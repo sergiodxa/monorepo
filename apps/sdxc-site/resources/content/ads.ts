@@ -1,6 +1,6 @@
 /**
- * The square ads the documentation right rail can show: Uptime landings, features,
- * use cases and monitor types, plus the React Router OAuth2 Handbook. The picker
+ * The square ads the documentation right rail can show: Uptime and Reader landings,
+ * features, use cases and comparisons, plus the React Router OAuth2 Handbook. The picker
  * rotates through this list; each entry is one tile a reader may see for a day.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -18,7 +18,10 @@ export type SidebarAdSurface =
 	| "handbook-navy"
 	| "handbook-charcoal"
 	| "handbook-code"
-	| "handbook-forest";
+	| "handbook-forest"
+	| "reader-emerald"
+	| "reader-paper"
+	| "reader-night";
 
 /** One square ad the docs rail may show under the table of contents. */
 export interface SidebarAdDefinition {
@@ -39,11 +42,12 @@ export interface SidebarAdDefinition {
 	 */
 	titleFace?: "sans" | "serif" | "mono";
 	/** Product family the tile belongs to; used when grouping the catalogue. */
-	brand: "uptime" | "handbook";
+	brand: "uptime" | "handbook" | "reader";
 }
 
 const UP = "https://uptime.sergiodxa.com";
 const BOOK = "https://books.sergiodxa.com";
+const READER = "https://reader.sergiodxa.com";
 
 /** Every ad the rail may rotate through. */
 export const SIDEBAR_ADS: SidebarAdDefinition[] = [
@@ -637,5 +641,188 @@ export const SIDEBAR_ADS: SidebarAdDefinition[] = [
 		cta: "/vs/healthchecks →",
 		surface: "uptime-ink",
 		brand: "uptime",
+	},
+
+	// —— Reader home ——
+	{
+		id: "rd-home",
+		href: READER,
+		kicker: "Feed reader",
+		title: "reader",
+		tagline: "Every feed you follow, in one quiet queue.",
+		cta: "reader.sergiodxa.com →",
+		surface: "reader-emerald",
+		brand: "reader",
+	},
+
+	// —— Reader features ——
+	{
+		id: "rd-ft-freshness",
+		href: `${READER}/features/freshness`,
+		kicker: "Feature",
+		title: "Fresh feeds",
+		tagline: "Checked as often as each feed publishes.",
+		cta: "freshness →",
+		surface: "reader-emerald",
+		brand: "reader",
+	},
+	{
+		id: "rd-ft-filters",
+		href: `${READER}/features/filters`,
+		kicker: "Feature",
+		title: "Filters",
+		tagline: "Drop, mark read or flag posts as they arrive.",
+		cta: "filters →",
+		surface: "reader-paper",
+		brand: "reader",
+	},
+	{
+		id: "rd-ft-articles",
+		href: `${READER}/features/articles`,
+		kicker: "Feature",
+		title: "Articles in place",
+		tagline: "The full article, set in your reading face.",
+		cta: "articles →",
+		surface: "reader-paper",
+		titleFace: "serif",
+		brand: "reader",
+	},
+	{
+		id: "rd-ft-search",
+		href: `${READER}/features/search`,
+		kicker: "Feature",
+		title: '"search" -noise',
+		tagline: "Phrases, OR and NOT across every post you kept.",
+		cta: "search →",
+		surface: "reader-night",
+		titleFace: "mono",
+		brand: "reader",
+	},
+	{
+		id: "rd-ft-notifications",
+		href: `${READER}/features/notifications`,
+		kicker: "Feature",
+		title: "Hear the feeds you pick",
+		tagline: "In your browser or by email, with quiet hours.",
+		cta: "notifications →",
+		surface: "reader-emerald",
+		brand: "reader",
+	},
+	{
+		id: "rd-ft-organize",
+		href: `${READER}/features/organize`,
+		kicker: "Feature",
+		title: "Folders and labels",
+		tagline: "Read a folder as one stream. Label why you kept it.",
+		cta: "organize →",
+		surface: "reader-paper",
+		brand: "reader",
+	},
+	{
+		id: "rd-ft-your-data",
+		href: `${READER}/features/your-data`,
+		kicker: "Feature",
+		title: "Your data, portable",
+		tagline: "Import OPML. Export it, or a ZIP of all you kept.",
+		cta: "your data →",
+		surface: "reader-night",
+		brand: "reader",
+	},
+	{
+		id: "rd-ft-agents",
+		href: `${READER}/features/agents`,
+		kicker: "MCP",
+		title: "Feeds for agents",
+		tagline: "Your assistant reads and searches your queue.",
+		cta: "agents →",
+		surface: "reader-night",
+		titleFace: "mono",
+		brand: "reader",
+	},
+
+	// —— Reader use cases ——
+	{
+		id: "rd-uc-news",
+		href: `${READER}/for/news`,
+		kicker: "For news",
+		title: "Busy feeds, every 15 min",
+		tagline: "Old news leaves. Filters take the rest.",
+		cta: "/for/news →",
+		surface: "reader-emerald",
+		brand: "reader",
+	},
+	{
+		id: "rd-uc-developers",
+		href: `${READER}/for/developers`,
+		kicker: "For developers",
+		title: "Release notes, flagged",
+		tagline: "Changelogs by RSS, read by your MCP client.",
+		cta: "/for/developers →",
+		surface: "reader-night",
+		titleFace: "mono",
+		brand: "reader",
+	},
+	{
+		id: "rd-uc-research",
+		href: `${READER}/for/research`,
+		kicker: "For research",
+		title: "Journals and preprints",
+		tagline: "Search, label and export what you kept.",
+		cta: "/for/research →",
+		surface: "reader-paper",
+		titleFace: "serif",
+		brand: "reader",
+	},
+	{
+		id: "rd-uc-podcasts",
+		href: `${READER}/for/podcasts`,
+		kicker: "For podcasts",
+		title: "Episodes beside posts",
+		tagline: "Play each episode on the post's own page.",
+		cta: "/for/podcasts →",
+		surface: "reader-emerald",
+		brand: "reader",
+	},
+
+	// —— Reader comparisons ——
+	{
+		id: "rd-vs-feedly",
+		href: `${READER}/vs/feedly`,
+		kicker: "Compare",
+		title: "Reader vs Feedly",
+		tagline: "One queue, newest first. No sponsored posts.",
+		cta: "/vs/feedly →",
+		surface: "reader-paper",
+		brand: "reader",
+	},
+	{
+		id: "rd-vs-inoreader",
+		href: `${READER}/vs/inoreader`,
+		kicker: "Compare",
+		title: "Reader vs Inoreader",
+		tagline: "Fewer knobs, one quiet queue.",
+		cta: "/vs/inoreader →",
+		surface: "reader-paper",
+		brand: "reader",
+	},
+	{
+		id: "rd-vs-feedbin",
+		href: `${READER}/vs/feedbin`,
+		kicker: "Compare",
+		title: "Reader vs Feedbin",
+		tagline: "Start on a free plan. Keep years of posts.",
+		cta: "/vs/feedbin →",
+		surface: "reader-paper",
+		brand: "reader",
+	},
+	{
+		id: "rd-vs-newsblur",
+		href: `${READER}/vs/newsblur`,
+		kicker: "Compare",
+		title: "Reader vs NewsBlur",
+		tagline: "Search and agents on the first paid plan.",
+		cta: "/vs/newsblur →",
+		surface: "reader-paper",
+		brand: "reader",
 	},
 ];

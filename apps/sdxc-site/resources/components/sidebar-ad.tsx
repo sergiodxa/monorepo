@@ -209,6 +209,54 @@ const SURFACES: Record<SidebarAdSurface, AdSurfaceSchemes> = {
 			border: "transparent",
 		},
 	},
+	"reader-emerald": {
+		light: {
+			background: "linear-gradient(165deg, oklch(0.96 0.04 162) 0%, oklch(0.98 0.018 162) 100%)",
+			ink: "oklch(0.24 0.051 162)",
+			muted: "oklch(0.32 0.068 162 / 0.72)",
+			accent: "oklch(0.52 0.112 162)",
+			border: "oklch(0.52 0.112 162 / 0.18)",
+		},
+		dark: {
+			background: "linear-gradient(165deg, oklch(0.24 0.051 162) 0%, oklch(0.16 0.034 162) 100%)",
+			ink: "oklch(0.98 0.018 162)",
+			muted: "oklch(0.91 0.075 162 / 0.75)",
+			accent: "oklch(0.73 0.155 162)",
+			border: "transparent",
+		},
+	},
+	"reader-paper": {
+		light: {
+			background: "oklch(0.98 0.004 250)",
+			ink: "oklch(0.24 0.008 250)",
+			muted: "oklch(0.42 0.012 250 / 0.8)",
+			accent: "oklch(0.52 0.112 162)",
+			border: "oklch(0.24 0.008 250 / 0.1)",
+		},
+		dark: {
+			background: "oklch(0.16 0.006 250)",
+			ink: "oklch(0.96 0.005 250)",
+			muted: "oklch(0.91 0.008 250 / 0.7)",
+			accent: "oklch(0.73 0.155 162)",
+			border: "oklch(1 0 0 / 0.08)",
+		},
+	},
+	"reader-night": {
+		light: {
+			background: "oklch(0.24 0.008 250)",
+			ink: "oklch(0.96 0.005 250)",
+			muted: "oklch(0.91 0.008 250 / 0.7)",
+			accent: "oklch(0.73 0.155 162)",
+			border: "transparent",
+		},
+		dark: {
+			background: "oklch(0.16 0.006 250)",
+			ink: "oklch(0.96 0.005 250)",
+			muted: "oklch(0.91 0.008 250 / 0.7)",
+			accent: "oklch(0.73 0.155 162)",
+			border: "oklch(1 0 0 / 0.08)",
+		},
+	},
 };
 
 /** Renders one square ad as a single outbound link. */
