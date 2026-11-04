@@ -49,7 +49,7 @@ export default createCommand(BENCH_COMMANDS.http, async (ctx) => {
 			ctx.stdout(`${JSON.stringify({ ok: false, report, error: "every request failed" })}\n`);
 			return exit(1);
 		}
-		return exit(1, `every request to ${report.url} failed (${report.errors} errors)`);
+		return exit(1, `every request to ${report.url} failed (${report.failures} failures)`);
 	}
 
 	let checked = assertHttpBudgets(report, budgets);
@@ -74,7 +74,7 @@ export default createCommand(BENCH_COMMANDS.http, async (ctx) => {
 function formatText(report: HttpReport): string {
 	let lines = [
 		`${report.method} ${report.url}`,
-		`requests ${report.requests} concurrency ${report.concurrency} ok ${report.ok} errors ${report.errors}`,
+		`requests ${report.requests} concurrency ${report.concurrency} ok ${report.ok} failures ${report.failures}`,
 		`min ${fmt(report.min)} mean ${fmt(report.mean)} p50 ${fmt(report.p50)} p95 ${fmt(report.p95)} p99 ${fmt(report.p99)} max ${fmt(report.max)}`,
 	];
 	return `${lines.join("\n")}\n`;

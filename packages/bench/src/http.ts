@@ -24,10 +24,13 @@ export interface HttpSample {
 export interface HttpReport {
 	url: string;
 	method: string;
+	/** How many requests the run issued (`SampleHttpOptions.requests`). */
 	requests: number;
 	concurrency: number;
+	/** How many of those requests completed without a transport or abort error. */
 	ok: number;
-	errors: number;
+	/** How many requests failed (`requests - ok`); assert `0` when every sample must succeed. */
+	failures: number;
 	/** Successful samples' latencies, sorted ascending. */
 	samples: number[];
 	min: number | null;
@@ -191,7 +194,7 @@ function summarize(
 		requests,
 		concurrency,
 		ok: sorted.length,
-		errors: samples.length - sorted.length,
+		failures: samples.length - sorted.length,
 		samples: sorted,
 		min: sorted[0] ?? null,
 		mean,

@@ -53,7 +53,7 @@ describe("sampleHttp", () => {
 			timeoutMs: 2_000,
 		});
 		expect(report.ok).toBe(8);
-		expect(report.errors).toBe(0);
+		expect(report.failures).toBe(0);
 		expect(report.p50).not.toBeNull();
 		expect(isSuccess(assertHttpBudgets(report, { p99: 5_000 }))).toBe(true);
 	});
