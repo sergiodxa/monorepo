@@ -17,8 +17,8 @@ import { logRenderFailure } from "~/app/initializers/logger";
 
 /**
  * The app's `ctx.assets` and `ctx.render` middleware, in the router's order, typed as plain
- * `Middleware` so every test router shares one `Router` type. Installed after
- * `securityHeaders()`, the document carries the response's nonce as it does in production.
+ * `Middleware` so every test router shares one `Router` type. Installed after Remix's `csp()`,
+ * the document carries the response's nonce as it does in production.
  */
 export function documentRendering(): Middleware[] {
 	return [
