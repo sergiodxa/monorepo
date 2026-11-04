@@ -62,13 +62,13 @@ describes, and every package missing here is listed on the [API reference](/api)
 
 ## Secure the app
 
-| I need to…                                    | Packages                                                           | Guide                                                                            |
-| --------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| hash, sign and encrypt with Web Crypto        | [`@sdxc/crypto`](/api/crypto)                                      | [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) |
-| send CSP, HSTS and Permissions-Policy headers | [`@sdxc/security-headers`](/api/security-headers)                  | [Security headers and CSP](/docs/identity-and-security/security-headers)         |
-| receive and send signed webhooks              | [`@sdxc/webhooks`](/api/webhooks)                                  | [Receive and send webhooks](/docs/identity-and-security/webhooks)                |
-| stop bots on a public form                    | [`@sdxc/honeypot`](/api/honeypot), [`@sdxc/captcha`](/api/captcha) | [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms)   |
-| score submitted content for spam              | [`@sdxc/spam`](/api/spam)                                          | [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms)   |
+| I need to…                                    | Packages                                                                                                  | Guide                                                                            |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| hash, sign and encrypt with Web Crypto        | [`@sdxc/crypto`](/api/crypto)                                                                             | [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) |
+| send CSP, HSTS and Permissions-Policy headers | [`remix`](https://www.npmjs.com/package/remix) `csp()`, [`@sdxc/security-headers`](/api/security-headers) | [Security headers and CSP](/docs/identity-and-security/security-headers)         |
+| receive and send signed webhooks              | [`@sdxc/webhooks`](/api/webhooks)                                                                         | [Receive and send webhooks](/docs/identity-and-security/webhooks)                |
+| stop bots on a public form                    | [`@sdxc/honeypot`](/api/honeypot), [`@sdxc/captcha`](/api/captcha)                                        | [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms)   |
+| score submitted content for spam              | [`@sdxc/spam`](/api/spam)                                                                                 | [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms)   |
 
 ## Publish content
 
