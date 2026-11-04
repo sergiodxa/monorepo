@@ -293,10 +293,14 @@ describe("runFlowCheck", () => {
 		expect(result.failureDetail).toContain(`at most ${FLOW_RUN_MAX_RESPONSE_BYTES} bytes`);
 	});
 
+	/**
+	 * The deadline falls inside the first request. Both durations leave starting the run
+	 * far below the deadline, so the first request is always under way when it fires.
+	 */
 	test("a run past its deadline stops, and reports that as an error", async () => {
 		server.use(
 			http.get(`${ORIGIN}/slow`, async () => {
-				await delay(40);
+				await delay(1_000);
 				return HttpResponse.json({ ok: true });
 			}),
 		);
@@ -312,7 +316,7 @@ describe("runFlowCheck", () => {
 				"}",
 			].join("\n"),
 			verifiedDomains: [DOMAIN],
-			timeoutMs: 20,
+			timeoutMs: 500,
 		});
 
 		expect(result.status).toBe("error");
