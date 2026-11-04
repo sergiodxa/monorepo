@@ -11,9 +11,10 @@ import type { SecurityHeaders } from "@sdxc/security-headers";
 const FONTS_ORIGIN = "https://fonts.bunny.net";
 
 /**
- * The policy for every apis response. Styles are inline because `remix/component`
- * writes them that way; fonts load from Bunny. JSON and MCP routes do not embed
- * scripts, so the same policy covers the whole Worker.
+ * The policy for every response. Styles are inline because `remix/component`
+ * writes them that way; fonts load from Bunny. The landing's JSON-LD script is
+ * inline and carries the response nonce. JSON and MCP routes embed no script,
+ * so a response that never reads the nonce drops that source.
  */
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
 	contentSecurityPolicy: {

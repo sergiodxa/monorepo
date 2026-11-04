@@ -8,6 +8,7 @@
 
 import type { Handle } from "remix/component";
 
+import { mf } from "@sdxc/microformats/ui";
 import { counterIncrement, counterReset, pseudoContent, raw } from "@sdxc/u/general";
 import {
 	absolute,
@@ -39,7 +40,15 @@ import {
 
 import type { Operation } from "~/config/catalog";
 
-import { SITE_BRAND, SITE_ORIGIN, SITE_TAGLINE } from "~/config/site";
+import {
+	AUTHOR_NAME,
+	AUTHOR_PHOTO,
+	AUTHOR_URL,
+	DOCS_ORIGIN,
+	SITE_BRAND,
+	SITE_ORIGIN,
+	SITE_TAGLINE,
+} from "~/config/site";
 
 namespace HomeView {
 	export interface Props {
@@ -258,7 +267,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 		let { operations } = handle.props;
 
 		return (
-			<div mix={[relative(), raw({ isolation: "isolate" }), overflow("clip")]}>
+			<article mix={[mf("h-entry"), relative(), raw({ isolation: "isolate" }), overflow("clip")]}>
 				<div
 					aria-hidden="true"
 					mix={[
@@ -305,10 +314,20 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 							}),
 						]}
 					>
-						{SITE_BRAND}
+						<a
+							href={SITE_ORIGIN}
+							mix={[
+								mf("u-url", "u-uid"),
+								raw({ color: "inherit", textDecoration: "none" }),
+								hover(raw({ color: "inherit" })),
+							]}
+						>
+							{SITE_BRAND}
+						</a>
 					</p>
 					<h1
 						mix={[
+							mf("p-name"),
 							m(0),
 							maxIs("22ch"),
 							weight("medium"),
@@ -325,6 +344,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 					</h1>
 					<p
 						mix={[
+							mf("p-summary"),
 							m(0),
 							maxIs("42rem"),
 							raw({ fontSize: "1.05rem", color: "var(--apis-ink-soft)" }),
@@ -352,6 +372,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 
 				<main
 					mix={[
+						mf("e-content"),
 						flex(),
 						flexCol(),
 						raw({
@@ -516,11 +537,12 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 								</thead>
 								<tbody>
 									{operations.map((operation) => (
-										<tr key={operation.id}>
+										<tr key={operation.id} mix={[mf("h-cite")]}>
 											<td mix={TD}>
-												<code mix={INLINE_CODE}>{operation.id}</code>
+												<code mix={[mf("p-name"), ...INLINE_CODE]}>{operation.id}</code>
 												<div
 													mix={[
+														mf("p-summary"),
 														raw({
 															marginTop: "0.35rem",
 															color: "var(--apis-ink-soft)",
@@ -534,12 +556,18 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 											<td mix={[TD, nowrap(), raw({ paddingInlineEnd: "1.25rem" })]}>
 												<a
 													href={`https://www.npmjs.com/package/${operation.package}`}
-													mix={[LINK, nowrap(), font("mono"), raw({ fontSize: "0.9em" })]}
+													mix={[
+														mf("u-url"),
+														LINK,
+														nowrap(),
+														font("mono"),
+														raw({ fontSize: "0.9em" }),
+													]}
 												>
 													{operation.package}
 												</a>
 											</td>
-											<td mix={PRICE_TD}>{operation.priceUsd}</td>
+											<td mix={[mf("p-x-price"), ...PRICE_TD]}>{operation.priceUsd}</td>
 										</tr>
 									))}
 								</tbody>
@@ -574,8 +602,19 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 						}),
 					]}
 				>
-					<span>Docs and packages stay free on npm and sdxc.dev.</span>
-					<a href="https://sdxc.dev" mix={LINK}>
+					<p mix={[mf("p-author", "h-card"), m(0)]}>
+						<a href={AUTHOR_URL} rel="author" mix={[mf("p-name", "u-url"), LINK]}>
+							{AUTHOR_NAME}
+						</a>
+						<data mix={[mf("u-photo")]} value={AUTHOR_PHOTO} />
+						<span aria-hidden="true"> · </span>
+						<a href={SITE_ORIGIN} mix={[mf("u-url", "u-uid"), LINK]}>
+							{SITE_BRAND}
+						</a>
+						<span aria-hidden="true"> · </span>
+						<span mix={[mf("p-note")]}>Docs and packages stay free on npm and sdxc.dev.</span>
+					</p>
+					<a href={DOCS_ORIGIN} rel="me" mix={LINK}>
 						sdxc.dev
 					</a>
 					<a href="https://x402.org/" mix={LINK}>
@@ -588,7 +627,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 						/health
 					</a>
 				</footer>
-			</div>
+			</article>
 		);
 	};
 }

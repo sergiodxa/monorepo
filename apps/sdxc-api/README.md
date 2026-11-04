@@ -30,6 +30,11 @@ locally with the in-memory facilitator, set a non-http stub such as
 | `/mcp`    | POST   | x402 on `tools/call` | Model Context Protocol                                                |
 | `/health` | GET    | Free                 | Health report                                                         |
 
+The HTML landing publishes a canonical URL on `https://api.sdxc.dev`, Open Graph and
+Twitter cards, `index, follow`, and schema.org JSON-LD for the publisher, the site,
+the page and the API. The same markup is an `h-entry` with the publisher's `h-card`
+and one `h-cite` per operation. `Accept: text/markdown` stays a plain Markdown body.
+
 ## Connect MCP
 
 Handshake-era agents need `mcp-bridge` from `@sdxc/mcp`. Pass `OWNER_ACCESS_TOKEN` so
