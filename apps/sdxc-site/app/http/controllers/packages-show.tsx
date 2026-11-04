@@ -191,15 +191,19 @@ export default createAction(routes.api.show, async (ctx) => {
 						<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
 							{body.content}
 						</Typeset>
-					) : isUiCatalogue ? (
+					) : null}
+
+					{!body && isUiCatalogue ? (
 						<div mix={[m("2.5rem", 0, 0, 0)]}>
 							<UiCatalogue components={uiComponents} exports={uiExports} />
 						</div>
-					) : (
+					) : null}
+
+					{!body && !isUiCatalogue ? (
 						<div mix={[m("2.5rem", 0, 0, 0)]}>
 							<CatalogueIndex groups={await readCatalogue(name)} />
 						</div>
-					)}
+					) : null}
 
 					{guides.length > 0 ? (
 						<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
