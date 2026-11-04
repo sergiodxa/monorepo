@@ -68,7 +68,6 @@ export const webRouter = createRouter({
 		csp({
 			reportOnlyPolicy: ({ nonce }) => remixCsp(PLATFORM_CONTENT_SECURITY_POLICY, nonce),
 			reportingEndpoints: { csp: "/reports/csp" },
-			filter: () => true,
 		}),
 		securityHeaders(PLATFORM_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry, "api-catalog": apiCatalogEntry }),
