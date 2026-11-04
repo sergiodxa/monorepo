@@ -17,6 +17,7 @@ import type { GitHubStatsSnapshot } from "~/app/services/github-stats";
 import type { NpmStatsSnapshot } from "~/app/services/npm-stats";
 import type { SiteEventsSnapshot } from "~/app/services/site-events";
 
+import { NOINDEX_NOFOLLOW } from "~/app/initializers/seo";
 import { needsAdoptionRefresh, readAdoption, refreshAdoption } from "~/app/services/adoption";
 import {
 	GITHUB_REPOSITORY,
@@ -43,7 +44,7 @@ import { readSiteEvents } from "~/app/services/site-events";
 const REFRESH_BUDGET = { inline: 20_000, background: 25_000 };
 
 /** The response directive every stats format carries, which keeps them out of search engines. */
-export const STATS_ROBOTS = "noindex, nofollow";
+export const STATS_ROBOTS = NOINDEX_NOFOLLOW;
 
 /** Every snapshot the stats formats draw from. */
 export interface StatsData {

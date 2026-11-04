@@ -15,6 +15,7 @@ import { createAction } from "remix/router";
 
 import { withStreamCache } from "~/app/http/caching";
 import defaultHandler from "~/app/http/controllers/default-handler";
+import { NOINDEX_NOFOLLOW } from "~/app/initializers/seo";
 import { searchDemoDocs } from "~/app/services/demo-docs-search";
 import { rememberedTabsVariant } from "~/app/services/remembered-tabs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -27,9 +28,6 @@ import {
 import { DemoDocsHome, DemoDocsMissing, DemoDocsSearch } from "~/resources/views/demo-docs/pages";
 import { DemoDocsArticle, DemoDocsShell, SEARCH_PAGE } from "~/resources/views/demo-docs/shell";
 import routes from "~/routes/web";
-
-/** The directive every demo carries, which keeps it out of results and its links unfollowed. */
-const DEMO_ROBOTS = "noindex, nofollow";
 
 /** The params a request carries; `page` is absent on the hub. */
 const PARAMS = s.object({ site: s.string(), page: s.optional(s.string()) });
@@ -54,7 +52,7 @@ export default createAction(routes.demoDocs.show, async (ctx) => {
 					assets={ctx.assets}
 					title={`${options.title} — ${site.name} Docs`}
 					description={site.description}
-					robots={DEMO_ROBOTS}
+					robots={NOINDEX_NOFOLLOW}
 					siteFooter={false}
 				>
 					{options.body}

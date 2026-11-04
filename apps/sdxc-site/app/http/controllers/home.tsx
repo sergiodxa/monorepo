@@ -14,6 +14,7 @@ import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { siteCache } from "~/app/initializers/cache";
+import { homeSchema } from "~/app/initializers/seo";
 import { readChangelog } from "~/app/services/changelog";
 import { readContent } from "~/app/services/content";
 import { readStoredSponsors } from "~/app/services/sponsors";
@@ -49,6 +50,7 @@ export default createAction(routes.home, async (ctx) => {
 			title="sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			schema={homeSchema()}
 			cookie={ctx.request.headers.get("Cookie")}
 		>
 			<SiteHeader activePath={routes.home.href()} />

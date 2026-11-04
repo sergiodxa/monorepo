@@ -7,6 +7,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -23,6 +24,7 @@ import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import foundationsPage from "~/app/http/controllers/ui-foundations";
 import themingPage from "~/app/http/controllers/ui-theming";
+import { pageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { importPath, readComponent } from "~/app/services/components";
@@ -33,6 +35,7 @@ import CompositionTree from "~/resources/components/composition-tree";
 import DemoLinks from "~/resources/components/demo-links";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import { findPreview, listExamples } from "~/resources/components/preview-registry.server";
 import PropsReference from "~/resources/components/props-reference";
@@ -114,6 +117,7 @@ export default createAction(routes.api.component, async (ctx) => {
 		...reference.parts.map((part) => ({ id: anchorFor(part.name), text: part.name, level: 3 })),
 	].filter((anchor): anchor is Anchor => anchor !== null);
 	let activePath = routes.api.component.href({ component });
+	let canonical = seo.canonical(ctx.url);
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -121,6 +125,21 @@ export default createAction(routes.api.component, async (ctx) => {
 			title={`${reference.name} — @sdxc/ui`}
 			description={reference.summary}
 			canonical={ctx.url.href}
+			schema={[
+				pageSchema({
+					name: reference.name,
+					description: reference.summary,
+					url: canonical,
+					cardTitle: `${reference.name} — @sdxc/ui`,
+				}),
+				trailSchema(
+					[
+						{ name: "API", url: routes.api.index.href() },
+						{ name: "@sdxc/ui", url: routes.api.show.href({ name: "ui" }) },
+					],
+					{ name: reference.name, url: canonical },
+				),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -130,7 +149,7 @@ export default createAction(routes.api.component, async (ctx) => {
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
+				<article mix={[mf("h-entry"), vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<DocsPageHeader
 							crumbs={[
@@ -138,8 +157,12 @@ export default createAction(routes.api.component, async (ctx) => {
 								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 								{ label: reference.name },
 							]}
-							title={reference.name}
-							description={<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>}
+							title={<EntryTitle href={activePath}>{reference.name}</EntryTitle>}
+							description={
+								<EntrySummary>
+									<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>
+								</EntrySummary>
+							}
 							actions={
 								<PageActions
 									markdownHref={markdownHref}
@@ -150,144 +173,150 @@ export default createAction(routes.api.component, async (ctx) => {
 						/>
 					</header>
 
-					{preview ? <Frame src={routes.frames.preview.href({ component })} /> : null}
+					<div mix={[mf("e-content")]}>
+						{preview ? <Frame src={routes.frames.preview.href({ component })} /> : null}
 
-					{demos.length > 0 ? (
+						{demos.length > 0 ? (
+							<ReferenceSection
+								id="demos"
+								title={demosTitle}
+								lead="Whole pages built only from @sdxc/ui, each for an invented product with its own palette and type. They open in a new tab."
+							>
+								<DemoLinks links={demos} />
+								<p mix={[m(0), text("sm"), fg("neutral")]}>
+									Every demo, landings and docs sites alike, is listed in the{" "}
+									<a href={routes.demos.href()}>demo gallery</a>.
+								</p>
+							</ReferenceSection>
+						) : null}
+
 						<ReferenceSection
-							id="demos"
-							title={demosTitle}
-							lead="Whole pages built only from @sdxc/ui, each for an invented product with its own palette and type. They open in a new tab."
+							id="installation"
+							title="Installation"
+							lead="An ordinary dependency: install it, import the theme once, and import the component where it is used."
 						>
-							<DemoLinks links={demos} />
-							<p mix={[m(0), text("sm"), fg("neutral")]}>
-								Every demo, landings and docs sites alike, is listed in the{" "}
-								<a href={routes.demos.href()}>demo gallery</a>.
-							</p>
+							<div mix={[vstack({ gap: 3, align: "stretch" })]}>
+								<CodeBlock labels={CODE_LABELS} code={INSTALL} language="bash" title="Terminal" />
+								<CodeBlock labels={CODE_LABELS} code={THEME_IMPORT} language="typescript" />
+								{reference.module === "components" ? (
+									<>
+										<p mix={[m(0), text("base"), fg("neutral")]}>
+											Or{" "}
+											<a href={routes.docs.show.href({ slug: COPY_GUIDE_SLUG })}>
+												copy it into your project
+											</a>{" "}
+											to edit it:
+										</p>
+										<CodeBlock
+											labels={CODE_LABELS}
+											code={`sdxc ui add ${component}`}
+											language="bash"
+											title="Terminal"
+										/>
+									</>
+								) : null}
+							</div>
 						</ReferenceSection>
-					) : null}
 
-					<ReferenceSection
-						id="installation"
-						title="Installation"
-						lead="An ordinary dependency: install it, import the theme once, and import the component where it is used."
-					>
-						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
-							<CodeBlock labels={CODE_LABELS} code={INSTALL} language="bash" title="Terminal" />
-							<CodeBlock labels={CODE_LABELS} code={THEME_IMPORT} language="typescript" />
-							{reference.module === "components" ? (
-								<>
-									<p mix={[m(0), text("base"), fg("neutral")]}>
-										Or{" "}
-										<a href={routes.docs.show.href({ slug: COPY_GUIDE_SLUG })}>
-											copy it into your project
-										</a>{" "}
-										to edit it:
-									</p>
-									<CodeBlock
-										labels={CODE_LABELS}
-										code={`sdxc ui add ${component}`}
-										language="bash"
-										title="Terminal"
-									/>
-								</>
-							) : null}
-						</div>
-					</ReferenceSection>
+						<ReferenceSection id="usage" title="Usage">
+							<div mix={[vstack({ gap: 3, align: "stretch" })]}>
+								<CodeBlock
+									labels={CODE_LABELS}
+									code={`import { ${reference.name} } from "${importPath(reference.module)}";`}
+									language="typescript"
+								/>
+								<p mix={[m(0), text("base"), fg("neutral")]}>
+									<ReferenceProse>{reference.description}</ReferenceProse>
+								</p>
+							</div>
+						</ReferenceSection>
 
-					<ReferenceSection id="usage" title="Usage">
-						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
-							<CodeBlock
-								labels={CODE_LABELS}
-								code={`import { ${reference.name} } from "${importPath(reference.module)}";`}
-								language="typescript"
-							/>
-							<p mix={[m(0), text("base"), fg("neutral")]}>
-								<ReferenceProse>{reference.description}</ReferenceProse>
-							</p>
-						</div>
-					</ReferenceSection>
+						{reference.parts.length > 0 ? (
+							<ReferenceSection
+								id="composition"
+								title="Composition"
+								lead="The parts the component publishes, each a static property of the host."
+							>
+								<CompositionTree host={reference.name} parts={reference.parts} />
+							</ReferenceSection>
+						) : null}
 
-					{reference.parts.length > 0 ? (
+						{hasExamples ? (
+							<ReferenceSection id="examples" title="Examples">
+								<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+									{liveExamples.map((example) => (
+										<section key={example.slug} mix={[vstack({ gap: 3, align: "stretch" })]}>
+											<h3 mix={[m(0), text("base"), weight("semibold")]}>{example.title}</h3>
+											<Frame
+												src={routes.frames.example.href({ component, example: example.slug })}
+											/>
+										</section>
+									))}
+									{examples.map((example) => (
+										<CodeBlock language="tsx" labels={CODE_LABELS} key={example} code={example} />
+									))}
+								</div>
+							</ReferenceSection>
+						) : null}
+
 						<ReferenceSection
-							id="composition"
-							title="Composition"
-							lead="The parts the component publishes, each a static property of the host."
+							id="props"
+							title="Props"
+							lead="Read from the component's own types, so every prop, every default and every allowed value is listed."
 						>
-							<CompositionTree host={reference.name} parts={reference.parts} />
-						</ReferenceSection>
-					) : null}
+							<div mix={[vstack({ gap: 6, align: "stretch" })]}>
+								{propsBlock(reference.name, reference.props)}
 
-					{hasExamples ? (
-						<ReferenceSection id="examples" title="Examples">
-							<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-								{liveExamples.map((example) => (
-									<section key={example.slug} mix={[vstack({ gap: 3, align: "stretch" })]}>
-										<h3 mix={[m(0), text("base"), weight("semibold")]}>{example.title}</h3>
-										<Frame src={routes.frames.example.href({ component, example: example.slug })} />
+								{reference.parts.map((part) => (
+									<section key={part.name} mix={[vstack({ gap: 3, align: "stretch" })]}>
+										<h3
+											id={anchorFor(part.name)}
+											mix={[m(0), font("mono"), text("base"), weight("semibold")]}
+										>
+											{part.name}
+										</h3>
+										{propsBlock(part.name, part.props)}
 									</section>
-								))}
-								{examples.map((example) => (
-									<CodeBlock language="tsx" labels={CODE_LABELS} key={example} code={example} />
 								))}
 							</div>
 						</ReferenceSection>
-					) : null}
 
-					<ReferenceSection
-						id="props"
-						title="Props"
-						lead="Read from the component's own types, so every prop, every default and every allowed value is listed."
-					>
-						<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-							{propsBlock(reference.name, reference.props)}
+						{reference.types.length > 0 ? (
+							<ReferenceSection id="types" title="Types">
+								<ReferenceTable
+									label={`${reference.name} types`}
+									columns={["Name", "Values", "What it decides"]}
+									rows={reference.types.map((type) => [
+										<code mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>
+											{type.name}
+										</code>,
+										<code mix={[font("mono"), text("sm"), fg("neutral")]}>
+											{type.values.join(" | ")}
+										</code>,
+										<span mix={[text("sm"), fg("neutral")]}>
+											<ReferenceProse>{type.description}</ReferenceProse>
+										</span>,
+									])}
+								/>
+							</ReferenceSection>
+						) : null}
 
-							{reference.parts.map((part) => (
-								<section key={part.name} mix={[vstack({ gap: 3, align: "stretch" })]}>
-									<h3
-										id={anchorFor(part.name)}
-										mix={[m(0), font("mono"), text("base"), weight("semibold")]}
-									>
-										{part.name}
-									</h3>
-									{propsBlock(part.name, part.props)}
-								</section>
-							))}
-						</div>
-					</ReferenceSection>
-
-					{reference.types.length > 0 ? (
-						<ReferenceSection id="types" title="Types">
-							<ReferenceTable
-								label={`${reference.name} types`}
-								columns={["Name", "Values", "What it decides"]}
-								rows={reference.types.map((type) => [
-									<code mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>{type.name}</code>,
-									<code mix={[font("mono"), text("sm"), fg("neutral")]}>
-										{type.values.join(" | ")}
-									</code>,
-									<span mix={[text("sm"), fg("neutral")]}>
-										<ReferenceProse>{type.description}</ReferenceProse>
-									</span>,
-								])}
-							/>
-						</ReferenceSection>
-					) : null}
-
-					{reference.related.length > 0 ? (
-						<ReferenceSection
-							id="related"
-							title="Also exported"
-							lead="Other components this module publishes."
-						>
-							<ul mix={[m(0)]}>
-								{reference.related.map((entry) => (
-									<li key={entry.name} mix={[text("sm")]}>
-										<code mix={[font("mono")]}>{entry.name}</code>
-									</li>
-								))}
-							</ul>
-						</ReferenceSection>
-					) : null}
+						{reference.related.length > 0 ? (
+							<ReferenceSection
+								id="related"
+								title="Also exported"
+								lead="Other components this module publishes."
+							>
+								<ul mix={[m(0)]}>
+									{reference.related.map((entry) => (
+										<li key={entry.name} mix={[text("sm")]}>
+											<code mix={[font("mono")]}>{entry.name}</code>
+										</li>
+									))}
+								</ul>
+							</ReferenceSection>
+						) : null}
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

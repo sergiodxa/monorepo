@@ -13,6 +13,7 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import { NOINDEX } from "~/app/initializers/seo";
 import { buildSearchIndex } from "~/app/services/search";
 import { matchDocuments, parseSearch } from "~/app/services/search-query";
 import { SearchResults } from "~/app/services/search-results";
@@ -39,7 +40,7 @@ export default createAction(routes.search, async (ctx) => {
 		let model = SearchResults.invalid(text, parsed.error);
 		return ctx.render(<SearchView assets={ctx.assets} model={model} canonical={canonical} />, {
 			status: 400,
-			headers: { "X-Robots-Tag": "noindex" },
+			headers: { "X-Robots-Tag": NOINDEX },
 		});
 	}
 
@@ -71,7 +72,7 @@ export default createAction(routes.search, async (ctx) => {
 	let response = ctx.render(
 		<SearchView assets={ctx.assets} model={model} canonical={canonical} />,
 		{
-			headers: { "X-Robots-Tag": "noindex" },
+			headers: { "X-Robots-Tag": NOINDEX },
 		},
 	);
 	return await withBundleCache(ctx.request, response, ctx.url.search);

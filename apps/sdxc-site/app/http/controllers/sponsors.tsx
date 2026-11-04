@@ -15,6 +15,7 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { siteCache } from "~/app/initializers/cache";
+import { pageSchema, seo } from "~/app/initializers/seo";
 import { readContent } from "~/app/services/content";
 import { readStoredSponsors, sponsorsTag } from "~/app/services/sponsors";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
@@ -44,6 +45,12 @@ export default createAction(routes.sponsors, async (ctx) => {
 			title="Sponsors — sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			schema={pageSchema({
+				name: "Fund the work behind sdxc",
+				description: DESCRIPTION,
+				url: seo.canonical(ctx.url),
+				cardTitle: "Sponsors — sdxc",
+			})}
 		>
 			<SiteHeader activePath={routes.sponsors.href()} />
 

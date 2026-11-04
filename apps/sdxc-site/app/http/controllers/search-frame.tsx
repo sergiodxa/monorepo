@@ -14,6 +14,7 @@ import { createAction } from "remix/router";
 import type { SearchKind } from "~/app/services/search-query";
 
 import { SearchFrameQuerySchema } from "~/app/http/validators/search";
+import { NOINDEX } from "~/app/initializers/seo";
 import { buildSearchIndex } from "~/app/services/search";
 import { matchDocuments, parseSearch } from "~/app/services/search-query";
 import { SearchResults } from "~/app/services/search-results";
@@ -60,7 +61,7 @@ export default createAction(routes.searchFrame, async (ctx) => {
 	}
 
 	return ctx.render(<SearchFrameView model={model} />, {
-		headers: { "X-Robots-Tag": "noindex" },
+		headers: { "X-Robots-Tag": NOINDEX },
 	});
 });
 

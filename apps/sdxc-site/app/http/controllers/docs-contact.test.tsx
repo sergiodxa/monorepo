@@ -50,7 +50,7 @@ describe("GET /docs/contact", () => {
 		expect(body).toContain('name="message"');
 		expect(body).toContain(`name="${honeypot.tokenField}"`);
 		expect(body).toContain('value="/docs/sdxc/deploy"');
-		expect(body).toContain('content="noindex"');
+		expect(body).toContain('content="noindex, follow"');
 	});
 
 	test("is answered by the contact route, not read as a guide's slug", async () => {

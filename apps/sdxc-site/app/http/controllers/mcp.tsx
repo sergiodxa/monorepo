@@ -17,6 +17,7 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import mcp from "~/app/initializers/mcp";
+import { pageSchema, seo } from "~/app/initializers/seo";
 import { readContent } from "~/app/services/content";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
 import SiteHeader from "~/resources/components/site-header";
@@ -51,6 +52,12 @@ export default createAction(routes.mcp, async (ctx) => {
 			title="MCP endpoint — sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			schema={pageSchema({
+				name: "The MCP endpoint",
+				description: DESCRIPTION,
+				url: seo.canonical(ctx.url),
+				cardTitle: "MCP endpoint — sdxc",
+			})}
 		>
 			<SiteHeader activePath={routes.mcp.href()} />
 

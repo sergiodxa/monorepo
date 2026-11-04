@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -18,6 +19,7 @@ import type { NavTree } from "~/app/services/navigation";
 import type { ThemeDeclaration } from "~/app/services/theming";
 
 import { withBundleCache } from "~/app/http/caching";
+import { pageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/catalogue-markdown";
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
@@ -25,6 +27,7 @@ import { readTheme } from "~/app/services/theming";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
@@ -51,6 +54,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 	];
 
 	let activePath = routes.api.component.href({ component: THEMING_SLUG });
+	let canonical = seo.canonical(ctx.url);
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -58,6 +62,21 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 			title={`${THEMING_TITLE} — @sdxc/ui`}
 			description={THEMING_SUMMARY}
 			canonical={ctx.url.href}
+			schema={[
+				pageSchema({
+					name: THEMING_TITLE,
+					description: THEMING_SUMMARY,
+					url: canonical,
+					cardTitle: `${THEMING_TITLE} — @sdxc/ui`,
+				}),
+				trailSchema(
+					[
+						{ name: "API", url: routes.api.index.href() },
+						{ name: "@sdxc/ui", url: routes.api.show.href({ name: "ui" }) },
+					],
+					{ name: THEMING_TITLE, url: canonical },
+				),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -67,7 +86,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
+				<article mix={[mf("h-entry"), vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<DocsPageHeader
 							crumbs={[
@@ -75,12 +94,12 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 								{ label: THEMING_TITLE },
 							]}
-							title={THEMING_TITLE}
+							title={<EntryTitle href={activePath}>{THEMING_TITLE}</EntryTitle>}
 							description={
-								<>
+								<EntrySummary>
 									Every color a component draws comes from a variable, and every variable belongs to
 									a role. Redefine the variables and the whole catalogue moves with them.
-								</>
+								</EntrySummary>
 							}
 							actions={
 								<PageActions
@@ -92,59 +111,61 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 						/>
 					</header>
 
-					<ReferenceSection
-						id="roles"
-						title="Semantic roles"
-						lead="A component picks a role — brand, neutral, success, warning, danger — and the role resolves to a fill, the text on that fill, a border and a focus ring. That pairing is the convention: a component never names a color, only the part of a role it needs."
-					>
-						<div mix={[vstack({ gap: 8, align: "stretch" })]}>
-							{theme.groups.map((group) => (
-								<section key={group.title} mix={[vstack({ gap: 3, align: "stretch" })]}>
-									<h3
-										id={anchorFor(group.title)}
-										mix={[m(0), text("base"), weight("semibold"), tracking("tight")]}
-									>
-										{group.title}
-									</h3>
-									<p mix={[m(0), text("sm"), fg("neutral")]}>{group.description}</p>
+					<div mix={[mf("e-content")]}>
+						<ReferenceSection
+							id="roles"
+							title="Semantic roles"
+							lead="A component picks a role — brand, neutral, success, warning, danger — and the role resolves to a fill, the text on that fill, a border and a focus ring. That pairing is the convention: a component never names a color, only the part of a role it needs."
+						>
+							<div mix={[vstack({ gap: 8, align: "stretch" })]}>
+								{theme.groups.map((group) => (
+									<section key={group.title} mix={[vstack({ gap: 3, align: "stretch" })]}>
+										<h3
+											id={anchorFor(group.title)}
+											mix={[m(0), text("base"), weight("semibold"), tracking("tight")]}
+										>
+											{group.title}
+										</h3>
+										<p mix={[m(0), text("sm"), fg("neutral")]}>{group.description}</p>
 
-									<ReferenceTable
-										label={`${group.title} variables`}
-										columns={["Token", "What it controls", "Components that read it"]}
-										rows={group.tokens.map((token) => [
-											<code mix={[font("mono"), text("sm"), fg("neutral.emphasis"), nowrap()]}>
-												{token.name}
-											</code>,
-											<span mix={[text("sm"), fg("neutral")]}>{token.controls}</span>,
-											<span mix={[text("sm"), fg("neutral")]}>
-												{token.components.length > 0 ? token.components.join(", ") : "—"}
-											</span>,
-										])}
-									/>
-								</section>
-							))}
-						</div>
-					</ReferenceSection>
+										<ReferenceTable
+											label={`${group.title} variables`}
+											columns={["Token", "What it controls", "Components that read it"]}
+											rows={group.tokens.map((token) => [
+												<code mix={[font("mono"), text("sm"), fg("neutral.emphasis"), nowrap()]}>
+													{token.name}
+												</code>,
+												<span mix={[text("sm"), fg("neutral")]}>{token.controls}</span>,
+												<span mix={[text("sm"), fg("neutral")]}>
+													{token.components.length > 0 ? token.components.join(", ") : "—"}
+												</span>,
+											])}
+										/>
+									</section>
+								))}
+							</div>
+						</ReferenceSection>
 
-					<ReferenceSection
-						id="light"
-						title="Light"
-						lead="What a document resolves to with no scheme class on it."
-					>
-						<CodeBlock labels={CODE_LABELS} code={block(":root", theme.light)} language="css" />
-					</ReferenceSection>
+						<ReferenceSection
+							id="light"
+							title="Light"
+							lead="What a document resolves to with no scheme class on it."
+						>
+							<CodeBlock labels={CODE_LABELS} code={block(":root", theme.light)} language="css" />
+						</ReferenceSection>
 
-					<ReferenceSection
-						id="dark"
-						title="Dark"
-						lead="The same names, redefined under a dark ancestor. Add `.dark` to force it, or `.system` to follow the reader's own setting."
-					>
-						<CodeBlock
-							labels={CODE_LABELS}
-							code={block(":is(.dark, .dark *)", theme.dark)}
-							language="css"
-						/>
-					</ReferenceSection>
+						<ReferenceSection
+							id="dark"
+							title="Dark"
+							lead="The same names, redefined under a dark ancestor. Add `.dark` to force it, or `.system` to follow the reader's own setting."
+						>
+							<CodeBlock
+								labels={CODE_LABELS}
+								code={block(":is(.dark, .dark *)", theme.dark)}
+								language="css"
+							/>
+						</ReferenceSection>
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

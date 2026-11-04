@@ -8,6 +8,7 @@
 
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
+import { mf } from "@sdxc/microformats/ui";
 import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
@@ -24,6 +25,7 @@ import type { PackageEntry } from "~/app/services/packages";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { packageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";
 import { listGuidesAbout } from "~/app/services/docs";
@@ -50,6 +52,7 @@ import { absoluteUrl } from "~/config/constants";
 import CatalogueIndex from "~/resources/components/catalogue-index";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PackageFact from "~/resources/components/package-fact";
 import PageActions from "~/resources/components/page-actions";
@@ -87,6 +90,7 @@ export default createAction(routes.api.show, async (ctx) => {
 	];
 	let markdownHref = routes.markdown.package.href({ name });
 	let activePath = routes.api.show.href({ name });
+	let canonical = seo.canonical(ctx.url);
 	let isUiCatalogue = name === "ui";
 	let uiComponents = isUiCatalogue ? await listComponentEntries() : [];
 	let uiExports = isUiCatalogue ? await listUiExportGroups() : [];
@@ -98,6 +102,18 @@ export default createAction(routes.api.show, async (ctx) => {
 			description={entry.description}
 			canonical={ctx.url.href}
 			og={{ type: "article" }}
+			schema={[
+				packageSchema({
+					name: entry.name,
+					description: entry.description,
+					url: canonical,
+					license: entry.license,
+				}),
+				trailSchema([{ name: "API", url: routes.api.index.href() }], {
+					name: entry.name,
+					url: canonical,
+				}),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -107,7 +123,7 @@ export default createAction(routes.api.show, async (ctx) => {
 				anchors={isUiCatalogue ? [] : anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article>
+				<article mix={[mf("h-entry")]}>
 					{isUiCatalogue ? (
 						<UiPackageHero
 							name={entry.name}
@@ -126,9 +142,9 @@ export default createAction(routes.api.show, async (ctx) => {
 									...(group ? [{ label: group }] : []),
 									{ label: entry.name },
 								]}
-								title={entry.name}
+								title={<EntryTitle href={activePath}>{entry.name}</EntryTitle>}
 								mono
-								description={entry.description}
+								description={<EntrySummary>{entry.description}</EntrySummary>}
 								actions={
 									<PageActions
 										markdownHref={markdownHref}
@@ -187,38 +203,40 @@ export default createAction(routes.api.show, async (ctx) => {
 						</header>
 					)}
 
-					{body ? (
-						<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
-							{body.content}
-						</Typeset>
-					) : null}
+					<div mix={[mf("e-content")]}>
+						{body ? (
+							<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
+								{body.content}
+							</Typeset>
+						) : null}
 
-					{!body && isUiCatalogue ? (
-						<div mix={[m("2.5rem", 0, 0, 0)]}>
-							<UiCatalogue components={uiComponents} exports={uiExports} />
-						</div>
-					) : null}
+						{!body && isUiCatalogue ? (
+							<div mix={[m("2.5rem", 0, 0, 0)]}>
+								<UiCatalogue components={uiComponents} exports={uiExports} />
+							</div>
+						) : null}
 
-					{!body && !isUiCatalogue ? (
-						<div mix={[m("2.5rem", 0, 0, 0)]}>
-							<CatalogueIndex groups={await readCatalogue(name)} />
-						</div>
-					) : null}
+						{!body && !isUiCatalogue ? (
+							<div mix={[m("2.5rem", 0, 0, 0)]}>
+								<CatalogueIndex groups={await readCatalogue(name)} />
+							</div>
+						) : null}
 
-					{guides.length > 0 ? (
-						<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
-							<h2 id={NEXT_ID}>Where to go next</h2>
-							<ul>
-								{guides.map((guide) => (
-									<li key={guide.slug}>
-										<a href={routes.docs.show.href({ slug: guide.slug })}>
-											{guide.frontmatter.title}
-										</a>
-									</li>
-								))}
-							</ul>
-						</Typeset>
-					) : null}
+						{guides.length > 0 ? (
+							<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
+								<h2 id={NEXT_ID}>Where to go next</h2>
+								<ul>
+									{guides.map((guide) => (
+										<li key={guide.slug}>
+											<a href={routes.docs.show.href({ slug: guide.slug })}>
+												{guide.frontmatter.title}
+											</a>
+										</li>
+									))}
+								</ul>
+							</Typeset>
+						) : null}
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

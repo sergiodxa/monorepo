@@ -15,6 +15,7 @@ import { DocsNotFound, searchQueryFromPath } from "@sdxc/ui/docs";
 import type { AppContext } from "~/app/initializers/router";
 import type { NavTree } from "~/app/services/navigation";
 
+import { NOINDEX } from "~/app/initializers/seo";
 import { listStartGuides } from "~/app/services/docs";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -59,7 +60,7 @@ export default async function docsNotFound(ctx: AppContext, tree: NavTree) {
 			assets={ctx.assets}
 			title="Not found — sdxc"
 			description="No documentation page answers to that address."
-			robots="noindex"
+			robots={NOINDEX}
 			siteFooter={false}
 		>
 			<DocsLayout tree={tree} filterQuery={ctx.url.searchParams.get("filter")} activePath="">

@@ -10,6 +10,7 @@
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { NOINDEX_NOFOLLOW } from "~/app/initializers/seo";
 import { findDemoDocsSite } from "~/resources/views/demo-docs";
 import routes from "~/routes/web";
 
@@ -56,7 +57,7 @@ export default createAction(routes.demoDocs.markdown, async (ctx) => {
 	return new Response(body, {
 		headers: {
 			"Content-Type": "text/markdown; charset=utf-8",
-			"X-Robots-Tag": "noindex, nofollow",
+			"X-Robots-Tag": NOINDEX_NOFOLLOW,
 		},
 	});
 });

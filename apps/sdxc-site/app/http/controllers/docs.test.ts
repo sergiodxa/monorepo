@@ -162,7 +162,7 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain("/docs/guides/rate-limits");
 		expect(body).toMatch(/<form[^>]*method="get"[^>]*action="\/search"/);
 		expect(body).toMatch(/name="q"[^>]*value="rate limits"|value="rate limits"[^>]*name="q"/);
-		expect(body).toContain('<meta name="robots" content="noindex"');
+		expect(body).toContain('<meta name="robots" content="noindex, follow"');
 	});
 
 	test("leads the 404's links with the way back, then the start guides", async () => {

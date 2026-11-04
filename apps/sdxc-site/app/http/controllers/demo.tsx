@@ -12,12 +12,10 @@ import { createAction } from "remix/router";
 
 import { withStreamCache } from "~/app/http/caching";
 import defaultHandler from "~/app/http/controllers/default-handler";
+import { NOINDEX_NOFOLLOW } from "~/app/initializers/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import { findDemoLanding } from "~/resources/views/demos";
 import routes from "~/routes/web";
-
-/** The directive every demo carries, which keeps it out of results and its links unfollowed. */
-const DEMO_ROBOTS = "noindex, nofollow";
 
 /** Reuses the landing's streamed render under the current build's cache key. */
 export default createAction(routes.demo, async (ctx) => {
@@ -31,7 +29,7 @@ export default createAction(routes.demo, async (ctx) => {
 				assets={ctx.assets}
 				title={demo.title}
 				description={demo.description}
-				robots={DEMO_ROBOTS}
+				robots={NOINDEX_NOFOLLOW}
 				siteFooter={false}
 			>
 				{demo.render()}

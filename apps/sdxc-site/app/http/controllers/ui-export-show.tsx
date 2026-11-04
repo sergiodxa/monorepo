@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/component";
 
+import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -23,6 +24,7 @@ import type { UiSymbol } from "~/app/services/ui-exports";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { pageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { toHeadline } from "~/app/services/headline";
@@ -32,6 +34,7 @@ import { isUiSubpath } from "~/app/services/ui-subpaths";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import PropsReference from "~/resources/components/props-reference";
 import ReferenceProse from "~/resources/components/reference-prose";
@@ -82,13 +85,30 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 	].filter((anchor): anchor is Anchor => anchor !== null);
 
 	let activePath = routes.api.uiExport.href({ subpath: reference.subpath, slug });
+	let canonical = seo.canonical(ctx.url);
+	let title = `${reference.name} — ${module}`;
 
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={`${reference.name} — ${module}`}
+			title={title}
 			description={reference.summary}
 			canonical={ctx.url.href}
+			schema={[
+				pageSchema({
+					name: reference.name,
+					description: reference.summary,
+					url: canonical,
+					cardTitle: title,
+				}),
+				trailSchema(
+					[
+						{ name: "API", url: routes.api.index.href() },
+						{ name: "@sdxc/ui", url: routes.api.show.href({ name: "ui" }) },
+					],
+					{ name: reference.name, url: canonical },
+				),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -98,7 +118,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
+				<article mix={[mf("h-entry"), vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<DocsPageHeader
 							crumbs={[
@@ -106,9 +126,13 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 								{ label: reference.name },
 							]}
-							title={reference.name}
+							title={<EntryTitle href={activePath}>{reference.name}</EntryTitle>}
 							mono
-							description={<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>}
+							description={
+								<EntrySummary>
+									<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>
+								</EntrySummary>
+							}
 							actions={
 								<PageActions
 									markdownHref={markdownHref}
@@ -124,76 +148,78 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 						/>
 					</header>
 
-					{usage ? (
-						<ReferenceSection id="usage" title="Usage">
-							<p mix={[m(0), text("base"), fg("neutral")]}>
-								<ReferenceProse>{usage}</ReferenceProse>
-							</p>
-						</ReferenceSection>
-					) : null}
+					<div mix={[mf("e-content")]}>
+						{usage ? (
+							<ReferenceSection id="usage" title="Usage">
+								<p mix={[m(0), text("base"), fg("neutral")]}>
+									<ReferenceProse>{usage}</ReferenceProse>
+								</p>
+							</ReferenceSection>
+						) : null}
 
-					{symbol.signature ? (
-						<ReferenceSection id="signature" title="Signature">
-							<div mix={[vstack({ gap: 3, align: "stretch" })]}>
-								<CodeBlock labels={CODE_LABELS} code={symbol.signature} language="typescript" />
-								{symbol.returns ? (
-									<p mix={[m(0), text("sm"), fg("neutral")]}>
-										<ReferenceProse>{`Returns ${lowerFirst(symbol.returns)}`}</ReferenceProse>
-									</p>
-								) : null}
-							</div>
-						</ReferenceSection>
-					) : null}
+						{symbol.signature ? (
+							<ReferenceSection id="signature" title="Signature">
+								<div mix={[vstack({ gap: 3, align: "stretch" })]}>
+									<CodeBlock labels={CODE_LABELS} code={symbol.signature} language="typescript" />
+									{symbol.returns ? (
+										<p mix={[m(0), text("sm"), fg("neutral")]}>
+											<ReferenceProse>{`Returns ${lowerFirst(symbol.returns)}`}</ReferenceProse>
+										</p>
+									) : null}
+								</div>
+							</ReferenceSection>
+						) : null}
 
-					{symbol.parameters.length > 0 ? (
-						<ReferenceSection id="parameters" title="Parameters">
-							<RowTable
-								label={`${symbol.name} parameters`}
-								first="Parameter"
-								rows={symbol.parameters}
-							/>
-						</ReferenceSection>
-					) : null}
+						{symbol.parameters.length > 0 ? (
+							<ReferenceSection id="parameters" title="Parameters">
+								<RowTable
+									label={`${symbol.name} parameters`}
+									first="Parameter"
+									rows={symbol.parameters}
+								/>
+							</ReferenceSection>
+						) : null}
 
-					{symbol.members.length > 0 ? (
-						<ReferenceSection id="properties" title="Properties">
-							<RowTable
-								label={`${symbol.name} properties`}
-								first="Property"
-								rows={symbol.members}
-							/>
-						</ReferenceSection>
-					) : null}
+						{symbol.members.length > 0 ? (
+							<ReferenceSection id="properties" title="Properties">
+								<RowTable
+									label={`${symbol.name} properties`}
+									first="Property"
+									rows={symbol.members}
+								/>
+							</ReferenceSection>
+						) : null}
 
-					{symbol.methods.length > 0 ? (
-						<ReferenceSection id="methods" title="Methods">
-							<MethodTable symbol={symbol} />
-						</ReferenceSection>
-					) : null}
+						{symbol.methods.length > 0 ? (
+							<ReferenceSection id="methods" title="Methods">
+								<MethodTable symbol={symbol} />
+							</ReferenceSection>
+						) : null}
 
-					{symbol.examples.length > 0 ? (
-						<ReferenceSection id="examples" title="Examples">
-							<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-								{symbol.examples.map((example) => (
-									<CodeBlock language="tsx" labels={CODE_LABELS} key={example} code={example} />
-								))}
-							</div>
-						</ReferenceSection>
-					) : null}
+						{symbol.examples.length > 0 ? (
+							<ReferenceSection id="examples" title="Examples">
+								<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+									{symbol.examples.map((example) => (
+										<CodeBlock language="tsx" labels={CODE_LABELS} key={example} code={example} />
+									))}
+								</div>
+							</ReferenceSection>
+						) : null}
 
-					{companions.length > 0 ? (
-						<ReferenceSection
-							id="related"
-							title="Used with it"
-							lead={`The events, constants and types its module publishes, each imported from ${module} too.`}
-						>
-							<div mix={[vstack({ gap: 8, align: "stretch" })]}>
-								{companions.map((companion) => (
-									<Companion key={companion.name} symbol={companion} />
-								))}
-							</div>
-						</ReferenceSection>
-					) : null}
+						{companions.length > 0 ? (
+							<ReferenceSection
+								id="related"
+								title="Used with it"
+								lead={`The events, constants and types its module publishes, each imported from ${module} too.`}
+							>
+								<div mix={[vstack({ gap: 8, align: "stretch" })]}>
+									{companions.map((companion) => (
+										<Companion key={companion.name} symbol={companion} />
+									))}
+								</div>
+							</ReferenceSection>
+						) : null}
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

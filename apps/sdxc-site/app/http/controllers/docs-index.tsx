@@ -24,6 +24,7 @@ import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import { pageSchema, seo } from "~/app/initializers/seo";
 import { describeSection, listGuides } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { readPackageFacts } from "~/app/services/packages";
@@ -123,6 +124,12 @@ export default createAction(routes.docs.index, async (ctx) => {
 			title="Documentation — sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			schema={pageSchema({
+				name: "Documentation",
+				description: DESCRIPTION,
+				url: seo.canonical(ctx.url),
+				cardTitle: "Documentation — sdxc",
+			})}
 			siteFooter={false}
 		>
 			<DocsLayout

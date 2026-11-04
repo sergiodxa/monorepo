@@ -15,6 +15,7 @@ import { Feature } from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import { pageSchema, seo } from "~/app/initializers/seo";
 import { readPackageFacts } from "~/app/services/packages";
 import { listShowcase } from "~/app/services/showcase";
 import Actions from "~/resources/components/actions";
@@ -81,6 +82,12 @@ export default createAction(routes.showcase, async (ctx) => {
 			title="Showcase — sdxc"
 			description={description}
 			canonical={ctx.url.href}
+			schema={pageSchema({
+				name: "Built on these packages",
+				description,
+				url: seo.canonical(ctx.url),
+				cardTitle: "Showcase — sdxc",
+			})}
 		>
 			<SiteHeader activePath={routes.showcase.href()} />
 

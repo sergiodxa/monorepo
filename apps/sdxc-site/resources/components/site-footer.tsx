@@ -18,14 +18,9 @@ import { when } from "@sdxc/u/state";
 import { leading, text, tracking, weight } from "@sdxc/u/typography";
 import { SiteFooter as UiSiteFooter } from "@sdxc/ui/landing";
 
-import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_URL } from "~/config/constants";
+import { AUTHOR_URL, AUTHOR_X_URL, NPM_ORG_URL, REPOSITORY_URL } from "~/config/constants";
+import OwnerCard from "~/resources/components/owner-card";
 import routes from "~/routes/web";
-
-/** Where the collection is read and its issues are filed. */
-const REPOSITORY_HREF = "https://github.com/sergiodxa/monorepo";
-
-/** Where every package is published. */
-const NPM_HREF = "https://www.npmjs.com/org/sdxc";
 
 /** The year the copyright line names. */
 const COPYRIGHT_YEAR = 2026;
@@ -86,8 +81,8 @@ export default function SiteFooter(_handle: Handle) {
 				{
 					title: "Elsewhere",
 					links: [
-						{ label: "Source on GitHub", href: REPOSITORY_HREF },
-						{ label: "Packages on npm", href: NPM_HREF },
+						{ label: "Source on GitHub", href: REPOSITORY_URL },
+						{ label: "Packages on npm", href: NPM_ORG_URL },
 						{ label: "The author's blog", href: AUTHOR_URL },
 						{ label: "Sponsor the work", href: routes.sponsors.href() },
 					],
@@ -95,19 +90,15 @@ export default function SiteFooter(_handle: Handle) {
 			]}
 			legal={
 				<p mix={[m(0)]}>
-					© {COPYRIGHT_YEAR}{" "}
-					<a href={AUTHOR_URL} mix={[fg("neutral.emphasis"), when("&:hover", fg("brand"))]}>
-						{AUTHOR_NAME}
-					</a>
-					. MIT licensed.
+					© {COPYRIGHT_YEAR} <OwnerCard />. MIT licensed.
 				</p>
 			}
 			social={
 				<>
-					<a href={REPOSITORY_HREF} aria-label="GitHub" title="GitHub">
+					<a href={REPOSITORY_URL} aria-label="GitHub" title="GitHub">
 						<GitHubMark />
 					</a>
-					<a href={AUTHOR_X_URL} aria-label="X" title="X">
+					<a href={AUTHOR_X_URL} rel="me" aria-label="X" title="X">
 						<XMark />
 					</a>
 					<a href={routes.feed.href()} aria-label="RSS feed" title="RSS feed" data-rmx-document>

@@ -9,9 +9,12 @@
 
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
+import { MicroTime, mf } from "@sdxc/microformats/ui";
 import { isFailure } from "@sdxc/result";
+import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { Typeset } from "@sdxc/ui";
 import { DocsPageHeader } from "@sdxc/ui/docs";
 import * as s from "remix/data-schema";
@@ -19,12 +22,14 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { articleSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
-import { absoluteUrl } from "~/config/constants";
+import { AUTHOR_NAME, AUTHOR_URL, absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import GuideOutcomes from "~/resources/components/guide-outcomes";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
@@ -60,6 +65,9 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let anchors = tableOfContents(document);
 	let markdownHref = routes.markdown.docs.href({ slug });
 	let activePath = routes.docs.show.href({ slug });
+	let canonical = seo.canonical(ctx.url);
+	let updatedAt = new Date(frontmatter.lastUpdated);
+	let dated = !Number.isNaN(updatedAt.getTime());
 
 	/** `docs / <section> / <title>`: only the root is somewhere a reader can go. */
 	let breadcrumbs = [
@@ -75,6 +83,20 @@ export default createAction(routes.docs.show, async (ctx) => {
 			description={frontmatter.description}
 			canonical={ctx.url.href}
 			og={{ type: "article" }}
+			schema={[
+				articleSchema({
+					name: frontmatter.title,
+					description: frontmatter.description,
+					url: canonical,
+					cardTitle: `${frontmatter.title} — sdxc`,
+					updated: frontmatter.lastUpdated,
+					section: frontmatter.section.title,
+				}),
+				trailSchema([{ name: "Documentation", url: routes.docs.index.href() }], {
+					name: frontmatter.title,
+					url: canonical,
+				}),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -84,32 +106,50 @@ export default createAction(routes.docs.show, async (ctx) => {
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article>
+				<article mix={[mf("h-entry")]}>
 					<header mix={[vstack({ gap: 3 })]}>
 						<DocsPageHeader
 							crumbs={breadcrumbs}
-							title={frontmatter.title}
-							description={frontmatter.description}
-							updated={{
-								label: "Last updated",
-								date: frontmatter.lastUpdated,
-								text: formatUpdated(frontmatter.lastUpdated),
-							}}
+							title={<EntryTitle href={activePath}>{frontmatter.title}</EntryTitle>}
+							description={<EntrySummary>{frontmatter.description}</EntrySummary>}
 							actions={
-								<PageActions
-									markdownHref={markdownHref}
-									markdownUrl={absoluteUrl(markdownHref)}
-									sourceUrl={`${GUIDE_SOURCE_BASE}${slug}.md`}
-								/>
+								<>
+									<p mix={[m(0)]}>
+										Last updated{" "}
+										{dated ? (
+											<MicroTime property="dt-updated" value={updatedAt}>
+												{formatUpdated(frontmatter.lastUpdated)}
+											</MicroTime>
+										) : (
+											formatUpdated(frontmatter.lastUpdated)
+										)}
+										{" by "}
+										<span mix={[mf("p-author", "h-card")]}>
+											<a
+												href={AUTHOR_URL}
+												mix={[mf("p-name", "u-url"), fg("neutral"), when("&:hover", fg("brand"))]}
+											>
+												{AUTHOR_NAME}
+											</a>
+										</span>
+									</p>
+									<PageActions
+										markdownHref={markdownHref}
+										markdownUrl={absoluteUrl(markdownHref)}
+										sourceUrl={`${GUIDE_SOURCE_BASE}${slug}.md`}
+									/>
+								</>
 							}
 						/>
 
 						<GuideOutcomes outcomes={frontmatter.outcomes} />
 					</header>
 
-					<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
-						{toRemix(document, { components: DOCS_COMPONENTS })}
-					</Typeset>
+					<div mix={[mf("e-content")]}>
+						<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
+							{toRemix(document, { components: DOCS_COMPONENTS })}
+						</Typeset>
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

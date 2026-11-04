@@ -16,6 +16,7 @@ import { m, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { LinkButton } from "@sdxc/ui";
 
+import { NOINDEX } from "~/app/initializers/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -29,6 +30,7 @@ export default function defaultHandler(ctx: { render: RenderFunction; assets: Do
 			assets={ctx.assets}
 			title="Not found — sdxc"
 			description="The requested page does not exist."
+			robots={NOINDEX}
 		>
 			<main mix={[vstack({ gap: 5, align: "center", justify: "center" }), p(24, 5)]}>
 				<h1 mix={[m(0), text("3xl")]}>Not found</h1>

@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { mf } from "@sdxc/microformats/ui";
 import { vstack } from "@sdxc/u/layout";
 import { DocsPageHeader } from "@sdxc/ui/docs";
 import * as s from "remix/data-schema";
@@ -16,12 +17,14 @@ import { createAction } from "remix/router";
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { readIconStyle } from "~/app/http/validators/icon-style";
+import { pageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { renderIconSvg } from "~/app/services/icon-svg";
 import { findIcon } from "~/app/services/icons";
 import { buildPackageNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import IconDetail from "~/resources/components/icon-detail";
 import PageActions from "~/resources/components/page-actions";
 import DocsLayout from "~/resources/layouts/docs";
@@ -41,13 +44,32 @@ export default createAction(routes.api.icon, async (ctx) => {
 	let style = readIconStyle(ctx.url.searchParams);
 
 	let markdownHref = routes.markdown.icon.href({ icon: icon.name });
+	let activePath = routes.api.icon.href({ icon: icon.name });
+	let canonical = seo.canonical(activePath);
+	let description = `The ${icon.name} icon from Lucide, rendered with ${icon.component} from @sdxc/icons.`;
+	let summary = `Rendered with ${icon.component}, or <Icon name="${icon.name}" /> when the name is data.`;
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${icon.name} icon — @sdxc/icons`}
-			description={`The ${icon.name} icon from Lucide, rendered with ${icon.component} from @sdxc/icons.`}
-			canonical={absoluteUrl(routes.api.icon.href({ icon: icon.name }))}
+			description={description}
+			canonical={absoluteUrl(activePath)}
 			og={{ type: "article" }}
+			schema={[
+				pageSchema({
+					name: icon.name,
+					description,
+					url: canonical,
+					cardTitle: `${icon.name} icon — @sdxc/icons`,
+				}),
+				trailSchema(
+					[
+						{ name: "API", url: routes.api.index.href() },
+						{ name: "@sdxc/icons", url: routes.api.icons.href() },
+					],
+					{ name: icon.name, url: canonical },
+				),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -56,16 +78,16 @@ export default createAction(routes.api.icon, async (ctx) => {
 				activePath={routes.api.icons.href()}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article mix={[vstack({ gap: 6, align: "stretch" })]}>
+				<article mix={[mf("h-entry"), vstack({ gap: 6, align: "stretch" })]}>
 					<DocsPageHeader
 						crumbs={[
 							{ label: "API", href: routes.api.index.href() },
 							{ label: "@sdxc/icons", href: routes.api.icons.href() },
 							{ label: icon.name },
 						]}
-						title={icon.name}
+						title={<EntryTitle href={activePath}>{icon.name}</EntryTitle>}
 						mono
-						description={`Rendered with ${icon.component}, or <Icon name="${icon.name}" /> when the name is data.`}
+						description={<EntrySummary>{summary}</EntrySummary>}
 						actions={
 							<PageActions
 								markdownHref={markdownHref}
@@ -74,7 +96,9 @@ export default createAction(routes.api.icon, async (ctx) => {
 							/>
 						}
 					/>
-					<IconDetail icon={icon} style={style} svg={await renderIconSvg(icon.name, style)} />
+					<div mix={[mf("e-content")]}>
+						<IconDetail icon={icon} style={style} svg={await renderIconSvg(icon.name, style)} />
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

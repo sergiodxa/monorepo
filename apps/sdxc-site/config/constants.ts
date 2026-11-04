@@ -27,6 +27,24 @@ export const AUTHOR_X_HANDLE = "@sergiodxa";
 /** The profile `AUTHOR_X_HANDLE` names. */
 export const AUTHOR_X_URL = "https://x.com/sergiodxa";
 
+/** The author's GitHub profile, the account the repository and the packages are published from. */
+export const AUTHOR_GITHUB_URL = "https://github.com/sergiodxa";
+
+/** The avatar GitHub serves for {@link AUTHOR_GITHUB_URL}. */
+export const AUTHOR_PHOTO_URL = "https://github.com/sergiodxa.png";
+
+/**
+ * Profiles that name the same person. Pages link them with `rel="me"` so a reader can
+ * check the site belongs to that person.
+ */
+export const AUTHOR_PROFILES = [AUTHOR_URL, AUTHOR_X_URL, AUTHOR_GITHUB_URL] as const;
+
+/** Where the collection is read and its issues are filed. */
+export const REPOSITORY_URL = "https://github.com/sergiodxa/monorepo";
+
+/** Where every package is published. */
+export const NPM_ORG_URL = "https://www.npmjs.com/org/sdxc";
+
 /** Where a reader funds the author's work on these packages. */
 export const SPONSOR_URL = "https://github.com/sponsors/sergiodxa";
 
