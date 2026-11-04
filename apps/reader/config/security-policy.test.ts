@@ -21,7 +21,6 @@ async function decorated(response: () => Response): Promise<Response> {
 		middleware: [
 			csp({
 				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
-				filter: () => true,
 			}),
 			securityHeaders(SECURITY_POLICY),
 		],
@@ -30,37 +29,25 @@ async function decorated(response: () => Response): Promise<Response> {
 	return router.fetch("https://reader.test/");
 }
 
+/** HTML fixture so Remix's default CSP filter (text/html only) selects the response. */
+function html(body: string, init?: ResponseInit): Response {
+	let headers = new Headers(init?.headers);
+	if (!headers.has("content-type")) headers.set("content-type", "text/html");
+	return new Response(body, { ...init, headers });
+}
+
 describe("the security policy", () => {
 	test("writes the Content-Security-Policy the app decided on", async () => {
-		let response = await decorated(() => new Response("<p>hi</p>"));
+		let response = await decorated(() => html("<p>hi</p>"));
 		let policy = response.headers.get("content-security-policy") ?? "";
 
-<<<<<<< HEAD
-		expect(response.headers.get("content-security-policy")).toBe(
-			[
-				"default-src 'none'",
-				"script-src 'self'",
-				"style-src 'self' 'unsafe-inline'",
-				"img-src 'self' data:",
-				"font-src 'self'",
-				"connect-src 'self'",
-				"manifest-src 'self'",
-				"media-src 'none'",
-				"frame-src 'none'",
-				"frame-ancestors 'none'",
-				"form-action 'self' https://auth.sergiodxa.com https://polar.sh https://buy.polar.sh",
-				"base-uri 'none'",
-				"object-src 'none'",
-			].join("; "),
-=======
 		expect(policy).toMatch(
-			/^default-src 'none'; script-src 'self' 'nonce-[A-Za-z0-9+/=]+'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; media-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'; object-src 'none'$/,
->>>>>>> 1a21e4dbb (fix(reader): Use Remix csp() for CSP and nonces)
+			/^default-src 'none'; script-src 'self' 'nonce-[A-Za-z0-9+/=]+'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; media-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'self' https:\/\/auth\.sergiodxa\.com https:\/\/polar\.sh https:\/\/buy\.polar\.sh; base-uri 'none'; object-src 'none'$/,
 		);
 	});
 
 	test("names no publisher's host in any directive", async () => {
-		let response = await decorated(() => new Response("<p>hi</p>"));
+		let response = await decorated(() => html("<p>hi</p>"));
 		let policy = response.headers.get("content-security-policy") ?? "";
 		let fetching = policy.split("; ").filter((directive) => !directive.startsWith("form-action "));
 
@@ -74,7 +61,7 @@ describe("the security policy", () => {
 	 * that redirect unless `form-action` names where it leads.
 	 */
 	test("lets a form's redirect reach the identity provider and the payment platform", async () => {
-		let response = await decorated(() => new Response("<p>hi</p>"));
+		let response = await decorated(() => html("<p>hi</p>"));
 		let policy = response.headers.get("content-security-policy") ?? "";
 		let formAction = policy.split("; ").find((directive) => directive.startsWith("form-action "));
 
@@ -88,7 +75,7 @@ describe("the security policy", () => {
 	});
 
 	test("carries the rest of the header set on every response", async () => {
-		let response = await decorated(() => new Response("<p>hi</p>"));
+		let response = await decorated(() => html("<p>hi</p>"));
 
 		expect(response.headers.get("referrer-policy")).toBe("no-referrer");
 		expect(response.headers.get("x-content-type-options")).toBe("nosniff");
@@ -104,15 +91,15 @@ describe("the security policy", () => {
 	});
 
 	test("hands the body on exactly as the handler produced it", async () => {
-		let response = await decorated(() => new Response("<p>hi</p>", { status: 404 }));
+		let response = await decorated(() => html("<p>hi</p>", { status: 404 }));
 
 		expect(response.status).toBe(404);
 		expect(await response.text()).toBe("<p>hi</p>");
 	});
 
 	test("preserves a response's own CSP as a separate policy Remix appends beside", async () => {
-		let response = await decorated(
-			() => new Response("<p>hi</p>", { headers: { "content-security-policy": "sandbox" } }),
+		let response = await decorated(() =>
+			html("<p>hi</p>", { headers: { "content-security-policy": "sandbox" } }),
 		);
 
 		/** Remix appends; `Headers#get` joins multiple values with ", ". */
