@@ -25,9 +25,8 @@ import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-poli
 
 /**
  * Publishes `ctx.formData`, `ctx.session`, `ctx.access`, `ctx.locale`, `ctx.intl`, `ctx.honeypot`,
- * `ctx.securityHeaders`, `ctx.assets` and `ctx.render` on a page's context. A POST without valid
- * honeypot fields is refused with a 400 before the controller runs; Remix CSP and the other
- * security headers come right before the assets and renderer.
+ * `ctx.securityHeaders`, `ctx.assets` and `ctx.render` on a page's context. A POST without a
+ * valid honeypot is refused with 400; Remix CSP and the other headers sit before assets/render.
  */
 export default createMiddleware(
 	formData(),

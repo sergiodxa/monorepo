@@ -1,8 +1,6 @@
 /**
- * The security headers every page is sent with: a Content-Security-Policy that admits this
- * origin and the response's nonce (via Remix `csp()`), and the headers that keep the page out
- * of frames and its referrer and device APIs to itself. Name an origin here before a page loads
- * from it.
+ * The CSP Remix's `csp()` sends plus the non-CSP headers that keep the page out of frames and
+ * its referrer and device APIs to itself. Name an origin here before a page loads from it.
  */
 
 import type { CSP, SecurityHeaders } from "@sdxc/security-headers";
