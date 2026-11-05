@@ -243,6 +243,25 @@ function toSigningSecret(secret: string): string {
 }
 
 /**
+ * Every key a Polar endpoint's deliveries may be signed with. Dashboard secrets sign
+ * over their UTF-8 bytes; a `whsec_` secret whose remainder is base64 may instead sign
+ * with those decoded bytes, as Standard Webhooks reads it, so both readings verify.
+ *
+ * @param secret - The endpoint's signing secret, as configured
+ * @returns Base64 key material for each reading the secret supports
+ */
+function signingSecrets(secret: string): string[] {
+	let secrets = [toSigningSecret(secret)];
+	let encoded = secret.startsWith("whsec_") ? secret.slice("whsec_".length) : "";
+
+	if (/^(?:[A-Za-z0-9+/]{4})+(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
+		secrets.push(encoded);
+	}
+
+	return secrets;
+}
+
+/**
  * Rebuilds a delivery as a request whose body is unread, since a stream reads
  * once and verification covers the exact bytes received. The headers are copied
  * entry by entry, which is the form every interceptor in the stack accepts.
@@ -1037,7 +1056,7 @@ export class PolarBilling extends APIClient implements Billing {
 				let secret = await verificationSecret(this.#webhookSecret);
 
 				let verified = await Webhooks.verify(toVerifiableRequest(request, rawBody), {
-					secret: toSigningSecret(secret),
+					secrets: signingSecrets(secret),
 					tolerance: WEBHOOK_TOLERANCE,
 				});
 

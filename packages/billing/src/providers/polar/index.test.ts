@@ -812,6 +812,36 @@ describe("PolarBilling", () => {
 		expect(await polar().webhooks.verify(signed.request, signed.body)).toBe(true);
 	});
 
+	/**
+	 * An endpoint whose secret came back as `whsec_<base64>` is signed with the decoded
+	 * remainder, and refusing it answered every delivery with a 401.
+	 */
+	test("verifies a whsec_ secret's delivery signed with its decoded key", async () => {
+		let secret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+		let signed = await unwrap(
+			sign(
+				{ type: "order.paid", data: { id: "019order" } },
+				{ secret, id: "msg_1", timestamp: new Date() },
+			),
+		);
+		let request = new Request("https://app.example.com/webhooks/billing", {
+			method: "POST",
+			headers: new Headers(signed.headers),
+			body: signed.body,
+		});
+
+		expect(await polar({ webhookSecret: secret }).webhooks.verify(request, signed.body)).toBe(true);
+	});
+
+	test("still verifies that whsec_ secret over its own bytes", async () => {
+		let secret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+		let signed = await delivery({ type: "order.paid", data: { id: "019order" } }, secret);
+
+		expect(
+			await polar({ webhookSecret: secret }).webhooks.verify(signed.request, signed.body),
+		).toBe(true);
+	});
+
 	test("refuses a delivery signed with anything else", async () => {
 		let signed = await delivery({ type: "order.paid", data: { id: "019order" } }, "whsec_other");
 
