@@ -46,6 +46,14 @@ const EXPECTED_COOLDOWN_SECONDS = 5 * 60;
 /** A password that passes every local rule and that the stand-in breach API reports. */
 const BREACHED_PASSWORD = "breached-but-long";
 
+/**
+ * Drops `nonce="…"` from Remix-stamped `<style>` tags so two renders of the same page can be
+ * compared for identity without depending on the per-request CSP nonce.
+ */
+function stripStyleNonces(html: string): string {
+	return html.replace(/\snonce="[^"]*"/g, "");
+}
+
 let server = setupServer(pwnedPasswords([BREACHED_PASSWORD]));
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -212,7 +220,7 @@ describe("requesting a password reset", () => {
 		let unknownBody = await unknown.text();
 
 		expect(unknown.status).toBe(known.status);
-		expect(unknownBody).toBe(knownBody);
+		expect(stripStyleNonces(unknownBody)).toBe(stripStyleNonces(knownBody));
 		expect(unknown.headers.get("content-type")).toBe(known.headers.get("content-type"));
 		expect(app.mail.messages).toHaveLength(0);
 	});
