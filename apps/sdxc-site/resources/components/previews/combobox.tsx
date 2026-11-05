@@ -138,6 +138,7 @@ export const ComboBoxPreview = clientEntry(
 		let committed: string | null = null;
 
 		return () => (
+			// @ts-expect-error -- Remix 3.2 rejects Handle-returning Context providers as JSX components
 			<combobox.Context name="timezone">
 				<ComboBox
 					mix={[
