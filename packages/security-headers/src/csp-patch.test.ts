@@ -53,4 +53,27 @@ describe("cspPatch", () => {
 
 		expect(response.headers.has("content-security-policy")).toBe(false);
 	});
+
+	test("leaves a non-HTML response alone when a patch was queued but Remix wrote no CSP", async () => {
+		let router = createRouter({
+			middleware: [
+				cspPatch(),
+				csp({
+					reportOnlyPolicy: { defaultSrc: ["'self'"] },
+				}),
+			],
+		});
+		router.get("/health", (ctx) => {
+			patchCsp(ctx, { reportOnlyPolicy: { scriptSrc: ["'self'", "sha256-abc"] } });
+			return Response.json(
+				{ status: "pass" },
+				{ headers: { "Content-Type": "application/health+json" } },
+			);
+		});
+
+		let response = await router.fetch("https://example.com/health");
+
+		expect(response.headers.get("content-type")).toBe("application/health+json");
+		expect(response.headers.has("content-security-policy-report-only")).toBe(false);
+	});
 });

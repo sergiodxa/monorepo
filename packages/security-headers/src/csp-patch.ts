@@ -78,9 +78,22 @@ export function cspPatch(): Middleware {
 		let { policy, reportOnlyPolicy } = state.patch;
 		if (policy === undefined && reportOnlyPolicy === undefined) return response;
 
+		/**
+		 * Only rewrite headers Remix already wrote. A queued patch on a JSON or other non-HTML
+		 * answer (e.g. import-map hashing that always runs) must not invent CSP or rebuild the
+		 * response — under MSW that rebuild drops Content-Type.
+		 */
+		let hasEnforced = response.headers.has("content-security-policy");
+		let hasReportOnly = response.headers.has("content-security-policy-report-only");
+		let appliesEnforced = policy !== undefined && hasEnforced;
+		let appliesReportOnly = reportOnlyPolicy !== undefined && hasReportOnly;
+		if (!appliesEnforced && !appliesReportOnly) return response;
+
 		let headers = new Headers(response.headers);
-		applyHeaderPatch(headers, "content-security-policy", policy);
-		applyHeaderPatch(headers, "content-security-policy-report-only", reportOnlyPolicy);
+		if (appliesEnforced) applyHeaderPatch(headers, "content-security-policy", policy);
+		if (appliesReportOnly) {
+			applyHeaderPatch(headers, "content-security-policy-report-only", reportOnlyPolicy);
+		}
 		return new Response(response.body, {
 			status: response.status,
 			statusText: response.statusText,
