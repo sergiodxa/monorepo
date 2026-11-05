@@ -18,10 +18,11 @@ describe("page", () => {
 		expect(response.headers.get("x-frame-options")).toBe("DENY");
 	});
 
-	test("advertises no nonce when the page renders no inline script", async () => {
+	test("names a request nonce in script-src for when the document hydrates", async () => {
 		let response = await createWebRouter().fetch("https://example.com/");
+		let policy = response.headers.get("content-security-policy") ?? "";
 
-		expect(response.headers.get("content-security-policy")).not.toContain("'nonce-");
+		expect(policy).toMatch(/script-src[^;]*'nonce-[A-Za-z0-9+/=]+'/);
 	});
 
 	test("renders in the language the visitor asks for, or the fallback", async () => {
