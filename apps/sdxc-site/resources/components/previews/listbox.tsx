@@ -97,6 +97,7 @@ export const ListBoxPreview = clientEntry(import.meta.url, function ListBoxPrevi
 	let activeValue: listbox.ListboxValue = "docs-site";
 
 	return () => (
+		// @ts-expect-error -- Remix 3.2 rejects Handle-returning Context providers as JSX components
 		<listbox.Context
 			value={value}
 			activeValue={activeValue}
