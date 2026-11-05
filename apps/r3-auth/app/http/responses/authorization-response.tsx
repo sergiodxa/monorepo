@@ -25,8 +25,12 @@ import FormPostView from "~/resources/views/form-post";
  */
 const NO_STORE_HEADERS = { "Cache-Control": "no-store", Pragma: "no-cache" };
 
-/** The slice of request context this module reads. */
-export type AuthorizationResponseContext = RequestContext & {
+/**
+ * The slice of request context this module reads. Params and middleware entries stay open so
+ * `getCspNonce(ctx)` accepts the router's `RequestContextWithEntries` the same way Remix's CSP
+ * helpers do.
+ */
+export type AuthorizationResponseContext = RequestContext<any, any> & {
 	render: Renderer<RemixNode>;
 	intl: I18n;
 };
