@@ -1,9 +1,8 @@
 /**
- * The escape hatch inherits the serializer's number handling: a bare number on
- * a property outside the unitless allow-list gains a `px` suffix, so `flex: 1`
- * serializes as `flex: 1px` and parses as a `1px` basis, leaving the layout
- * quietly wrong. Pass such values as strings; zero and known-unitless
- * properties keep their bare number.
+ * The escape hatch inherits the serializer's number handling: bare numbers on length
+ * properties gain a `px` suffix (`width: 1` → `width: 1px`), while unitless properties
+ * Remix knows about (`flex`, `line-height`, …) and zero stay bare. Pass other units as
+ * strings.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,13 +27,14 @@ describe("raw", () => {
 		expect(css.replace(/\s+/g, " ")).toContain('&[data-color="1"] { color: var(--ui-chart-1); }');
 	});
 
-	test("a bare number on a non-unitless property picks up a px suffix", async () => {
-		expect(await declarations(raw({ flex: 1 }))).toEqual(["flex: 1px"]);
-		expect(await declarations(raw({ flex: "1" }))).toEqual(["flex: 1"]);
+	test("a bare number on a length property picks up a px suffix", async () => {
+		expect(await declarations(raw({ width: 1 }))).toEqual(["width: 1px"]);
+		expect(await declarations(raw({ width: "1rem" }))).toEqual(["width: 1rem"]);
 	});
 
 	test("zero and known-unitless properties are left alone", async () => {
 		expect(await declarations(raw({ margin: 0 }))).toEqual(["margin: 0"]);
 		expect(await declarations(raw({ lineHeight: 1.5 }))).toEqual(["line-height: 1.5"]);
+		expect(await declarations(raw({ flex: 1 }))).toEqual(["flex: 1"]);
 	});
 });
