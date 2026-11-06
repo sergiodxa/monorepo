@@ -65,7 +65,7 @@ export function wakabaMeta(
 	url: string,
 	listing: AppStoreListing = APP_STORE,
 ): Array<DocumentShell.MetaTag> {
-	let image = new URL(`${WAKABA_ASSETS}/social-card.png`, PROFILE.canonical.origin).href;
+	let image = new URL(`${WAKABA_ASSETS}/branding/social-card.png`, PROFILE.canonical.origin).href;
 	let tags: Array<DocumentShell.MetaTag> = [
 		{ property: "og:type", content: "website" },
 		{ property: "og:site_name", content: "Wakaba" },
@@ -90,8 +90,12 @@ export function wakabaMeta(
 
 /** The icons every Wakaba page names: the 学 mark in either scheme, and the app icon. */
 const ICONS: Array<DocumentShell.IconLink> = [
-	{ rel: "icon", href: `${WAKABA_ASSETS}/favicon.svg`, type: "image/svg+xml" },
-	{ rel: "apple-touch-icon", href: `${WAKABA_ASSETS}/apple-touch-icon.png`, sizes: "180x180" },
+	{ rel: "icon", href: `${WAKABA_ASSETS}/branding/logo/favicon.svg`, type: "image/svg+xml" },
+	{
+		rel: "apple-touch-icon",
+		href: `${WAKABA_ASSETS}/branding/app-icon/apple-touch-icon.png`,
+		sizes: "180x180",
+	},
 ];
 
 /**

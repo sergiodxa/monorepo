@@ -67,6 +67,11 @@ export function BonsaiBand() {
 	);
 }
 
+/** A stage's file name under `bonsai/light/` and `bonsai/dark/`: its index and first day. */
+function stageFile(index: number, days: number): string {
+	return `${String(index).padStart(2, "0")}-day-${String(days).padStart(3, "0")}`;
+}
+
 /** Seconds each stage before the last holds the stage. */
 const STEP = 3;
 
@@ -188,12 +193,12 @@ function BonsaiTimelapse() {
 								<picture mix={[block(), is("full")]}>
 									<source
 										media="(prefers-color-scheme: dark)"
-										srcSet={`${WAKABA_ASSETS}/bonsai/dark-${String(index).padStart(2, "0")}.webp`}
+										srcSet={`${WAKABA_ASSETS}/bonsai/dark/${stageFile(index, days)}.webp`}
 										width={480}
 										height={455}
 									/>
 									<img
-										src={`${WAKABA_ASSETS}/bonsai/light-${String(index).padStart(2, "0")}.webp`}
+										src={`${WAKABA_ASSETS}/bonsai/light/${stageFile(index, days)}.webp`}
 										alt={
 											final
 												? "Wakaba's bonsai at a year of practice, fully grown, in the same pot it started in."

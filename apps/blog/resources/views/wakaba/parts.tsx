@@ -65,73 +65,95 @@ export function WakabaMark(handle: Handle<WakabaMark.Props>) {
 	);
 }
 
-/** One screenshot of the app, with its dark capture when the app was shot in both. */
+/**
+ * One capture of the app: its file under `/apps/wakaba/` without the extension, and the
+ * `-light`/`-dark` suffix the file carries when the app was shot in both appearances.
+ */
 interface Screen {
+	file: string;
 	alt: string;
 	dark?: boolean;
 }
 
 /**
- * The real screenshots the pages frame, keyed by their file under `screens/`. Each is the
- * English capture at 560 × 1218, half the device's width, so it stays sharp at the 280px
- * a phone is drawn at.
+ * The real captures the pages frame: app screenshots under `screenshots/` and widget gallery
+ * captures under `widgets/`. Each is the English capture at 560 × 1218, half the device's
+ * width, so it stays sharp at the 280px a phone is drawn at.
  */
 export const SCREENS = {
 	"path-kitsune": {
+		file: "screenshots/path-kitsune",
 		alt: "Wakaba's learning path at Level 1: numbered session stones, with Kitsune pointing to the next one.",
 	},
 	"flashcards-fish": {
+		file: "screenshots/flashcards-fish",
 		alt: "A flashcard for 魚, fish: furigana さかな above the kanji and the romaji sakana below.",
 		dark: true,
 	},
 	practice: {
+		file: "screenshots/practice",
 		alt: "A practice question asking for the meaning of みず, with Aka Oni beside the word and three answers below.",
 		dark: true,
 	},
 	"flashcards-water": {
+		file: "screenshots/flashcards-water",
 		alt: "A flashcard for 水, water: furigana みず over the kanji, the meaning and the romaji mizu.",
 	},
 	conjugations: {
+		file: "screenshots/conjugations",
 		alt: "The details of 食べる, to eat: its dictionary form and conjugations such as 食べます and 食べません.",
 	},
 	"level-exam-path": {
+		file: "screenshots/level-exam-path",
 		alt: "The learning path reaching the Level 2 exam, with Kitsune beside the next sessions.",
 	},
 	listening: {
+		file: "screenshots/listening",
 		alt: "A listening question: a speaker button plays the word and three meanings wait below.",
 	},
 	speaking: {
+		file: "screenshots/speaking",
 		alt: "Speaking practice asking the learner to say みず aloud, with a microphone button.",
 	},
 	"build-sentence": {
+		file: "screenshots/build-sentence",
 		alt: "A sentence to build in Japanese from word tiles, for “I ask the teacher a question.”",
 	},
 	"conjugation-practice": {
+		file: "screenshots/conjugation-practice",
 		alt: "A conjugation question: write たべる, to eat, in its polite non-past form.",
 	},
 	"oni-correction": {
+		file: "screenshots/oni-correction",
 		alt: "Aka Oni after a wrong answer: the right word みず, water, and a note on how it differs.",
 	},
 	"kana-tracing": {
+		file: "screenshots/kana-tracing",
 		alt: "Katakana tracing practice: a stroke drawn over the guide, numbered in stroke order.",
 	},
 	"stroke-guide": {
+		file: "screenshots/stroke-guide",
 		alt: "The stroke-order guide for 水, its second stroke highlighted and numbered.",
 	},
 	"new-word": {
+		file: "screenshots/new-word",
 		alt: "A new word introduced before any question: みず, water, mizu, with Tengu and a Start exercise button.",
 	},
 	"practice-feedback": {
+		file: "screenshots/practice-feedback",
 		alt: "A correct answer: “You got it!” over みず, water, mizu, with a Next word button.",
 	},
 	"oni-mistakes": {
+		file: "screenshots/oni-mistakes",
 		alt: "A review of earlier mistakes with Aka Oni, asking for the reading of みず in romaji.",
 	},
 	"widget-progress": {
+		file: "widgets/progress-medium",
 		alt: "The Practice bonsai widget in the iOS widget gallery: a bonsai, a 23-day streak, 36 words learned and “Practiced today”.",
 		dark: true,
 	},
 	"widget-word": {
+		file: "widgets/word-large",
 		alt: "The Word of the day widget in the iOS widget gallery: 機, ki, machine (kanji component).",
 		dark: true,
 	},
@@ -162,7 +184,7 @@ export function Phone(handle: Handle<Phone.Props>) {
 	return () => {
 		let { eager, screen } = handle.props;
 		let shot: Screen = SCREENS[screen];
-		let base = shot.dark ? `${screen}-light` : screen;
+		let base = shot.dark ? `${shot.file}-light` : shot.file;
 
 		return (
 			<div
@@ -180,13 +202,13 @@ export function Phone(handle: Handle<Phone.Props>) {
 					{shot.dark ? (
 						<source
 							media="(prefers-color-scheme: dark)"
-							srcSet={`${WAKABA_ASSETS}/screens/${screen}-dark.webp`}
+							srcSet={`${WAKABA_ASSETS}/${shot.file}-dark.webp`}
 							width={560}
 							height={1218}
 						/>
 					) : null}
 					<img
-						src={`${WAKABA_ASSETS}/screens/${base}.webp`}
+						src={`${WAKABA_ASSETS}/${base}.webp`}
 						alt={shot.alt}
 						width={560}
 						height={1218}
@@ -279,18 +301,18 @@ export function AppStoreCall(handle: Handle<AppStoreCall.Props>) {
 
 /** The character poses under `characters/`, by file name. */
 export type MascotPose =
-	| "kitsune"
 	| "kitsune-celebrate"
+	| "kitsune-pointing"
 	| "kitsune-study"
 	| "kitsune-wave"
-	| "oni"
 	| "oni-checkpoint"
-	| "tanuki"
+	| "oni-correction"
+	| "tanuki-applause"
 	| "tanuki-celebrate"
 	| "tanuki-listening"
 	| "tanuki-wave"
-	| "tengu"
 	| "tengu-celebrate"
+	| "tengu-teaching"
 	| "tengu-welcome";
 
 /**

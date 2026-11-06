@@ -74,14 +74,12 @@ Dividers use the primary text color at **10% opacity**.
 
 ## Available Assets
 
-The pages use optimised copies of the app's art, served from `apps/blog/public/apps/wakaba/` (URL path `/apps/wakaba/`):
+All assets are optimised copies under `apps/blog/public/apps/wakaba/` in this repository, served at `/apps/wakaba/`, and only the files the pages use are kept:
 
-- **`public/apps/wakaba/characters/`**: transparent WebP illustrations of Kitsune, Aka Oni, Tanuki, and Tengu, squared and trimmed: `kitsune.webp` (pointing), `oni.webp` (correction), `tanuki.webp` (applause) and `tengu.webp` (teaching) for the companions band, plus poses named by character and activity, such as `kitsune-study.webp`, `tanuki-listening.webp` and `oni-checkpoint.webp`.
-- **`public/apps/wakaba/screens/`**: actual English app screenshots as WebP at 560 × 1218, including the learning path with character guides, flashcards, and practice activities. Screens captured in both appearances carry `-light` and `-dark` suffixes, such as `flashcards-fish-dark.webp`.
-- **`public/apps/wakaba/bonsai/`**: transparent WebP of all ten growth stages, named by appearance and stage index, such as `light-04.webp` and `dark-04.webp`, each cropped to the same frame so the pot stays in place.
-- **`public/apps/wakaba/screens/widget-*.webp`**: actual iOS WidgetKit gallery screenshots in English, `widget-progress-*` (Practice bonsai, medium) and `widget-word-*` (Word of the day, large), in light and dark. These include the surrounding native widget-selection interface.
-- **`public/apps/wakaba/favicon.svg`**: the standalone logo, drawn in vermilion in light and coral in dark. The page's header and footer draw the same mark inline.
-- **`public/apps/wakaba/apple-touch-icon.png`**: the rounded app icon, at 180 × 180 for the home-screen bookmark.
-- **`public/apps/wakaba/social-card.png`**: the 1200 × 630 Open Graph and Twitter card, drawn from the logo and the full-grown bonsai.
-
-The full-size originals are not part of the repository.
+- **`characters/`**: transparent WebP illustrations of Kitsune, Aka Oni, Tanuki, and Tengu at 360 × 360, squared and trimmed. Filenames identify the character and pose, such as `kitsune-pointing.webp`, `oni-correction.webp`, `tanuki-listening.webp` and `tengu-teaching.webp`; Aka Oni uses the `oni` prefix.
+- **`screenshots/`**: actual English app screenshots as WebP at 560 × 1218, including the learning path with character guides, flashcards, and practice activities. Screens captured in both appearances carry `-light` and `-dark` suffixes, such as `flashcards-fish-dark.webp`.
+- **`bonsai/`**: transparent WebP of all ten growth stages at 480 × 455, organized into `light/` and `dark/` and cropped to one frame so the pot stays in place. Filenames include the stage index and minimum practiced-day threshold, such as `04-day-016.webp`.
+- **`widgets/`**: actual iOS WidgetKit gallery screenshots in English as WebP at 560 × 1218, named by widget type, size, and appearance: `progress-medium-light.webp`, `progress-medium-dark.webp`, `word-large-light.webp` and `word-large-dark.webp`. These include the surrounding native widget-selection interface.
+- **`branding/logo/favicon.svg`**: the standalone logo as an SVG favicon, vermilion in light and coral in dark. The pages' header and footer draw the same mark inline.
+- **`branding/app-icon/apple-touch-icon.png`**: the rounded app icon at 180 × 180.
+- **`branding/social-card.png`**: the 1200 × 630 Open Graph and Twitter card, drawn from the logo and the full-grown bonsai.

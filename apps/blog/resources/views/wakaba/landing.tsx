@@ -225,7 +225,7 @@ function HeroStage() {
 						}),
 					]}
 				>
-					<Mascot pose="kitsune" size="fill" tilt={-4} />
+					<Mascot pose="kitsune-pointing" size="fill" tilt={-4} />
 				</div>
 				<div
 					mix={[
@@ -362,6 +362,7 @@ function LearningPath() {
 const COMPANIONS = [
 	{
 		id: "kitsune",
+		pose: "kitsune-pointing",
 		name: "Kitsune",
 		kanji: "狐",
 		role: "The guide",
@@ -370,6 +371,7 @@ const COMPANIONS = [
 	},
 	{
 		id: "oni",
+		pose: "oni-correction",
 		name: "Aka Oni",
 		kanji: "赤鬼",
 		role: "The corrector",
@@ -378,6 +380,7 @@ const COMPANIONS = [
 	},
 	{
 		id: "tanuki",
+		pose: "tanuki-applause",
 		name: "Tanuki",
 		kanji: "狸",
 		role: "The cheerleader",
@@ -386,6 +389,7 @@ const COMPANIONS = [
 	},
 	{
 		id: "tengu",
+		pose: "tengu-teaching",
 		name: "Tengu",
 		kanji: "天狗",
 		role: "The teacher",
@@ -432,7 +436,7 @@ function Companions() {
 						]}
 					>
 						<img
-							src={`${WAKABA_ASSETS}/characters/${companion.id}.webp`}
+							src={`${WAKABA_ASSETS}/characters/${companion.pose}.webp`}
 							alt={companion.alt}
 							width={360}
 							height={360}
@@ -748,7 +752,7 @@ function Widgets() {
 				/>
 				<WidgetShot
 					side="end"
-					mascot="tengu"
+					mascot="tengu-teaching"
 					screen="widget-word"
 					title="Word of the day"
 					sizes="Small, medium and large"

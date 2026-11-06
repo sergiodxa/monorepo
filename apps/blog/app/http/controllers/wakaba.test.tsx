@@ -51,11 +51,11 @@ describe("GET /apps/wakaba", () => {
 
 		expect(html).toContain('name="description"');
 		expect(html).toContain(
-			'property="og:image" content="https://sergiodxa.com/apps/wakaba/social-card.png"',
+			'property="og:image" content="https://sergiodxa.com/apps/wakaba/branding/social-card.png"',
 		);
 		expect(html).toContain('name="twitter:card" content="summary_large_image"');
 		expect(html).toContain('rel="canonical" href="https://sergiodxa.com/apps/wakaba"');
-		expect(html).toContain('href="/apps/wakaba/favicon.svg"');
+		expect(html).toContain('href="/apps/wakaba/branding/logo/favicon.svg"');
 		expect(html).toContain('rel="apple-touch-icon"');
 	});
 
