@@ -1,5 +1,5 @@
 /**
- * The server side of the site's contact forms, Encore support and the press kit: the
+ * The server side of the site's contact forms, Encore and Wakaba support and the press kit: the
  * per-address budget a submission spends, the spam assessment of a valid request, and its
  * delivery. The sending binding lives in Worker configuration, so it never reaches a page.
  *
@@ -20,6 +20,7 @@ import { stopForumSpam } from "@sdxc/spam/stop-forum-spam";
 
 import type { SupportRequest } from "~/app/http/validators/encore-support";
 import type { PressContact } from "~/app/http/validators/press-contact";
+import type { WakabaSupportRequest } from "~/app/http/validators/wakaba-support";
 
 import emails from "~/app/emails";
 import { mail } from "~/app/initializers/mail";
@@ -33,6 +34,12 @@ import { PROFILE } from "~/config/profile";
 export const SUPPORT_SENDER: Address = {
 	email: "encore@support.sergiodxa.com",
 	name: "Encore Support",
+};
+
+/** Mailbox Wakaba support requests are sent from, on the same verified sending domain. */
+export const WAKABA_SENDER: Address = {
+	email: "wakaba@support.sergiodxa.com",
+	name: "Wakaba Support",
 };
 
 /** Mailbox press kit invitations are sent from, on the same verified sending domain. */
@@ -93,7 +100,7 @@ export class SupportDeliveryError extends Error {
 export interface SupportDeskOptions {
 	/** How mail leaves the worker; absent when the deployment declares no email binding. */
 	transport: Transport | undefined;
-	/** The address Encore support requests are delivered to. */
+	/** The address Encore and Wakaba support requests are delivered to. */
 	inbox: string | undefined;
 	/** The per-client budget; absent in a local run without the binding, which admits all. */
 	limiter: RateLimit | undefined;
@@ -178,6 +185,32 @@ export class SupportDesk {
 		let flagged = assessment?.verdict === "unsure" ? assessment : undefined;
 		let sent = await this.#mailer.send(emails.encore.support, {
 			to: this.#inbox,
+			props: { request, flagged },
+		});
+		if (isFailure(sent)) {
+			return failure(new SupportDeliveryError("rejected", { cause: sent.error }));
+		}
+		return success(undefined);
+	}
+
+	/**
+	 * Mails a Wakaba support request to the support inbox, from {@link WAKABA_SENDER}, and waits
+	 * for the provider's answer. An `unsure` assessment is delivered flagged, with its signals.
+	 *
+	 * @param request The validated submission.
+	 * @param assessment The spam assessment, flagged in the email when unsure.
+	 * @returns Success once the provider accepted the message.
+	 */
+	async deliverWakaba(
+		request: WakabaSupportRequest,
+		assessment?: SpamFilter.Assessment,
+	): Promise<Result<void, SupportDeliveryError>> {
+		if (!this.#mailer || !this.#inbox) return failure(new SupportDeliveryError("unconfigured"));
+
+		let flagged = assessment?.verdict === "unsure" ? assessment : undefined;
+		let sent = await this.#mailer.send(emails.wakaba.support, {
+			to: this.#inbox,
+			from: WAKABA_SENDER,
 			props: { request, flagged },
 		});
 		if (isFailure(sent)) {

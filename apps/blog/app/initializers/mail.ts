@@ -23,6 +23,10 @@ mail.map(
 	lazy(() => import("~/app/emails/encore/support")),
 );
 mail.map(
+	emails.wakaba.support,
+	lazy(() => import("~/app/emails/wakaba/support")),
+);
+mail.map(
 	emails.press.contact,
 	lazy(() => import("~/app/emails/press/contact")),
 );

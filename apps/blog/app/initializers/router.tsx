@@ -201,9 +201,9 @@ function activityPubService(env: App.Env): Middleware {
 
 /** Services {@link createWebRouter} otherwise builds from the Worker's bindings. */
 export interface ApplicationOptions {
-	/** Delivers Encore support requests in place of the `EMAIL` binding. */
+	/** Delivers contact form requests in place of the `EMAIL` binding. */
 	mailTransport?: Transport;
-	/** Scores Encore support requests in place of the free default checks. */
+	/** Scores contact form requests in place of the free default checks. */
 	spamFilter?: SpamFilter;
 }
 
@@ -364,6 +364,22 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 	router.map(
 		routes.encorePrivacyMarkdown,
 		lazy(() => import("~/app/http/controllers/encore-privacy").then((it) => it.markdownPage)),
+	);
+	router.map(
+		routes.wakaba,
+		lazy(() => import("~/app/http/controllers/wakaba")),
+	);
+	router.map(
+		routes.wakabaSupport,
+		lazy(() => import("~/app/http/controllers/wakaba-support"), contactGuards),
+	);
+	router.map(
+		routes.wakabaPrivacy,
+		lazy(() => import("~/app/http/controllers/wakaba-privacy")),
+	);
+	router.map(
+		routes.wakabaPrivacyMarkdown,
+		lazy(() => import("~/app/http/controllers/wakaba-privacy").then((it) => it.markdownPage)),
 	);
 	router.map(
 		routes.press,

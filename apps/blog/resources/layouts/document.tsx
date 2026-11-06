@@ -23,6 +23,7 @@ import "~/resources/css/colors.css";
 import "@sdxc/ui/theme.css";
 import "@sdxc/highlight/styles.css";
 import "~/resources/css/highlight.css";
+import "~/resources/css/wakaba.css";
 
 /**
  * The profiles `rel="me"` claims as the site owner's, which is how an IndieWeb reader
@@ -30,7 +31,16 @@ import "~/resources/css/highlight.css";
  */
 const REL_ME = [PROFILE.github.profile, PROFILE.x.profile, PROFILE.youtube.profile];
 
-namespace DocumentLayout {
+/**
+ * The blog's `theme-color` pair, tracking `--ui-color-neutral-50`/`-950` by hand, since
+ * `content` takes a bare color.
+ */
+const BLOG_THEME_COLORS: DocumentLayout.ThemeColors = {
+	light: "oklch(0.98 0.004 250)",
+	dark: "oklch(0.16 0.006 250)",
+};
+
+export namespace DocumentLayout {
 	/**
 	 * A tag rendered in `<head>` beyond the document's own fixed set. Either
 	 * `property` (which Open Graph and Twitter both use here) or `name` identifies
@@ -40,6 +50,20 @@ namespace DocumentLayout {
 		property?: string;
 		name?: string;
 		content: string;
+	}
+
+	/** A `<link>` naming the page's icon, such as an SVG favicon or an Apple touch icon. */
+	export interface IconLink {
+		rel: "icon" | "apple-touch-icon";
+		href: string;
+		type?: string;
+		sizes?: string;
+	}
+
+	/** The colours the browser paints its chrome with, one per colour scheme. */
+	export interface ThemeColors {
+		light: string;
+		dark: string;
 	}
 
 	export interface Props {
@@ -70,13 +94,22 @@ namespace DocumentLayout {
 		 * `<body>` keeps the gradient covering the viewport for short pages.
 		 */
 		bodyMix?: TagProps<"body">["mix"];
+		/**
+		 * A class beside `system` on `<html>` that re-themes the whole page from a stylesheet
+		 * keyed on it, as `wakaba` does for the Wakaba pages: their palette replaces the blog's
+		 * on the root, so every semantic token derives from it.
+		 */
+		scope?: string;
+		/** Icons in place of the browser's default lookup. */
+		icons?: Array<IconLink>;
+		/** The chrome colours, for a page whose ground is not the blog's. */
+		themeColors?: ThemeColors;
 	}
 }
 
 /**
  * `class="system"` gates the theme layer's dark blocks and `color-scheme` reaches
- * the chrome the browser paints itself. The `theme-color` literals track
- * `--ui-color-neutral-50`/`-950` by hand, since `content` takes a bare color.
+ * the chrome the browser paints itself, in the page's `theme-color` pair.
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
@@ -87,8 +120,11 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 			canonical,
 			children,
 			description,
+			icons = [],
 			locale = "en",
 			meta = [],
+			scope,
+			themeColors = BLOG_THEME_COLORS,
 			title,
 		} = handle.props;
 		let { script, stylesheets } = assets;
@@ -96,7 +132,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		return (
 			<html
 				lang={locale}
-				class="system"
+				class={scope ? `system ${scope}` : "system"}
 				mix={[
 					colorScheme("light dark"),
 					/**
@@ -119,13 +155,13 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta
 						name="theme-color"
 						media="(prefers-color-scheme: light)"
-						content="oklch(0.98 0.004 250)"
+						content={themeColors.light}
 						data-rmx-key="theme-color-light"
 					/>
 					<meta
 						name="theme-color"
 						media="(prefers-color-scheme: dark)"
-						content="oklch(0.16 0.006 250)"
+						content={themeColors.dark}
 						data-rmx-key="theme-color-dark"
 					/>
 					<ImportMap value={script.importMap} />
@@ -136,6 +172,16 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
 					))}
 					<title data-rmx-key="title">{title}</title>
+					{icons.map((icon) => (
+						<link
+							key={icon.href}
+							rel={icon.rel}
+							href={icon.href}
+							type={icon.type}
+							sizes={icon.sizes}
+							data-rmx-key={`icon:${icon.href}`}
+						/>
+					))}
 					{description && (
 						<meta name="description" content={description} data-rmx-key="description" />
 					)}

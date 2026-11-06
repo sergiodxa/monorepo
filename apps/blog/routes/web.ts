@@ -90,6 +90,22 @@ export default route({
 	encorePrivacyMarkdown: get("/apps/encore/privacy.md"),
 
 	/**
+	 * Wakaba's landing, the Marketing URL of its App Store listing, drawn in the app's own
+	 * look rather than the blog's.
+	 */
+	wakaba: get("/apps/wakaba"),
+
+	/**
+	 * The Wakaba support page, its listing's Support URL: the form on `GET`, a support request
+	 * on `POST` at the same address, so a failed submission re-renders where the visitor is.
+	 */
+	wakabaSupport: form("/apps/wakaba/support"),
+
+	/** Wakaba's privacy policy, plus the same policy as Markdown on its own route. */
+	wakabaPrivacy: get("/apps/wakaba/privacy"),
+	wakabaPrivacyMarkdown: get("/apps/wakaba/privacy.md"),
+
+	/**
 	 * The press kit sent to events and podcasts that need the author's bio and photos, which
 	 * takes invitations on `POST` at the same address, plus the same kit as Markdown, which
 	 * pastes cleanly into a speaker form.

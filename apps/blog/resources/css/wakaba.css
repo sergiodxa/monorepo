@@ -1,0 +1,136 @@
+/*
+ * Wakaba's pages: the app's own palette, faces and landing tokens, applied when the
+ * document renders with the `wakaba` scope on <html>. Declared on the root, the palette is
+ * what the theme layer derives every semantic `--ui-*` token from in both schemes, so the
+ * pages share the blog's domain and components and none of its look.
+ *
+ * The anchor values are the app's own: cream paper #F7F5ED and white cards with vermilion
+ * #C43B2E in light; warm charcoal #1E1C19 and #2D2A26 with coral #EE967E and the #B64838
+ * button in dark. The ramps around them are built so the theme's derivations land on those
+ * values: dark `--ui-bg` reads step 950, and raised surfaces mix 950 with 900 half and half.
+ *
+ * Secondary text sits a step darker than the app's #858581, which reads 3.5:1 on cream;
+ * step 600 keeps 4.5:1 on cream and on white. Dividers are primary text at 10%, as in the app.
+ */
+
+:root.wakaba {
+	--ui-color-brand-50: #fcf2ef;
+	--ui-color-brand-100: #f9e1db;
+	--ui-color-brand-200: #f2c3b8;
+	--ui-color-brand-300: #e89c8e;
+	--ui-color-brand-400: #dc705f;
+	--ui-color-brand-500: #d04f3f;
+	--ui-color-brand-600: #c43b2e;
+	--ui-color-brand-700: #a43025;
+	--ui-color-brand-800: #83281f;
+	--ui-color-brand-900: #621f18;
+	--ui-color-brand-950: #3b120e;
+
+	--ui-color-neutral-50: #f7f5ed;
+	--ui-color-neutral-100: #eeebe1;
+	--ui-color-neutral-200: #e2ded2;
+	--ui-color-neutral-300: #cdc8bb;
+	--ui-color-neutral-400: #aba699;
+	--ui-color-neutral-500: #87837a;
+	--ui-color-neutral-600: #66625a;
+	--ui-color-neutral-700: #4c4943;
+	--ui-color-neutral-800: #33312c;
+	--ui-color-neutral-900: #141310;
+	--ui-color-neutral-950: #0a0908;
+
+	--ui-font-sans:
+		-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI",
+		"Segoe UI", system-ui, sans-serif;
+	/* Rounded where the platform has it (Safari); the system face elsewhere, never a CJK font's Latin */
+	--ui-font-display:
+		ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, "Hiragino Sans",
+		sans-serif;
+	/* The brush-like Mincho the app sets its kanji in */
+	--ui-font-serif:
+		"Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", "Noto Serif CJK JP", serif;
+
+	--ui-radius-sm: 0.5rem;
+	--ui-radius-md: 0.75rem;
+	--ui-radius-lg: 1rem;
+	--ui-radius-xl: 1.5rem;
+
+	--ui-landing-display-weight: 750;
+	--ui-landing-display-tracking: -0.03em;
+	--ui-landing-display-max: 4.5rem;
+	--ui-landing-chapter-tracking: -0.025em;
+	--ui-landing-cta-radius: 9999px;
+	--ui-landing-cta-height: 3rem;
+	--ui-landing-cta-weight: 650;
+	--ui-button-radius: 9999px;
+	--ui-landing-eyebrow-font: var(--ui-font-display);
+	--ui-landing-eyebrow-transform: none;
+	--ui-landing-eyebrow-tracking: 0;
+	--ui-landing-eyebrow-weight: 700;
+	--ui-landing-eyebrow-color: var(--ui-brand-fg);
+	--ui-landing-radius-surface: 1.5rem;
+	--ui-landing-card-radius-outer: 1.5rem;
+	--ui-landing-card-radius-inner: 1.5rem;
+	--ui-landing-radius-frame: 1.75rem;
+	--ui-landing-band-radius: 2rem;
+	--ui-landing-band-tint: var(--ui-color-neutral-100);
+	--ui-landing-band-glow: none;
+	--ui-landing-hairline: color-mix(in srgb, var(--ui-neutral-fg-emphasis) 10%, transparent);
+	--ui-shadow-surface:
+		0 0 0 1px rgb(60 40 20 / 0.05), 0 1px 2px rgb(60 40 20 / 0.05),
+		0 8px 24px -12px rgb(60 40 20 / 0.12);
+	--ui-shadow-stage:
+		0 0 0 1px rgb(60 40 20 / 0.05), 0 2px 4px rgb(60 40 20 / 0.04),
+		0 24px 48px -20px rgb(60 40 20 / 0.22);
+
+	/* Wakaba-only surfaces the page's own scenes paint with */
+	--wakaba-card: var(--ui-surface-raised);
+	--wakaba-sun: var(--ui-color-brand-100);
+	--wakaba-ink: var(--ui-neutral-fg-emphasis);
+	--wakaba-bezel: #161412;
+	/* Each companion's card, tinted after the character: fox orange, oni red, tanuki straw, tengu leaf */
+	--wakaba-kitsune: #fcebdc;
+	--wakaba-oni: #fadfda;
+	--wakaba-tanuki: #f3ead6;
+	--wakaba-tengu: #e7eedd;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root.wakaba {
+		--ui-color-brand-50: #fdf3ef;
+		--ui-color-brand-100: #fbe4dc;
+		--ui-color-brand-200: #f6cbbd;
+		--ui-color-brand-300: #f2b19e;
+		--ui-color-brand-400: #ee967e;
+		--ui-color-brand-500: #d86b55;
+		--ui-color-brand-600: #b64838;
+		--ui-color-brand-700: #93392c;
+		--ui-color-brand-800: #6e2d23;
+		--ui-color-brand-900: #4a221b;
+		--ui-color-brand-950: #2e1a15;
+
+		--ui-color-neutral-50: #faf7f0;
+		--ui-color-neutral-100: #f3eee3;
+		--ui-color-neutral-200: #dcd4c6;
+		--ui-color-neutral-300: #beb5a6;
+		--ui-color-neutral-400: #a79e8f;
+		--ui-color-neutral-500: #8a8275;
+		--ui-color-neutral-600: #6e675d;
+		--ui-color-neutral-700: #544f47;
+		--ui-color-neutral-800: #46413a;
+		--ui-color-neutral-900: #3c3833;
+		--ui-color-neutral-950: #1e1c19;
+
+		--ui-landing-band-tint: #262420;
+		--ui-landing-hairline: color-mix(in srgb, var(--ui-neutral-fg-emphasis) 10%, transparent);
+		--ui-shadow-surface: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 1px rgb(255 255 255 / 0.07);
+		--ui-shadow-stage:
+			inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 1px rgb(255 255 255 / 0.07),
+			0 24px 48px -20px rgb(0 0 0 / 0.6);
+		--wakaba-sun: #3a231d;
+		--wakaba-bezel: #0c0b0a;
+		--wakaba-kitsune: #3a2a1e;
+		--wakaba-oni: #3e2420;
+		--wakaba-tanuki: #34301f;
+		--wakaba-tengu: #263224;
+	}
+}
