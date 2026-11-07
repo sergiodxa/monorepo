@@ -487,7 +487,6 @@ function YourTurn(handle: Handle) {
 							reveal: t.deck.reveal,
 							draw: t.play.draw,
 							shuffle: t.play.shuffle,
-							sound: t.play.sound,
 							left: t.play.left,
 						}}
 					/>

@@ -63,7 +63,13 @@ export interface EncoreCopy {
 	/** The language's own name, for the footer's language links. */
 	languageName: string;
 	meta: { title: string; description: string };
-	header: { support: string; privacy: string; navLabel: string };
+	header: {
+		support: string;
+		privacy: string;
+		navLabel: string;
+		/** Names the speaker that turns the page's sound effects on and off. */
+		sound: string;
+	};
 	footer: {
 		tagline: string;
 		columns: { encore: string; more: string; elsewhere: string };
@@ -85,7 +91,6 @@ export interface EncoreCopy {
 	play: CopyBand & {
 		draw: string;
 		shuffle: string;
-		sound: string;
 		/** Where the reader is in the deck, with `{count}` and `{total}` where the numbers go. */
 		left: string;
 	};

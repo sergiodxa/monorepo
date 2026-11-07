@@ -18,7 +18,7 @@ export const EN: EncoreCopy = {
 		description:
 			"Draw a card, reveal a singing challenge and sing a song that fits it. 108 hand-written challenges in English, Spanish and Japanese, for US$4.99 once.",
 	},
-	header: { support: "Support", privacy: "Privacy", navLabel: "Encore" },
+	header: { support: "Support", privacy: "Privacy", navLabel: "Encore", sound: "Sound effects" },
 	footer: {
 		tagline: "A familiar song. A shared moment.",
 		columns: { encore: "Encore", more: "More from Sergio", elsewhere: "Elsewhere" },
@@ -43,7 +43,6 @@ export const EN: EncoreCopy = {
 			"This is the real deck: all 108 hand-written challenges. Tap the card, read it out loud, and sing. Nobody's recording.",
 		draw: "Draw another",
 		shuffle: "Shuffle",
-		sound: "Sound effects",
 		left: "Card {count} of {total}",
 	},
 	tour: {

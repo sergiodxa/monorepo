@@ -19,7 +19,12 @@ export const ES: EncoreCopy = {
 		description:
 			"Sacá una carta, revelá un desafío y cantá una canción que encaje. 108 desafíos escritos a mano, en español, inglés y japonés, por un único pago de US$4,99.",
 	},
-	header: { support: "Soporte", privacy: "Privacidad", navLabel: "Encore" },
+	header: {
+		support: "Soporte",
+		privacy: "Privacidad",
+		navLabel: "Encore",
+		sound: "Efectos de sonido",
+	},
 	footer: {
 		tagline: "Una canción conocida. Un momento compartido.",
 		columns: { encore: "Encore", more: "Más de Sergio", elsewhere: "En otros lados" },
@@ -44,7 +49,6 @@ export const ES: EncoreCopy = {
 			"Este es el mazo de verdad: los 108 desafíos escritos a mano. Tocá la carta, leela en voz alta y cantá. Nadie está grabando.",
 		draw: "Sacar otra",
 		shuffle: "Mezclar",
-		sound: "Efectos de sonido",
 		left: "Carta {count} de {total}",
 	},
 	tour: {

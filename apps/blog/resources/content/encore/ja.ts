@@ -19,7 +19,7 @@ export const JA: EncoreCopy = {
 		description:
 			"カードを引いて、お題をめくって、ぴったりの曲を歌おう。手書きのお題は108枚、日本語・英語・スペイン語に対応。お支払いは一度きりの US$4.99 です。",
 	},
-	header: { support: "サポート", privacy: "プライバシー", navLabel: "Encore" },
+	header: { support: "サポート", privacy: "プライバシー", navLabel: "Encore", sound: "効果音" },
 	footer: {
 		tagline: "おなじみの一曲を、みんなの思い出に。",
 		columns: { encore: "Encore", more: "Sergio のほかの作品", elsewhere: "SNS" },
@@ -44,7 +44,6 @@ export const JA: EncoreCopy = {
 			"本物のデッキです。手書きのお題が108枚。カードをタップして、声に出して読んで、歌おう。録音はしていません。",
 		draw: "もう一枚引く",
 		shuffle: "シャッフル",
-		sound: "効果音",
 		left: "{total} 枚中 {count} 枚目",
 	},
 	tour: {

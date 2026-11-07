@@ -127,6 +127,7 @@ export function Wordmark(handle: Handle) {
 					textDecoration: "none",
 					letterSpacing: "0.32em",
 					marginInlineEnd: "-0.32em",
+					"@media (max-width: 26rem)": { letterSpacing: "0.12em", marginInlineEnd: "-0.12em" },
 				}),
 				font("sans"),
 				text("base"),
@@ -134,7 +135,7 @@ export function Wordmark(handle: Handle) {
 				focusVisible(raw({ outline: "2px solid currentColor", outlineOffset: "4px" })),
 			]}
 		>
-			<EncoreMark size={26} />
+			<EncoreMark size={24} />
 			<span aria-hidden="true">ENCORE</span>
 		</a>
 	);

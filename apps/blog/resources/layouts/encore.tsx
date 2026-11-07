@@ -30,6 +30,7 @@ import {
 	inLanguage,
 } from "~/config/encore";
 import { PROFILE } from "~/config/profile";
+import { EncoreSoundToggle } from "~/resources/components/encore-sound-toggle";
 import { ENCORE_COPY } from "~/resources/content/encore";
 import DocumentLayout from "~/resources/layouts/document";
 import { AppFooter, QuietLink } from "~/resources/views/app-pages/footer";
@@ -153,8 +154,8 @@ export function EncoreLayout(handle: Handle<EncoreLayout.Props>) {
 }
 
 /**
- * The header: the wordmark home, then Support and Privacy. The two short links fit beside
- * the wordmark at 320px in every language, so the header needs no menu.
+ * The header: the wordmark home, then Support, Privacy and the speaker that mutes the page's
+ * sounds. They fit beside the wordmark at 320px in every language, so the header needs no menu.
  *
  * @returns The render function producing the header.
  */
@@ -167,13 +168,20 @@ export function EncoreHeader(handle: Handle<{ path: string }>) {
 					aria-label={copy.header.navLabel}
 					mix={[
 						hstack({ gap: 4, align: "center", justify: "between" }),
+						raw({ "@media (max-width: 26rem)": { gap: "0.5rem" } }),
 						maxIs("72rem"),
 						mi("auto"),
 						pb(4),
 					]}
 				>
 					<Wordmark />
-					<span mix={[hstack({ gap: 5, align: "center" }), text("sm")]}>
+					<span
+						mix={[
+							hstack({ gap: 5, align: "center" }),
+							text("sm"),
+							raw({ "@media (max-width: 26rem)": { gap: "0.625rem" } }),
+						]}
+					>
 						<QuietLink
 							href={inLanguage(routes.encoreSupport.index.href(), copy.locale)}
 							label={copy.header.support}
@@ -182,6 +190,7 @@ export function EncoreHeader(handle: Handle<{ path: string }>) {
 							href={inLanguage(routes.encorePrivacy.href(), copy.locale)}
 							label={copy.header.privacy}
 						/>
+						<EncoreSoundToggle label={copy.header.sound} />
 					</span>
 				</nav>
 			</header>
