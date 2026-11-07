@@ -56,6 +56,21 @@ function mount(width: number, language: "en" | "es-AR" | "ja" = "en"): HTMLEleme
 	return host;
 }
 
+describe("The deck", () => {
+	test("turns a card over when the reader taps it", () => {
+		let host = mount(1200);
+
+		let label = host.querySelector<HTMLLabelElement>("#deck li label");
+		let flipper = label?.querySelector<HTMLElement>(":scope > span[aria-hidden]");
+		expect(flipper && getComputedStyle(flipper).transform).toBe("none");
+		label?.click();
+		expect(label?.querySelector("input")?.checked).toBe(true);
+		flipper?.getAnimations().forEach((animation) => animation.finish());
+		expect(flipper && getComputedStyle(flipper).transform).not.toBe("none");
+		host.remove();
+	});
+});
+
 describe("EncoreLandingContent", () => {
 	test.each(["en", "es-AR", "ja"] as const)(
 		"keeps every box inside a 320px page in %s",
@@ -77,11 +92,12 @@ describe("EncoreLandingContent", () => {
 	test("draws its cards in the app's 320 × 460 proportions", () => {
 		let host = mount(1200);
 
-		let cards = Array.from(host.querySelectorAll<HTMLElement>("#deck li > div"));
-		expect(cards).toHaveLength(5);
+		let cards = Array.from(
+			host.querySelectorAll<HTMLElement>("#deck li label > span > span > div"),
+		);
+		expect(cards).toHaveLength(10);
 		for (let card of cards) {
-			let box = card.getBoundingClientRect();
-			expect(box.height / box.width).toBeCloseTo(460 / 320, 2);
+			expect(card.offsetHeight / card.offsetWidth).toBeCloseTo(460 / 320, 2);
 		}
 		host.remove();
 	});

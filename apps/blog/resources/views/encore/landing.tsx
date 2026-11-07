@@ -11,11 +11,12 @@ import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { ArrowDownIcon, ChevronDownIcon } from "@sdxc/icons";
+import { keyframes } from "@sdxc/u/animation";
 import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, hidden, hstack, repeat, vstack } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
+import { at, motionSafe } from "@sdxc/u/responsive";
 import { is, m, maxIs, mi, p, pbs, pi } from "@sdxc/u/size";
 import { font, leading, text, weight } from "@sdxc/u/typography";
 import { Accordion, HeadingScope, Link, LinkButton } from "@sdxc/ui";
@@ -35,19 +36,23 @@ import type { EncoreLocale } from "~/config/encore";
 import type { CardId } from "~/resources/content/encore/copy";
 
 import { inLanguage } from "~/config/encore";
+import { EncoreDraw } from "~/resources/components/encore-draw";
 import { PathAutoplay } from "~/resources/components/path-autoplay";
 import { ENCORE_COPY } from "~/resources/content/encore";
+import { ENCORE_DECK } from "~/resources/content/encore/deck";
 import { EncoreLayout } from "~/resources/layouts/encore";
 import { GuidedTour } from "~/resources/views/app-pages/guided-tour";
 import { Swipeable } from "~/resources/views/app-pages/swipeable";
+import { PlayingCard, sparklePath } from "~/resources/views/encore/card";
 import {
 	AppStoreCall,
 	copyOf,
+	DeckCard,
 	EncoreLanguage,
 	EncoreMark,
+	FlipCard,
 	Phone,
-	PlayingCard,
-	sparklePath,
+	Sparkles,
 	Watch,
 } from "~/resources/views/encore/parts";
 import routes from "~/routes/web";
@@ -70,7 +75,7 @@ function nearView(height: number) {
 }
 
 /**
- * The page, band by band: the promise over the game's screens, a round as a tour, the deck,
+ * The page, band by band: the promise over the game's screens, a card to play, a round as a tour, the deck,
  * the Watch remote, the small things, privacy, the questions a group
  * asks first, and the download once more.
  *
@@ -102,9 +107,11 @@ export function EncoreLandingView() {
 export function EncoreLandingContent(handle: Handle<{ locale?: EncoreLocale }>) {
 	return () => (
 		<EncoreLanguage copy={ENCORE_COPY[handle.props.locale ?? "en"]}>
-			<main>
+			<main mix={[raw({ position: "relative", isolation: "isolate" })]}>
+				<Sparkles seed={7} count={60} />
 				<HeadingScope>
 					<Hero />
+					<YourTurn />
 					<Round />
 					<Deck />
 					<WatchBand />
@@ -155,6 +162,62 @@ function Hero(handle: Handle) {
 			/>
 		);
 	};
+}
+
+/** The music notes drifting up off the stage: where each starts, its size and colour. */
+const NOTES = [
+	{ x: 0.2, y: 0.78, size: 1.3, color: "var(--encore-coral)" },
+	{ x: 0.79, y: 0.62, size: 1.1, color: "var(--encore-gold)" },
+	{ x: 0.66, y: 0.9, size: 0.9, color: "var(--encore-violet)" },
+] as const;
+
+/**
+ * A sparkle's slow twinkle, offset by its place in the row so no two pulse together. Only
+ * for readers who allow motion; the others see the sparkles still.
+ */
+function twinkle(index: number) {
+	return [
+		keyframes("encore-twinkle", {
+			"0%, 100%": { scale: "1", opacity: "1" },
+			"50%": { scale: "0.55", opacity: "0.5" },
+		}),
+		raw({ transformBox: "fill-box", transformOrigin: "center" }),
+		motionSafe(
+			raw({
+				animationName: "encore-twinkle",
+				animationDuration: `${2.6 + (index % 3) * 0.7}s`,
+				animationDelay: `${-index * 0.9}s`,
+				animationTimingFunction: "ease-in-out",
+				animationIterationCount: "infinite",
+			}),
+		),
+	];
+}
+
+/**
+ * A note's drift: it rises and sways a little, fading out at the top, then starts again,
+ * offset by its place so the notes never move together. Hidden for readers who ask for less
+ * motion, since a still note floating mid-air reads as a mistake.
+ */
+function floatUp(index: number) {
+	return [
+		keyframes("encore-note", {
+			"0%": { translate: "0 0", rotate: "-8deg", opacity: "0" },
+			"15%": { opacity: "0.55" },
+			"70%": { opacity: "0.4" },
+			"100%": { translate: "1.5rem -9rem", rotate: "10deg", opacity: "0" },
+		}),
+		raw({ opacity: "0", transformBox: "fill-box", transformOrigin: "center" }),
+		motionSafe(
+			raw({
+				animationName: "encore-note",
+				animationDuration: `${7 + index * 1.5}s`,
+				animationDelay: `${-index * 2.4}s`,
+				animationTimingFunction: "ease-out",
+				animationIterationCount: "infinite",
+			}),
+		),
+	];
 }
 
 /**
@@ -223,10 +286,30 @@ function Backdrop(handle: Handle) {
 						))}
 					</g>
 					<g mix={[raw({ opacity: "var(--encore-sparkle-opacity)" })]}>
-						{sparkles.map(([x, y, r, color]) => (
-							<path key={`${x}-${y}`} d={sparklePath(w * x, h * y, r * 1.6)} fill={color} />
+						{sparkles.map(([x, y, r, color], index) => (
+							<path
+								key={`${x}-${y}`}
+								d={sparklePath(w * x, h * y, r * 1.6)}
+								fill={color}
+								mix={[twinkle(index)]}
+							/>
 						))}
 					</g>
+					{NOTES.map((note, index) => (
+						<g
+							key={note.x}
+							transform={`translate(${w * note.x} ${h * note.y}) scale(${note.size})`}
+						>
+							<path
+								d="M0 0V-22L14 -26V-6M0 0a5 4 0 1 1 -10 0a5 4 0 1 1 10 0ZM14 -6a5 4 0 1 1 -10 0a5 4 0 1 1 10 0Z"
+								fill={note.color}
+								stroke={note.color}
+								strokeWidth={2.5}
+								strokeLinejoin="round"
+								mix={[floatUp(index)]}
+							/>
+						</g>
+					))}
 				</svg>
 			</div>
 		);
@@ -272,7 +355,7 @@ function HeroStage() {
 					<PlayingCard faceDown />
 				</StageCard>
 				<StageCard side="end">
-					<PlayingCard card="a001" />
+					<DeckCard card="a001" />
 				</StageCard>
 			</div>
 		</div>
@@ -356,6 +439,65 @@ function StageCard(handle: Handle<{ side: "start" | "end"; children: RemixNode }
 	};
 }
 
+/**
+ * The deck in a fresh random order for each page view, so every visit deals differently.
+ *
+ * @param cards The deck in the app's order.
+ * @returns A shuffled copy.
+ */
+function shuffled<T>(cards: ReadonlyArray<T>): Array<T> {
+	let result = [...cards];
+	for (let i = result.length - 1; i > 0; i--) {
+		let j = Math.floor(Math.random() * (i + 1));
+		[result[i], result[j]] = [result[j] as T, result[i] as T];
+	}
+	return result;
+}
+
+/**
+ * The reader's turn: one card from the real deck, face down on the game's backdrop, to flip,
+ * sing and draw again, before the page explains anything else.
+ *
+ * @returns The render function producing the band.
+ */
+function YourTurn(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<LandingSection id="play" align="center">
+				<LandingHeader align="center" eyebrow={t.play.eyebrow} description={t.play.description}>
+					{t.play.title}
+				</LandingHeader>
+				<div
+					mix={[
+						rounded("xl"),
+						raw({
+							inlineSize: "100%",
+							position: "relative",
+							isolation: "isolate",
+							overflow: "hidden",
+							paddingBlock: "clamp(2rem, 6cqi, 3.5rem)",
+							paddingInline: "1rem",
+						}),
+					]}
+				>
+					<Backdrop />
+					<EncoreDraw
+						cards={shuffled(ENCORE_DECK[t.locale])}
+						labels={{
+							reveal: t.deck.reveal,
+							draw: t.play.draw,
+							shuffle: t.play.shuffle,
+							sound: t.play.sound,
+							left: t.play.left,
+						}}
+					/>
+				</div>
+			</LandingSection>
+		);
+	};
+}
+
 /** The four moves of a round, each with its radio value and the screen it produces. */
 const ROUND = [
 	{ value: "reveal", screen: "card-back" },
@@ -401,12 +543,19 @@ function Round(handle: Handle) {
 	};
 }
 
-/** The cards the deck band lays out, hand-written ones around a combined challenge. */
-const DECK: ReadonlyArray<CardId> = ["a001", "a002", "a060", "generated", "a100"];
+/** The cards the deck band deals face down, hand-written ones around a combined challenge, each with its lean. */
+const DECK: ReadonlyArray<{ card: CardId; tilt: number }> = [
+	{ card: "a001", tilt: -3 },
+	{ card: "a002", tilt: 2 },
+	{ card: "a060", tilt: -1.5 },
+	{ card: "generated", tilt: 3 },
+	{ card: "a100", tilt: -2 },
+];
 
 /**
- * The deck: five cards drawn as the app draws them, in the page's language, in a row that
- * scrolls sideways on a phone and sits whole on a wide band.
+ * The deck: five cards dealt face down, each one turning over at a tap to show a real
+ * challenge in the page's language, in a row that scrolls sideways on a phone and sits whole
+ * on a wide band.
  *
  * @returns The render function producing the band.
  */
@@ -424,9 +573,9 @@ function Deck(handle: Handle) {
 					fitsFrom="60rem"
 					fitColumn="minmax(0, 1fr)"
 				>
-					{DECK.map((card) => (
-						<li key={card} mix={[raw({ minInlineSize: "0", paddingBlock: "0.5rem" })]}>
-							<PlayingCard card={card} badge={t.generated} />
+					{DECK.map(({ card, tilt }) => (
+						<li key={card} mix={[raw({ minInlineSize: "0", paddingBlock: "1rem" })]}>
+							<FlipCard card={card} badge={t.generated} tilt={tilt} />
 						</li>
 					))}
 				</Swipeable>
@@ -481,193 +630,19 @@ function WatchBand(handle: Handle) {
 	};
 }
 
-/** A keyboard key as macOS draws it in a menu or a key cap. */
-function Key(handle: Handle<{ children: RemixNode }>) {
-	return () => (
-		<kbd
-			mix={[
-				raw({
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					minInlineSize: "2.25rem",
-					blockSize: "2.25rem",
-					paddingInline: "0.5rem",
-					borderRadius: "0.5rem",
-					fontFamily: "var(--ui-font-sans)",
-					fontSize: "1rem",
-					fontWeight: "600",
-					background: "var(--app-card)",
-					boxShadow: "0 0 0 1px var(--ui-landing-hairline), 0 2px 0 var(--ui-landing-hairline)",
-				}),
-			]}
-		>
-			{handle.props.children}
-		</kbd>
-	);
-}
-
-/** A switch in the Settings app, drawn off, as both of Encore's start. */
-function SettingsRow(handle: Handle<{ label: string }>) {
-	return () => (
-		<span mix={[hstack({ gap: 3, align: "center", justify: "between" }), text("sm")]}>
-			{handle.props.label}
-			<span
-				aria-hidden="true"
-				mix={[
-					raw({
-						inlineSize: "2.5rem",
-						blockSize: "1.5rem",
-						flexShrink: "0",
-						borderRadius: "9999px",
-						background: "color-mix(in srgb, currentColor 18%, transparent)",
-						position: "relative",
-						"&::after": {
-							content: '""',
-							position: "absolute",
-							insetBlockStart: "2px",
-							insetInlineStart: "2px",
-							inlineSize: "1.25rem",
-							blockSize: "1.25rem",
-							borderRadius: "50%",
-							background: "white",
-							boxShadow: "0 1px 2px rgb(0 0 0 / 0.25)",
-						},
-					}),
-				]}
-			/>
-		</span>
-	);
-}
-
-/** The bento's cells in order, each naming the scene that shows it. */
-const DETAILS = ["mac", "ipad", "languages", "undo", "feedback", "access"] as const;
+/** The bento's nights in order, each with the real card that fits it and the block it sits on. */
+const NIGHTS = [
+	{ key: "karaoke", card: "a015", tint: "var(--encore-violet)", tilt: -4 },
+	{ key: "road", card: "a033", tint: "var(--encore-gold)", tilt: 3 },
+	{ key: "holiday", card: "a080", tint: "var(--encore-coral)", tilt: -2 },
+	{ key: "abroad", card: "a104", tint: "var(--encore-pink)", tilt: 4 },
+	{ key: "newYear", card: "a045", tint: "var(--encore-gold)", tilt: -3 },
+	{ key: "everyone", card: "a011", tint: "var(--encore-violet)", tilt: 2 },
+] as const;
 
 /**
- * The scene leading one bento cell: the Game menu's shortcut, an iPad turned on its side,
- * the same card in each language, the undo shortcut, the two Settings switches, and the
- * VoiceOver label of a face-down card. Every word in it is the app's own.
- *
- * @param handle Runtime handle carrying which cell the scene leads.
- * @returns The render function producing the scene.
- */
-function DetailScene(handle: Handle<{ detail: (typeof DETAILS)[number] }>) {
-	return () => {
-		let t = copyOf(handle);
-		let app = t.details.app;
-		let frame = [
-			vstack({ gap: 2, align: "stretch" }),
-			p(4),
-			rounded("lg"),
-			raw({ minBlockSize: "8.5rem", justifyContent: "center", background: "var(--app-card)" }),
-		];
-		switch (handle.props.detail) {
-			case "mac":
-				return (
-					<div mix={frame}>
-						<span mix={[text("xs"), weight("semibold"), fg("neutral")]}>{app.game}</span>
-						<span mix={[hstack({ gap: 3, align: "center", justify: "between" })]}>
-							<span mix={[text("sm"), weight("medium")]}>{app.shuffleDeck}</span>
-							<span mix={[hstack({ gap: 1, align: "center" })]}>
-								<Key>⌘</Key>
-								<Key>R</Key>
-							</span>
-						</span>
-					</div>
-				);
-			case "ipad":
-				return (
-					<div mix={[...frame, raw({ alignItems: "center" })]}>
-						<div
-							aria-hidden="true"
-							mix={[
-								raw({
-									inlineSize: "9rem",
-									aspectRatio: "4 / 3",
-									padding: "0.375rem",
-									borderRadius: "0.875rem",
-									background: "var(--app-bezel)",
-								}),
-							]}
-						>
-							<div
-								mix={[
-									raw({
-										blockSize: "100%",
-										borderRadius: "0.5rem",
-										background: "var(--encore-backdrop)",
-										display: "grid",
-										placeItems: "center",
-									}),
-								]}
-							>
-								<div mix={[raw({ inlineSize: "2.6rem" })]}>
-									<PlayingCard faceDown />
-								</div>
-							</div>
-						</div>
-					</div>
-				);
-			case "languages":
-				return (
-					<ul
-						mix={[
-							...frame,
-							m(0),
-							raw({ listStyle: "none", fontFamily: "var(--encore-font-card)" }),
-						]}
-					>
-						{(["en", "es-AR", "ja"] as const).map((language) => (
-							<li key={language} lang={language} mix={[text("sm"), leading("snug")]}>
-								{ENCORE_COPY[language].cards.a001.prompt}
-							</li>
-						))}
-					</ul>
-				);
-			case "undo":
-				return (
-					<div mix={frame}>
-						<span mix={[text("xs"), weight("semibold"), fg("neutral")]}>{app.previousCard}</span>
-						<span mix={[hstack({ gap: 1, align: "center" })]}>
-							<Key>⌘</Key>
-							<Key>Z</Key>
-						</span>
-					</div>
-				);
-			case "feedback":
-				return (
-					<div mix={frame}>
-						<span mix={[text("xs"), weight("semibold"), fg("neutral")]}>{app.feedback}</span>
-						<SettingsRow label={app.haptics} />
-						<SettingsRow label={app.sounds} />
-					</div>
-				);
-			case "access":
-				return (
-					<div mix={[...frame, raw({ alignItems: "start" })]}>
-						<span
-							mix={[
-								text("sm"),
-								rounded("md"),
-								raw({
-									padding: "0.5rem 0.75rem",
-									background: "color-mix(in srgb, var(--encore-violet) 14%, transparent)",
-									boxShadow:
-										"inset 0 0 0 2px color-mix(in srgb, var(--encore-violet) 60%, transparent)",
-								}),
-							]}
-						>
-							“{app.faceDown}”
-						</span>
-					</div>
-				);
-		}
-	};
-}
-
-/**
- * The small things as a bento: six cells, each led by a small scene drawn with the app's own
- * labels, shown at every width so a phone reader sees them too.
+ * The nights as a bento: six colour blocks, each led by the real card from the deck that
+ * belongs to that night, tilted as if just dealt, shown at every width.
  *
  * @returns The render function producing the band.
  */
@@ -675,7 +650,7 @@ function Details(handle: Handle) {
 	return () => {
 		let t = copyOf(handle).details;
 		return (
-			<LandingSection id="details" mix={[nearView(900)]}>
+			<LandingSection id="nights" mix={[nearView(1100)]}>
 				<LandingHeader eyebrow={t.eyebrow} description={t.description}>
 					{t.title}
 				</LandingHeader>
@@ -690,22 +665,35 @@ function Details(handle: Handle) {
 						at("xl", gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") })),
 					]}
 				>
-					{DETAILS.map((detail) => (
+					{NIGHTS.map((night) => (
 						<li
-							key={detail}
+							key={night.key}
 							mix={[
 								vstack({ gap: 2, align: "stretch" }),
-								p(3),
-								raw({ paddingBlockEnd: "1.5rem" }),
 								rounded("xl"),
-								raw({ background: "var(--ui-landing-band-tint)" }),
+								raw({
+									overflow: "hidden",
+									paddingBlockEnd: "1.5rem",
+									background: `linear-gradient(160deg, color-mix(in srgb, ${night.tint} 22%, transparent), transparent 70%), var(--ui-landing-band-tint)`,
+								}),
 							]}
 						>
-							<DetailScene detail={detail} />
+							<div
+								mix={[
+									raw({
+										inlineSize: "min(13rem, 70%)",
+										marginInline: "auto",
+										paddingBlock: "1.75rem 0.5rem",
+										rotate: `${night.tilt}deg`,
+									}),
+								]}
+							>
+								<DeckCard card={night.card} />
+							</div>
 							<p
 								mix={[
 									m(0),
-									pi(3),
+									pi(6),
 									pbs(2),
 									font("display"),
 									text("xl"),
@@ -713,10 +701,10 @@ function Details(handle: Handle) {
 									leading("tight"),
 								]}
 							>
-								{t.items[detail].title}
+								{t.items[night.key].title}
 							</p>
-							<p mix={[m(0), pi(3), text("sm"), fg("neutral"), leading("relaxed")]}>
-								{t.items[detail].body}
+							<p mix={[m(0), pi(6), text("sm"), fg("neutral"), leading("relaxed")]}>
+								{t.items[night.key].body}
 							</p>
 						</li>
 					))}

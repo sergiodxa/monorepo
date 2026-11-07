@@ -15,7 +15,7 @@ import { at } from "@sdxc/u/responsive";
 import { is, m, maxIs, mi, pbe, pbs, pi } from "@sdxc/u/size";
 import { font, overflowWrap, text, weight } from "@sdxc/u/typography";
 
-import { PlayingCard } from "~/resources/views/encore/parts";
+import { PlayingCard } from "~/resources/views/encore/card";
 
 /** Props of the page frame. */
 export interface EncorePageProps {

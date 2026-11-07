@@ -29,45 +29,53 @@ export const EN: EncoreCopy = {
 	},
 	appStore: "Download on the App Store",
 	hero: {
-		eyebrow: "A music party game for iPhone, iPad, Apple Watch and Mac",
+		eyebrow: "The party game where every card is a song",
 		title: "Your next night starts with a song.",
 		description:
-			"Draw a card, reveal the challenge, and sing a song that fits it. Encore deals 108 hand-written challenges, from guilty pleasures to duets with a stranger, and steers away from whatever you just sang.",
-		tour: "How a round works",
-		note: "US$4.99, once. No subscription, no ads, every card included.",
+			"Flip a card, read the challenge, belt out a song that fits. 108 hand-written challenges, from guilty pleasures to a duet with a total stranger. Bad singers extremely welcome.",
+		tour: "How to play",
+		note: "US$4.99 once. No subscriptions, no ads, no judgement.",
+	},
+	play: {
+		eyebrow: "Your turn",
+		title: "Pick a card, any card",
+		description:
+			"This is the real deck: all 108 hand-written challenges. Tap the card, read it out loud, and sing. Nobody's recording.",
+		draw: "Draw another",
+		shuffle: "Shuffle",
+		sound: "Sound effects",
+		left: "Card {count} of {total}",
 	},
 	tour: {
-		eyebrow: "How a round works",
-		title: "Draw a card. Make it a sing-along.",
+		eyebrow: "How to play",
+		title: "Flip. Sing. Swipe. Repeat until hoarse.",
 		description:
-			"The card is the whole game: no menus, no players to add, no score to keep. Tap, sing, swipe.",
+			"The card is the whole game. No menus, no teams to pick, no scoreboard to argue over.",
 		stageLabel: "The four moves of a round",
 		steps: [
+			{ title: "Tap to reveal", body: "A card waits face down, all mystery. Tap it and it flips." },
 			{
-				title: "Tap to reveal",
-				body: "A face-down card waits in the middle of the table. Tap it and it flips over.",
+				title: "Sing it",
+				body: "Read the challenge out loud. Whoever has a song first grabs the mic (or the hairbrush).",
 			},
 			{
-				title: "Sing the challenge",
-				body: "Read it out loud and pick a song that fits. Whoever has one first takes the mic.",
+				title: "Swipe for the next one",
+				body: "Flick the card away when the song is done. The next challenge is already face up.",
 			},
 			{
-				title: "Swipe when you're done",
-				body: "Flick the card away and the next challenge is already face up behind it.",
-			},
-			{
-				title: "Shake to shuffle",
-				body: "Shake the phone for a fresh deck, face down again. With a keyboard, press Command-R.",
+				title: "Shake things up",
+				body: "Shake the phone for a brand-new deck. With a keyboard, Command-R does it too.",
 			},
 		],
 	},
 	deck: {
 		eyebrow: "The deck",
-		title: "108 challenges, written by hand",
+		title: "108 challenges, each one a little bit of trouble",
 		description:
-			"Every card asks for a song only your group can choose: one about you, one about the room, one about the title. Encore mixes them so the same mood never comes up twice in a row, and a shake deals a fresh deck whenever you want one.",
+			"Some are about you, some about the room, some about the title of the song. Encore deals them so the same mood never comes twice in a row. Go on, tap one.",
 		listLabel: "Cards from the deck",
 		generated: "Combined challenge",
+		reveal: "Tap to reveal",
 	},
 	cards: {
 		a001: {
@@ -86,64 +94,78 @@ export const EN: EncoreCopy = {
 			title: "ENCORE",
 			prompt: "You earned it. Sing whatever you want. No rules, no restrictions.",
 		},
+		a011: {
+			title: "EVERYBODY KNOWS THIS ONE",
+			prompt:
+				"Choose a song you believe every single person here knows. Everyone joins in on the chorus.",
+		},
+		a033: {
+			title: "ROAD TRIP",
+			prompt: "Sing a song you play loudly in a car with the windows down.",
+		},
+		a045: {
+			title: "NEW YEAR'S EVE",
+			prompt:
+				"Sing a song that belongs at midnight on New Year's Eve—the kind that makes people feel something.",
+		},
+		a015: {
+			title: "KARAOKE CHAMPION",
+			prompt:
+				"Sing whatever you'd choose to absolutely destroy at karaoke. Pull out all the stops.",
+		},
+		a080: {
+			title: "HOLIDAY CLASSIC",
+			prompt: "Sing a seasonal song—the one that immediately makes the room feel festive.",
+		},
+		a104: { title: "FOREIGN FAVOURITE", prompt: "Sing a hit from a country that isn't your own." },
 		generated: { prompt: "Sing a nostalgic song from the 1990s." },
 	},
 	watch: {
 		eyebrow: "Apple Watch",
-		title: "Run the night from your wrist",
+		title: "Conduct the chaos from your wrist",
 		description:
-			"Leave the phone on the table where everyone can read it. The Watch shows the card and reveals, deals or shuffles it on the iPhone.",
+			"Leave the phone on the table where everyone can read it. Your Apple Watch flips, deals and shuffles from across the room.",
 		items: [
-			"“Card ready”, then the challenge itself, on your wrist",
-			"Reveal, Next and Shuffle, with a tap you can feel",
+			"“Card ready” on your wrist, then the challenge itself",
+			"Reveal, Next and Shuffle, with a little tap you can feel",
 			"Pairs with your iPhone on its own: nothing to sign in to",
-			"A remote for the game on your iPhone, which stays open nearby",
+			"Works while Encore is open on the iPhone nearby",
 		],
 	},
 	details: {
-		eyebrow: "The small things",
-		title: "Made for the room you're in",
-		description:
-			"Encore fits the screen you have, speaks your language and stays quiet until you ask it not to.",
+		eyebrow: "Game night, anywhere",
+		title: "A card for every kind of night",
+		description: "Karaoke bar, road trip or New Year's Eve: there's a card for that.",
 		items: {
-			mac: {
-				title: "On a Mac",
-				body: "The iPad app runs on Apple silicon Macs too, and with a keyboard Command-R shuffles the deck.",
+			karaoke: {
+				title: "Karaoke night",
+				body: "No machine? No problem. Any speaker, any room, any level of talent.",
 			},
-			ipad: {
-				title: "On an iPad",
-				body: "Any orientation, so the iPad can stand in the middle of the table.",
+			road: {
+				title: "Road trip",
+				body: "Every card lives in the app, so the game keeps going with no signal.",
 			},
-			languages: {
-				title: "In your language",
-				body: "Every card, written for English, Spanish, Argentine Spanish and Japanese.",
+			holiday: {
+				title: "Holiday party",
+				body: "Prop an iPad in the middle of the table, or play on a Mac when everyone's on the couch.",
 			},
-			undo: {
-				title: "Swiped too soon?",
-				body: "Undo brings the last card back, until the next shuffle.",
+			abroad: {
+				title: "Friends from abroad",
+				body: "Cards in English, Spanish and Japanese, in whatever language your phone speaks.",
 			},
-			feedback: {
-				title: "Sound and haptics",
-				body: "Off until you turn them on in Settings. Sounds stay silent when your phone is.",
+			newYear: {
+				title: "New Year's Eve",
+				body: "Shake for a fresh deck whenever the night needs one. No setup, no scores.",
 			},
-			access: {
-				title: "For everyone at the table",
-				body: "VoiceOver reads every card aloud, and Reduce Motion fades it instead of flipping.",
+			everyone: {
+				title: "Everyone sings",
+				body: "No turns and no teams: whoever knows a song grabs the mic. VoiceOver reads every card aloud.",
 			},
-		},
-		app: {
-			game: "Game",
-			shuffleDeck: "Shuffle Deck",
-			previousCard: "Previous Card",
-			feedback: "Feedback",
-			haptics: "Haptics",
-			sounds: "Sound Effects",
-			faceDown: "Face-down card. Tap to reveal.",
 		},
 	},
 	privacy: {
 		eyebrow: "Privacy",
-		title: "Nobody's listening",
+		title: "What happens at karaoke stays at karaoke",
 		description:
 			"Encore never opens the microphone. Your singing stays in the room, and the game keeps nothing about it.",
 		checks: [
@@ -173,8 +195,8 @@ export const EN: EncoreCopy = {
 					"No. Every card is built into the app, so it plays the same on a train, at a cabin or in a basement.",
 				],
 				[
-					"Is Encore OK for kids?",
-					"Yes. It's rated 4+ on the App Store, and every card simply asks for a song.",
+					"Do we need to be good singers?",
+					"Absolutely not. Some cards practically beg you to be terrible: OVERACT IT wants dramatic, theatrical commitment to every word.",
 				],
 				[
 					"Will we see the same cards again?",
@@ -207,7 +229,7 @@ export const EN: EncoreCopy = {
 	},
 	closing: {
 		title: "Keep the songs coming.",
-		description: "Bring everyone together: a familiar song, a shared moment.",
+		description: "Grab your people, claim a corner of the room, flip the first card.",
 		support: "Need help? Visit support",
 	},
 	screens: {

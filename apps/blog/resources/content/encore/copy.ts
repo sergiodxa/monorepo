@@ -32,7 +32,18 @@ export interface CardText {
 }
 
 /** The cards the pages draw, by the app's own card id. */
-export type CardId = "a001" | "a002" | "a060" | "a100" | "generated";
+export type CardId =
+	| "a001"
+	| "a002"
+	| "a011"
+	| "a015"
+	| "a033"
+	| "a045"
+	| "a060"
+	| "a080"
+	| "a100"
+	| "a104"
+	| "generated";
 
 /** The screens the pages frame, each still a placeholder until its capture is exported. */
 export type ScreenName =
@@ -70,22 +81,25 @@ export interface EncoreCopy {
 		tour: string;
 		note: string;
 	};
+	/** The playable card: a round of the game on the page, dealt from the real deck. */
+	play: CopyBand & {
+		draw: string;
+		shuffle: string;
+		sound: string;
+		/** Where the reader is in the deck, with `{count}` and `{total}` where the numbers go. */
+		left: string;
+	};
 	tour: CopyBand & { stageLabel: string; steps: [CopyItem, CopyItem, CopyItem, CopyItem] };
-	deck: CopyBand & { listLabel: string; generated: string };
+	deck: CopyBand & {
+		listLabel: string;
+		generated: string;
+		/** The app's own hint on a face-down card, which names each card the reader can flip. */
+		reveal: string;
+	};
 	cards: Record<CardId, CardText>;
 	watch: CopyBand & { items: Array<string> };
 	details: CopyBand & {
-		items: Record<"mac" | "ipad" | "languages" | "undo" | "feedback" | "access", CopyItem>;
-		/** The app's own labels each detail's scene shows, as the app prints them. */
-		app: {
-			game: string;
-			shuffleDeck: string;
-			previousCard: string;
-			feedback: string;
-			haptics: string;
-			sounds: string;
-			faceDown: string;
-		};
+		items: Record<"karaoke" | "road" | "holiday" | "abroad" | "newYear" | "everyone", CopyItem>;
 	};
 	privacy: CopyBand & { checks: Array<string>; policy: string };
 	faq: { eyebrow: string; title: string; columns: Array<Array<readonly [string, string]>> };

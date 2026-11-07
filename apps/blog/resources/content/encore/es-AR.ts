@@ -30,45 +30,56 @@ export const ES: EncoreCopy = {
 	},
 	appStore: "Descargalo en el App Store",
 	hero: {
-		eyebrow: "Un juego musical para fiestas en iPhone, iPad, Apple Watch y Mac",
+		eyebrow: "El juego de fiesta donde cada carta es una canción",
 		title: "Tu próxima noche empieza con una canción.",
 		description:
-			"Sacá una carta, revelá el desafío y cantá una canción que encaje. Encore reparte 108 desafíos escritos a mano, de placeres culposos a dúos con un desconocido, y evita repetir lo que acaban de cantar.",
-		tour: "Cómo se juega una ronda",
-		note: "US$4,99, un solo pago. Sin suscripción, sin publicidad, con todas las cartas.",
+			"Das vuelta una carta, leés el desafío y cantás a los gritos una canción que encaje. 108 desafíos escritos a mano, de placeres culposos a un dúo con un completo desconocido. Desafinados más que bienvenidos.",
+		tour: "Cómo se juega",
+		note: "US$4,99, un solo pago. Sin suscripciones, sin publicidad, sin juicios.",
+	},
+	play: {
+		eyebrow: "Te toca",
+		title: "Elegí una carta, cualquier carta",
+		description:
+			"Este es el mazo de verdad: los 108 desafíos escritos a mano. Tocá la carta, leela en voz alta y cantá. Nadie está grabando.",
+		draw: "Sacar otra",
+		shuffle: "Mezclar",
+		sound: "Efectos de sonido",
+		left: "Carta {count} de {total}",
 	},
 	tour: {
-		eyebrow: "Cómo se juega una ronda",
-		title: "Sacá una carta. Que se convierta en un karaoke.",
+		eyebrow: "Cómo se juega",
+		title: "Dala vuelta. Cantá. Deslizá. Hasta quedarte sin voz.",
 		description:
-			"La carta es todo el juego: sin menús, sin jugadores que cargar, sin puntajes. Tocá, cantá, deslizá.",
+			"La carta es todo el juego. Sin menús, sin equipos que armar, sin tabla de puntos por la que pelearse.",
 		stageLabel: "Los cuatro movimientos de una ronda",
 		steps: [
 			{
 				title: "Tocá para revelar",
-				body: "Una carta boca abajo espera en el medio de la mesa. Tocala y se da vuelta.",
+				body: "Una carta espera boca abajo, puro misterio. Tocala y se da vuelta.",
 			},
 			{
-				title: "Cantá el desafío",
-				body: "Leelo en voz alta y elegí una canción que encaje. El primero que tenga una agarra el micrófono.",
+				title: "Cantala",
+				body: "Leé el desafío en voz alta. El primero que tenga una canción agarra el micrófono (o el cepillo).",
 			},
 			{
-				title: "Deslizá cuando terminen",
-				body: "Sacá la carta de un toque y el siguiente desafío ya está boca arriba detrás.",
+				title: "Deslizá para la siguiente",
+				body: "Sacá la carta de un toque cuando termine la canción. El próximo desafío ya está boca arriba.",
 			},
 			{
-				title: "Agitá para mezclar",
-				body: "Agitá el teléfono para un mazo nuevo, otra vez boca abajo. Con un teclado, apretá Comando-R.",
+				title: "Sacudí todo",
+				body: "Agitá el teléfono para un mazo nuevo. Con un teclado, Comando-R también lo hace.",
 			},
 		],
 	},
 	deck: {
 		eyebrow: "El mazo",
-		title: "108 desafíos escritos a mano",
+		title: "108 desafíos, cada uno un pequeño lío",
 		description:
-			"Cada carta pide una canción que solo tu grupo puede elegir: una sobre vos, una sobre la gente que te rodea, una sobre el título. Encore las mezcla para que el mismo clima no se repita dos veces seguidas, y agitando el teléfono repartís un mazo nuevo cuando quieras.",
+			"Algunos son sobre vos, otros sobre la gente que te rodea, otros sobre el título de la canción. Encore los reparte para que el mismo clima nunca se repita dos veces seguidas. Dale, tocá una.",
 		listLabel: "Cartas del mazo",
 		generated: "Desafío combinado",
+		reveal: "Tocá para revelar",
 	},
 	cards: {
 		a001: {
@@ -87,64 +98,78 @@ export const ES: EncoreCopy = {
 			title: "ENCORE",
 			prompt: "Te lo ganaste. Cantá lo que quieras. Sin reglas, sin restricciones.",
 		},
+		a011: {
+			title: "ESTA LA SABE TODOS",
+			prompt:
+				"Elegí una canción que creas que absolutamente todos aquí conocen. Todos se unen en el estribillo.",
+		},
+		a033: {
+			title: "VIAJE EN CARRETERA",
+			prompt: "Cantá una canción que ponés a todo volumen en el auto con las ventanas bajadas.",
+		},
+		a045: {
+			title: "NOCHEVIEJA",
+			prompt:
+				"Cantá una canción que pertenece a la medianoche de Año Nuevo—del tipo que hace sentir algo a la gente.",
+		},
+		a015: {
+			title: "CAMPEÓN DEL KARAOKE",
+			prompt: "Cantá lo que elegirías para destrozarlo totalmente en el karaoke. Sin reservas.",
+		},
+		a080: {
+			title: "CLÁSICO FESTIVO",
+			prompt:
+				"Cantá una canción de temporada—la que hace que la sala se sienta festiva al instante.",
+		},
+		a104: { title: "FAVORITA EXTRANJERA", prompt: "Cantá un éxito de un país que no es el tuyo." },
 		generated: { prompt: "Cantá una canción nostálgica de los años 90." },
 	},
 	watch: {
 		eyebrow: "Apple Watch",
-		title: "Llevá la noche desde la muñeca",
+		title: "Dirigí el caos desde la muñeca",
 		description:
-			"Dejá el teléfono en la mesa, donde todos lo puedan leer. El Watch muestra la carta y la revela, reparte o mezcla en el iPhone.",
+			"Dejá el teléfono en la mesa, donde todos lo puedan leer. Tu Apple Watch da vuelta, reparte y mezcla desde la otra punta del living.",
 		items: [
-			"“Carta lista” y después el desafío, en tu muñeca",
-			"Revelar, Siguiente y Mezclar, con un toque que se siente",
+			"“Carta lista” en tu muñeca, y después el desafío",
+			"Revelar, Siguiente y Mezclar, con un toquecito que se siente",
 			"Se conecta solo con tu iPhone: no hay que iniciar sesión en nada",
-			"Es un control remoto del juego en tu iPhone, que sigue abierto cerca",
+			"Funciona mientras Encore está abierto en el iPhone cerca",
 		],
 	},
 	details: {
-		eyebrow: "Los detalles",
-		title: "Hecho para el lugar donde estás",
-		description:
-			"Encore se adapta a la pantalla que tengas, habla tu idioma y no hace ruido hasta que se lo pidas.",
+		eyebrow: "Noche de juegos, en cualquier lado",
+		title: "Una carta para cada noche",
+		description: "Un bar de karaoke, un viaje en auto o Año Nuevo: hay una carta para eso.",
 		items: {
-			mac: {
-				title: "En una Mac",
-				body: "La app de iPad también funciona en las Mac con Apple silicon, y con un teclado Comando-R mezcla el mazo.",
+			karaoke: {
+				title: "Noche de karaoke",
+				body: "¿Sin máquina? No pasa nada. Cualquier parlante, cualquier lugar, cualquier nivel de talento.",
 			},
-			ipad: {
-				title: "En un iPad",
-				body: "En cualquier orientación, para que el iPad quede parado en el medio de la mesa.",
+			road: {
+				title: "Viaje en auto",
+				body: "Todas las cartas viven en la app, así que el juego sigue aunque no haya señal.",
 			},
-			languages: {
-				title: "En tu idioma",
-				body: "Cada carta, escrita en inglés, español, español rioplatense y japonés.",
+			holiday: {
+				title: "Fiesta en casa",
+				body: "Apoyá un iPad en el medio de la mesa, o jugá en una Mac cuando están todos en el sillón.",
 			},
-			undo: {
-				title: "¿Deslizaste antes de tiempo?",
-				body: "Deshacer trae de vuelta la última carta, hasta la próxima mezcla.",
+			abroad: {
+				title: "Amigos de otros países",
+				body: "Cartas en español, inglés y japonés, en el idioma de tu teléfono.",
 			},
-			feedback: {
-				title: "Sonido y vibración",
-				body: "Apagados hasta que los actives en Ajustes. Los sonidos callan cuando tu teléfono está en silencio.",
+			newYear: {
+				title: "Año Nuevo",
+				body: "Agitá para un mazo nuevo cuando la noche lo pida. Sin preparación, sin puntajes.",
 			},
-			access: {
-				title: "Para todos en la mesa",
-				body: "VoiceOver lee cada carta en voz alta, y con Reducir movimiento la carta aparece en vez de darse vuelta.",
+			everyone: {
+				title: "Todos cantan",
+				body: "Sin turnos ni equipos: el que sabe una canción agarra el micrófono. VoiceOver lee cada carta en voz alta.",
 			},
-		},
-		app: {
-			game: "Juego",
-			shuffleDeck: "Mezclar mazo",
-			previousCard: "Carta anterior",
-			feedback: "Respuesta táctil y sonido",
-			haptics: "Vibración",
-			sounds: "Efectos de sonido",
-			faceDown: "Carta boca abajo. Toca para revelar.",
 		},
 	},
 	privacy: {
 		eyebrow: "Privacidad",
-		title: "Nadie está escuchando",
+		title: "Lo que pasa en el karaoke queda en el karaoke",
 		description:
 			"Encore nunca abre el micrófono. Lo que cantás queda en la sala, y el juego no guarda nada de eso.",
 		checks: [
@@ -174,8 +199,8 @@ export const ES: EncoreCopy = {
 					"No. Todas las cartas vienen en la app, así que funciona igual en un tren, en una cabaña o en un sótano.",
 				],
 				[
-					"¿Es apta para chicos?",
-					"Sí. Tiene clasificación 4+ en el App Store, y cada carta solo pide una canción.",
+					"¿Hay que cantar bien?",
+					"Para nada. Algunas cartas casi te piden que lo hagas mal: SOBREACTÚALO quiere un compromiso dramático y teatral con cada palabra.",
 				],
 				[
 					"¿Vamos a ver las mismas cartas otra vez?",
@@ -208,7 +233,7 @@ export const ES: EncoreCopy = {
 	},
 	closing: {
 		title: "Que sigan las canciones.",
-		description: "Juntá a todos: una canción conocida, un momento compartido.",
+		description: "Juntá a tu gente, adueñate de un rincón y da vuelta la primera carta.",
 		support: "¿Necesitás ayuda? Visitá soporte",
 	},
 	screens: {

@@ -76,13 +76,12 @@ describe("GET /apps/encore", () => {
 		expect(html).toContain("Sing a nostalgic song from the 1990s.");
 	});
 
-	test("names the price, Family Sharing and the age rating, and Mac as the iPad app", async () => {
+	test("names the price, Family Sharing and Mac as the iPad app", async () => {
 		let html = await (await fetchPage("/apps/encore")).text();
 
 		expect(html).toContain("US$4.99");
 		expect(html).toContain("Family Sharing");
-		expect(html).toContain("rated 4+");
-		expect(html).toContain("The iPad app runs on Apple silicon Macs");
+		expect(html).toContain("or play on a Mac");
 	});
 
 	test("lists every language for search engines and links them from the footer", async () => {
@@ -92,6 +91,19 @@ describe("GET /apps/encore", () => {
 		expect(html).toContain('hreflang="ja" href="https://sergiodxa.com/apps/encore?lang=ja"');
 		expect(html).toContain('hreflang="x-default" href="https://sergiodxa.com/apps/encore"');
 		expect(html).toContain('href="/apps/encore?lang=ja"');
+	});
+});
+
+describe("The playable card", () => {
+	test("deals from the real deck, face down, in the page's language", async () => {
+		let english = await (await fetchPage("/apps/encore")).text();
+		let japanese = await (await fetchPage("/apps/encore?lang=ja")).text();
+
+		expect(english).toContain("Pick a card, any card");
+		expect(english).toContain('aria-label="Tap to reveal"');
+		expect(english).toContain("KARAOKE CHAMPION");
+		expect(japanese).toContain("好きなカードを一枚どうぞ");
+		expect(japanese).toContain("カラオケチャンピオン");
 	});
 });
 
