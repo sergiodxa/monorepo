@@ -9,10 +9,12 @@
 
 import type { Handle } from "remix/component";
 
+import { ShuffleIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 import { Button } from "@sdxc/ui";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 import { clientEntry, on } from "remix/component";
 
 import type { BadgeLanguage } from "~/resources/views/app-pages/app-store-badge";
@@ -55,7 +57,8 @@ function prefersLessMotion(): boolean {
 
 /**
  * The island. It renders the first card face down on the server, so the page shows a real
- * card before it loads; once loaded, every control works with mouse, touch and keyboard.
+ * card before it loads. Its shuffle button sits in the corner of the nearest positioned
+ * ancestor, the band's stage. Every control works with mouse, touch and keyboard.
  */
 export const EncoreDraw = clientEntry(
 	import.meta.url,
@@ -104,120 +107,79 @@ export const EncoreDraw = clientEntry(
 		return () => {
 			let { cards, labels, store } = handle.props;
 			let card = cards[index];
-			if (!card) {
-				return (
-					<div
-						mix={[
-							raw({
-								display: "grid",
-								justifyItems: "center",
-								gap: "1.25rem",
-								textAlign: "center",
-							}),
-						]}
-					>
-						<div mix={[raw({ inlineSize: "min(18rem, 78vw)", opacity: "0.85" })]}>
-							<PlayingCard faceDown />
-						</div>
-						<p
-							aria-live="polite"
-							mix={[
-								raw({
-									margin: "0",
-									maxInlineSize: "24rem",
-									fontSize: "1.125rem",
-									fontWeight: "600",
-									textWrap: "balance",
-								}),
-							]}
-						>
-							{labels.end}
-						</p>
-						<div
-							mix={[
-								raw({
-									display: "flex",
-									flexWrap: "wrap",
-									justifyContent: "center",
-									alignItems: "center",
-									gap: "0.75rem",
-								}),
-							]}
-						>
-							<AppStoreBadge href={store.href} label={store.label} language={store.language} />
-							<Button type="button" variant="surface" mix={[on("click", shuffle)]}>
-								{labels.shuffle}
-							</Button>
-						</div>
-					</div>
-				);
-			}
 			return (
 				<div
 					mix={[
 						raw({
 							display: "grid",
 							justifyItems: "center",
-							gap: "1.25rem",
+							gap: "1rem",
+							textAlign: "center",
 						}),
 					]}
 				>
-					<button
-						type="button"
-						aria-label={revealed ? undefined : labels.reveal}
-						aria-live="polite"
-						mix={[
-							on("click", () => (revealed ? draw() : reveal())),
-							raw({
-								inlineSize: "min(18rem, 78vw)",
-								padding: "0",
-								border: "0",
-								background: "none",
-								cursor: "pointer",
-								perspective: "1400px",
-								borderRadius: "1.25rem",
-								"&:focus-visible": {
-									outline: "2px solid var(--app-accent)",
-									outlineOffset: "6px",
-								},
-							}),
-						]}
-					>
-						<span
-							data-revealed={revealed ? "" : undefined}
-							data-leaving={leaving ? "" : undefined}
+					{card ? (
+						<button
+							type="button"
+							aria-label={revealed ? undefined : labels.reveal}
+							aria-live="polite"
 							mix={[
+								on("click", () => (revealed ? draw() : reveal())),
 								raw({
-									display: "grid",
-									transformStyle: "preserve-3d",
-									"&[data-revealed]": { transform: "rotateY(180deg)" },
-									"&[data-leaving]": {
-										transform: "translateX(70%) rotate(14deg) rotateY(180deg)",
-										opacity: "0",
+									inlineSize: "min(16rem, 64vw)",
+									padding: "0",
+									border: "0",
+									background: "none",
+									cursor: "pointer",
+									perspective: "1400px",
+									borderRadius: "1.25rem",
+									"&:focus-visible": {
+										outline: "2px solid var(--app-accent)",
+										outlineOffset: "6px",
 									},
-									"@media (prefers-reduced-motion: no-preference)": {
-										transition: "transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1)",
-										"&[data-leaving]": {
-											transition: `transform ${SWIPE_MS}ms ease-in, opacity ${SWIPE_MS}ms ease-in`,
-										},
-									},
-									"& > *": { gridArea: "1 / 1", backfaceVisibility: "hidden" },
 								}),
 							]}
 						>
-							<span mix={[block()]}>
-								<PlayingCard faceDown />
+							<span
+								data-revealed={revealed ? "" : undefined}
+								data-leaving={leaving ? "" : undefined}
+								mix={[
+									raw({
+										display: "grid",
+										transformStyle: "preserve-3d",
+										"&[data-revealed]": { transform: "rotateY(180deg)" },
+										"&[data-leaving]": {
+											transform: "translateX(70%) rotate(14deg) rotateY(180deg)",
+											opacity: "0",
+										},
+										"@media (prefers-reduced-motion: no-preference)": {
+											transition: "transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1)",
+											"&[data-leaving]": {
+												transition: `transform ${SWIPE_MS}ms ease-in, opacity ${SWIPE_MS}ms ease-in`,
+											},
+										},
+										"& > *": { gridArea: "1 / 1", backfaceVisibility: "hidden" },
+									}),
+								]}
+							>
+								<span mix={[block()]}>
+									<PlayingCard faceDown />
+								</span>
+								<span mix={[block(), raw({ transform: "rotateY(180deg)" })]}>
+									<PlayingCard title={card.title} prompt={card.prompt} />
+								</span>
 							</span>
-							<span mix={[block(), raw({ transform: "rotateY(180deg)" })]}>
-								<PlayingCard title={card.title} prompt={card.prompt} />
-							</span>
-						</span>
-						{revealed ? (
-							<span mix={[visuallyHidden()]}>
-								{card.title}. {card.prompt}
-							</span>
-						) : null}
-					</button>
+							{revealed ? (
+								<span mix={[visuallyHidden()]}>
+									{card.title}. {card.prompt}
+								</span>
+							) : null}
+						</button>
+					) : (
+						<div mix={[raw({ inlineSize: "min(16rem, 64vw)", opacity: "0.85" })]}>
+							<PlayingCard faceDown />
+						</div>
+					)}
 					<div
 						mix={[
 							raw({
@@ -226,30 +188,78 @@ export const EncoreDraw = clientEntry(
 								justifyContent: "center",
 								alignItems: "center",
 								gap: "0.75rem",
+								minBlockSize: "3rem",
 							}),
 						]}
 					>
-						<Button type="button" mix={[on("click", draw)]}>
-							{labels.draw}
-						</Button>
-						<Button type="button" variant="surface" mix={[on("click", shuffle)]}>
-							{labels.shuffle}
-						</Button>
+						{card ? (
+							<Button type="button" mix={[on("click", draw), landingCtaChrome()]}>
+								{labels.draw}
+							</Button>
+						) : (
+							<AppStoreBadge href={store.href} label={store.label} language={store.language} />
+						)}
 					</div>
 					<p
+						aria-live={card ? undefined : "polite"}
 						mix={[
 							raw({
 								margin: "0",
-								fontSize: "0.8125rem",
+								display: "grid",
+								alignContent: "start",
+								justifyItems: "center",
+								blockSize: "3rem",
+								maxInlineSize: "22rem",
+								lineHeight: "1.5",
+								textWrap: "balance",
+								fontSize: card ? "0.8125rem" : "1rem",
+								fontWeight: card ? "400" : "600",
 								fontVariantNumeric: "tabular-nums",
-								color: "var(--ui-neutral-fg)",
+								color: card ? "var(--ui-neutral-fg)" : "var(--ui-neutral-fg-emphasis)",
 							}),
 						]}
 					>
-						{labels.left
-							.replace("{count}", String(index + 1))
-							.replace("{total}", String(cards.length))}
+						{card
+							? labels.left
+									.replace("{count}", String(index + 1))
+									.replace("{total}", String(cards.length))
+							: labels.end}
 					</p>
+					<button
+						type="button"
+						aria-label={labels.shuffle}
+						title={labels.shuffle}
+						mix={[
+							on("click", shuffle),
+							raw({
+								position: "absolute",
+								insetBlockStart: "0.75rem",
+								insetInlineEnd: "0.75rem",
+								display: "grid",
+								placeItems: "center",
+								inlineSize: "2.5rem",
+								blockSize: "2.5rem",
+								padding: "0",
+								borderRadius: "9999px",
+								border: "0",
+								cursor: "pointer",
+								color: "var(--ui-neutral-fg-emphasis)",
+								backgroundColor: "color-mix(in srgb, var(--app-card) 70%, transparent)",
+								boxShadow: "inset 0 0 0 1px var(--ui-landing-hairline)",
+								"&:hover": { backgroundColor: "var(--app-card)" },
+								"&:focus-visible": {
+									outline: "2px solid var(--app-accent)",
+									outlineOffset: "2px",
+								},
+								"@media (prefers-reduced-motion: no-preference)": {
+									transition: "rotate 0.3s ease",
+									"&:active": { rotate: "-20deg" },
+								},
+							}),
+						]}
+					>
+						<ShuffleIcon size={18} aria-hidden="true" />
+					</button>
 				</div>
 			);
 		};

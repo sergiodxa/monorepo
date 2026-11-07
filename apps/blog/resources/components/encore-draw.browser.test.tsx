@@ -1,7 +1,8 @@
 /**
  * Plays Encore's sample in a real browser: the first card waits face down and names itself
  * with the app's hint, a tap turns it over, drawing deals the next card face up, and after the
- * last card the table ends on the App Store badge until a shuffle deals the sample again.
+ * last card the table ends on the App Store badge, at the same height so nothing below jumps,
+ * until a shuffle deals the sample again.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,6 +66,7 @@ describe("EncoreDraw", () => {
 		let card = mounted.container.querySelector<HTMLButtonElement>("button");
 
 		expect(card?.getAttribute("aria-label")).toBe("Tap to reveal");
+		let height = (mounted.container.firstElementChild as HTMLElement).offsetHeight;
 		expect(mounted.container.textContent).toContain("Card 1 of 3");
 
 		card?.click();
@@ -87,13 +89,12 @@ describe("EncoreDraw", () => {
 			await frame();
 		}
 		expect(mounted.container.textContent).toContain("That's your sample.");
+		expect((mounted.container.firstElementChild as HTMLElement).offsetHeight).toBe(height);
 		expect(
 			mounted.container.querySelector('a[data-app-store="available"]')?.getAttribute("href"),
 		).toBe(STORE.href);
 
-		Array.from(mounted.container.querySelectorAll("button"))
-			.find((button) => button.textContent?.includes("Shuffle"))
-			?.click();
+		mounted.container.querySelector<HTMLButtonElement>('button[aria-label="Shuffle"]')?.click();
 		await frame();
 		expect(mounted.container.querySelector("button")?.getAttribute("aria-label")).toBe(
 			"Tap to reveal",

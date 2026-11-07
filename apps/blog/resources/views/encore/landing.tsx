@@ -461,8 +461,8 @@ function YourTurn(handle: Handle) {
 							position: "relative",
 							isolation: "isolate",
 							overflow: "hidden",
-							paddingBlock: "clamp(2rem, 6cqi, 3.5rem)",
-							paddingInline: "1rem",
+							paddingBlock: "clamp(3.75rem, 8cqi, 5rem) clamp(1.25rem, 4cqi, 2.5rem)",
+							paddingInline: "clamp(1.5rem, 6cqi, 4rem)",
 						}),
 					]}
 				>
