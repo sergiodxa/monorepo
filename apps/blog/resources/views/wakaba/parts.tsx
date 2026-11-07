@@ -11,7 +11,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { block, shrink } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
+import { is, p } from "@sdxc/u/size";
 
 import type { PageLocale } from "~/app/services/page-locale";
 import type { WakabaCopy } from "~/resources/content/wakaba/copy";
@@ -113,72 +113,34 @@ export function WakabaMark(handle: Handle<WakabaMark.Props>) {
 interface Screen {
 	file: string;
 	dark?: boolean;
+	/** Shot on an iPad mini, at 744 × 1133, and framed as a tablet. */
+	tablet?: boolean;
 }
 
 /**
  * The real captures the pages frame: app screenshots under `screenshots/` and widget gallery
- * captures under `widgets/`. Each is the English capture at 560 × 1218, half the device's
- * width, so it stays sharp at the 280px a phone is drawn at.
+ * captures under `widgets/`, each in both appearances and in the page's language. An iPhone
+ * capture is 560 × 1218, half the device's width, so it stays sharp at the 280px it is drawn at.
  */
 export const SCREENS = {
-	"path-kitsune": {
-		file: "screenshots/{lang}/path-kitsune",
-	},
-	"flashcards-fish": {
-		file: "screenshots/{lang}/flashcards-fish",
-		dark: true,
-	},
-	practice: {
-		file: "screenshots/{lang}/practice",
-		dark: true,
-	},
-	"flashcards-water": {
-		file: "screenshots/{lang}/flashcards-water",
-	},
-	conjugations: {
-		file: "screenshots/{lang}/conjugations",
-	},
-	"level-exam-path": {
-		file: "screenshots/{lang}/level-exam-path",
-	},
-	listening: {
-		file: "screenshots/{lang}/listening",
-	},
-	speaking: {
-		file: "screenshots/{lang}/speaking",
-	},
-	"build-sentence": {
-		file: "screenshots/{lang}/build-sentence",
-	},
-	"conjugation-practice": {
-		file: "screenshots/{lang}/conjugation-practice",
-	},
-	"oni-correction": {
-		file: "screenshots/{lang}/oni-correction",
-	},
-	"kana-tracing": {
-		file: "screenshots/{lang}/kana-tracing",
-	},
-	"stroke-guide": {
-		file: "screenshots/{lang}/stroke-guide",
-	},
-	"new-word": {
-		file: "screenshots/{lang}/new-word",
-	},
-	"practice-feedback": {
-		file: "screenshots/{lang}/practice-feedback",
-	},
-	"oni-mistakes": {
-		file: "screenshots/{lang}/oni-mistakes",
-	},
-	"widget-progress": {
-		file: "widgets/{lang}/progress-medium",
-		dark: true,
-	},
-	"widget-word": {
-		file: "widgets/{lang}/word-large",
-		dark: true,
-	},
+	"path-progress": { file: "screenshots/{lang}/path-progress", dark: true },
+	"flashcards-fish": { file: "screenshots/{lang}/flashcards-fish", dark: true },
+	practice: { file: "screenshots/{lang}/practice", dark: true },
+	"flashcards-water": { file: "screenshots/{lang}/flashcards-water", dark: true },
+	conjugations: { file: "screenshots/{lang}/conjugations", dark: true },
+	"level-exam": { file: "screenshots/{lang}/level-exam", dark: true },
+	listening: { file: "screenshots/{lang}/listening", dark: true },
+	speaking: { file: "screenshots/{lang}/speaking", dark: true },
+	"build-sentence": { file: "screenshots/{lang}/build-sentence", dark: true },
+	conjugation: { file: "screenshots/{lang}/conjugation", dark: true },
+	"oni-correction": { file: "screenshots/{lang}/oni-correction", dark: true },
+	"kana-tracing": { file: "screenshots/{lang}/kana-tracing", dark: true, tablet: true },
+	"stroke-guide": { file: "screenshots/{lang}/stroke-guide", dark: true },
+	"new-word": { file: "screenshots/{lang}/new-word", dark: true },
+	"correct-answer": { file: "screenshots/{lang}/correct-answer", dark: true },
+	"oni-review": { file: "screenshots/{lang}/oni-review", dark: true },
+	"widget-progress": { file: "widgets/{lang}/progress-medium", dark: true },
+	"widget-word": { file: "widgets/{lang}/word-large", dark: true },
 } as const satisfies Record<string, Screen>;
 
 /** A screenshot's key in {@link SCREENS}. */
@@ -209,32 +171,62 @@ export function Phone(handle: Handle<Phone.Props>) {
 		let shot: Screen = SCREENS[screen];
 		let file = shot.file.replace("{lang}", copy.captures);
 		let base = shot.dark ? `${file}-light` : file;
-
-		return (
-			<PhoneFrame>
-				<picture mix={[block(), screenCorners()]}>
-					{shot.dark ? (
-						<source
-							media="(prefers-color-scheme: dark)"
-							srcSet={`${WAKABA_ASSETS}/${file}-dark.webp`}
-							width={560}
-							height={1218}
-						/>
-					) : null}
-					<img
-						src={`${WAKABA_ASSETS}/${base}.webp`}
-						alt={copy.screens[screen]}
-						width={560}
-						height={1218}
-						loading={eager ? "eager" : "lazy"}
-						decoding="async"
-						fetchpriority={eager ? "high" : undefined}
-						mix={[block(), is("full"), raw({ blockSize: "auto" })]}
+		let [width, height] = shot.tablet ? [744, 1133] : [560, 1218];
+		let picture = (
+			<picture mix={[block(), shot.tablet ? tabletScreenCorners() : screenCorners()]}>
+				{shot.dark ? (
+					<source
+						media="(prefers-color-scheme: dark)"
+						srcSet={`${WAKABA_ASSETS}/${file}-dark.webp`}
+						width={width}
+						height={height}
 					/>
-				</picture>
-			</PhoneFrame>
+				) : null}
+				<img
+					src={`${WAKABA_ASSETS}/${base}.webp`}
+					alt={copy.screens[screen]}
+					width={width}
+					height={height}
+					loading={eager ? "eager" : "lazy"}
+					decoding="async"
+					fetchpriority={eager ? "high" : undefined}
+					mix={[block(), is("full"), raw({ blockSize: "auto" })]}
+				/>
+			</picture>
 		);
+
+		return shot.tablet ? <TabletFrame>{picture}</TabletFrame> : <PhoneFrame>{picture}</PhoneFrame>;
 	};
+}
+
+/**
+ * The bezel of an iPad mini around a capture: an even ink border with the gentler corners of
+ * a tablet, so an iPad screen never reads as a stretched phone.
+ *
+ * @param handle Runtime handle carrying the screen, which clips itself with {@link tabletScreenCorners}.
+ * @returns The render function producing the bezel.
+ */
+function TabletFrame(handle: Handle<{ children: RemixNode }>) {
+	return () => (
+		<div
+			mix={[
+				is("full"),
+				p(2),
+				raw({
+					backgroundColor: "var(--app-bezel)",
+					borderRadius: "7% / 4.6%",
+					boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.12)",
+				}),
+			]}
+		>
+			{handle.props.children}
+		</div>
+	);
+}
+
+/** The corners of an iPad mini screen inside a {@link TabletFrame}. */
+function tabletScreenCorners() {
+	return raw({ overflow: "hidden", borderRadius: "4.4% / 2.9%" });
 }
 
 namespace AppStoreCall {

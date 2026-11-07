@@ -244,7 +244,7 @@ function HeroStage(handle: Handle) {
 							<Phone screen="flashcards-fish" eager />
 						</FannedPhone>
 						<div mix={[raw({ inlineSize: "var(--phone)", flexShrink: "0", zIndex: "1" })]}>
-							<Phone screen="path-kitsune" eager />
+							<Phone screen="path-progress" eager />
 						</div>
 						<FannedPhone side="end">
 							<Phone screen="practice" eager />
@@ -553,7 +553,7 @@ const EXERCISE_SCREENS = [
 	"listening",
 	"speaking",
 	"build-sentence",
-	"conjugation-practice",
+	"conjugation",
 	"oni-correction",
 ] as const;
 
@@ -604,8 +604,8 @@ function Exercises(handle: Handle) {
 }
 
 /**
- * Kana tracing: a stroke drawn over the guide beside the stroke-order guide for 水, on an
- * inset band, with the Apple Pencil named where it applies.
+ * Kana tracing: a stroke drawn over the guide on an iPad beside the stroke-order guide for 水
+ * on an iPhone, sized so both devices stand about as tall, on an inset band.
  *
  * @returns The render function producing the band.
  */
@@ -627,8 +627,8 @@ function KanaTracing(handle: Handle) {
 						mix={[
 							grid(),
 							gap(4),
-							gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
-							maxIs("30rem"),
+							gridTemplate({ columns: "minmax(0, 7fr) minmax(0, 5fr)" }),
+							maxIs("34rem"),
 							mi("auto"),
 							is("full"),
 							raw({ alignItems: "start" }),
@@ -657,18 +657,20 @@ function KanaTracing(handle: Handle) {
  * language, since a reader already sees their own on every other screen.
  */
 const DETAILS = [
-	{ key: "kanji-index", screen: "kanji-index", tint: "tengu", focus: "0%" },
-	{ key: "particle", screen: "particle", tint: "kitsune", focus: "0%" },
-	{ key: "phrases", screen: "phrases", tint: "sky", focus: "0%" },
-	{ key: "kana-tables", screen: "hiragana", tint: "plum", focus: "0%" },
-	{ key: "languages", screen: "flashcards-water", tint: "oni", focus: "55%" },
-	{ key: "add-word", screen: "add-word", tint: "tanuki", focus: "0%" },
+	{ key: "kanji-index", screen: "kanji-index", dark: true, tint: "tengu", focus: "0%" },
+	{ key: "particle", screen: "particle", dark: true, tint: "kitsune", focus: "0%" },
+	{ key: "phrases", screen: "phrases", dark: true, tint: "sky", focus: "0%" },
+	{ key: "kana-tables", screen: "hiragana", dark: false, tint: "plum", focus: "0%" },
+	{ key: "languages", screen: "flashcards-water", dark: true, tint: "oni", focus: "55%" },
+	{ key: "add-word", screen: "add-word", dark: true, tint: "tanuki", focus: "0%" },
 ] as const;
 
 namespace DetailScreen {
 	/** Props of one bento card's screen. */
 	export interface Props {
 		screen: string;
+		/** Whether the screen was shot in both appearances, as `-light` and `-dark` files. */
+		dark: boolean;
 		/** The folder of the language the capture was shot in. */
 		captures: "en" | "es";
 		/** Which part of the screen the card shows, as a vertical position. */
@@ -679,37 +681,47 @@ namespace DetailScreen {
 
 /**
  * The real screen leading a bento card: the top of a full screenshot cropped to one height
- * and fading out below.
+ * and fading out below, in the visitor's appearance when the screen was shot in both.
  *
  * @param handle Runtime handle carrying the screen, its crop and its alt text.
  * @returns The render function producing the screen.
  */
 function DetailScreen(handle: Handle<DetailScreen.Props>) {
 	return () => {
-		let { alt, captures, focus, screen } = handle.props;
-		let src = `${WAKABA_ASSETS}/screenshots/${captures}/${screen}.webp`;
+		let { alt, captures, dark, focus, screen } = handle.props;
+		let file = `${WAKABA_ASSETS}/screenshots/${captures}/${screen}`;
 
 		return (
 			<div mix={[raw({ paddingInline: "12%", paddingBlockStart: "1.5rem" })]}>
-				<img
-					src={src}
-					alt={alt}
-					width={560}
-					height={1218}
-					loading="lazy"
-					decoding="async"
-					mix={[
-						block(),
-						is("full"),
-						raw({
-							blockSize: "14rem",
-							objectFit: "cover",
-							objectPosition: `50% ${focus}`,
-							borderRadius: "1.25rem 1.25rem 0 0",
-							maskImage: "linear-gradient(to bottom, black 70%, transparent)",
-						}),
-					]}
-				/>
+				<picture>
+					{dark ? (
+						<source
+							media="(prefers-color-scheme: dark)"
+							srcSet={`${file}-dark.webp`}
+							width={560}
+							height={1218}
+						/>
+					) : null}
+					<img
+						src={dark ? `${file}-light.webp` : `${file}.webp`}
+						alt={alt}
+						width={560}
+						height={1218}
+						loading="lazy"
+						decoding="async"
+						mix={[
+							block(),
+							is("full"),
+							raw({
+								blockSize: "14rem",
+								objectFit: "cover",
+								objectPosition: `50% ${focus}`,
+								borderRadius: "1.25rem 1.25rem 0 0",
+								maskImage: "linear-gradient(to bottom, black 70%, transparent)",
+							}),
+						]}
+					/>
+				</picture>
 			</div>
 		);
 	};
@@ -758,6 +770,7 @@ function Details(handle: Handle) {
 						>
 							<DetailScreen
 								screen={detail.screen}
+								dark={detail.dark}
 								captures={detail.key === "languages" ? otherCaptures(t.captures) : t.captures}
 								focus={detail.focus}
 								alt={t.details.items[detail.key].alt}

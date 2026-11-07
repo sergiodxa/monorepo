@@ -70,20 +70,32 @@ describe("GET /apps/wakaba", () => {
 		expect(html).not.toContain("apple-itunes-app");
 	});
 
-	test("shows each of the small things with its real screen", async () => {
+	test("shows each of the small things with its real screen, in both appearances", async () => {
 		let html = await (await fetchPage("/apps/wakaba")).text();
 
 		for (let screen of [
 			"en/kanji-index",
 			"en/particle",
 			"en/phrases",
-			"en/hiragana",
 			"es/flashcards-water",
 			"en/add-word",
 		]) {
-			expect(html).toContain(`src="/apps/wakaba/screenshots/${screen}.webp"`);
+			expect(html).toContain(`src="/apps/wakaba/screenshots/${screen}-light.webp"`);
+			expect(html).toContain(`srcset="/apps/wakaba/screenshots/${screen}-dark.webp"`);
 		}
+		expect(html).toContain('src="/apps/wakaba/screenshots/en/hiragana.webp"');
 		expect(html).toContain("Everything else in your pocket");
+	});
+
+	test("frames the iPad capture as a tablet and every other screen as a phone", async () => {
+		let html = await (await fetchPage("/apps/wakaba")).text();
+
+		expect(html).toMatch(
+			/src="\/apps\/wakaba\/screenshots\/en\/kana-tracing-light\.webp"[^>]*width="744"/,
+		);
+		expect(html).toMatch(
+			/src="\/apps\/wakaba\/screenshots\/en\/stroke-guide-light\.webp"[^>]*width="560"/,
+		);
 	});
 
 	test("names only iPhone and iPad", async () => {
@@ -104,12 +116,13 @@ describe("GET /apps/wakaba in Spanish", () => {
 		expect(html).toMatch(/<html lang="es-AR" class="system wakaba/);
 		expect(headingCount(html)).toBe(1);
 		expect(html).toMatch(/<h1[^>]*>[\s\S]*Crece con cada[\s\S]*práctica[\s\S]*<\/h1>/);
-		expect(html).toContain('src="/apps/wakaba/screenshots/es/path-kitsune.webp"');
+		expect(html).toContain('src="/apps/wakaba/screenshots/es/path-progress-light.webp"');
+		expect(html).toContain('srcset="/apps/wakaba/screenshots/es/path-progress-dark.webp"');
 		expect(html).toContain("Muy pronto en la");
 		expect(html).toContain(
 			'content="https://sergiodxa.com/apps/wakaba/branding/social-card-es.png"',
 		);
-		expect(html).not.toContain('src="/apps/wakaba/screenshots/en/path-kitsune.webp"');
+		expect(html).not.toContain("/apps/wakaba/screenshots/en/path-progress");
 	});
 
 	test("keeps the language out of the header", async () => {
@@ -133,8 +146,8 @@ describe("GET /apps/wakaba in Spanish", () => {
 		let english = await (await fetchPage("/apps/wakaba?lang=en")).text();
 		let spanish = await (await fetchPage("/apps/wakaba?lang=es-AR")).text();
 
-		expect(english).toContain('src="/apps/wakaba/screenshots/es/flashcards-water.webp"');
-		expect(spanish).toContain('src="/apps/wakaba/screenshots/en/flashcards-water.webp"');
+		expect(english).toContain('src="/apps/wakaba/screenshots/es/flashcards-water-light.webp"');
+		expect(spanish).toContain('src="/apps/wakaba/screenshots/en/flashcards-water-light.webp"');
 	});
 });
 

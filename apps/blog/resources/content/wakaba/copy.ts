@@ -26,22 +26,22 @@ export interface CopyBand {
 
 /** The screenshots the pages frame, by name, each with the alt text of its capture. */
 export type ScreenAlts = Record<
-	| "path-kitsune"
+	| "path-progress"
 	| "flashcards-fish"
 	| "practice"
 	| "flashcards-water"
 	| "conjugations"
-	| "level-exam-path"
+	| "level-exam"
 	| "listening"
 	| "speaking"
 	| "build-sentence"
-	| "conjugation-practice"
+	| "conjugation"
 	| "oni-correction"
 	| "kana-tracing"
 	| "stroke-guide"
 	| "new-word"
-	| "practice-feedback"
-	| "oni-mistakes"
+	| "correct-answer"
+	| "oni-review"
 	| "widget-progress"
 	| "widget-word",
 	string

@@ -194,7 +194,7 @@ export const EN: WakabaCopy = {
 			"add-word": {
 				title: "Your own words",
 				body: "Add a word you met elsewhere and choose the level where practice introduces it.",
-				alt: "The Add word form: meaning in English and Spanish, Japanese spellings and the learning level.",
+				alt: "The Add word form filled in for 猫: cat, gato and neko, its spellings ねこ and 猫, and Level 2.",
 			},
 		},
 	},
@@ -288,8 +288,8 @@ export const EN: WakabaCopy = {
 		support: "Questions? Write to support",
 	},
 	screens: {
-		"path-kitsune":
-			"Wakaba's learning path at Level 1: numbered session stones, with Kitsune pointing to the next one.",
+		"path-progress":
+			"Wakaba's learning path at Level 3 with a 23-day streak: sessions 38 and 39 ticked, and Kitsune pointing to session 40.",
 		"flashcards-fish":
 			"A flashcard for 魚, fish: furigana さかな above the kanji and the romaji sakana below.",
 		practice:
@@ -298,26 +298,27 @@ export const EN: WakabaCopy = {
 			"A flashcard for 水, water: furigana みず over the kanji, the meaning and the romaji mizu.",
 		conjugations:
 			"The details of 食べる, to eat: its dictionary form and conjugations such as 食べます and 食べません.",
-		"level-exam-path":
-			"The learning path reaching the Level 2 exam, with Kitsune beside the next sessions.",
+		"level-exam":
+			"A Level 2 exam question asking for the reading of 本 in hiragana, with Aka Oni beside the kanji.",
 		listening:
-			"A listening question: a speaker button plays the word and three meanings wait below.",
-		speaking: "Speaking practice asking the learner to say みず aloud, with a microphone button.",
+			"A listening question with Tanuki: a speaker button plays the word, and cat, dog and train wait below.",
+		speaking:
+			"Speaking practice asking the learner to say ともだち aloud, with a microphone button.",
 		"build-sentence":
 			"A sentence to build in Japanese from word tiles, for “I ask the teacher a question.”",
-		"conjugation-practice":
-			"A conjugation question: write たべる, to eat, in its polite non-past form.",
+		conjugation:
+			"A conjugation question with Aka Oni: のむ, to drink, in its polite past form, with three answers below.",
 		"oni-correction":
-			"Aka Oni after a wrong answer: the right word みず, water, and a note on how it differs.",
+			"Aka Oni after a wrong answer: the right word ねこ, cat, and how it differs from いぬ, dog.",
 		"kana-tracing":
-			"Katakana tracing practice: a stroke drawn over the guide, numbered in stroke order.",
+			"Hiragana tracing on iPad: a stroke of あ drawn over the guide, numbered in stroke order.",
 		"stroke-guide": "The stroke-order guide for 水, its second stroke highlighted and numbered.",
 		"new-word":
-			"A new word introduced before any question: みず, water, mizu, with Tengu and a Start exercise button.",
-		"practice-feedback":
-			"A correct answer: “You got it!” over みず, water, mizu, with a Next word button.",
-		"oni-mistakes":
-			"A review of earlier mistakes with Aka Oni, asking for the reading of みず in romaji.",
+			"A new word introduced before any question: せんせい, teacher, sensei, with Tengu and a Start exercise button.",
+		"correct-answer":
+			"A correct answer: “You got it!” over ねこ, cat, neko, with Kitsune and a Next word button.",
+		"oni-review":
+			"A review of earlier mistakes with Aka Oni: いぬ, dog, and how it differs from ねこ, cat.",
 		"widget-progress":
 			"The Practice bonsai widget in the iOS widget gallery: a bonsai, a 23-day streak, 36 words learned and “Practiced today”.",
 		"widget-word":

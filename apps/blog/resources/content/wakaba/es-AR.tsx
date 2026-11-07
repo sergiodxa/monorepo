@@ -194,7 +194,7 @@ export const ES: WakabaCopy = {
 			"add-word": {
 				title: "Tus propias palabras",
 				body: "Agrega una palabra que encontraste en otro lado y elige el nivel en el que la práctica la presenta.",
-				alt: "El formulario para agregar una palabra: significado en inglés y en español, escrituras japonesas y nivel de aprendizaje.",
+				alt: "El formulario para agregar una palabra completado para 猫: cat, gato y neko, sus escrituras ねこ y 猫, y el nivel 2.",
 			},
 		},
 	},
@@ -286,8 +286,8 @@ export const ES: WakabaCopy = {
 		support: "¿Preguntas? Escribe a soporte",
 	},
 	screens: {
-		"path-kitsune":
-			"El camino de aprendizaje en el nivel 1: piedras numeradas de sesiones, con Kitsune señalando la siguiente.",
+		"path-progress":
+			"El camino de aprendizaje en el nivel 3 con 23 días de racha: las sesiones 38 y 39 completadas y Kitsune señalando la 40.",
 		"flashcards-fish":
 			"Una tarjeta de 魚, pez: el furigana さかな sobre el kanji y el romaji sakana debajo.",
 		practice:
@@ -296,26 +296,27 @@ export const ES: WakabaCopy = {
 			"Una tarjeta de 水, agua: el furigana みず sobre el kanji, el significado y el romaji mizu.",
 		conjugations:
 			"Los detalles de 食べる, comer: su forma de diccionario y conjugaciones como 食べます y 食べません.",
-		"level-exam-path":
-			"El camino de aprendizaje llegando al examen del nivel 2, con Kitsune junto a las próximas sesiones.",
+		"level-exam":
+			"Una pregunta del examen del nivel 2 que pide la lectura de 本 en hiragana, con Aka Oni junto al kanji.",
 		listening:
-			"Una pregunta de comprensión auditiva: un botón reproduce la palabra y debajo esperan tres significados.",
+			"Una pregunta de comprensión auditiva con Tanuki: un botón reproduce la palabra y debajo esperan gato, perro y tren.",
 		speaking:
-			"La práctica de pronunciación pide decir みず en voz alta, con un botón de micrófono.",
-		"build-sentence": "Una frase para armar en japonés con fichas de palabras.",
-		"conjugation-practice":
-			"Una pregunta de conjugación: escribir たべる, comer, en su forma cortés no pasada.",
+			"La práctica de pronunciación pide decir ともだち en voz alta, con un botón de micrófono.",
+		"build-sentence":
+			"Una oración para armar en japonés con fichas de palabras, para “Le hago una pregunta al profesor.”",
+		conjugation:
+			"Una pregunta de conjugación con Aka Oni: のむ, beber, en su forma cortés pasada, con tres respuestas debajo.",
 		"oni-correction":
-			"Aka Oni después de una respuesta incorrecta: la palabra correcta みず, agua, y una nota sobre la diferencia.",
+			"Aka Oni después de una respuesta incorrecta: la palabra correcta ねこ, gato, y en qué se diferencia de いぬ, perro.",
 		"kana-tracing":
-			"Práctica de trazado de katakana: un trazo dibujado sobre la guía, numerado según su orden.",
+			"Trazado de hiragana en iPad: un trazo de あ dibujado sobre la guía, numerado según su orden.",
 		"stroke-guide": "La guía del orden de trazos de 水, con el segundo trazo resaltado y numerado.",
 		"new-word":
-			"Una palabra nueva presentada antes de cualquier pregunta: みず, agua, mizu, con Tengu y un botón para empezar el ejercicio.",
-		"practice-feedback":
-			"Una respuesta correcta sobre みず, agua, mizu, con un botón para la siguiente palabra.",
-		"oni-mistakes":
-			"Un repaso de errores anteriores con Aka Oni, que pide la lectura de みず en romaji.",
+			"Una palabra nueva presentada antes de cualquier pregunta: せんせい, profesor, sensei, con Tengu y un botón para empezar el ejercicio.",
+		"correct-answer":
+			"Una respuesta correcta: «¡Correcto!» sobre ねこ, gato, neko, con Kitsune y un botón para la siguiente palabra.",
+		"oni-review":
+			"Un repaso de errores anteriores con Aka Oni: いぬ, perro, y en qué se diferencia de ねこ, gato.",
 		"widget-progress":
 			"El widget Bonsái de práctica en la galería de widgets de iOS: un bonsái, una racha de 23 días y 36 palabras aprendidas.",
 		"widget-word": "El widget Palabra del día en la galería de widgets de iOS: 機, ki.",

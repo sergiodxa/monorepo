@@ -21,9 +21,9 @@ import { copyOf, Phone } from "~/resources/views/wakaba/parts";
 /** The steps in order, each with the radio value it switches on and its real screen. */
 const STEPS = [
 	{ value: "meet", screen: "new-word" },
-	{ value: "practise", screen: "practice-feedback" },
-	{ value: "exam", screen: "level-exam-path" },
-	{ value: "review", screen: "oni-mistakes" },
+	{ value: "practise", screen: "correct-answer" },
+	{ value: "exam", screen: "level-exam" },
+	{ value: "review", screen: "oni-review" },
 ] as const satisfies ReadonlyArray<{ value: string; screen: ScreenName }>;
 
 /**
