@@ -219,6 +219,9 @@ describe("AppStoreCall", () => {
 
 		let link = mounted.container.querySelector('a[data-app-store="available"]');
 		expect(link?.getAttribute("href")).toBe("https://apps.apple.com/app/id6740000000");
-		expect(link?.textContent).toContain("App Store");
+		expect(link?.querySelector("img")?.getAttribute("alt")).toBe("Download on the App Store");
+		expect(link?.querySelector("img")?.getAttribute("src")).toBe(
+			"/apps/app-store/badge-en-us-black.svg",
+		);
 	});
 });

@@ -123,7 +123,7 @@ export function WakabaPrivacyView() {
 							rounded("xl"),
 							minIs(0),
 							overflowWrap("break-word"),
-							raw({ backgroundColor: "var(--wakaba-card)" }),
+							raw({ backgroundColor: "var(--app-card)" }),
 							at("md", p(8)),
 						]}
 					>

@@ -13,7 +13,7 @@ import { hidden } from "@sdxc/u/layout";
 import { clientEntry, createMixin } from "remix/component";
 
 /** The animation whose end advances the tour; the tour's own CSS names it the same. */
-export const PATH_ADVANCE_ANIMATION = "wakaba-path-advance";
+export const PATH_ADVANCE_ANIMATION = "tour-advance";
 
 /** Props of the autoplay island. */
 type PathAutoplayProps = Record<never, never>;

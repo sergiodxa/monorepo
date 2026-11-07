@@ -84,13 +84,15 @@
 		0 0 0 1px rgb(60 40 20 / 0.05), 0 2px 4px rgb(60 40 20 / 0.04),
 		0 24px 48px -20px rgb(60 40 20 / 0.22);
 
+	/* The surfaces every app page's shared pieces paint with: cards, the screen stage, the tour */
+	--app-card: var(--ui-surface-raised);
+	--app-stage: var(--ui-color-brand-100);
+	--app-accent: var(--ui-brand-bg-solid);
+	--app-rail: var(--ui-neutral-border);
+	--app-bezel: #161412;
+
 	/* Wakaba-only surfaces the page's own scenes paint with */
-	--wakaba-card: var(--ui-surface-raised);
-	--wakaba-sun: var(--ui-color-brand-100);
 	--wakaba-ink: var(--ui-neutral-fg-emphasis);
-	--wakaba-accent: var(--ui-brand-bg-solid);
-	--wakaba-rail: var(--ui-neutral-border);
-	--wakaba-bezel: #161412;
 	/* Each companion's card, tinted after the character: fox orange, oni red, tanuki straw, tengu leaf */
 	--wakaba-kitsune: #fcebdc;
 	--wakaba-oni: #fadfda;
@@ -138,8 +140,8 @@
 		--ui-shadow-stage:
 			inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 1px rgb(255 255 255 / 0.07),
 			0 24px 48px -20px rgb(0 0 0 / 0.6);
-		--wakaba-sun: #3a231d;
-		--wakaba-bezel: #0c0b0a;
+		--app-stage: #3a231d;
+		--app-bezel: #0c0b0a;
 		--wakaba-kitsune: #3a2a1e;
 		--wakaba-oni: #3e2420;
 		--wakaba-tanuki: #34301f;

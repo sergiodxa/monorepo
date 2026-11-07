@@ -23,17 +23,21 @@ export type PageLocale = (typeof PAGE_LOCALES)[number];
  * regional tag identifies the written dialect, independent of the intended reader.
  *
  * @param tag A language tag, from a header or a query parameter.
+ * @param locales The languages the page is written in.
  * @returns The language to serve, or `undefined` when nothing matches.
  */
-function matchLocale(tag: string): PageLocale | undefined {
+function matchLocale<Locale extends string>(
+	tag: string,
+	locales: ReadonlyArray<Locale>,
+): Locale | undefined {
 	let wanted = tag.trim().toLowerCase();
 	if (wanted === "") return undefined;
 
-	let exact = PAGE_LOCALES.find((locale) => locale.toLowerCase() === wanted);
+	let exact = locales.find((locale) => locale.toLowerCase() === wanted);
 	if (exact) return exact;
 
 	let base = wanted.split("-")[0];
-	return PAGE_LOCALES.find((locale) => locale.toLowerCase().split("-")[0] === base);
+	return locales.find((locale) => locale.toLowerCase().split("-")[0] === base);
 }
 
 /**
@@ -46,16 +50,34 @@ function matchLocale(tag: string): PageLocale | undefined {
  * @returns The language to serve, defaulting to English.
  */
 export function resolvePageLocale(url: URL, acceptLanguage: string | null): PageLocale {
+	return resolveLocale(url, acceptLanguage, PAGE_LOCALES);
+}
+
+/**
+ * {@link resolvePageLocale} for a page written in its own set of languages, such as an app
+ * page that follows the app's languages. The first language is the fallback.
+ *
+ * @param url The request URL, read for `?lang=`.
+ * @param acceptLanguage The request's `Accept-Language` header, when it sent one.
+ * @param locales The page's languages, the fallback first.
+ * @returns The language to serve.
+ * @example resolveLocale(url, "ja-JP", ["en", "es-AR", "ja"]) // "ja"
+ */
+export function resolveLocale<Locale extends string>(
+	url: URL,
+	acceptLanguage: string | null,
+	locales: readonly [Locale, ...Array<Locale>],
+): Locale {
 	let requested = url.searchParams.get("lang");
 	if (requested !== null) {
-		let chosen = matchLocale(requested);
+		let chosen = matchLocale(requested, locales);
 		if (chosen) return chosen;
 	}
 
 	for (let entry of acceptLanguage?.split(",") ?? []) {
-		let chosen = matchLocale(entry.split(";")[0] ?? "");
+		let chosen = matchLocale(entry.split(";")[0] ?? "", locales);
 		if (chosen) return chosen;
 	}
 
-	return "en";
+	return locales[0];
 }

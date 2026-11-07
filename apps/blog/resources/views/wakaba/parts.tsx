@@ -9,15 +9,9 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { HourglassIcon, SmartphoneIcon } from "@sdxc/icons";
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { block, hstack, shrink, vstack } from "@sdxc/u/layout";
-import { bs, is, m, maxIs, p, pi } from "@sdxc/u/size";
-import { focusVisible, hover } from "@sdxc/u/state";
-import { leading, nowrap, text, weight } from "@sdxc/u/typography";
-import { interactiveTransition } from "@sdxc/ui/styles";
+import { block, shrink } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
 
 import type { PageLocale } from "~/app/services/page-locale";
 import type { WakabaCopy } from "~/resources/content/wakaba/copy";
@@ -25,6 +19,8 @@ import type { WakabaCopy } from "~/resources/content/wakaba/copy";
 import { appStoreUrl } from "~/config/wakaba";
 import { EN } from "~/resources/content/wakaba/en";
 import { ES } from "~/resources/content/wakaba/es-AR";
+import { AppStoreBadge } from "~/resources/views/app-pages/app-store-badge";
+import { PhoneFrame, screenCorners } from "~/resources/views/app-pages/phone";
 
 /** Where the page's optimised images are served from. */
 export const WAKABA_ASSETS = "/apps/wakaba";
@@ -215,18 +211,8 @@ export function Phone(handle: Handle<Phone.Props>) {
 		let base = shot.dark ? `${file}-light` : file;
 
 		return (
-			<div
-				mix={[
-					is("full"),
-					p(1.5),
-					raw({
-						backgroundColor: "var(--wakaba-bezel)",
-						borderRadius: "15% / 7%",
-						boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.12)",
-					}),
-				]}
-			>
-				<picture mix={[block(), raw({ overflow: "hidden", borderRadius: "12.5% / 5.8%" })]}>
+			<PhoneFrame>
+				<picture mix={[block(), screenCorners()]}>
 					{shot.dark ? (
 						<source
 							media="(prefers-color-scheme: dark)"
@@ -246,7 +232,7 @@ export function Phone(handle: Handle<Phone.Props>) {
 						mix={[block(), is("full"), raw({ blockSize: "auto" })]}
 					/>
 				</picture>
-			</div>
+			</PhoneFrame>
 		);
 	};
 }
@@ -260,9 +246,8 @@ namespace AppStoreCall {
 }
 
 /**
- * The download call every Wakaba page repeats. With a listing it is an ink badge linking to
- * the App Store; before release it is a quiet outlined note that reads as a status, not a
- * control, so nobody taps a link that leads nowhere.
+ * The download call every Wakaba page repeats, in the page's language: Apple's badge linking
+ * the listing once there is one, and before release a quiet note that reads as a status.
  *
  * @param handle Runtime handle carrying the listing URL.
  * @returns The render function producing the badge or the note.
@@ -271,59 +256,12 @@ export function AppStoreCall(handle: Handle<AppStoreCall.Props>) {
 	return () => {
 		let href = handle.props.href === undefined ? appStoreUrl() : handle.props.href;
 		let copy = copyOf(handle);
-
-		if (!href) {
-			return (
-				<p
-					data-app-store="coming-soon"
-					mix={[
-						hstack({ gap: 2.5, align: "center" }),
-						bs(12),
-						pi(5),
-						m(0),
-						rounded("full"),
-						border({ width: 1, color: "brand" }),
-						bg("brand.tint"),
-						fg("brand.emphasis"),
-					]}
-				>
-					<HourglassIcon size={18} aria-hidden="true" />
-					<span mix={[vstack({ gap: 0, align: "start" })]}>
-						<span mix={[text("xs"), leading("none")]}>{copy.appStore.soon}</span>
-						<span mix={[text("base"), weight("semibold"), leading("tight"), nowrap()]}>
-							App Store
-						</span>
-					</span>
-				</p>
-			);
-		}
-
 		return (
-			<a
+			<AppStoreBadge
 				href={href}
-				data-app-store="available"
-				mix={[
-					hstack({ gap: 2.5, align: "center" }),
-					bs(12),
-					pi(5),
-					maxIs("full"),
-					rounded("full"),
-					bg("neutral.solid"),
-					fg("neutral.onSolid"),
-					raw({ textDecoration: "none" }),
-					interactiveTransition(),
-					hover(bg("neutral.bg-solid-hover")),
-					focusVisible(raw({ outline: "2px solid currentColor", outlineOffset: "2px" })),
-				]}
-			>
-				<SmartphoneIcon size={18} aria-hidden="true" />
-				<span mix={[vstack({ gap: 0, align: "start" })]}>
-					<span mix={[text("xs"), leading("none")]}>{copy.appStore.available}</span>
-					<span mix={[text("base"), weight("semibold"), leading("tight"), nowrap()]}>
-						App Store
-					</span>
-				</span>
-			</a>
+				label={href ? `${copy.appStore.available} App Store` : copy.appStore.soon}
+				language={copy.locale === "es-AR" ? "es-mx" : "en-us"}
+			/>
 		);
 	};
 }

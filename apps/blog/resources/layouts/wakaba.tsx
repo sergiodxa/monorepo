@@ -10,25 +10,25 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
-import { bg, borderEdge, fg } from "@sdxc/u/color";
+import { bg, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { container, gap, grid, gridTemplate, grow, repeat, vstack } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
-import { m, maxIs, mi, minBs, p, pbe, pbs, pi } from "@sdxc/u/size";
-import { focusVisible, hover, when } from "@sdxc/u/state";
-import { font, text, weight } from "@sdxc/u/typography";
+import { grow, vstack } from "@sdxc/u/layout";
+import { m, minBs } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { font } from "@sdxc/u/typography";
 
 import type { AppStoreListing } from "~/config/wakaba";
 import type { WakabaCopy } from "~/resources/content/wakaba/copy";
 import type { DocumentLayout as DocumentShell } from "~/resources/layouts/document";
-import type { NavLink as ChromeLink } from "~/resources/views/wakaba/chrome";
+import type { FooterColumn, NavLink as ChromeLink } from "~/resources/views/app-pages/footer";
 
 import { PROFILE } from "~/config/profile";
 import { APP_STORE, WAKABA_THEME_COLORS } from "~/config/wakaba";
 import { EN } from "~/resources/content/wakaba/en";
 import { inLanguage } from "~/resources/content/wakaba/pages";
 import DocumentLayout from "~/resources/layouts/document";
-import { QuietLink, WakabaHeader, Wordmark } from "~/resources/views/wakaba/chrome";
+import { AppFooter } from "~/resources/views/app-pages/footer";
+import { WakabaHeader, Wordmark } from "~/resources/views/wakaba/chrome";
 import { copyOf, WAKABA_ASSETS, WakabaLanguage } from "~/resources/views/wakaba/parts";
 import routes from "~/routes/web";
 
@@ -164,12 +164,6 @@ export function WakabaLayout(handle: Handle<WakabaLayout.Props>) {
 	};
 }
 
-/** One titled column of footer links. */
-interface FooterColumn {
-	title: string;
-	links: Array<WakabaLayout.NavLink>;
-}
-
 /**
  * The footer's columns in the page's language: the app's own pages, the author's other
  * projects on and off this domain, and where else to find him.
@@ -212,7 +206,7 @@ function footerColumns(copy: WakabaCopy): Array<FooterColumn> {
 
 /**
  * The footer: the wordmark with the app's promise beside three columns of links, then who
- * made it. The columns sit in a row of their own from the `md` width of the footer.
+ * made it, in the page's language.
  *
  * @returns The render function producing the footer.
  */
@@ -220,80 +214,12 @@ function WakabaFooter(handle: Handle) {
 	return () => {
 		let copy = copyOf(handle);
 		return (
-			<footer mix={[container("wakaba-footer"), pi(4), pbs(12), pbe(10), at("md", pi(6))]}>
-				<div
-					mix={[
-						vstack({ gap: 8, align: "stretch" }),
-						maxIs("72rem"),
-						mi("auto"),
-						pbs(8),
-						borderEdge("block-start", { width: 1, color: "neutral" }),
-					]}
-				>
-					<div
-						mix={[
-							grid(),
-							gap(8),
-							at("lg", "wakaba-footer", gridTemplate({ columns: "minmax(0, 1fr) auto" })),
-						]}
-					>
-						<div mix={[vstack({ gap: 2, align: "start" })]}>
-							<Wordmark />
-							<p mix={[m(0), text("sm"), fg("neutral"), maxIs("20rem")]}>{copy.footer.tagline}</p>
-						</div>
-						<div
-							mix={[
-								grid(),
-								gap(8),
-								gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
-								at("md", "wakaba-footer", gridTemplate({ columns: repeat(3, "max-content") })),
-								at("md", "wakaba-footer", raw({ columnGap: "4rem" })),
-							]}
-						>
-							{footerColumns(copy).map((column) => (
-								<nav
-									key={column.title}
-									aria-label={column.title}
-									mix={[vstack({ gap: 3, align: "start" })]}
-								>
-									<h2 mix={[m(0), text("sm"), weight("semibold"), fg("neutral.emphasis")]}>
-										{column.title}
-									</h2>
-									<ul
-										mix={[
-											vstack({ gap: 2, align: "start" }),
-											m(0),
-											p(0),
-											raw({ listStyle: "none" }),
-											text("sm"),
-										]}
-									>
-										{column.links.map((link) => (
-											<li key={link.href}>
-												<QuietLink {...link} />
-											</li>
-										))}
-									</ul>
-								</nav>
-							))}
-						</div>
-					</div>
-					<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
-						{copy.footer.madeBy}{" "}
-						<a
-							href={routes.feed.href()}
-							mix={[
-								fg("neutral"),
-								hover(fg("neutral.emphasis")),
-								focusVisible(raw({ outline: "2px solid currentColor", outlineOffset: "2px" })),
-							]}
-						>
-							Sergio Xalambrí
-						</a>{" "}
-						· © 2026
-					</p>
-				</div>
-			</footer>
+			<AppFooter
+				brand={<Wordmark />}
+				tagline={copy.footer.tagline}
+				columns={footerColumns(copy)}
+				madeBy={copy.footer.madeBy}
+			/>
 		);
 	};
 }

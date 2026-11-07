@@ -49,6 +49,7 @@ import type { MascotPose } from "~/resources/views/wakaba/parts";
 
 import { inLanguage } from "~/resources/content/wakaba/pages";
 import { WakabaLayout } from "~/resources/layouts/wakaba";
+import { Swipeable } from "~/resources/views/app-pages/swipeable";
 import { BonsaiBand } from "~/resources/views/wakaba/bonsai";
 import {
 	AppStoreCall,
@@ -59,7 +60,7 @@ import {
 	WAKABA_COPY,
 	WakabaLanguage,
 } from "~/resources/views/wakaba/parts";
-import { PathBand, Swipeable } from "~/resources/views/wakaba/path";
+import { PathBand } from "~/resources/views/wakaba/path";
 import routes from "~/routes/web";
 
 /** Types used by the landing's renderer. */
@@ -234,7 +235,7 @@ function HeroStage(handle: Handle) {
 								inlineSize: "min(100%, calc(var(--phone) * 2.6))",
 								aspectRatio: "1",
 								borderRadius: "50%",
-								backgroundColor: "var(--wakaba-sun)",
+								backgroundColor: "var(--app-stage)",
 							}),
 						]}
 					/>
@@ -351,7 +352,7 @@ function FloatingCard(handle: Handle<FloatingCard.Props>) {
 					raw({
 						paddingBlock: "0.75rem",
 						borderRadius: "1.25rem",
-						backgroundColor: "var(--wakaba-card)",
+						backgroundColor: "var(--app-card)",
 						boxShadow: "0 0 0 1px rgb(60 40 20 / 0.06), 0 18px 36px -16px rgb(60 40 20 / 0.3)",
 					}),
 					drift(start ? "-1s" : "-4s"),
@@ -1006,7 +1007,7 @@ function Privacy(handle: Handle) {
 						mix={[
 							p(6),
 							rounded("xl"),
-							raw({ backgroundColor: "var(--wakaba-card)", position: "relative" }),
+							raw({ backgroundColor: "var(--app-card)", position: "relative" }),
 							at("md", p(8)),
 						]}
 					>
@@ -1077,7 +1078,7 @@ function Questions(handle: Handle) {
 								key={question}
 								name={`wakaba-faq-${index}`}
 								mix={[
-									raw({ paddingInline: "1.25rem", backgroundColor: "var(--wakaba-card)" }),
+									raw({ paddingInline: "1.25rem", backgroundColor: "var(--app-card)" }),
 									rounded("xl"),
 								]}
 							>

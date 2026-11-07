@@ -14,18 +14,16 @@ import { raw } from "@sdxc/u/general";
 import { hstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { maxIs, mi, pb, pi } from "@sdxc/u/size";
-import { focusVisible, hover } from "@sdxc/u/state";
+import { focusVisible } from "@sdxc/u/state";
 import { font, text, weight } from "@sdxc/u/typography";
 
 import { inLanguage } from "~/resources/content/wakaba/pages";
+import { QuietLink } from "~/resources/views/app-pages/footer";
 import { copyOf, WakabaMark } from "~/resources/views/wakaba/parts";
 import routes from "~/routes/web";
 
 /** One link in the header or the footer. */
-export interface NavLink {
-	href: string;
-	label: string;
-}
+export type { NavLink } from "~/resources/views/app-pages/footer";
 
 /**
  * The wordmark linking home: the 学 mark in the accent beside "Wakaba" set in the rounded
@@ -51,29 +49,6 @@ export function Wordmark(handle: Handle) {
 				<WakabaMark size={30} />
 			</span>
 			Wakaba
-		</a>
-	);
-}
-
-/**
- * A plain text link in the header or footer, quiet until hovered.
- *
- * @param handle Runtime handle carrying the destination and label.
- * @returns The render function producing the link.
- */
-export function QuietLink(handle: Handle<NavLink>) {
-	return () => (
-		<a
-			href={handle.props.href}
-			mix={[
-				fg("neutral"),
-				weight("medium"),
-				raw({ textDecoration: "none" }),
-				hover(fg("neutral.emphasis")),
-				focusVisible(raw({ outline: "2px solid currentColor", outlineOffset: "4px" })),
-			]}
-		>
-			{handle.props.label}
 		</a>
 	);
 }

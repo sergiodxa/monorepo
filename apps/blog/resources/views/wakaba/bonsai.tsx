@@ -148,7 +148,7 @@ function BonsaiTimelapse(handle: Handle) {
 			<MotionLoop
 				pauseLabel={t.pause}
 				placement="start-end"
-				mix={[p(4), rounded("xl"), raw({ backgroundColor: "var(--wakaba-card)" }), at("md", p(8))]}
+				mix={[p(4), rounded("xl"), raw({ backgroundColor: "var(--app-card)" }), at("md", p(8))]}
 			>
 				<div mix={[vstack({ gap: 5, align: "stretch" })]}>
 					<div mix={[grid(), raw({ placeItems: "center" })]}>
@@ -161,7 +161,7 @@ function BonsaiTimelapse(handle: Handle) {
 								raw({
 									aspectRatio: "1",
 									borderRadius: "50%",
-									backgroundColor: "var(--wakaba-sun)",
+									backgroundColor: "var(--app-stage)",
 								}),
 							]}
 						/>
@@ -292,7 +292,7 @@ function MissedWeekend(handle: Handle) {
 						pb(2),
 						pi(4),
 						border({ width: 1, color: "neutral" }),
-						raw({ backgroundColor: "var(--wakaba-card)" }),
+						raw({ backgroundColor: "var(--app-card)" }),
 						text("sm"),
 						tabularNums(),
 					]}
