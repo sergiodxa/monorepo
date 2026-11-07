@@ -72,27 +72,17 @@ Read from `Encore/Assets.xcassets` and the SwiftUI code (`GameView.swift`, `Card
 
 Ornament colours, the same in both appearances with different opacity: coral `#FF5C61`, gold `#FFB23D`, violet `#9140EB` and pink `#E84CA6`. Background ribbons draw at 24% (light) and 16% (dark); card flourishes at 48% and 78%; the card's inner frame is gold at 72% and 55%.
 
-## Assets the Landing Needs
+## Assets
 
-None are in the repository yet. The landing shows a labelled placeholder at each spot, sized like the real capture. Once a file is in `apps/blog/public/apps/encore/`, setting `ready: true` on its entry in `SCREENS` (`resources/views/encore/parts.tsx`) swaps the placeholder for it.
+All assets live in `apps/blog/public/apps/encore/`, served at `/apps/encore/`, and the pages use every one:
 
-- Phone screens are WebP at **560 × 1218**, half an iPhone capture (the same as Wakaba's). They carry no marketing text and no device frame; the page draws the frame.
-- Each screen is exported once per page language, in `en/`, `es/` (Argentine Spanish) and `ja/` folders with the same file names, so a Japanese reader sees Japanese cards.
-- Light and dark captures carry `-light` and `-dark` suffixes, and the page follows the visitor's scheme.
-- Watch screens are 416 × 496, dark only, like watchOS.
+- **`screenshots/{en,es,ja}/`**: `card-back`, `challenge` (EARWORM), `swipe` (FAMILY REUNION), `shuffle` and `generated`, each as `-light` and `-dark` WebP at 560 × 1218, from 1206 × 2622 iPhone captures. The page follows the reader's language and colour scheme.
+- **`watch/{en,es,ja}/`**: `card-ready` and `challenge`, WebP at 416 × 496. The Watch shows the simulator's clock, since watchOS screenshots cannot override the time.
+- **`branding/app-icon/apple-touch-icon.png`**: the app icon at 180 × 180.
+- **`branding/logo/favicon.svg`**: the icon's burst as a single-colour mark, plum in light and gold in dark.
+- **`branding/social-card-{en,es,ja}.png`**: 1200 × 630 link previews drawn from the landing's own pieces: the app's card-back artwork, the EARWORM card, the serif headline and the plum backdrop. A shared link shows the card in the language its `?lang=` names, English without one.
 
-| File (under `public/apps/encore/`)               | What it shows                                                 | Used in                     |
-| ------------------------------------------------ | ------------------------------------------------------------- | --------------------------- |
-| `branding/app-icon/apple-touch-icon.png`         | The app icon, 180 × 180, rounded by iOS                       | home-screen icon            |
-| `branding/logo/favicon.svg`                      | The icon's burst as a single-colour mark                      | browser tab, header, footer |
-| `branding/social-card.png`                       | 1200 × 630 Open Graph / Twitter card                          | link previews               |
-| `screenshots/{lang}/card-back-{light,dark}.webp` | A face-down card, first launch, with the “Tap to reveal” hint | hero, tour step 1           |
-| `screenshots/{lang}/challenge-{light,dark}.webp` | A revealed hand-written card                                  | hero (front), tour step 2   |
-| `screenshots/{lang}/swipe-{light,dark}.webp`     | A card mid-swipe with the next one behind it                  | tour step 3                 |
-| `screenshots/{lang}/shuffle-{light,dark}.webp`   | A new face-down card right after a shake, the deck fanned     | tour step 4                 |
-| `screenshots/{lang}/generated-{light,dark}.webp` | A generated card (no title), e.g. “a song from the 1990s”     | hero (fanned behind)        |
-| `watch/{lang}/card-ready.webp`                   | Watch: “Card ready” with Reveal and Shuffle                   | Watch band                  |
-| `watch/{lang}/challenge.webp`                    | Watch: a revealed prompt with Next and Shuffle                | Watch band                  |
+To replace a screen, export the same name at 1206 × 2622 and convert it to WebP at 560 × 1218.
 
 Apple's **Download on the App Store** badge is shared by every app page, under `public/apps/app-store/`: `badge-en-us-black.svg`, `badge-en-us-white.svg`, `badge-es-mx-black.svg`, `badge-es-mx-white.svg`, `badge-ja-jp-black.svg` and `badge-ja-jp-white.svg`, downloaded unaltered from Apple's marketing resources (<https://developer.apple.com/app-store/marketing/guidelines/>). Apple publishes Latin American Spanish (`es-mx`) for Argentina.
 

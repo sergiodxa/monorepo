@@ -17,6 +17,8 @@ export const EN: EncoreCopy = {
 		title: "Encore: a music party game for iPhone, iPad, Apple Watch and Mac",
 		description:
 			"Draw a card, reveal a singing challenge and sing a song that fits it. 108 hand-written challenges in English, Spanish and Japanese, for US$4.99 once.",
+		socialCardAlt:
+			"A face-down Encore card and the EARWORM challenge beside “Your next night starts with a song.”",
 	},
 	header: { support: "Support", privacy: "Privacy", navLabel: "Encore", sound: "Sound effects" },
 	footer: {

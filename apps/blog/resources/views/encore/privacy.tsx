@@ -37,6 +37,8 @@ export namespace EncorePrivacyView {
 		document: Markdown.Document;
 		/** The language the policy is written in. English by default. */
 		locale?: EncoreLocale;
+		/** The social card's language, from `?lang=` alone. English by default. */
+		share?: EncoreLocale;
 	}
 }
 
@@ -54,6 +56,7 @@ export function EncorePrivacyView() {
 			<EncoreLayout
 				assets={assets}
 				locale={locale}
+				share={model.share}
 				title={model.title}
 				description={model.description}
 				path={routes.encorePrivacy.href()}

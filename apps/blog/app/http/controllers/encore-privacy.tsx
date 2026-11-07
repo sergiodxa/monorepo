@@ -18,7 +18,7 @@ import type { EncoreLocale } from "~/config/encore";
 
 import { parseMarkdownPage } from "~/app/services/markdown-page";
 import { resolveLocale } from "~/app/services/page-locale";
-import { ENCORE_LOCALES } from "~/config/encore";
+import { ENCORE_LOCALES, shareLocale } from "~/config/encore";
 import spanish from "~/resources/content/encore/privacy.es-AR.md?raw";
 import japanese from "~/resources/content/encore/privacy.ja.md?raw";
 import english from "~/resources/content/encore/privacy.md?raw";
@@ -73,6 +73,7 @@ export default createAction(routes.encorePrivacy, async (ctx) => {
 			description: page.data.frontmatter.description,
 			document: page.data.document,
 			locale,
+			share: shareLocale(ctx.url),
 		},
 		{ headers: { "Content-Language": locale, Vary: "Accept, Accept-Language" } },
 	);

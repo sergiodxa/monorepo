@@ -29,6 +29,18 @@ export type EncoreLocale = (typeof ENCORE_LOCALES)[number];
 export const ENCORE_THEME_COLORS = { light: "#FFFAF0", dark: "#0E0513" } as const;
 
 /**
+ * The language of the social card for a shared link: the one `?lang=` names, English without
+ * one. A link preview reflects the shared URL, whatever language the previewer asks for.
+ *
+ * @param url The request URL.
+ * @returns The social card's language.
+ */
+export function shareLocale(url: URL): EncoreLocale {
+	let requested = url.searchParams.get("lang")?.toLowerCase();
+	return ENCORE_LOCALES.find((locale) => locale.toLowerCase() === requested) ?? "en";
+}
+
+/**
  * An Encore page's address in a language, keeping a reader who picked one with `?lang=` on it.
  *
  * @param href The page's path, which may carry a fragment.

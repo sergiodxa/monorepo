@@ -59,6 +59,8 @@ export namespace EncoreLandingView {
 	export interface Model {
 		/** The language the page is written in. */
 		locale: EncoreLocale;
+		/** The social card's language, from `?lang=` alone. English by default. */
+		share?: EncoreLocale;
 	}
 }
 
@@ -84,6 +86,7 @@ export function EncoreLandingView() {
 			<EncoreLayout
 				assets={assets}
 				locale={model.locale}
+				share={model.share}
 				title={copy.meta.title}
 				description={copy.meta.description}
 				path={routes.encore.href()}

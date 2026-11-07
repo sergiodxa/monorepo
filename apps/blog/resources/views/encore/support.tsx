@@ -46,6 +46,8 @@ export namespace EncoreSupportView {
 		honeypot?: Honeypot.Fields;
 		/** The language the page is written in. English by default. */
 		locale?: EncoreLocale;
+		/** The social card's language, from `?lang=` alone. English by default. */
+		share?: EncoreLocale;
 	}
 }
 
@@ -64,6 +66,7 @@ export function EncoreSupportView() {
 			<EncoreLayout
 				assets={assets}
 				locale={locale}
+				share={model.share}
 				title={t.title}
 				description={t.description}
 				path={routes.encoreSupport.index.href()}

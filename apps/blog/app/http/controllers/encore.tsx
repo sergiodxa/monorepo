@@ -9,7 +9,7 @@
 import { createAction } from "remix/router";
 
 import { resolveLocale } from "~/app/services/page-locale";
-import { ENCORE_LOCALES } from "~/config/encore";
+import { ENCORE_LOCALES, shareLocale } from "~/config/encore";
 import { EncoreLandingView } from "~/resources/views/encore/landing";
 import routes from "~/routes/web";
 
@@ -23,7 +23,7 @@ export default createAction(routes.encore, (ctx) => {
 	let locale = resolveLocale(ctx.url, ctx.request.headers.get("Accept-Language"), ENCORE_LOCALES);
 	return ctx.render(
 		EncoreLandingView,
-		{ locale },
+		{ locale, share: shareLocale(ctx.url) },
 		{ headers: { "Content-Language": locale, Vary: "Accept-Language" } },
 	);
 });

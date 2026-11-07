@@ -65,7 +65,12 @@ export interface EncoreCopy {
 	badge: BadgeLanguage;
 	/** The language's own name, for the footer's language links. */
 	languageName: string;
-	meta: { title: string; description: string };
+	meta: {
+		title: string;
+		description: string;
+		/** Describes the social card a link preview shows. */
+		socialCardAlt: string;
+	};
 	header: {
 		support: string;
 		privacy: string;

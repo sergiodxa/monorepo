@@ -18,6 +18,8 @@ export const ES: EncoreCopy = {
 		title: "Encore: un juego musical para fiestas en iPhone, iPad, Apple Watch y Mac",
 		description:
 			"Sacá una carta, revelá un desafío y cantá una canción que encaje. 108 desafíos escritos a mano, en español, inglés y japonés, por un único pago de US$4,99.",
+		socialCardAlt:
+			"Una carta de Encore boca abajo y el desafío PEGADIZO junto a “Tu próxima noche empieza con una canción.”",
 	},
 	header: {
 		support: "Soporte",

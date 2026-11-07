@@ -59,13 +59,42 @@ describe("GET /apps/encore", () => {
 		expect(html).not.toContain('data-app-store="coming-soon"');
 	});
 
-	test("holds each screenshot's place with a placeholder naming its file", async () => {
+	test("frames the real screenshots in the page's language and the visitor's scheme", async () => {
+		let english = await (await fetchPage("/apps/encore")).text();
+		let japanese = await (await fetchPage("/apps/encore?lang=ja")).text();
+
+		expect(english).toContain('src="/apps/encore/screenshots/en/challenge-light.webp"');
+		expect(english).toContain('srcset="/apps/encore/screenshots/en/challenge-dark.webp"');
+		expect(english).toContain('src="/apps/encore/watch/en/challenge.webp"');
+		expect(japanese).toContain('src="/apps/encore/screenshots/ja/swipe-light.webp"');
+		expect(english).not.toContain("data-placeholder");
+	});
+
+	test("names the app icon and the favicon", async () => {
 		let html = await (await fetchPage("/apps/encore")).text();
 
-		for (let screen of ["card-back", "challenge", "swipe", "shuffle", "watch-ready"]) {
-			expect(html).toContain(`data-placeholder="${screen}"`);
-		}
-		expect(html).toContain("screenshots/en/challenge-{light,dark}.webp");
+		expect(html).toContain('href="/apps/encore/branding/logo/favicon.svg"');
+		expect(html).toContain('href="/apps/encore/branding/app-icon/apple-touch-icon.png"');
+	});
+
+	test("previews a shared link with the social card ?lang= names, English without one", async () => {
+		let card = async (path: string, headers: Record<string, string> = {}) =>
+			(await (await fetchPage(path, headers)).text()).match(
+				/property="og:image" content="([^"]+)"/,
+			)?.[1];
+
+		expect(await card("/apps/encore")).toBe(
+			"https://sergiodxa.com/apps/encore/branding/social-card-en.png",
+		);
+		expect(await card("/apps/encore", { "accept-language": "ja" })).toBe(
+			"https://sergiodxa.com/apps/encore/branding/social-card-en.png",
+		);
+		expect(await card("/apps/encore?lang=es-AR")).toBe(
+			"https://sergiodxa.com/apps/encore/branding/social-card-es.png",
+		);
+		expect(await card("/apps/encore/privacy?lang=ja")).toBe(
+			"https://sergiodxa.com/apps/encore/branding/social-card-ja.png",
+		);
 	});
 
 	test("draws the deck's cards with the app's own words", async () => {
@@ -134,7 +163,7 @@ describe("GET /apps/encore in Spanish and Japanese", () => {
 		expect(headingCount(html)).toBe(1);
 		expect(html).toContain("次の夜は、一曲から始まる。");
 		expect(html).toContain("90年代のなつかしい曲を歌おう。");
-		expect(html).toContain("screenshots/ja/challenge-{light,dark}.webp");
+		expect(html).toContain('src="/apps/encore/screenshots/ja/challenge-light.webp"');
 		expect(html).toContain('src="/apps/app-store/badge-ja-jp-black.svg"');
 	});
 

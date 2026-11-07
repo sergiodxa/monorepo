@@ -18,7 +18,7 @@ import type { EncoreLocale } from "~/config/encore";
 
 import { encoreSupportSchema } from "~/app/http/validators/encore-support";
 import { resolveLocale } from "~/app/services/page-locale";
-import { ENCORE_LOCALES, inLanguage } from "~/config/encore";
+import { ENCORE_LOCALES, inLanguage, shareLocale } from "~/config/encore";
 import { EncoreSupportView } from "~/resources/views/encore/support";
 import routes from "~/routes/web";
 
@@ -60,7 +60,11 @@ async function renderForm(
 	init?: ResponseInit,
 ): Promise<Response> {
 	let honeypot = unwrap(await ctx.honeypot.issue());
-	return ctx.render(EncoreSupportView, { ...model, honeypot }, withLanguage(model.locale, init));
+	return ctx.render(
+		EncoreSupportView,
+		{ ...model, honeypot, share: shareLocale(ctx.url) },
+		withLanguage(model.locale, init),
+	);
 }
 
 /** The request's language, from `?lang=` or `Accept-Language`. */
@@ -94,7 +98,7 @@ export default createController(routes.encoreSupport, {
 			if (sent) {
 				return ctx.render(
 					EncoreSupportView,
-					{ state: "sent", values: {}, issues: [], locale },
+					{ state: "sent", values: {}, issues: [], locale, share: shareLocale(ctx.url) },
 					withLanguage(locale),
 				);
 			}

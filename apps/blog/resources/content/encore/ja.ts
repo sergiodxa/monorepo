@@ -18,6 +18,8 @@ export const JA: EncoreCopy = {
 		title: "Encore：iPhone、iPad、Apple Watch、Mac で遊べる音楽パーティーゲーム",
 		description:
 			"カードを引いて、お題をめくって、ぴったりの曲を歌おう。手書きのお題は108枚、日本語・英語・スペイン語に対応。お支払いは一度きりの US$4.99 です。",
+		socialCardAlt:
+			"裏向きの Encore のカードと「耳から離れない」のお題、そして「次の夜は、一曲から始まる。」の一文",
 	},
 	header: { support: "サポート", privacy: "プライバシー", navLabel: "Encore", sound: "効果音" },
 	footer: {

@@ -34,7 +34,13 @@ import { EncoreSoundToggle } from "~/resources/components/encore-sound-toggle";
 import { ENCORE_COPY } from "~/resources/content/encore";
 import DocumentLayout from "~/resources/layouts/document";
 import { AppFooter, QuietLink } from "~/resources/views/app-pages/footer";
-import { copyOf, EncoreLanguage, Sparkles, Wordmark } from "~/resources/views/encore/parts";
+import {
+	copyOf,
+	ENCORE_ASSETS,
+	EncoreLanguage,
+	Sparkles,
+	Wordmark,
+} from "~/resources/views/encore/parts";
 import routes from "~/routes/web";
 
 /** Types used by Encore's page shell. */
@@ -46,6 +52,11 @@ export namespace EncoreLayout {
 		path: string;
 		/** The page's language. English by default. */
 		locale?: EncoreLocale;
+		/**
+		 * The language of the social card a link preview shows: the one `?lang=` names, so a
+		 * shared link previews the same way for everyone. English by default.
+		 */
+		share?: EncoreLocale;
 		children: RemixNode;
 		/** The request's document assets, which the renderer hands every view. */
 		assets: DocumentAssets;
@@ -58,17 +69,31 @@ export namespace EncoreLayout {
 	}
 }
 
+/** The suffix of each language's social card under `branding/`. */
+const SOCIAL_CARDS: Record<EncoreLocale, string> = { en: "en", "es-AR": "es", ja: "ja" };
+
+/** The icons every Encore page names: the app icon's burst in either scheme, and the app icon. */
+const ICONS: Array<DocumentShell.IconLink> = [
+	{ rel: "icon", href: `${ENCORE_ASSETS}/branding/logo/favicon.svg`, type: "image/svg+xml" },
+	{
+		rel: "apple-touch-icon",
+		href: `${ENCORE_ASSETS}/branding/app-icon/apple-touch-icon.png`,
+		sizes: "180x180",
+	},
+];
+
 /** The `og:locale` of each language. */
 const OG_LOCALES: Record<EncoreLocale, string> = { en: "en_US", "es-AR": "es_AR", ja: "ja_JP" };
 
 /**
- * The tags that describe an Encore page off the site: Open Graph and Twitter, and the Safari
- * smart banner naming the App Store listing. A social card image joins them once it is exported.
+ * The tags that describe an Encore page off the site: Open Graph and Twitter with the social
+ * card in the language `?lang=` names, and the Safari smart banner naming the listing.
  *
  * @param title The page's title.
  * @param description The page's description.
  * @param url The page's canonical URL.
  * @param locale The page's language.
+ * @param share The social card's language, from `?lang=` alone.
  * @returns The meta tags, in the order the document writes them.
  */
 export function encoreMeta(
@@ -76,7 +101,12 @@ export function encoreMeta(
 	description: string,
 	url: string,
 	locale: EncoreLocale,
+	share: EncoreLocale = "en",
 ): Array<DocumentShell.MetaTag> {
+	let image = new URL(
+		`${ENCORE_ASSETS}/branding/social-card-${SOCIAL_CARDS[share]}.png`,
+		PROFILE.canonical.origin,
+	).href;
 	return [
 		{ property: "og:type", content: "website" },
 		{ property: "og:site_name", content: "Encore" },
@@ -84,9 +114,14 @@ export function encoreMeta(
 		{ property: "og:title", content: title },
 		{ property: "og:description", content: description },
 		{ property: "og:url", content: url },
-		{ name: "twitter:card", content: "summary" },
+		{ property: "og:image", content: image },
+		{ property: "og:image:alt", content: ENCORE_COPY[share].meta.socialCardAlt },
+		{ property: "og:image:width", content: "1200" },
+		{ property: "og:image:height", content: "630" },
+		{ name: "twitter:card", content: "summary_large_image" },
 		{ name: "twitter:title", content: title },
 		{ name: "twitter:description", content: description },
+		{ name: "twitter:image", content: image },
 		{ name: "apple-itunes-app", content: `app-id=${ENCORE_APP_STORE_ID}` },
 	];
 }
@@ -121,8 +156,9 @@ export function EncoreLayout(handle: Handle<EncoreLayout.Props>) {
 				description={description}
 				canonical={canonical}
 				alternates={alternates}
+				icons={ICONS}
 				themeColors={ENCORE_THEME_COLORS}
-				meta={encoreMeta(title, description, canonical, locale)}
+				meta={encoreMeta(title, description, canonical, locale, handle.props.share ?? "en")}
 				bodyMix={[
 					m(0),
 					minBs("100dvh"),
