@@ -58,6 +58,9 @@ describe("EncoreDraw", () => {
 		let card = mounted.container.querySelector<HTMLButtonElement>("button");
 
 		expect(card?.getAttribute("aria-label")).toBe("Tap to reveal");
+		expect(
+			mounted.container.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked,
+		).toBe(true);
 		expect(mounted.container.textContent).toContain("Card 1 of 3");
 
 		card?.click();

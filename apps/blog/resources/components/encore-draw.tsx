@@ -1,7 +1,7 @@
 /**
  * The playable card on Encore's landing: a round of the game in the page. Tap the card to
  * flip it, draw the next one, or shuffle the deck, with the app's own synthesized reveal and
- * shuffle sounds once the reader switches them on, as the app's settings start off.
+ * shuffle sounds, on from the start since every sound answers the reader's own tap.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -87,7 +87,7 @@ export const EncoreDraw = clientEntry(
 		let index = 0;
 		let revealed = false;
 		let leaving = false;
-		let soundOn = false;
+		let soundOn = true;
 		let audio: AudioContext | undefined;
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		handle.signal.addEventListener("abort", () => {
