@@ -69,6 +69,22 @@ describe("GET /apps/wakaba", () => {
 		expect(html).not.toContain("apple-itunes-app");
 	});
 
+	test("shows each of the small things with its real screen", async () => {
+		let html = await (await fetchPage("/apps/wakaba")).text();
+
+		for (let screen of [
+			"kanji-index",
+			"particle",
+			"phrases",
+			"practice-reminder",
+			"flashcards-water-es",
+			"add-word",
+		]) {
+			expect(html).toContain(`src="/apps/wakaba/screenshots/${screen}.webp"`);
+		}
+		expect(html).toContain("Everything else in your pocket");
+	});
+
 	test("names only iPhone and iPad", async () => {
 		let html = await (await fetchPage("/apps/wakaba")).text();
 

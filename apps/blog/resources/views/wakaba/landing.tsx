@@ -27,7 +27,7 @@ import {
 	vstack,
 } from "@sdxc/u/layout";
 import { at, motionSafe } from "@sdxc/u/responsive";
-import { is, m, maxIs, mi, p, pbs } from "@sdxc/u/size";
+import { is, m, maxIs, mi, p, pbe, pbs, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, leading, text, weight } from "@sdxc/u/typography";
 import { Accordion, HeadingScope, Link, LinkButton } from "@sdxc/ui";
@@ -110,6 +110,7 @@ export function WakabaLandingContent() {
 				<Flashcards />
 				<Exercises />
 				<KanaTracing />
+				<Details />
 				<BonsaiBand />
 				<Widgets />
 				<Privacy />
@@ -489,6 +490,7 @@ function Flashcards() {
 						maxIs("30rem"),
 						mi("auto"),
 						is("full"),
+						raw({ alignItems: "start" }),
 					]}
 				>
 					<Phone screen="flashcards-water" />
@@ -502,7 +504,6 @@ function Flashcards() {
 				<li>Kanji with furigana, hiragana, katakana and romaji</li>
 				<li>The meaning in English or Spanish</li>
 				<li>Pronounced by your device's own Japanese voices</li>
-				<li>Add your own words and edit any card</li>
 			</ul>
 		</FeatureBand>
 	);
@@ -694,6 +695,7 @@ function KanaTracing() {
 						maxIs("30rem"),
 						mi("auto"),
 						is("full"),
+						raw({ alignItems: "start" }),
 					]}
 				>
 					<Phone screen="kana-tracing" />
@@ -705,10 +707,197 @@ function KanaTracing() {
 		>
 			<ul>
 				<li>Animated stroke order for every kana and kanji</li>
-				<li>Kana and particle tables to look things up</li>
-				<li>A kanji reference ordered by stroke count</li>
+				<li>Hiragana and katakana tables to look things up</li>
 			</ul>
 		</FeatureBand>
+	);
+}
+
+/** The smaller features, each with the real screen that shows it and the block it sits on. */
+const DETAILS = [
+	{
+		screen: "kanji-index",
+		tint: "tengu",
+		focus: "0%",
+		title: "Kanji by stroke count",
+		body: "Every kanji in the reference, grouped by its strokes, with the words that use it.",
+		alt: "The kanji reference, grouped by stroke count: 一, 丁, 七 and the words that use each one.",
+	},
+	{
+		screen: "particle",
+		tint: "kitsune",
+		focus: "0%",
+		title: "Particles, explained",
+		body: "は, が, を and the rest: what each one does, with example sentences.",
+		alt: "The particle は, the topic marker, explained with two example sentences.",
+	},
+	{
+		screen: "phrases",
+		tint: "sky",
+		focus: "0%",
+		title: "More than 2,100 sentences",
+		body: "Real sentences for the words you learn, with the translation in your language.",
+		alt: "The phrases library: 2,134 sentences such as 水を下さい。, Water, please.",
+	},
+	{
+		screen: "practice-reminder",
+		tint: "plum",
+		focus: "banner",
+		title: "One quiet reminder",
+		body: "Once a day at the hour you pick, morning, noon, afternoon or evening. Or never.",
+		alt: "A notification on the Lock Screen: “A little Japanese today? Take a few minutes to practice your vocabulary.”",
+	},
+	{
+		screen: "flashcards-water-es",
+		tint: "oni",
+		focus: "55%",
+		title: "In English or Spanish",
+		body: "Meanings and every screen in either language, and each language keeps its own progress.",
+		alt: "The flashcard for 水 in Spanish: agua, mizu.",
+	},
+	{
+		screen: "add-word",
+		tint: "tanuki",
+		focus: "0%",
+		title: "Your own words",
+		body: "Add a word you met elsewhere and choose the level where practice introduces it.",
+		alt: "The Add word form: meaning in English and Spanish, Japanese spellings and the learning level.",
+	},
+] as const;
+
+namespace DetailScreen {
+	/** Props of one bento card's screen. */
+	export interface Props {
+		screen: string;
+		/**
+		 * Which part of a full screen the card shows, as a vertical position, or `banner` for
+		 * a notification capture shown whole.
+		 */
+		focus: string;
+		alt: string;
+	}
+}
+
+/**
+ * The real screen leading a bento card: the top of a full screenshot cropped to one height
+ * and fading out below, or a notification banner shown whole in the same space.
+ *
+ * @param handle Runtime handle carrying the screen, its crop and its alt text.
+ * @returns The render function producing the screen.
+ */
+function DetailScreen(handle: Handle<DetailScreen.Props>) {
+	return () => {
+		let { alt, focus, screen } = handle.props;
+		let src = `${WAKABA_ASSETS}/screenshots/${screen}.webp`;
+
+		if (focus === "banner") {
+			return (
+				<div
+					mix={[grid(), raw({ blockSize: "15.5rem", placeItems: "center", paddingInline: "8%" })]}
+				>
+					<img
+						src={src}
+						alt={alt}
+						width={560}
+						height={113}
+						loading="lazy"
+						decoding="async"
+						mix={[
+							block(),
+							is("full"),
+							raw({
+								blockSize: "auto",
+								borderRadius: "1rem",
+								boxShadow: "0 12px 24px -12px rgb(0 0 0 / 0.35)",
+							}),
+						]}
+					/>
+				</div>
+			);
+		}
+
+		return (
+			<div mix={[raw({ paddingInline: "12%", paddingBlockStart: "1.5rem" })]}>
+				<img
+					src={src}
+					alt={alt}
+					width={560}
+					height={1218}
+					loading="lazy"
+					decoding="async"
+					mix={[
+						block(),
+						is("full"),
+						raw({
+							blockSize: "14rem",
+							objectFit: "cover",
+							objectPosition: `50% ${focus}`,
+							borderRadius: "1.25rem 1.25rem 0 0",
+							maskImage: "linear-gradient(to bottom, black 70%, transparent)",
+						}),
+					]}
+				/>
+			</div>
+		);
+	};
+}
+
+/**
+ * The small things as a bento: six colour blocks, each led by the top of the real screen
+ * that shows the feature, fading out below, and shown at every width so a phone reader sees
+ * the screens too.
+ *
+ * @returns The render function producing the band.
+ */
+function Details() {
+	return () => (
+		<LandingSection id="details" mix={[nearView(1100)]}>
+			<LandingHeader
+				eyebrow="The small things"
+				description="The references and details you reach for between sessions."
+			>
+				Everything else in your pocket
+			</LandingHeader>
+			<ul
+				mix={[
+					grid(),
+					gap(4),
+					m(0),
+					p(0),
+					raw({ listStyle: "none" }),
+					at("md", gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") })),
+					at("xl", gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") })),
+				]}
+			>
+				{DETAILS.map((detail) => (
+					<li
+						key={detail.screen}
+						mix={[
+							vstack({ gap: 2, align: "stretch" }),
+							pbe(6),
+							rounded("xl"),
+							raw({ overflow: "hidden", backgroundColor: `var(--wakaba-${detail.tint})` }),
+						]}
+					>
+						<DetailScreen screen={detail.screen} focus={detail.focus} alt={detail.alt} />
+						<p
+							mix={[
+								m(0),
+								pi(6),
+								pbs(2),
+								font("display"),
+								text("xl"),
+								weight("bold"),
+								leading("tight"),
+							]}
+						>
+							{detail.title}
+						</p>
+						<p mix={[m(0), pi(6), text("sm"), fg("neutral"), leading("relaxed")]}>{detail.body}</p>
+					</li>
+				))}
+			</ul>
+		</LandingSection>
 	);
 }
 
@@ -962,7 +1151,7 @@ function Questions() {
 					key={index}
 					mix={[
 						vstack({ gap: 3, align: "stretch" }),
-						raw({ "--ui-neutral-border": "transparent" }),
+						raw({ borderBlockStartWidth: "0" }),
 						index > 0
 							? raw({
 									paddingBlockStart: "0.75rem",

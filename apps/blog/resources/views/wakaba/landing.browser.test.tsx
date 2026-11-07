@@ -69,6 +69,45 @@ describe("WakabaLandingContent", () => {
 	});
 });
 
+describe("Phone frames", () => {
+	test("hug their screenshot, with no bezel stretched below it in a pair", async () => {
+		document.documentElement.className = "system wakaba";
+		let host = document.createElement("div");
+		host.style.inlineSize = "1200px";
+		document.body.appendChild(host);
+		mounted = render(<WakabaLandingContent />, { container: host });
+		for (let image of Array.from(host.querySelectorAll<HTMLImageElement>("picture img"))) {
+			image.loading = "eager";
+		}
+
+		let stretched = Array.from(host.querySelectorAll("#flashcards picture, #writing picture"))
+			.map((picture) => ({
+				bezel: picture.parentElement?.getBoundingClientRect().height ?? 0,
+				screen: picture.getBoundingClientRect().height,
+			}))
+			.filter(({ bezel, screen }) => bezel - screen > 16);
+
+		expect(host.querySelectorAll("#flashcards picture, #writing picture")).toHaveLength(4);
+		expect(stretched).toEqual([]);
+		host.remove();
+	});
+});
+
+describe("Questions", () => {
+	test("draw no rule above either column, in whatever scheme re-declares the border colour", () => {
+		document.documentElement.className = "system wakaba";
+		mounted = render(<WakabaLandingContent />);
+
+		let columns = Array.from(mounted.container.querySelectorAll("#faq details")).map(
+			(item) => item.parentElement,
+		);
+		expect(new Set(columns).size).toBe(2);
+		for (let column of new Set(columns)) {
+			expect(column && getComputedStyle(column).borderTopWidth).toBe("0px");
+		}
+	});
+});
+
 describe("AppStoreCall", () => {
 	test("renders a status, not a link, before the listing exists", () => {
 		mounted = render(<AppStoreCall href={null} />);

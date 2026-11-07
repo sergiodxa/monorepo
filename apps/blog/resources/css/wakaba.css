@@ -92,6 +92,9 @@
 	--wakaba-oni: #fadfda;
 	--wakaba-tanuki: #f3ead6;
 	--wakaba-tengu: #e7eedd;
+	/* Two more blocks for the bento of smaller features: a morning sky and a plum dusk */
+	--wakaba-sky: #e3edf2;
+	--wakaba-plum: #efe4ee;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -132,5 +135,7 @@
 		--wakaba-oni: #3e2420;
 		--wakaba-tanuki: #34301f;
 		--wakaba-tengu: #263224;
+		--wakaba-sky: #1f2a30;
+		--wakaba-plum: #2e2430;
 	}
 }
