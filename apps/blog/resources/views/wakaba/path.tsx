@@ -239,7 +239,7 @@ function StepCards(handle: Handle) {
 		let t = copyOf(handle).path;
 		return (
 			<div mix={[raw({ [WIDE]: { display: "none" } })]}>
-				<Swipeable label={t.stageLabel} column="82%">
+				<Swipeable label={t.stageLabel} column="82cqi">
 					{STEPS.map((step, index) => (
 						<li
 							key={step.value}
@@ -299,9 +299,12 @@ namespace Swipeable {
 	export interface Props {
 		/** Names the list for assistive technology. */
 		label: string;
-		/** Each item's width while the row scrolls, most of the row so one card reads at a time. */
+		/**
+		 * Each item's width while the row scrolls, in `cqi` of the row: most of it so one card
+		 * reads at a time, and no wider than its content so cards sit the row's gap apart.
+		 */
 		column: string;
-		/** The container width from which every item fits and the row stops scrolling. */
+		/** The row's width from which every item fits and the row stops scrolling. */
 		fitsFrom?: string;
 		/** Each item's width once they all fit. Defaults to `column`. */
 		fitColumn?: string;
@@ -310,18 +313,23 @@ namespace Swipeable {
 	}
 }
 
-/** The fade a row's mask draws for each pair of edges with cards past them. */
-const FADES = {
-	end: "linear-gradient(to right, black 84%, transparent)",
-	start: "linear-gradient(to right, transparent, black 16%)",
-	both: "linear-gradient(to right, transparent, black 16%, black 84%, transparent)",
-} as const;
+/**
+ * The fade a row's mask draws for each pair of edges with cards past them, each as wide as
+ * the gutter `peek` leaves beside the centred card, so only the neighbours ever fade.
+ */
+function fades(peek: string) {
+	return {
+		end: `linear-gradient(to right, black calc(100% - ${peek}), transparent)`,
+		start: `linear-gradient(to right, transparent, black ${peek})`,
+		both: `linear-gradient(to right, transparent, black ${peek}, black calc(100% - ${peek}), transparent)`,
+	};
+}
 
 /**
  * A row of cards that scrolls sideways one card at a time: each card is most of the row's
- * width and snaps to its start, so one card is readable and the next peeks in. It fades only
- * an edge with a card past it; the fade island reads the scroll position, and before it
- * loads the trailing edge fades. From `fitsFrom` every card fits and the row becomes a grid.
+ * width and snaps to its centre, so one card is readable and its neighbours peek in the
+ * equal gutters at either edge, all a fade ever covers. The row is its own size container,
+ * so its gutters and `fitsFrom` measure the row; from `fitsFrom` it becomes a grid.
  *
  * @param handle Runtime handle carrying the label, the item widths and the items.
  * @returns The render function producing the row.
@@ -330,8 +338,10 @@ export function Swipeable(handle: Handle<Swipeable.Props>) {
 	return () => {
 		let { children, column, fitColumn, fitsFrom, label } = handle.props;
 		let fits = fitsFrom ? `@container (min-width: ${fitsFrom})` : undefined;
+		let peek = `calc((100cqi - ${column}) / 2)`;
+		let fade = fades(peek);
 		return (
-			<div>
+			<div mix={[raw({ containerType: "inline-size" })]}>
 				<ul
 					aria-label={label}
 					data-swipe=""
@@ -347,16 +357,18 @@ export function Swipeable(handle: Handle<Swipeable.Props>) {
 							overflowX: "auto",
 							scrollSnapType: "x mandatory",
 							paddingBlockEnd: "0.5rem",
-							"& > li": { scrollSnapAlign: "start" },
-							maskImage: FADES.end,
-							'&[data-fade="start"]': { maskImage: FADES.start },
-							'&[data-fade="both"]': { maskImage: FADES.both },
+							paddingInline: peek,
+							"& > li": { scrollSnapAlign: "center" },
+							maskImage: fade.end,
+							'&[data-fade="start"]': { maskImage: fade.start },
+							'&[data-fade="both"]': { maskImage: fade.both },
 							'&[data-fade="none"]': { maskImage: "none" },
 							...(fits
 								? {
 										[fits]: {
 											maskImage: "none",
 											overflowX: "visible",
+											paddingInline: "0",
 											gridAutoColumns: fitColumn ?? column,
 										},
 									}

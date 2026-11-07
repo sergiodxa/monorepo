@@ -73,7 +73,7 @@ describe("WakabaLandingContent", () => {
 });
 
 describe("Swipe rows", () => {
-	test("snap one card at a time to the start, with no hint text under the row", () => {
+	test("snap one card at a time to the centre, with no hint text under the row", () => {
 		document.documentElement.className = "system wakaba";
 		let host = document.createElement("div");
 		host.style.inlineSize = "390px";
@@ -84,9 +84,31 @@ describe("Swipe rows", () => {
 		expect(rows.length).toBeGreaterThanOrEqual(3);
 		for (let row of rows) {
 			let card = row.querySelector("li");
-			expect(card && getComputedStyle(card).scrollSnapAlign).toContain("start");
+			expect(card && getComputedStyle(card).scrollSnapAlign).toContain("center");
 		}
 		expect(host.textContent).not.toContain("Swipe for more");
+		host.remove();
+	});
+});
+
+describe("Swipe rows at rest", () => {
+	test("centre their first card, with the content filling it and an equal gutter on each side", () => {
+		document.documentElement.className = "system wakaba";
+		let host = document.createElement("div");
+		host.style.inlineSize = "390px";
+		document.body.appendChild(host);
+		mounted = render(<WakabaLandingContent />, { container: host });
+
+		let offsets = Array.from(host.querySelectorAll<HTMLElement>("[data-swipe]"))
+			.filter((row) => row.scrollWidth > row.clientWidth)
+			.map((row) => {
+				let box = row.getBoundingClientRect();
+				let card = row.querySelector("li")!.getBoundingClientRect();
+				return Math.round(card.left - box.left - (box.right - card.right));
+			});
+
+		expect(offsets.length).toBeGreaterThan(0);
+		expect(offsets.every((offset) => Math.abs(offset) <= 1)).toBe(true);
 		host.remove();
 	});
 });

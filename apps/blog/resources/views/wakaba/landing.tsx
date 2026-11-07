@@ -572,7 +572,7 @@ function Exercises(handle: Handle) {
 				</LandingHeader>
 				<Swipeable
 					label={t.exercises.listLabel}
-					column="82%"
+					column="min(78cqi, 16rem)"
 					fitsFrom="60rem"
 					fitColumn="minmax(0, 1fr)"
 				>
@@ -816,8 +816,8 @@ function Widgets(handle: Handle) {
 				>
 					<Swipeable
 						label={t.widgets.title}
-						column="82%"
-						fitsFrom="36rem"
+						column="min(82cqi, 16rem)"
+						fitsFrom="35rem"
 						fitColumn="minmax(0, 1fr)"
 					>
 						<li mix={[raw({ minInlineSize: "0" })]}>
@@ -967,17 +967,6 @@ function Privacy(handle: Handle) {
 							}),
 						]}
 					>
-						<div
-							mix={[
-								raw({
-									flexShrink: "0",
-									paddingBlockStart: "1.5rem",
-									"@container (min-width: 48rem)": { display: "none" },
-								}),
-							]}
-						>
-							<Mascot pose="kitsune-study" size="sm" tilt={-3} />
-						</div>
 						<LandingHeader
 							eyebrow={t.privacy.eyebrow}
 							description={
@@ -991,6 +980,17 @@ function Privacy(handle: Handle) {
 						>
 							{t.privacy.title}
 						</LandingHeader>
+						<div
+							mix={[
+								raw({
+									flexShrink: "0",
+									paddingBlockStart: "1.5rem",
+									"@container (min-width: 48rem)": { display: "none" },
+								}),
+							]}
+						>
+							<Mascot pose="kitsune-study" size="sm" tilt={3} />
+						</div>
 					</div>
 					<div
 						mix={[
