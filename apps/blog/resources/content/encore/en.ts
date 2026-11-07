@@ -211,6 +211,10 @@ export const EN: EncoreCopy = {
 					"Will we see the same cards again?",
 					"Not until all 108 hand-written cards have come up. After that a handful of combined challenges bridge to a fresh pass, and a shake shuffles a new deck at any time.",
 				],
+				[
+					"What's the most dangerous card?",
+					"Probably DUET WITH A STRANGER, which asks you to pick someone you've never sung with and duet right now. Consider yourself warned.",
+				],
 			],
 			[
 				[

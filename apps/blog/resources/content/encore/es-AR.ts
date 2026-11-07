@@ -223,6 +223,10 @@ export const ES: EncoreCopy = {
 					"¿Vamos a ver las mismas cartas otra vez?",
 					"No hasta que salgan las 108 cartas escritas a mano. Después, unos pocos desafíos combinados llevan a una vuelta nueva, y agitando el teléfono mezclás un mazo nuevo cuando quieras.",
 				],
+				[
+					"¿Cuál es la carta más peligrosa?",
+					"Probablemente DÚO CON UN DESCONOCIDO, que te pide elegir a alguien con quien nunca cantaste y hacer un dúo ahora mismo. Quedás advertido.",
+				],
 			],
 			[
 				[
