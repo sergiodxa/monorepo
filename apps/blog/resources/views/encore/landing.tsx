@@ -449,8 +449,6 @@ function WatchBand(handle: Handle) {
 				id="watch"
 				mix={[nearView(700)]}
 				layout="split"
-				tone="tinted"
-				inset
 				eyebrow={t.eyebrow}
 				title={t.title}
 				description={t.description}
