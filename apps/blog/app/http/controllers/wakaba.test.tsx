@@ -171,6 +171,31 @@ describe("GET /apps/wakaba/privacy", () => {
 	});
 });
 
+describe("GET /apps/wakaba/privacy in Spanish", () => {
+	test("answers a Spanish reader with the Spanish policy, in Wakaba's Spanish shell", async () => {
+		let response = await fetchPage("/apps/wakaba/privacy", { "accept-language": "es" });
+		let html = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(html).toMatch(/<html lang="es-AR"/);
+		expect(headingCount(html)).toBe(1);
+		expect(html).toMatch(/<title[^>]*>Política de privacidad de Wakaba<\/title>/);
+		expect(html).toContain("Sincronización con iCloud");
+		expect(html).toContain('href="/apps/wakaba/privacy.md?lang=es-AR"');
+		expect(html).toContain('href="/apps/wakaba/support?lang=es-AR"');
+	});
+
+	test("serves the Spanish Markdown at the .md route with ?lang=", async () => {
+		let response = await fetchPage("/apps/wakaba/privacy.md?lang=es-AR");
+		let body = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(body).toContain("Última actualización: 6 de noviembre de 2026");
+		expect(body).toContain("## Práctica de pronunciación");
+		expect(body).not.toContain("title: Política de privacidad de Wakaba");
+	});
+});
+
 describe("GET /apps/wakaba/privacy.md", () => {
 	test("serves the policy as Markdown without its frontmatter", async () => {
 		let response = await fetchPage("/apps/wakaba/privacy.md");

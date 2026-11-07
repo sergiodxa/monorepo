@@ -17,6 +17,7 @@ import { maxIs, mi, pb, pi } from "@sdxc/u/size";
 import { focusVisible, hover } from "@sdxc/u/state";
 import { font, text, weight } from "@sdxc/u/typography";
 
+import { inLanguage } from "~/resources/content/wakaba/pages";
 import { copyOf, WakabaMark } from "~/resources/views/wakaba/parts";
 import routes from "~/routes/web";
 
@@ -32,10 +33,10 @@ export interface NavLink {
  *
  * @returns The render function producing the link.
  */
-export function Wordmark() {
+export function Wordmark(handle: Handle) {
 	return () => (
 		<a
-			href={routes.wakaba.href()}
+			href={inLanguage(routes.wakaba.href(), copyOf(handle).locale)}
 			mix={[
 				hstack({ gap: 2, align: "center" }),
 				fg("neutral.emphasis"),
@@ -99,8 +100,14 @@ export function WakabaHeader(handle: Handle) {
 				>
 					<Wordmark />
 					<span mix={[hstack({ gap: 5, align: "center" }), text("sm")]}>
-						<QuietLink href={routes.wakabaSupport.index.href()} label={copy.header.support} />
-						<QuietLink href={routes.wakabaPrivacy.href()} label={copy.header.privacy} />
+						<QuietLink
+							href={inLanguage(routes.wakabaSupport.index.href(), copy.locale)}
+							label={copy.header.support}
+						/>
+						<QuietLink
+							href={inLanguage(routes.wakabaPrivacy.href(), copy.locale)}
+							label={copy.header.privacy}
+						/>
 					</span>
 				</nav>
 			</header>

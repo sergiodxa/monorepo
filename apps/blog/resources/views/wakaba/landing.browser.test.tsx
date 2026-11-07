@@ -72,6 +72,23 @@ describe("WakabaLandingContent", () => {
 	});
 });
 
+describe("Hero cards", () => {
+	test("stay hidden on a phone, where they would cover the screens", () => {
+		document.documentElement.className = "system wakaba";
+		let host = document.createElement("div");
+		host.style.inlineSize = "375px";
+		document.body.appendChild(host);
+		mounted = render(<WakabaLandingContent />, { container: host });
+
+		let cards = Array.from(
+			host.querySelectorAll<HTMLElement>("#top div[aria-hidden='true']"),
+		).filter((element) => element.textContent?.includes("23-day streak"));
+		expect(cards).toHaveLength(1);
+		expect(cards.map((card) => getComputedStyle(card).display)).toEqual(["none"]);
+		host.remove();
+	});
+});
+
 describe("WakabaLandingContent in Spanish", () => {
 	test("keeps every box inside a 320px page", () => {
 		document.documentElement.className = "system wakaba";

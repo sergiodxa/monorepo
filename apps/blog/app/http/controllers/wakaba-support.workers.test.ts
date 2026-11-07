@@ -144,10 +144,12 @@ function submit(body: URLSearchParams, options: SubmitOptions = {}) {
 	);
 }
 
-/** Loads the page, carrying a session cookie when one is given. */
-function load(cookie?: string) {
+/** Loads the page, carrying a session cookie when one is given, and any further headers. */
+function load(cookie?: string, headers: Record<string, string> = {}) {
 	let app = createWebRouter(environment());
-	return app.fetch(new Request(new URL(PATH, ORIGIN), { headers: cookie ? { cookie } : {} }));
+	return app.fetch(
+		new Request(new URL(PATH, ORIGIN), { headers: { ...(cookie ? { cookie } : {}), ...headers } }),
+	);
 }
 
 describe("GET /apps/wakaba/support", () => {
@@ -187,6 +189,39 @@ describe("GET /apps/wakaba/support", () => {
 			expect(html).toContain(`for="${id}"`);
 			expect(html).toContain(`id="${id}"`);
 		}
+	});
+});
+
+describe("/apps/wakaba/support in Spanish", () => {
+	test("renders the form in Spanish for a Spanish reader, posting the same values", async () => {
+		let response = await load(undefined, { "accept-language": "es-MX" });
+		let html = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(html).toMatch(/<html lang="es-AR"/);
+		expect(html).toContain("Soporte de Wakaba");
+		expect(html).toContain("Enviar solicitud de soporte");
+		expect(html).toContain('<option value="Vocabulary correction"');
+		expect(html).toContain("Corrección de vocabulario");
+		expect(html).toContain('href="/apps/wakaba/privacy?lang=es-AR"');
+	});
+
+	test("reports invalid fields in Spanish and keeps ?lang= on the confirmation", async () => {
+		let invalid = await submit(await submission({ email: "" }), {
+			headers: { "accept-language": "es-AR" },
+		});
+		expect(await invalid.text()).toContain(
+			"Escribe tu correo electrónico para que pueda responderte.",
+		);
+
+		let transport = new MemoryTransport();
+		let sent = await submit(await submission(), {
+			transport,
+			headers: { "accept-language": "es-AR" },
+		});
+		expect(sent.status).toBe(303);
+		expect(sent.headers.get("location")).toBe(`${PATH}?lang=es-AR`);
+		expect(transport.last?.subject).toBe("[Wakaba] Bug report on iPhone");
 	});
 });
 

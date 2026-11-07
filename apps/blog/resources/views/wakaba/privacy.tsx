@@ -19,8 +19,11 @@ import { is, m, maxIs, mi, minIs, p, pbe, pbs, pi } from "@sdxc/u/size";
 import { font, overflowWrap, text, weight } from "@sdxc/u/typography";
 import { Link, Typeset } from "@sdxc/ui";
 
+import type { PageLocale } from "~/app/services/page-locale";
+
+import { inLanguage, WAKABA_PAGES_COPY } from "~/resources/content/wakaba/pages";
 import { WakabaLayout } from "~/resources/layouts/wakaba";
-import { Mascot } from "~/resources/views/wakaba/parts";
+import { Mascot, WAKABA_COPY } from "~/resources/views/wakaba/parts";
 import routes from "~/routes/web";
 
 /** Types used by the privacy page's renderer. */
@@ -31,6 +34,8 @@ export namespace WakabaPrivacyView {
 		description: string;
 		/** The policy's body, parsed from its Markdown source. */
 		document: Markdown.Document;
+		/** The language the policy is written in. English by default. */
+		locale?: PageLocale;
 	}
 }
 
@@ -41,83 +46,91 @@ export namespace WakabaPrivacyView {
  * @returns View function rendering the policy.
  */
 export function WakabaPrivacyView() {
-	return ({ model, assets }: { model: WakabaPrivacyView.Model; assets: DocumentAssets }) => (
-		<WakabaLayout
-			assets={assets}
-			title={model.title}
-			description={model.description}
-			path={routes.wakabaPrivacy.href()}
-		>
-			<main
-				mix={[
-					grid(),
-					gap(6),
-					pi(4),
-					pbe(8),
-					maxIs("46rem"),
-					mi("auto"),
-					is("full"),
-					at("md", pi(6)),
-				]}
+	return ({ model, assets }: { model: WakabaPrivacyView.Model; assets: DocumentAssets }) => {
+		let locale = model.locale ?? "en";
+		let t = WAKABA_PAGES_COPY[locale].privacy;
+		return (
+			<WakabaLayout
+				assets={assets}
+				copy={WAKABA_COPY[locale]}
+				bilingual
+				title={model.title}
+				description={model.description}
+				path={routes.wakabaPrivacy.href()}
 			>
-				<header
+				<main
 					mix={[
 						grid(),
-						gap(3),
-						pbs(8),
-						raw({ gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center" }),
+						gap(6),
+						pi(4),
+						pbe(8),
+						maxIs("46rem"),
+						mi("auto"),
+						is("full"),
+						at("md", pi(6)),
 					]}
 				>
-					<h1
+					<header
 						mix={[
-							m(0),
-							font("display"),
-							text("4xl"),
-							weight("bold"),
-							raw({ letterSpacing: "-0.025em", lineHeight: "1.1" }),
+							grid(),
+							gap(3),
+							pbs(8),
+							raw({ gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center" }),
+						]}
+					>
+						<h1
+							mix={[
+								m(0),
+								font("display"),
+								text("4xl"),
+								weight("bold"),
+								raw({ letterSpacing: "-0.025em", lineHeight: "1.1" }),
+								overflowWrap("break-word"),
+							]}
+						>
+							{model.title}
+						</h1>
+						<div
+							mix={[
+								raw({
+									gridColumn: "2",
+									gridRow: "1",
+									alignSelf: "start",
+									"@media (min-width: 48rem)": { gridRow: "1 / span 2" },
+								}),
+							]}
+						>
+							<Mascot pose="kitsune-study" size="md" tilt={4} />
+						</div>
+						<p
+							mix={[
+								m(0),
+								hstack({ gap: 4, align: "center" }),
+								flexWrap("wrap"),
+								text("sm"),
+								raw({ gridColumn: "1 / -1", "@media (min-width: 48rem)": { gridColumn: "1" } }),
+							]}
+						>
+							<span mix={[fg("neutral")]}>{t.forLine}</span>
+							<Link href={inLanguage(routes.wakabaPrivacyMarkdown.href(), locale)}>
+								{t.viewMarkdown}
+							</Link>
+						</p>
+					</header>
+					<article
+						mix={[
+							p(5),
+							rounded("xl"),
+							minIs(0),
 							overflowWrap("break-word"),
+							raw({ backgroundColor: "var(--wakaba-card)" }),
+							at("md", p(8)),
 						]}
 					>
-						{model.title}
-					</h1>
-					<div
-						mix={[
-							raw({
-								gridColumn: "2",
-								gridRow: "1",
-								alignSelf: "start",
-								"@media (min-width: 48rem)": { gridRow: "1 / span 2" },
-							}),
-						]}
-					>
-						<Mascot pose="kitsune-study" size="md" tilt={4} />
-					</div>
-					<p
-						mix={[
-							m(0),
-							hstack({ gap: 4, align: "center" }),
-							flexWrap("wrap"),
-							text("sm"),
-							raw({ gridColumn: "1 / -1", "@media (min-width: 48rem)": { gridColumn: "1" } }),
-						]}
-					>
-						<span mix={[fg("neutral")]}>For Wakaba on iPhone and iPad.</span>
-						<Link href={routes.wakabaPrivacyMarkdown.href()}>View as Markdown</Link>
-					</p>
-				</header>
-				<article
-					mix={[
-						p(5),
-						rounded("xl"),
-						minIs(0),
-						overflowWrap("break-word"),
-						raw({ backgroundColor: "var(--wakaba-card)" }),
-						at("md", p(8)),
-					]}
-				>
-					<Typeset preset="reading">{toRemix(model.document)}</Typeset>
-				</article>
-			</main>
-		</WakabaLayout>
-	);
+						<Typeset preset="reading">{toRemix(model.document)}</Typeset>
+					</article>
+				</main>
+			</WakabaLayout>
+		);
+	};
 }

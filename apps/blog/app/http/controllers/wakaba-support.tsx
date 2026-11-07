@@ -1,6 +1,6 @@
 /**
  * HTTP controller for the public Wakaba support page, the Support URL of the app's App Store
- * listings. It renders the contact form with honeypot fields, and on submission reads their check,
+ * listings, in English or Spanish. It renders the contact form with honeypot fields, and on submission reads their check,
  * validates, rate-limits and mails the request, redirecting to a confirmation once it is sent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -14,8 +14,11 @@ import { createController } from "remix/router";
 import { Session } from "remix/session";
 
 import type { AppContext } from "~/app/initializers/router";
+import type { PageLocale } from "~/app/services/page-locale";
 
-import { WakabaSupportRequestSchema } from "~/app/http/validators/wakaba-support";
+import { wakabaSupportSchema } from "~/app/http/validators/wakaba-support";
+import { resolvePageLocale } from "~/app/services/page-locale";
+import { inLanguage } from "~/resources/content/wakaba/pages";
 import { WakabaSupportView } from "~/resources/views/wakaba/support";
 import routes from "~/routes/web";
 
@@ -57,7 +60,20 @@ async function renderForm(
 	init?: ResponseInit,
 ): Promise<Response> {
 	let honeypot = unwrap(await ctx.honeypot.issue());
-	return ctx.render(WakabaSupportView, { ...model, honeypot }, init);
+	return ctx.render(WakabaSupportView, { ...model, honeypot }, withLanguage(model.locale, init));
+}
+
+/** The request's language, from `?lang=` or `Accept-Language`. */
+function localeOf(ctx: AppContext): PageLocale {
+	return resolvePageLocale(ctx.url, ctx.request.headers.get("Accept-Language"));
+}
+
+/** A response's init carrying the page's language and the header its choice varied on. */
+function withLanguage(locale: PageLocale = "en", init?: ResponseInit): ResponseInit {
+	let headers = new Headers(init?.headers);
+	headers.set("Content-Language", locale);
+	headers.set("Vary", "Accept-Language");
+	return { ...init, headers };
 }
 
 /**
@@ -73,9 +89,16 @@ export default createController(routes.wakabaSupport, {
 		 * @returns The support page.
 		 */
 		index: async (ctx) => {
+			let locale = localeOf(ctx);
 			let sent = ctx.get(Session).get(SENT_FLASH) === true;
-			if (sent) return ctx.render(WakabaSupportView, { state: "sent", values: {}, issues: [] });
-			return renderForm(ctx, { state: "idle", values: {}, issues: [] });
+			if (sent) {
+				return ctx.render(
+					WakabaSupportView,
+					{ state: "sent", values: {}, issues: [], locale },
+					withLanguage(locale),
+				);
+			}
+			return renderForm(ctx, { state: "idle", values: {}, issues: [], locale });
 		},
 
 		/**
@@ -86,6 +109,8 @@ export default createController(routes.wakabaSupport, {
 		 * @returns A See Other redirect to the confirmation, or the form with a 4xx/5xx status.
 		 */
 		action: async (ctx) => {
+			let locale = localeOf(ctx);
+			let confirmation = inLanguage(routes.wakabaSupport.index.href(), locale);
 			let form = ctx.get(FormData);
 			let values = submittedValues(form);
 			let session = ctx.get(Session);
@@ -95,11 +120,11 @@ export default createController(routes.wakabaSupport, {
 				ctx.log.set({ support: { outcome: "honeypot", reason: trap.error.code } });
 				if (trap.error.code === "trap-filled") {
 					session.flash(SENT_FLASH, true);
-					return redirect(routes.wakabaSupport.index.href(), {
+					return redirect(confirmation, {
 						status: redirect.Status.SeeOther,
 					});
 				}
-				return renderForm(ctx, { state: "resubmit", values, issues: [] }, { status: 400 });
+				return renderForm(ctx, { state: "resubmit", values, issues: [], locale }, { status: 400 });
 			}
 
 			let admitted = await ctx.supportDesk.admit(
@@ -109,17 +134,17 @@ export default createController(routes.wakabaSupport, {
 				ctx.log.set({ support: { outcome: "rate_limited" } });
 				return renderForm(
 					ctx,
-					{ state: "rate-limited", values, issues: [] },
+					{ state: "rate-limited", values, issues: [], locale },
 					{ status: 429, headers: { "retry-after": "60" } },
 				);
 			}
 
-			let parsed = await validate(form ?? new FormData(), WakabaSupportRequestSchema);
+			let parsed = await validate(form ?? new FormData(), wakabaSupportSchema(locale));
 			if (isFailure(parsed)) {
 				ctx.log.set({ support: { outcome: "invalid" } });
 				return renderForm(
 					ctx,
-					{ state: "invalid", values, issues: parsed.error.issues },
+					{ state: "invalid", values, issues: parsed.error.issues, locale },
 					{ status: 400 },
 				);
 			}
@@ -142,18 +167,18 @@ export default createController(routes.wakabaSupport, {
 			if (assessment.verdict === "spam") {
 				ctx.log.set({ support: { outcome: "spam" } });
 				session.flash(SENT_FLASH, true);
-				return redirect(routes.wakabaSupport.index.href(), { status: redirect.Status.SeeOther });
+				return redirect(confirmation, { status: redirect.Status.SeeOther });
 			}
 
 			let delivered = await ctx.supportDesk.deliverWakaba(parsed.data, assessment);
 			if (isFailure(delivered)) {
 				ctx.log.warn("support.delivery_failed", { reason: delivered.error.reason });
-				return renderForm(ctx, { state: "failed", values, issues: [] }, { status: 503 });
+				return renderForm(ctx, { state: "failed", values, issues: [], locale }, { status: 503 });
 			}
 
 			ctx.log.set({ support: { outcome: "delivered", topic: parsed.data.topic } });
 			session.flash(SENT_FLASH, true);
-			return redirect(routes.wakabaSupport.index.href(), { status: redirect.Status.SeeOther });
+			return redirect(confirmation, { status: redirect.Status.SeeOther });
 		},
 	},
 });

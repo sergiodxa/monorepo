@@ -31,6 +31,8 @@ import {
 	Typeset,
 } from "@sdxc/ui";
 
+import type { PageLocale } from "~/app/services/page-locale";
+
 import {
 	WAKABA_SUPPORT_LIMITS as SUPPORT_LIMITS,
 	WAKABA_SUPPORT_MESSAGE_MIN as SUPPORT_MESSAGE_MIN,
@@ -38,8 +40,9 @@ import {
 	WAKABA_SUPPORT_TOPICS as SUPPORT_TOPICS,
 } from "~/app/http/validators/wakaba-support";
 import { SubmitButton } from "~/resources/components/submit-button";
+import { inLanguage, WAKABA_PAGES_COPY } from "~/resources/content/wakaba/pages";
 import { WakabaLayout } from "~/resources/layouts/wakaba";
-import { Mascot } from "~/resources/views/wakaba/parts";
+import { Mascot, WAKABA_COPY } from "~/resources/views/wakaba/parts";
 import routes from "~/routes/web";
 
 /**
@@ -65,6 +68,8 @@ export namespace WakabaSupportView {
 		issues: ReadonlyArray<Form.Issue>;
 		/** Freshly issued trap fields; `sent` renders no form and needs none. */
 		honeypot?: Honeypot.Fields;
+		/** The language the page is written in. English by default. */
+		locale?: PageLocale;
 	}
 
 	/** Props of a labeled native select, which reads its own error from `issues`. */
@@ -72,13 +77,16 @@ export namespace WakabaSupportView {
 		name: string;
 		label: string;
 		placeholder: string;
-		options: ReadonlyArray<string>;
+		/** The posted value of each option, with the label the page shows for it. */
+		options: ReadonlyArray<readonly [string, string]>;
 		value: string | undefined;
 		issues: ReadonlyArray<Form.Issue>;
 	}
 
 	/** Props of the message field. */
 	export interface MessageProps {
+		label: string;
+		placeholder: string;
 		value: string | undefined;
 		issues: ReadonlyArray<Form.Issue>;
 	}
@@ -127,9 +135,9 @@ function Choice(handle: Handle<WakabaSupportView.ChoiceProps>) {
 					<Select.Option value="" selected={!value}>
 						{placeholder}
 					</Select.Option>
-					{options.map((option) => (
+					{options.map(([option, optionLabel]) => (
 						<Select.Option key={option} value={option} selected={value === option}>
-							{option}
+							{optionLabel}
 						</Select.Option>
 					))}
 				</Select>
@@ -142,12 +150,12 @@ function Choice(handle: Handle<WakabaSupportView.ChoiceProps>) {
 /** The message textarea, with its hint and error both announced through `aria-describedby`. */
 function MessageField(handle: Handle<WakabaSupportView.MessageProps>) {
 	return () => {
-		let { value, issues } = handle.props;
+		let { issues, label, placeholder, value } = handle.props;
 		let error = issueFor(issues, "message");
 
 		return (
 			<div mix={[grid(), gap(2)]}>
-				<Label htmlFor="support-message">Message</Label>
+				<Label htmlFor="support-message">{label}</Label>
 				<TextArea
 					id="support-message"
 					name="message"
@@ -155,7 +163,7 @@ function MessageField(handle: Handle<WakabaSupportView.MessageProps>) {
 					minLength={SUPPORT_MESSAGE_MIN}
 					maxLength={SUPPORT_LIMITS.message}
 					rows={8}
-					placeholder="Describe your question, problem, or suggestion…"
+					placeholder={placeholder}
 					color={error ? "danger" : undefined}
 					aria-invalid={error ? "true" : undefined}
 					aria-describedby={error ? "support-message-error" : undefined}
@@ -179,13 +187,17 @@ function MessageField(handle: Handle<WakabaSupportView.MessageProps>) {
 export function WakabaSupportView() {
 	return ({ model, assets }: { model: WakabaSupportView.Model; assets: DocumentAssets }) => {
 		let { state, values, issues, honeypot } = model;
-		let action = routes.wakabaSupport.action.href();
+		let locale = model.locale ?? "en";
+		let t = WAKABA_PAGES_COPY[locale].support;
+		let action = inLanguage(routes.wakabaSupport.action.href(), locale);
 
 		return (
 			<WakabaLayout
 				assets={assets}
-				title="Wakaba Support"
-				description="Get help with Wakaba, the Japanese vocabulary app for iPhone and iPad. Report a problem, ask a question, suggest a feature or correct a word."
+				copy={WAKABA_COPY[locale]}
+				bilingual
+				title={t.title}
+				description={t.description}
 				path={routes.wakabaSupport.index.href()}
 			>
 				<main
@@ -212,7 +224,7 @@ export function WakabaSupportView() {
 							level={1}
 							mix={[m(0), font("display"), text("4xl"), overflowWrap("break-word")]}
 						>
-							Wakaba Support
+							{t.title}
 						</Heading>
 						<div
 							mix={[
@@ -232,15 +244,8 @@ export function WakabaSupportView() {
 								raw({ gridColumn: "1 / -1", "@media (min-width: 48rem)": { gridColumn: "1" } }),
 							]}
 						>
-							<p>
-								Found a bug, a word that looks wrong, or an idea for Wakaba? Write to me here and
-								I’ll reply by email.
-							</p>
-							<p>
-								If something isn’t working, tell me which device you’re using, what happened and
-								what you expected. Your iOS or iPadOS version and the app version help too, if you
-								know them.
-							</p>
+							<p>{t.intro[0]}</p>
+							<p>{t.intro[1]}</p>
 						</Typeset>
 					</header>
 
@@ -258,21 +263,20 @@ export function WakabaSupportView() {
 						]}
 					>
 						<Heading level={2} id="support-form" mix={[m(0), font("display"), text("2xl")]}>
-							Send a request
+							{t.formTitle}
 						</Heading>
 
 						{state === "sent" ? (
 							<div mix={[grid(), gap(4)]}>
 								<Alert color="success" live="polite">
 									<Alert.Content>
-										<Alert.Description>
-											Your support request has been sent. I’ll reply to the email address you
-											provided.
-										</Alert.Description>
+										<Alert.Description>{t.sent}</Alert.Description>
 									</Alert.Content>
 								</Alert>
 								<p mix={[m(0)]}>
-									<Link href={routes.wakabaSupport.index.href()}>Send another request</Link>
+									<Link href={inLanguage(routes.wakabaSupport.index.href(), locale)}>
+										{t.sendAnother}
+									</Link>
 								</p>
 							</div>
 						) : (
@@ -280,39 +284,28 @@ export function WakabaSupportView() {
 								{state === "failed" ? (
 									<Alert color="danger" live="assertive">
 										<Alert.Content>
-											<Alert.Description>
-												I couldn’t send your request. Your message has been preserved—please try
-												again.
-											</Alert.Description>
+											<Alert.Description>{t.failed}</Alert.Description>
 										</Alert.Content>
 									</Alert>
 								) : null}
 								{state === "rate-limited" ? (
 									<Alert color="warning" live="assertive">
 										<Alert.Content>
-											<Alert.Description>
-												You’ve sent several requests in a short time. Your message has been
-												preserved—please wait a minute and try again.
-											</Alert.Description>
+											<Alert.Description>{t.rateLimited}</Alert.Description>
 										</Alert.Content>
 									</Alert>
 								) : null}
 								{state === "resubmit" ? (
 									<Alert color="warning" live="assertive">
 										<Alert.Content>
-											<Alert.Description>
-												This form expired before it was sent. Your message has been preserved—please
-												send it again.
-											</Alert.Description>
+											<Alert.Description>{t.resubmit}</Alert.Description>
 										</Alert.Content>
 									</Alert>
 								) : null}
 								{state === "invalid" ? (
 									<Alert color="danger" live="assertive">
 										<Alert.Content>
-											<Alert.Description>
-												Please correct the highlighted fields and send your request again.
-											</Alert.Description>
+											<Alert.Description>{t.invalid}</Alert.Description>
 										</Alert.Content>
 									</Alert>
 								) : null}
@@ -325,14 +318,14 @@ export function WakabaSupportView() {
 									]}
 								>
 									<TextField
-										label="Name (optional)"
+										label={t.name}
 										name="name"
 										autoComplete="name"
 										maxLength={SUPPORT_LIMITS.name}
 										defaultValue={values.name}
 									/>
 									<TextField
-										label="Email"
+										label={t.email}
 										name="email"
 										type="email"
 										autoComplete="email"
@@ -342,51 +335,59 @@ export function WakabaSupportView() {
 									/>
 									<Choice
 										name="topic"
-										label="Topic"
-										placeholder="Choose a topic"
-										options={SUPPORT_TOPICS}
+										label={t.topic}
+										placeholder={t.chooseTopic}
+										options={SUPPORT_TOPICS.map((topic) => [topic, t.topics[topic]] as const)}
 										value={values.topic}
 										issues={issues}
 									/>
 									<Choice
 										name="platform"
-										label="Device/platform"
-										placeholder="Choose a device"
-										options={SUPPORT_PLATFORMS}
+										label={t.device}
+										placeholder={t.chooseDevice}
+										options={SUPPORT_PLATFORMS.map(
+											(platform) => [platform, t.platforms[platform]] as const,
+										)}
 										value={values.platform}
 										issues={issues}
 									/>
 									<TextField
-										label="OS version (optional)"
+										label={t.osVersion}
 										name="osVersion"
 										autoComplete="off"
-										placeholder="e.g. iOS 26.1"
+										placeholder={t.osPlaceholder}
 										maxLength={SUPPORT_LIMITS.version}
 										defaultValue={values.osVersion}
 									/>
 									<TextField
-										label="App version (optional)"
+										label={t.appVersion}
 										name="appVersion"
 										autoComplete="off"
-										placeholder="e.g. 1.0"
+										placeholder={t.appPlaceholder}
 										maxLength={SUPPORT_LIMITS.version}
 										defaultValue={values.appVersion}
 									/>
 								</div>
 
-								<MessageField value={values.message} issues={issues} />
+								<MessageField
+									label={t.message}
+									placeholder={t.messagePlaceholder}
+									value={values.message}
+									issues={issues}
+								/>
 
 								{honeypot ? <HoneypotFields {...honeypot} /> : null}
 
 								<p mix={[m(0), text("sm")]}>
-									I’ll use the information you submit to respond to your request and investigate any
-									reported issue. Please don’t include passwords, payment details, or other
-									sensitive information. Read our{" "}
-									<Link href={routes.wakabaPrivacy.href()}>Privacy Policy</Link>.
+									{t.notice}{" "}
+									<Link href={inLanguage(routes.wakabaPrivacy.href(), locale)}>
+										{t.privacyLink}
+									</Link>
+									.
 								</p>
 
 								<div mix={[hstack({ gap: 3, align: "center" }), flexWrap("wrap")]}>
-									<SubmitButton label="Send support request" pendingLabel="Sending…" />
+									<SubmitButton label={t.submit} pendingLabel={t.pending} />
 								</div>
 							</Form>
 						)}

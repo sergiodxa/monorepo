@@ -26,6 +26,7 @@ import type { NavLink as ChromeLink } from "~/resources/views/wakaba/chrome";
 import { PROFILE } from "~/config/profile";
 import { APP_STORE, WAKABA_THEME_COLORS } from "~/config/wakaba";
 import { EN } from "~/resources/content/wakaba/en";
+import { inLanguage } from "~/resources/content/wakaba/pages";
 import DocumentLayout from "~/resources/layouts/document";
 import { QuietLink, WakabaHeader, Wordmark } from "~/resources/views/wakaba/chrome";
 import { copyOf, WAKABA_ASSETS, WakabaLanguage } from "~/resources/views/wakaba/parts";
@@ -178,9 +179,15 @@ function footerColumns(copy: WakabaCopy): Array<FooterColumn> {
 		{
 			title: copy.footer.columns.wakaba,
 			links: [
-				{ href: `${routes.wakaba.href()}#download`, label: copy.footer.download },
-				{ href: routes.wakabaSupport.index.href(), label: copy.header.support },
-				{ href: routes.wakabaPrivacy.href(), label: copy.header.privacy },
+				{
+					href: `${inLanguage(routes.wakaba.href(), copy.locale)}#download`,
+					label: copy.footer.download,
+				},
+				{
+					href: inLanguage(routes.wakabaSupport.index.href(), copy.locale),
+					label: copy.header.support,
+				},
+				{ href: inLanguage(routes.wakabaPrivacy.href(), copy.locale), label: copy.header.privacy },
 			],
 		},
 		{

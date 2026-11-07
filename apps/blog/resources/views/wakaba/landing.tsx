@@ -50,6 +50,7 @@ import type { PageLocale } from "~/app/services/page-locale";
 import type { MascotPose } from "~/resources/views/wakaba/parts";
 
 import { PATH_ADVANCE_ANIMATION, PathAutoplay } from "~/resources/components/path-autoplay";
+import { inLanguage } from "~/resources/content/wakaba/pages";
 import { WakabaLayout } from "~/resources/layouts/wakaba";
 import { BonsaiBand } from "~/resources/views/wakaba/bonsai";
 import {
@@ -344,9 +345,10 @@ function FloatingCard(handle: Handle<FloatingCard.Props>) {
 						insetBlockStart: start ? "30%" : "52%",
 						insetInlineStart: start ? "3%" : "auto",
 						insetInlineEnd: start ? "auto" : "3%",
+						alignItems: "center",
+						gap: "0.75rem",
 						"@container wakaba-hero (min-width: 64rem)": { display: "flex" },
 					}),
-					hstack({ gap: 3, align: "center" }),
 					pi(4),
 					raw({
 						paddingBlock: "0.75rem",
@@ -1127,7 +1129,9 @@ function Privacy(handle: Handle) {
 						description={
 							<>
 								{t.privacy.description}{" "}
-								<Link href={routes.wakabaPrivacy.href()}>{t.header.privacy}</Link>
+								<Link href={inLanguage(routes.wakabaPrivacy.href(), t.locale)}>
+									{t.header.privacy}
+								</Link>
 							</>
 						}
 					>
@@ -1240,7 +1244,7 @@ function Download(handle: Handle) {
 				actions={
 					<span mix={[vstack({ gap: 4, align: "center" })]}>
 						<AppStoreCall />
-						<Link href={routes.wakabaSupport.index.href()} mix={[text("sm")]}>
+						<Link href={inLanguage(routes.wakabaSupport.index.href(), t.locale)} mix={[text("sm")]}>
 							{t.closing.support}
 						</Link>
 					</span>
