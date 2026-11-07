@@ -29,15 +29,21 @@ export type EncoreLocale = (typeof ENCORE_LOCALES)[number];
 export const ENCORE_THEME_COLORS = { light: "#FFFAF0", dark: "#0E0513" } as const;
 
 /**
- * The language of the social card for a shared link: the one `?lang=` names, English without
- * one. A link preview reflects the shared URL, whatever language the previewer asks for.
+ * The language of the social card for a shared link: the one `?lang=` names, matched on its
+ * base tag as the page is (`es` and `es-MX` reach Argentine Spanish), English without one.
  *
  * @param url The request URL.
  * @returns The social card's language.
  */
 export function shareLocale(url: URL): EncoreLocale {
-	let requested = url.searchParams.get("lang")?.toLowerCase();
-	return ENCORE_LOCALES.find((locale) => locale.toLowerCase() === requested) ?? "en";
+	let requested = url.searchParams.get("lang")?.trim().toLowerCase();
+	if (!requested) return "en";
+	let base = requested.split("-")[0];
+	return (
+		ENCORE_LOCALES.find((locale) => locale.toLowerCase() === requested) ??
+		ENCORE_LOCALES.find((locale) => locale.toLowerCase().split("-")[0] === base) ??
+		"en"
+	);
 }
 
 /**

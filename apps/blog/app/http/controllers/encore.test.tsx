@@ -97,6 +97,20 @@ describe("GET /apps/encore", () => {
 		);
 	});
 
+	test("reads ?lang=es as Argentine Spanish for the page, its card and its meta tags", async () => {
+		for (let path of ["/apps/encore?lang=es", "/apps/encore?lang=es-MX"]) {
+			let html = await (await fetchPage(path)).text();
+
+			expect(html).toMatch(/<html lang="es-AR"/);
+			expect(html).toContain('property="og:locale" content="es_AR"');
+			expect(html).toContain(
+				'property="og:image" content="https://sergiodxa.com/apps/encore/branding/social-card-es.png"',
+			);
+			expect(html).toContain('rel="canonical" href="https://sergiodxa.com/apps/encore?lang=es-AR"');
+			expect(html).toContain("Tu próxima noche empieza con una canción.");
+		}
+	});
+
 	test("draws the deck's cards with the app's own words", async () => {
 		let html = await (await fetchPage("/apps/encore")).text();
 
