@@ -10,19 +10,17 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
-import { ArrowDownIcon, ChevronDownIcon } from "@sdxc/icons";
+import { ArrowDownIcon, CheckIcon, ChevronDownIcon } from "@sdxc/icons";
 import { keyframes } from "@sdxc/u/animation";
 import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { gap, grid, gridTemplate, hidden, hstack, repeat, vstack } from "@sdxc/u/layout";
+import { block, gap, grid, gridTemplate, hidden, hstack, repeat, vstack } from "@sdxc/u/layout";
 import { at, motionSafe } from "@sdxc/u/responsive";
 import { is, m, maxIs, mi, p, pbs, pi } from "@sdxc/u/size";
 import { font, leading, text, weight } from "@sdxc/u/typography";
 import { Accordion, HeadingScope, Link, LinkButton } from "@sdxc/ui";
 import {
-	CheckList,
-	CheckRow,
 	ClosingCta,
 	FaqBand,
 	FeatureBand,
@@ -713,8 +711,9 @@ function Details(handle: Handle) {
 }
 
 /**
- * Privacy as plain facts, each one checked against the app's code: no account, no microphone,
- * no tracking, cards on the device and the Watch talking straight to the phone.
+ * Privacy as plain facts, each one checked against the app's code, set as a centered row of
+ * checked pills under the promise: no account, no microphone, no tracking, cards on the
+ * device and the Watch talking straight to the phone.
  *
  * @returns The render function producing the band.
  */
@@ -722,40 +721,56 @@ function Privacy(handle: Handle) {
 	return () => {
 		let t = copyOf(handle);
 		return (
-			<LandingSection id="privacy" tone="tinted" inset mix={[nearView(520)]}>
-				<LandingHeader eyebrow={t.privacy.eyebrow} mix={[raw({ maxInlineSize: "none" })]}>
+			<LandingSection id="privacy" tone="tinted" inset align="center" mix={[nearView(520)]}>
+				<LandingHeader
+					align="center"
+					eyebrow={t.privacy.eyebrow}
+					description={
+						<>
+							{t.privacy.description}
+							<span mix={[block(), raw({ marginBlockStart: "0.75rem" })]}>
+								<Link href={inLanguage(routes.encorePrivacy.href(), t.locale)}>
+									{t.privacy.policy}
+								</Link>
+							</span>
+						</>
+					}
+				>
 					{t.privacy.title.split("\n").map((line) => (
-						<span key={line} mix={[raw({ display: "block" })]}>
+						<span key={line} mix={[block()]}>
 							{line}
 						</span>
 					))}
 				</LandingHeader>
-				<div
+				<ul
 					mix={[
-						grid(),
-						gap(8),
-						raw({
-							alignItems: "start",
-							"@container (min-width: 56rem)": {
-								gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-							},
-						}),
+						hstack({ gap: 3, align: "center", justify: "center" }),
+						raw({ flexWrap: "wrap", maxInlineSize: "52rem", marginInline: "auto" }),
+						m(0),
+						p(0),
+						raw({ listStyle: "none" }),
 					]}
 				>
-					<div mix={[vstack({ gap: 4, align: "start" }), text("base"), fg("neutral")]}>
-						<p mix={[m(0), leading("relaxed")]}>{t.privacy.description}</p>
-						<p mix={[m(0)]}>
-							<Link href={inLanguage(routes.encorePrivacy.href(), t.locale)}>
-								{t.privacy.policy}
-							</Link>
-						</p>
-					</div>
-					<CheckList>
-						{t.privacy.checks.map((check) => (
-							<CheckRow key={check}>{check}</CheckRow>
-						))}
-					</CheckList>
-				</div>
+					{t.privacy.checks.map((check) => (
+						<li
+							key={check}
+							mix={[
+								hstack({ gap: 2, align: "center" }),
+								rounded("full"),
+								text("sm"),
+								raw({
+									paddingBlock: "0.5rem",
+									paddingInline: "0.875rem 1rem",
+									backgroundColor: "var(--app-card)",
+									boxShadow: "inset 0 0 0 1px var(--ui-landing-hairline)",
+								}),
+							]}
+						>
+							<CheckIcon size={16} aria-hidden="true" mix={[raw({ color: "var(--app-accent)" })]} />
+							{check}
+						</li>
+					))}
+				</ul>
 			</LandingSection>
 		);
 	};
