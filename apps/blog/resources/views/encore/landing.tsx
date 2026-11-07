@@ -796,7 +796,8 @@ function Privacy(handle: Handle) {
 }
 
 /**
- * The questions band: two columns of disclosures on cards, one open at a time per column.
+ * The questions band: two columns of disclosures on cards, each opening on its own, so a
+ * phone reader who sees one list can keep several answers open at once.
  *
  * @returns The render function producing the band.
  */
@@ -822,7 +823,6 @@ function Questions(handle: Handle) {
 						{column.map(([question, answer]) => (
 							<Accordion.Item
 								key={question}
-								name={`encore-faq-${index}`}
 								mix={[
 									raw({ paddingInline: "1.25rem", backgroundColor: "var(--app-card)" }),
 									rounded("xl"),

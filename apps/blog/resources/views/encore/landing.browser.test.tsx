@@ -56,6 +56,20 @@ function mount(width: number, language: "en" | "es-AR" | "ja" = "en"): HTMLEleme
 	return host;
 }
 
+describe("The questions", () => {
+	test("stay open together, so a phone reader sees one list that behaves like one", () => {
+		let host = mount(375);
+
+		let questions = Array.from(host.querySelectorAll<HTMLDetailsElement>("#faq details"));
+		expect(questions).toHaveLength(12);
+		for (let question of questions.slice(0, 2)) question.querySelector("summary")?.click();
+		questions[6]?.querySelector("summary")?.click();
+
+		expect(questions.filter((question) => question.open)).toHaveLength(3);
+		host.remove();
+	});
+});
+
 describe("The deck", () => {
 	test("turns a card over when the reader taps it", () => {
 		let host = mount(1200);
