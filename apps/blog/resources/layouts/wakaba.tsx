@@ -188,7 +188,7 @@ function footerColumns(copy: WakabaCopy): Array<FooterColumn> {
 			title: copy.footer.columns.more,
 			links: [
 				{ href: routes.feed.href(), label: copy.footer.blog },
-				{ href: routes.encoreSupport.index.href(), label: "Encore" },
+				{ href: routes.encore.href(), label: "Encore" },
 				{ href: "https://uptime.sergiodxa.com", label: "Uptime" },
 				{ href: "https://sdxc.dev", label: "sdxc.dev" },
 			],

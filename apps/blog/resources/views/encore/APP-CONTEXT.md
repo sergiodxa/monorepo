@@ -13,7 +13,9 @@ A paid app: a **one-time purchase of US$4.99** on the App Store, with no subscri
 
 - App Store listing: <https://apps.apple.com/us/app/encore-music-party-game/id6813754400> (Apple ID `6813754400`).
 - Category: Music Games (`LSApplicationCategoryType`).
-- Version 1.0; iOS and iPadOS 17, watchOS 10, Mac through Mac Catalyst.
+- Version 1.0; iOS and iPadOS 17 and watchOS 10. On Apple silicon Macs the iPad app installs from the Mac App Store as-is; there is no separate macOS build or listing.
+- Rated **4+** on the App Store: suitable for all ages.
+- **Family Sharing** is on: one purchase covers everyone in the family group.
 
 ## Data and Privacy
 
@@ -23,7 +25,6 @@ A paid app: a **one-time purchase of US$4.99** on the App Store, with no subscri
 - No microphone, recording or speech recognition. The app never listens to anyone sing.
 - No analytics, advertising or third-party SDKs. The Swift package has no dependencies.
 - The iPhone and the paired Apple Watch exchange the current card's title, prompt, whether it is revealed, and the reveal/next/shuffle commands, directly through Apple's WatchConnectivity.
-- On Mac the app runs in the App Sandbox with no extra entitlements.
 
 The published policy is at `/apps/encore/privacy` (source `resources/content/encore/privacy.md`).
 
@@ -34,12 +35,12 @@ English (development language), Spanish, Argentine Spanish (voseo: “Cantá una
 ## Main Features
 
 - **108 hand-written challenge cards**, each with an uppercase title and a one-line prompt, across personal, group, genre, era, performance, song-title, situation and emotional sets. Examples: GUILTY PLEASURE, MAIN CHARACTER, ONE-HIT WONDER, DUET WITH A STRANGER, WEDDING SONG, THE SLOW BUILD, and ENCORE (“You earned it. Sing whatever you want.”).
-- **Generated challenges** that combine two pieces — a theme, a style, an era, a language or a title rule — such as “a romantic rock song” or “a song from the 1990s with a colour in the title”. Compatibility rules keep nonsense pairs out (two eras at once, romance with rebellion). Generated cards have no title.
-- **A dealer that avoids repeats.** About nine in ten draws are hand-written cards while any remain unseen. The dealer remembers the last eight cards and steers away from the same tags, theme, genre, era, title rule and performance style; easier cards come up more often than hard ones. When every authored card has been played, five generated cards bridge to a fresh pass.
+- **Generated challenges**, a large pool built at launch, that combine two pieces — a theme, a style, an era, a language or a title rule — such as “a romantic rock song” or “a song from the 1990s with a colour in the title”. Compatibility rules keep nonsense pairs out (two eras at once, romance with rebellion). Generated cards have no title.
+- **A dealer that avoids repeats.** About nine in ten draws are hand-written cards while any remain unseen. The dealer remembers the last eight cards and steers away from the same tags, theme, genre, era, title rule and performance style; easier cards come up more often than hard ones. When every authored card has been played, five generated cards bridge to a fresh pass of the authored deck, so a group sees few generated cards in practice; the pool's size is not stated anywhere and is not worth a figure.
 - **The card is the interface.** No navigation, tab bar or buttons: tap the face-down card to flip it, swipe it away for the next challenge (it arrives already revealed), shake the phone to shuffle a new deck face-down. Three one-time hints teach the gestures: “Tap to reveal”, “Swipe when you're done”, “Shake to shuffle”.
 - **Undo.** Swiping registers an undo, so Command-Z on a Mac or an iPad keyboard brings the previous card back; a shuffle clears it.
 - **Apple Watch remote.** The Watch shows the current card's title and “Card ready” or the prompt, with Reveal or Next, and Shuffle. It is a remote for the iPhone game and needs Encore open on the iPhone (“Open Encore on iPhone” when it is out of reach).
-- **iPad and Mac.** iPad runs in every orientation; on Mac the card scales with the window up to 1.6×, and **Game → Shuffle Deck** is Command-R.
+- **iPad and Mac.** iPad runs in every orientation. On a Mac the iPad app runs as it is; with a keyboard on iPad or Mac, **Game → Shuffle Deck** is Command-R. (The project also has Mac Catalyst code that scales the card with the window, but no Catalyst build ships.)
 - **Haptics and sound effects**, both off by default and switched on in the system Settings app under Encore. The ambient audio respects the silent switch and mixes with music that is already playing.
 - **Accessibility.** VoiceOver reads each card's title and prompt, with “Next challenge” and “Shuffle deck” actions; with Reduce Motion the card fades instead of flipping.
 
@@ -73,29 +74,36 @@ Ornament colours, the same in both appearances with different opacity: coral `#F
 
 ## Assets the Landing Needs
 
-None are in the repository yet: the landing shows labelled placeholders at each spot, and each asset is a one-line switch in `resources/views/encore/parts.tsx` once its file is in `apps/blog/public/apps/encore/`. Screens are WebP at **560 × 1218** (half an iPhone capture, the same as Wakaba's), without marketing text or device frames; the page draws the frame. Light and dark pairs carry `-light` and `-dark` suffixes.
+None are in the repository yet. The landing shows a labelled placeholder at each spot, sized like the real capture. Once a file is in `apps/blog/public/apps/encore/`, setting `ready: true` on its entry in `SCREENS` (`resources/views/encore/parts.tsx`) swaps the placeholder for it.
 
-| File (under `public/apps/encore/`)             | What it shows                                                 | Used in                     |
-| ---------------------------------------------- | ------------------------------------------------------------- | --------------------------- |
-| `branding/app-icon/apple-touch-icon.png`       | The app icon, 180 × 180, rounded by iOS                       | home-screen icon            |
-| `branding/logo/favicon.svg`                    | The icon's burst as a single-colour mark                      | browser tab, header, footer |
-| `branding/social-card.png`                     | 1200 × 630 Open Graph / Twitter card                          | link previews               |
-| `screenshots/card-back-{light,dark}.webp`      | A face-down card, first launch, with the “Tap to reveal” hint | hero, tour step 1           |
-| `screenshots/challenge-{light,dark}.webp`      | A revealed hand-written card, e.g. MUSICAL THEATRE            | hero (front), tour step 2   |
-| `screenshots/swipe-{light,dark}.webp`          | A card mid-swipe with the next one behind it                  | tour step 3                 |
-| `screenshots/shuffle-{light,dark}.webp`        | A new face-down card right after a shake, deck fanned         | tour step 4                 |
-| `screenshots/generated-{light,dark}.webp`      | A generated card (no title), e.g. “a song from the 1990s…”    | hero (fanned), deck band    |
-| `screenshots/ipad-landscape-{light,dark}.webp` | iPad in landscape, 1218 × 900                                 | details bento               |
-| `screenshots/mac-window-{light,dark}.webp`     | Mac window with the Game menu open, 1200 × 750                | details bento               |
-| `watch/card-ready.webp`                        | Watch: “Card ready” with Reveal and Shuffle, 416 × 496        | Watch band                  |
-| `watch/challenge.webp`                         | Watch: a revealed prompt with Next and Shuffle, 416 × 496     | Watch band                  |
+- Phone screens are WebP at **560 × 1218**, half an iPhone capture (the same as Wakaba's). They carry no marketing text and no device frame; the page draws the frame.
+- Each screen is exported once per page language, in `en/`, `es/` (Argentine Spanish) and `ja/` folders with the same file names, so a Japanese reader sees Japanese cards.
+- Light and dark captures carry `-light` and `-dark` suffixes, and the page follows the visitor's scheme.
+- Watch screens are 416 × 496, dark only, like watchOS.
+
+| File (under `public/apps/encore/`)               | What it shows                                                 | Used in                     |
+| ------------------------------------------------ | ------------------------------------------------------------- | --------------------------- |
+| `branding/app-icon/apple-touch-icon.png`         | The app icon, 180 × 180, rounded by iOS                       | home-screen icon            |
+| `branding/logo/favicon.svg`                      | The icon's burst as a single-colour mark                      | browser tab, header, footer |
+| `branding/social-card.png`                       | 1200 × 630 Open Graph / Twitter card                          | link previews               |
+| `screenshots/{lang}/card-back-{light,dark}.webp` | A face-down card, first launch, with the “Tap to reveal” hint | hero, tour step 1           |
+| `screenshots/{lang}/challenge-{light,dark}.webp` | A revealed hand-written card                                  | hero (front), tour step 2   |
+| `screenshots/{lang}/swipe-{light,dark}.webp`     | A card mid-swipe with the next one behind it                  | tour step 3                 |
+| `screenshots/{lang}/shuffle-{light,dark}.webp`   | A new face-down card right after a shake, the deck fanned     | tour step 4                 |
+| `screenshots/{lang}/generated-{light,dark}.webp` | A generated card (no title), e.g. “a song from the 1990s”     | hero (fanned behind)        |
+| `watch/{lang}/card-ready.webp`                   | Watch: “Card ready” with Reveal and Shuffle                   | Watch band                  |
+| `watch/{lang}/challenge.webp`                    | Watch: a revealed prompt with Next and Shuffle                | Watch band                  |
+
+Apple's **Download on the App Store** badge is shared by every app page, under `public/apps/app-store/`: `badge-en-us-black.svg`, `badge-en-us-white.svg`, `badge-es-mx-black.svg`, `badge-es-mx-white.svg`, `badge-ja-jp-black.svg` and `badge-ja-jp-white.svg`, downloaded unaltered from Apple's marketing resources (<https://developer.apple.com/app-store/marketing/guidelines/>). Apple publishes Latin American Spanish (`es-mx`) for Argentina.
 
 The App Store campaign images in `output/app-store/` have headlines and device frames baked in, so they are not usable as screens here; raw simulator or device captures are.
 
-## Open Questions
+## Decisions
 
-1. **Spanish and Japanese pages.** The app ships in four languages; the landing, policy and support form are English only, like the pages they replace. Should the landing follow Wakaba with an Argentine Spanish version (and Japanese)?
-2. **Mac availability.** The project enables Mac Catalyst and the existing support page names Mac, so the landing does too. Is the Mac version live on the same listing?
-3. **Generated card count.** The number of valid combinations is computed at launch and not stated anywhere; the page says “combined challenges” without a figure. Give a number if you want one shown.
-4. **Age suitability.** Some cards mention breakups and one “Guilty pleasure”; there is no explicit content. The App Store age rating isn't in the code, so the page says nothing about it.
-5. **Family Sharing.** Not determinable from the code; the FAQ leaves it out.
+Answered by the developer on 2026-11-07:
+
+1. **Languages.** The landing, the privacy policy and the support form ship in English, Argentine Spanish and Japanese, the app's languages (its neutral Spanish shares the Argentine pages).
+2. **Mac.** Encore works on Apple silicon Macs as the iPad app; the pages say it works on Mac without describing Mac-only behaviour.
+3. **Generated cards.** No count is shown: after the hand-written deck, five generated cards lead into a fresh pass, so they are a small part of any night.
+4. **Age rating.** 4+, for all ages.
+5. **Family Sharing.** Supported: one purchase, the whole family group downloads it.

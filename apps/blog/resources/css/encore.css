@@ -1,0 +1,179 @@
+/*
+ * Encore's pages: the app's own palette, faces and landing tokens, applied when the document
+ * renders with the `encore` scope on <html>. The theme layer derives every semantic `--ui-*`
+ * token from these ramps in both schemes, so the pages share the blog's domain and none of its look.
+ *
+ * The anchors are the app's: in light, the card face's warm paper #FFFAF0 and #F7EBE6 with the
+ * card back's plum #1A0830 as ink and the ornaments' violet #9140EB as the accent; in dark, the
+ * game's plum night #0E0513, the card face #26122E, and the ornaments' gold #FFB23D as the accent,
+ * with plum text on gold buttons. Coral #FF5C61, gold and violet draw the ribbons in both.
+ *
+ * The light accent keeps 4.9:1 on the paper and 5.1:1 under white text; secondary text, step 600
+ * in light and 300 in dark, keeps 6:1 or more on its ground.
+ */
+
+:root.encore {
+	--ui-color-brand-50: #f6f0fe;
+	--ui-color-brand-100: #ece0fc;
+	--ui-color-brand-200: #dac2f9;
+	--ui-color-brand-300: #c09af4;
+	--ui-color-brand-400: #a86df0;
+	--ui-color-brand-500: #9c55ee;
+	--ui-color-brand-600: #9140eb;
+	--ui-color-brand-700: #7a2fd0;
+	--ui-color-brand-800: #5f2599;
+	--ui-color-brand-900: #451c6b;
+	--ui-color-brand-950: #2a1042;
+
+	--ui-color-neutral-50: #fffaf0;
+	--ui-color-neutral-100: #f7ebe6;
+	--ui-color-neutral-200: #ebdde0;
+	--ui-color-neutral-300: #d6c3cf;
+	--ui-color-neutral-400: #b29db1;
+	--ui-color-neutral-500: #8c7590;
+	--ui-color-neutral-600: #6b5573;
+	--ui-color-neutral-700: #4f3b59;
+	--ui-color-neutral-800: #352340;
+	--ui-color-neutral-900: #1a0830;
+	--ui-color-neutral-950: #0f031f;
+
+	--ui-font-sans:
+		-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Segoe UI", system-ui, sans-serif;
+	/* The campaign's elegant serif for headlines: New York on Apple platforms */
+	--ui-font-display:
+		ui-serif, "New York", "Iowan Old Style", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+	/* The app's SF Rounded, for the cards drawn on the page */
+	--encore-font-card:
+		ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Hiragino Maru Gothic ProN",
+		system-ui, sans-serif;
+
+	--ui-radius-sm: 0.5rem;
+	--ui-radius-md: 0.75rem;
+	--ui-radius-lg: 1rem;
+	--ui-radius-xl: 1.25rem;
+
+	--ui-landing-display-weight: 700;
+	--ui-landing-display-tracking: -0.015em;
+	--ui-landing-display-max: 4.75rem;
+	--ui-landing-section-space-hero: clamp(1.5rem, 0.8rem + 3cqi, 3rem);
+	--ui-landing-chapter-tracking: -0.01em;
+	--ui-landing-cta-radius: 9999px;
+	--ui-landing-cta-height: 3rem;
+	--ui-landing-cta-weight: 600;
+	--ui-button-radius: 9999px;
+	/* Eyebrows set like the card titles: small, semibold, uppercase, widely tracked */
+	--ui-landing-eyebrow-font: var(--ui-font-sans);
+	--ui-landing-eyebrow-transform: uppercase;
+	--ui-landing-eyebrow-tracking: 0.18em;
+	--ui-landing-eyebrow-weight: 600;
+	--ui-landing-eyebrow-color: var(--ui-brand-fg);
+	--ui-landing-radius-surface: 1.25rem;
+	--ui-landing-card-radius-outer: 1.25rem;
+	--ui-landing-card-radius-inner: 1.25rem;
+	--ui-landing-radius-frame: 1.5rem;
+	--ui-landing-band-radius: 2rem;
+	--ui-landing-band-tint: var(--ui-color-neutral-100);
+	--ui-landing-band-glow: none;
+	--ui-landing-hairline: color-mix(in srgb, var(--ui-neutral-fg-emphasis) 10%, transparent);
+	--ui-shadow-surface:
+		0 0 0 1px rgb(61 15 74 / 0.06), 0 1px 2px rgb(61 15 74 / 0.05),
+		0 8px 24px -12px rgb(61 15 74 / 0.14);
+	--ui-shadow-stage:
+		0 0 0 1px rgb(61 15 74 / 0.06), 0 2px 4px rgb(61 15 74 / 0.04),
+		0 24px 48px -20px rgb(61 15 74 / 0.26);
+
+	/* The surfaces every app page's shared pieces paint with: cards, the screen stage, the tour */
+	--app-card: var(--ui-surface-raised);
+	--app-stage: linear-gradient(135deg, #ffe8d4, #e6d1f7, #ffdbc7);
+	--app-accent: var(--ui-brand-bg-solid);
+	--app-rail: var(--ui-neutral-border);
+	--app-bezel: #1a0830;
+
+	/* The game's backdrop, read from the app: a peach-lavender wash under a cream stage light */
+	--encore-backdrop: linear-gradient(135deg, #ffe8d4, #e6d1f7, #ffdbc7);
+	--encore-glow: rgb(255 247 227 / 0.78);
+	--encore-ribbon-opacity: 0.24;
+	--encore-sparkle-opacity: 0.46;
+	/* The ornaments, the same in both schemes */
+	--encore-coral: #ff5c61;
+	--encore-gold: #ffb23d;
+	--encore-violet: #9140eb;
+	--encore-pink: #e84ca6;
+	/* The wordmark's gold, deepened on paper so it still reads as gold */
+	--encore-gold-ink: #a8670b;
+	/* The card, both faces, as the app paints it in this scheme */
+	--encore-card-face: linear-gradient(135deg, #fffaf0, #f7ebe6);
+	--encore-card-field: rgb(255 255 255 / 0.94);
+	--encore-card-back: linear-gradient(135deg, #3d0f4a, #1a0830);
+	--encore-card-border: #d1d1d1;
+	--encore-card-ink: #1a0830;
+	--encore-card-muted: #6b5573;
+	--encore-flourish-opacity: 0.48;
+	--encore-frame-opacity: 0.72;
+	--encore-card-shadow: 0 10px 20px rgb(0 0 0 / 0.18);
+}
+
+/* Inset bands pad their copy like the cards inside them on a phone, not flush to the panel */
+:root.encore [data-inset] {
+	--ui-landing-gutter: 1.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root.encore {
+		--ui-color-brand-50: #fff8ec;
+		--ui-color-brand-100: #ffefd3;
+		--ui-color-brand-200: #ffdda3;
+		--ui-color-brand-300: #ffcb73;
+		--ui-color-brand-400: #ffc566;
+		--ui-color-brand-500: #ffba4d;
+		--ui-color-brand-600: #ffb23d;
+		--ui-color-brand-700: #e89a22;
+		--ui-color-brand-800: #6b4512;
+		--ui-color-brand-900: #3b260c;
+		--ui-color-brand-950: #24170a;
+		--ui-brand-fg-on-solid: #1a0830;
+
+		--ui-color-neutral-50: #fff8f2;
+		--ui-color-neutral-100: #f7ebe6;
+		--ui-color-neutral-200: #e3d2df;
+		--ui-color-neutral-300: #cdb8cf;
+		--ui-color-neutral-400: #a58fa8;
+		--ui-color-neutral-500: #85708a;
+		--ui-color-neutral-600: #66536d;
+		--ui-color-neutral-700: #4a3a52;
+		--ui-color-neutral-800: #36263f;
+		--ui-color-neutral-900: #26122e;
+		--ui-color-neutral-950: #0e0513;
+
+		--ui-landing-band-tint: #1a0b20;
+		--ui-landing-hairline: color-mix(in srgb, var(--ui-neutral-fg-emphasis) 10%, transparent);
+		--ui-shadow-surface: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 1px rgb(255 255 255 / 0.07);
+		--ui-shadow-stage:
+			inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 1px rgb(255 255 255 / 0.07),
+			0 24px 48px -20px rgb(0 0 0 / 0.6);
+
+		--app-stage: linear-gradient(135deg, #0e0513, #1f0924, #0b0412);
+		--app-bezel: #050208;
+
+		--encore-backdrop: linear-gradient(135deg, #0e0513, #1f0924, #0b0412);
+		--encore-glow: rgb(138 51 184 / 0.24);
+		--encore-ribbon-opacity: 0.16;
+		--encore-sparkle-opacity: 0.32;
+		--encore-gold-ink: #ffb23d;
+		--encore-card-face: linear-gradient(135deg, #26122e, #14081f);
+		--encore-card-field: rgb(31 13 38 / 0.96);
+		--encore-card-back: linear-gradient(135deg, #290833, #0f031f);
+		--encore-card-border: #595959;
+		--encore-card-ink: #f7ebe6;
+		--encore-card-muted: #cdb8cf;
+		--encore-flourish-opacity: 0.78;
+		--encore-frame-opacity: 0.55;
+		--encore-card-shadow: 0 10px 20px rgb(0 0 0 / 0.45);
+	}
+}
+
+/* Japanese headings break at their punctuation, never inside a word such as 一曲 */
+:root.encore:lang(ja) :is(h1, h2, h3) {
+	word-break: keep-all;
+	overflow-wrap: anywhere;
+}

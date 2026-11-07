@@ -1,6 +1,6 @@
 /**
  * HTTP controller for the public Encore support page, the Support URL of the app's App Store
- * listings. It renders the contact form with honeypot fields, and on submission reads their check,
+ * listings, in English, Argentine Spanish or Japanese. It renders the contact form with honeypot fields, and on submission reads their check,
  * validates, rate-limits and mails the request, redirecting to a confirmation once it is sent.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -14,9 +14,12 @@ import { createController } from "remix/router";
 import { Session } from "remix/session";
 
 import type { AppContext } from "~/app/initializers/router";
+import type { EncoreLocale } from "~/config/encore";
 
-import { SupportRequestSchema } from "~/app/http/validators/encore-support";
-import { EncoreSupportView } from "~/resources/views/encore-support";
+import { encoreSupportSchema } from "~/app/http/validators/encore-support";
+import { resolveLocale } from "~/app/services/page-locale";
+import { ENCORE_LOCALES, inLanguage } from "~/config/encore";
+import { EncoreSupportView } from "~/resources/views/encore/support";
 import routes from "~/routes/web";
 
 /** The flash key carrying a successful delivery across the redirect to the confirmation. */
@@ -57,7 +60,20 @@ async function renderForm(
 	init?: ResponseInit,
 ): Promise<Response> {
 	let honeypot = unwrap(await ctx.honeypot.issue());
-	return ctx.render(EncoreSupportView, { ...model, honeypot }, init);
+	return ctx.render(EncoreSupportView, { ...model, honeypot }, withLanguage(model.locale, init));
+}
+
+/** The request's language, from `?lang=` or `Accept-Language`. */
+function localeOf(ctx: AppContext): EncoreLocale {
+	return resolveLocale(ctx.url, ctx.request.headers.get("Accept-Language"), ENCORE_LOCALES);
+}
+
+/** A response's init carrying the page's language and the header its choice varied on. */
+function withLanguage(locale: EncoreLocale = "en", init?: ResponseInit): ResponseInit {
+	let headers = new Headers(init?.headers);
+	headers.set("Content-Language", locale);
+	headers.set("Vary", "Accept-Language");
+	return { ...init, headers };
 }
 
 /**
@@ -73,9 +89,16 @@ export default createController(routes.encoreSupport, {
 		 * @returns The support page.
 		 */
 		index: async (ctx) => {
+			let locale = localeOf(ctx);
 			let sent = ctx.get(Session).get(SENT_FLASH) === true;
-			if (sent) return ctx.render(EncoreSupportView, { state: "sent", values: {}, issues: [] });
-			return renderForm(ctx, { state: "idle", values: {}, issues: [] });
+			if (sent) {
+				return ctx.render(
+					EncoreSupportView,
+					{ state: "sent", values: {}, issues: [], locale },
+					withLanguage(locale),
+				);
+			}
+			return renderForm(ctx, { state: "idle", values: {}, issues: [], locale });
 		},
 
 		/**
@@ -89,17 +112,19 @@ export default createController(routes.encoreSupport, {
 			let form = ctx.get(FormData);
 			let values = submittedValues(form);
 			let session = ctx.get(Session);
+			let locale = localeOf(ctx);
+			let confirmation = inLanguage(routes.encoreSupport.index.href(), locale);
 
 			let trap = ctx.honeypotOutcome;
 			if (isFailure(trap)) {
 				ctx.log.set({ support: { outcome: "honeypot", reason: trap.error.code } });
 				if (trap.error.code === "trap-filled") {
 					session.flash(SENT_FLASH, true);
-					return redirect(routes.encoreSupport.index.href(), {
+					return redirect(confirmation, {
 						status: redirect.Status.SeeOther,
 					});
 				}
-				return renderForm(ctx, { state: "resubmit", values, issues: [] }, { status: 400 });
+				return renderForm(ctx, { state: "resubmit", values, issues: [], locale }, { status: 400 });
 			}
 
 			let admitted = await ctx.supportDesk.admit(
@@ -109,17 +134,17 @@ export default createController(routes.encoreSupport, {
 				ctx.log.set({ support: { outcome: "rate_limited" } });
 				return renderForm(
 					ctx,
-					{ state: "rate-limited", values, issues: [] },
+					{ state: "rate-limited", values, issues: [], locale },
 					{ status: 429, headers: { "retry-after": "60" } },
 				);
 			}
 
-			let parsed = await validate(form ?? new FormData(), SupportRequestSchema);
+			let parsed = await validate(form ?? new FormData(), encoreSupportSchema(locale));
 			if (isFailure(parsed)) {
 				ctx.log.set({ support: { outcome: "invalid" } });
 				return renderForm(
 					ctx,
-					{ state: "invalid", values, issues: parsed.error.issues },
+					{ state: "invalid", values, issues: parsed.error.issues, locale },
 					{ status: 400 },
 				);
 			}
@@ -142,18 +167,18 @@ export default createController(routes.encoreSupport, {
 			if (assessment.verdict === "spam") {
 				ctx.log.set({ support: { outcome: "spam" } });
 				session.flash(SENT_FLASH, true);
-				return redirect(routes.encoreSupport.index.href(), { status: redirect.Status.SeeOther });
+				return redirect(confirmation, { status: redirect.Status.SeeOther });
 			}
 
 			let delivered = await ctx.supportDesk.deliver(parsed.data, assessment);
 			if (isFailure(delivered)) {
 				ctx.log.warn("support.delivery_failed", { reason: delivered.error.reason });
-				return renderForm(ctx, { state: "failed", values, issues: [] }, { status: 503 });
+				return renderForm(ctx, { state: "failed", values, issues: [], locale }, { status: 503 });
 			}
 
 			ctx.log.set({ support: { outcome: "delivered", topic: parsed.data.topic } });
 			session.flash(SENT_FLASH, true);
-			return redirect(routes.encoreSupport.index.href(), { status: redirect.Status.SeeOther });
+			return redirect(confirmation, { status: redirect.Status.SeeOther });
 		},
 	},
 });

@@ -354,6 +354,10 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		supportDesk(env, options.mailTransport, options.spamFilter),
 	];
 	router.map(
+		routes.encore,
+		lazy(() => import("~/app/http/controllers/encore")),
+	);
+	router.map(
 		routes.encoreSupport,
 		lazy(() => import("~/app/http/controllers/encore-support"), contactGuards),
 	);

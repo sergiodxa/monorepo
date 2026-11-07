@@ -190,6 +190,43 @@ describe("GET /apps/encore/support", () => {
 	});
 });
 
+describe("/apps/encore/support in Japanese", () => {
+	test("renders the page in Encore's Japanese shell with one h1", async () => {
+		let app = createWebRouter(environment());
+		let response = await app.fetch(
+			new Request(new URL(PATH, ORIGIN), { headers: { "accept-language": "ja" } }),
+		);
+		let html = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("ja");
+		expect(html).toMatch(/<html lang="ja" class="system encore/);
+		expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+		expect(html).toContain("Encore サポート");
+		expect(html).toContain('action="/apps/encore/support?lang=ja"');
+		expect(html).toContain('value="Bug report"');
+	});
+
+	test("reports invalid fields in Japanese", async () => {
+		let response = await submit(await submission({ email: "not-an-email" }), {
+			headers: { "accept-language": "ja" },
+		});
+		let html = await response.text();
+
+		expect(response.status).toBe(400);
+		expect(html).toContain("name@example.com のような有効なメールアドレスを入力してください。");
+	});
+
+	test("confirms a Japanese request on the Japanese page", async () => {
+		let response = await submit(await submission(), {
+			transport: new MemoryTransport(),
+			headers: { "accept-language": "ja" },
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(`${PATH}?lang=ja`);
+	});
+});
+
 describe("POST /apps/encore/support", () => {
 	test("mails the request to the inbox, replying to the visitor, then confirms once", async () => {
 		let transport = new MemoryTransport();

@@ -76,6 +76,12 @@ export default route({
 	mcpMarkdown: get("/mcp.md"),
 
 	/**
+	 * Encore's landing, the Marketing URL of its App Store listing, drawn in the app's own
+	 * look, in English, Argentine Spanish or Japanese.
+	 */
+	encore: get("/apps/encore"),
+
+	/**
 	 * The support page the Encore App Store listings link to. `form()` serves the page on
 	 * `GET` and takes the support request on `POST` at the same address, so a failed
 	 * submission re-renders where the visitor already is.

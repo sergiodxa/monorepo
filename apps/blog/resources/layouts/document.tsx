@@ -23,6 +23,7 @@ import "~/resources/css/colors.css";
 import "@sdxc/ui/theme.css";
 import "@sdxc/highlight/styles.css";
 import "~/resources/css/highlight.css";
+import "~/resources/css/encore.css";
 import "~/resources/css/wakaba.css";
 
 /**
