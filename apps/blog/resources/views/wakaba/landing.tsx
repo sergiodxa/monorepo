@@ -938,6 +938,12 @@ function WidgetShot(handle: Handle<WidgetShot.Props>) {
 }
 
 /**
+ * The band width from which the privacy copy and its card sit side by side, wide enough that
+ * the Kitsune sitting on the card's corner clears the first line of the list.
+ */
+const PRIVACY_SIDE_BY_SIDE = "@container (min-width: 64rem)";
+
+/**
  * Privacy as plain facts, each one checked against the app's code: no account, practice on
  * the device, progress in the learner's own iCloud and speech recognised on the device.
  * Kitsune sits on the card's corner on a wide band and beside the title on a narrow one.
@@ -953,8 +959,10 @@ function Privacy(handle: Handle) {
 					mix={[
 						grid(),
 						gap(8),
-						at("lg", gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" })),
-						raw({ alignItems: "center" }),
+						raw({
+							alignItems: "center",
+							[PRIVACY_SIDE_BY_SIDE]: { gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" },
+						}),
 					]}
 				>
 					<div
@@ -985,11 +993,12 @@ function Privacy(handle: Handle) {
 								raw({
 									flexShrink: "0",
 									paddingBlockStart: "1.5rem",
-									"@container (min-width: 48rem)": { display: "none" },
+									inlineSize: "clamp(4.5rem, 20cqi, 7.5rem)",
+									[PRIVACY_SIDE_BY_SIDE]: { display: "none" },
 								}),
 							]}
 						>
-							<Mascot pose="kitsune-study" size="sm" tilt={3} />
+							<Mascot pose="kitsune-study" size="fill" tilt={3} />
 						</div>
 					</div>
 					<div
@@ -1007,7 +1016,7 @@ function Privacy(handle: Handle) {
 									position: "absolute",
 									insetBlockStart: "-3.5rem",
 									insetInlineEnd: "1rem",
-									"@container (min-width: 48rem)": { display: "block" },
+									[PRIVACY_SIDE_BY_SIDE]: { display: "block" },
 								}),
 							]}
 						>
