@@ -1,7 +1,7 @@
 /**
  * Encore's sound effects in the browser: the app's own reveal and shuffle sounds rebuilt from
- * the formulas its SwiftUI code synthesizes them with, plus the blips the header's speaker
- * makes, and the reader's on/off choice, remembered in this browser and on by default.
+ * the formulas its SwiftUI code synthesizes them with, plus the page's own ticks and blips, and
+ * the reader's on/off choice, remembered in this browser and on by default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,6 +30,18 @@ function shuffle(time: number, duration: number): number {
 	return Math.sin(2 * Math.PI * frequency * time) * (1 - progress) * (0.35 + 0.65 * pulses) * 0.6;
 }
 
+/** A card turning back face down: the reveal's chirp in reverse, falling from 980 to 620 Hz. */
+function conceal(time: number, duration: number): number {
+	let progress = time / duration;
+	return Math.sin(2 * Math.PI * (980 - 360 * progress) * time) * Math.sin(Math.PI * progress) * 0.4;
+}
+
+/** A tour step picked: a soft 40 ms tick, a short high note that fades at once. */
+function tick(time: number, duration: number): number {
+	let progress = time / duration;
+	return Math.sin(2 * Math.PI * 1320 * time) * (1 - progress) ** 3 * 0.35;
+}
+
 /** Sound turning on: two quick rising notes, a fifth apart. */
 function on(time: number, duration: number): number {
 	let frequency = time < duration / 2 ? 660 : 990;
@@ -47,6 +59,8 @@ function off(time: number, duration: number): number {
 /** Every effect, with its length in seconds. */
 const EFFECTS = {
 	reveal: [reveal, 0.1],
+	conceal: [conceal, 0.1],
+	tick: [tick, 0.04],
 	shuffle: [shuffle, 0.28],
 	on: [on, 0.16],
 	off: [off, 0.16],

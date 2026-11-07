@@ -35,11 +35,11 @@ import type { CardId } from "~/resources/content/encore/copy";
 
 import { ENCORE_APP_STORE_URL, inLanguage } from "~/config/encore";
 import { EncoreDraw } from "~/resources/components/encore-draw";
+import { EncorePageSounds } from "~/resources/components/encore-page-sounds";
 import { PathAutoplay } from "~/resources/components/path-autoplay";
 import { ENCORE_COPY } from "~/resources/content/encore";
 import { EncoreLayout } from "~/resources/layouts/encore";
 import { GuidedTour } from "~/resources/views/app-pages/guided-tour";
-import { Swipeable } from "~/resources/views/app-pages/swipeable";
 import { PlayingCard, sparklePath } from "~/resources/views/encore/card";
 import {
 	AppStoreCall,
@@ -105,6 +105,7 @@ export function EncoreLandingContent(handle: Handle<{ locale?: EncoreLocale }>) 
 	return () => (
 		<EncoreLanguage copy={ENCORE_COPY[handle.props.locale ?? "en"]}>
 			<main>
+				<EncorePageSounds />
 				<HeadingScope>
 					<Hero />
 					<YourTurn />
@@ -538,9 +539,9 @@ const DECK: ReadonlyArray<{ card: CardId; tilt: number }> = [
 ];
 
 /**
- * The deck: five cards dealt face down, each one turning over at a tap to show a real
- * challenge in the page's language, in a row that scrolls sideways on a phone and sits whole
- * on a wide band.
+ * The deck: five cards face down, turning over at a tap to show a real challenge. On a phone
+ * they lie in one pile whose top card flips in place, the rest staying face down beneath it;
+ * on a wide band they sit in a row, each one flippable.
  *
  * @returns The render function producing the band.
  */
@@ -552,18 +553,47 @@ function Deck(handle: Handle) {
 				<LandingHeader eyebrow={t.eyebrow} description={t.description}>
 					{t.title}
 				</LandingHeader>
-				<Swipeable
-					label={t.listLabel}
-					column="min(70cqi, 16rem)"
-					fitsFrom="60rem"
-					fitColumn="minmax(0, 1fr)"
-				>
-					{DECK.map(({ card, tilt }) => (
-						<li key={card} mix={[raw({ minInlineSize: "0", paddingBlock: "1rem" })]}>
-							<FlipCard card={card} badge={t.generated} tilt={tilt} />
-						</li>
-					))}
-				</Swipeable>
+				<div mix={[raw({ containerType: "inline-size" })]}>
+					<ul
+						aria-label={t.listLabel}
+						mix={[
+							m(0),
+							p(0),
+							raw({
+								"--card": "min(72cqi, 16rem)",
+								listStyle: "none",
+								display: "grid",
+								justifyContent: "center",
+								gridTemplateColumns: "var(--card)",
+								"& > li": { gridArea: "1 / 1", position: "relative" },
+								"& > li:not(:last-child)": { pointerEvents: "none" },
+								"@container (min-width: 60rem)": {
+									gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+									justifyContent: "stretch",
+									gap: "1rem",
+									"& > li": { gridArea: "auto" },
+									"& > li:not(:last-child)": { pointerEvents: "auto" },
+								},
+							}),
+						]}
+					>
+						{DECK.map(({ card, tilt }, index) => (
+							<li
+								key={card}
+								mix={[
+									raw({
+										paddingBlock: "0.5rem",
+										"@container (max-width: 59.99rem)": {
+											translate: `0 ${(DECK.length - 1 - index) * -0.35}rem`,
+										},
+									}),
+								]}
+							>
+								<FlipCard card={card} badge={t.generated} tilt={tilt} />
+							</li>
+						))}
+					</ul>
+				</div>
 			</LandingSection>
 		);
 	};

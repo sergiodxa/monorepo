@@ -44,7 +44,7 @@ export const EN: EncoreCopy = {
 		draw: "Draw another",
 		shuffle: "Shuffle",
 		left: "Card {count} of {total}",
-		end: "That's your sample. The other 105 cards are waiting in Encore.",
+		end: "The party continues in Encore, with 105 more cards waiting for you.",
 	},
 	tour: {
 		eyebrow: "How to play",
@@ -196,16 +196,16 @@ export const EN: EncoreCopy = {
 					"No. Encore deals the challenge and you bring the song: a karaoke track, a speaker, a guitar, or nothing but your voice.",
 				],
 				[
-					"How many people can play?",
-					"As many as can read one screen. There are no players to set up, no turns and no score, so anyone can take a card.",
+					"Do we need to be good singers?",
+					"Absolutely not. Some cards practically beg you to be terrible: OVERACT IT wants dramatic, theatrical commitment to every word.",
 				],
 				[
 					"Do I need an internet connection?",
 					"No. Every card is built into the app, so it plays the same on a train, at a cabin or in a basement.",
 				],
 				[
-					"Do we need to be good singers?",
-					"Absolutely not. Some cards practically beg you to be terrible: OVERACT IT wants dramatic, theatrical commitment to every word.",
+					"What if nobody knows a song that fits?",
+					"Swipe it away. No penalties, no points to lose, and the next card is already waiting face up.",
 				],
 				[
 					"Will we see the same cards again?",
@@ -214,24 +214,28 @@ export const EN: EncoreCopy = {
 			],
 			[
 				[
+					"How much does it cost?",
+					"US$4.99 once on the App Store, or the equivalent where you live. No subscription, no in-app purchases and no ads.",
+				],
+				[
+					"Can I play alone?",
+					"Technically, yes: the shower counts. But Encore really shines with a room full of people who can't help singing along.",
+				],
+				[
 					"Which languages does it speak?",
 					"English, Spanish, Argentine Spanish and Japanese. Encore follows your device's language.",
+				],
+				[
+					"How many people can play?",
+					"As many as can read one screen. There are no players to set up, no turns and no score, so anyone can take a card.",
 				],
 				[
 					"Does the Apple Watch work on its own?",
 					"It's a remote for the game on your iPhone: it shows the card and reveals, deals and shuffles it while Encore is open on the iPhone nearby.",
 				],
 				[
-					"How much does it cost?",
-					"US$4.99 once on the App Store, or the equivalent where you live. No subscription, no in-app purchases and no ads.",
-				],
-				[
 					"Can my family share one purchase?",
 					"Yes. Encore supports Family Sharing, so everyone in your family group can download it from one purchase.",
-				],
-				[
-					"Can I turn on sounds or vibration?",
-					"Yes. Both are off at first; switch them on in the Settings app under Encore.",
 				],
 			],
 		],
