@@ -60,6 +60,13 @@ export namespace DocumentLayout {
 		sizes?: string;
 	}
 
+	/** The same page in another language, which search engines list in its place there. */
+	export interface Alternate {
+		/** A BCP 47 tag, or `x-default` for the page readers without a match get. */
+		hreflang: string;
+		href: string;
+	}
+
 	/** The colours the browser paints its chrome with, one per colour scheme. */
 	export interface ThemeColors {
 		light: string;
@@ -102,6 +109,8 @@ export namespace DocumentLayout {
 		scope?: string;
 		/** Icons in place of the browser's default lookup. */
 		icons?: Array<IconLink>;
+		/** The page's translations, advertised as `alternate` links with their language. */
+		alternates?: Array<Alternate>;
 		/** The chrome colours, for a page whose ground is not the blog's. */
 		themeColors?: ThemeColors;
 	}
@@ -115,6 +124,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let {
 			activity,
+			alternates = [],
 			assets,
 			bodyMix,
 			canonical,
@@ -186,6 +196,15 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						<meta name="description" content={description} data-rmx-key="description" />
 					)}
 					{canonical && <link rel="canonical" href={canonical} data-rmx-key="canonical" />}
+					{alternates.map((alternate) => (
+						<link
+							key={alternate.hreflang}
+							rel="alternate"
+							hreflang={alternate.hreflang}
+							href={alternate.href}
+							data-rmx-key={`alternate:${alternate.hreflang}`}
+						/>
+					))}
 					{activity && (
 						<link
 							rel="alternate"

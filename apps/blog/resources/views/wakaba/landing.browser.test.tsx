@@ -11,9 +11,12 @@ import type { RenderResult } from "remix/component/test";
 
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
+import { page } from "vitest/browser";
 
+import { ES } from "~/resources/content/wakaba/es-AR";
+import { WakabaHeader } from "~/resources/views/wakaba/chrome";
 import { WakabaLandingContent } from "~/resources/views/wakaba/landing";
-import { AppStoreCall } from "~/resources/views/wakaba/parts";
+import { AppStoreCall, WakabaLanguage } from "~/resources/views/wakaba/parts";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
@@ -66,6 +69,44 @@ describe("WakabaLandingContent", () => {
 		expect(escaping).toEqual([]);
 		expect(host.scrollWidth).toBeLessThanOrEqual(320);
 		host.remove();
+	});
+});
+
+describe("WakabaLandingContent in Spanish", () => {
+	test("keeps every box inside a 320px page", () => {
+		document.documentElement.className = "system wakaba";
+		let host = document.createElement("div");
+		host.style.inlineSize = "320px";
+		document.body.appendChild(host);
+		mounted = render(<WakabaLandingContent locale="es-AR" />, { container: host });
+
+		let edge = host.getBoundingClientRect().right;
+		let escaping = Array.from(host.querySelectorAll("*"))
+			.filter((element) => !insideScroller(element, host))
+			.filter((element) => element.getBoundingClientRect().right > edge + 1);
+
+		expect(escaping).toHaveLength(0);
+		host.remove();
+	});
+});
+
+describe("WakabaHeader", () => {
+	test("fits a 320px screen with the language link, in the longer Spanish labels", async () => {
+		await page.viewport(320, 800);
+		document.documentElement.className = "system wakaba";
+		mounted = render(
+			<WakabaLanguage copy={ES}>
+				<WakabaHeader switchTo={{ href: "/apps/wakaba?lang=en", label: "English", locale: "en" }} />
+			</WakabaLanguage>,
+		);
+
+		let nav = mounted.container.querySelector("nav");
+		expect(nav).not.toBeNull();
+		expect(nav && nav.scrollWidth).toBeLessThanOrEqual(nav?.clientWidth ?? 0);
+		expect(mounted.container.querySelector('a[hreflang="en"]')?.getAttribute("aria-label")).toBe(
+			"English",
+		);
+		await page.viewport(1280, 900);
 	});
 });
 

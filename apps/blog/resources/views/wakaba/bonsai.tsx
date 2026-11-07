@@ -21,7 +21,7 @@ import { when } from "@sdxc/u/state";
 import { font, leading, tabularNums, text, weight } from "@sdxc/u/typography";
 import { LandingHeader, LandingSection, MotionLoop } from "@sdxc/ui/landing";
 
-import { Mascot, WAKABA_ASSETS } from "~/resources/views/wakaba/parts";
+import { copyOf, Mascot, WAKABA_ASSETS } from "~/resources/views/wakaba/parts";
 
 /**
  * The practised days each stage begins at, in growth order. Distinct days count, so several
@@ -35,36 +35,31 @@ export const BONSAI_STAGES = [0, 4, 8, 12, 16, 30, 60, 90, 180, 365] as const;
  *
  * @returns The render function producing the band.
  */
-export function BonsaiBand() {
-	return () => (
-		<LandingSection
-			id="bonsai"
-			mix={[raw({ contentVisibility: "auto", containIntrinsicSize: "auto 900px" })]}
-		>
-			<LandingHeader
-				eyebrow="The bonsai"
-				description={
-					<>
-						It grows with the days you practise, not with your streak, through ten stages from the
-						first session to a year. <strong>Missing a day never shrinks the tree.</strong>
-					</>
-				}
+export function BonsaiBand(handle: Handle) {
+	return () => {
+		let t = copyOf(handle).bonsai;
+		return (
+			<LandingSection
+				id="bonsai"
+				mix={[raw({ contentVisibility: "auto", containIntrinsicSize: "auto 900px" })]}
 			>
-				A tree that only grows
-			</LandingHeader>
-			<div
-				mix={[
-					grid(),
-					gap(6),
-					at("lg", gridTemplate({ columns: "minmax(0, 3fr) minmax(0, 2fr)" })),
-					raw({ alignItems: "center" }),
-				]}
-			>
-				<BonsaiTimelapse />
-				<MissedWeekend />
-			</div>
-		</LandingSection>
-	);
+				<LandingHeader eyebrow={t.eyebrow} description={t.description}>
+					{t.title}
+				</LandingHeader>
+				<div
+					mix={[
+						grid(),
+						gap(6),
+						at("lg", gridTemplate({ columns: "minmax(0, 3fr) minmax(0, 2fr)" })),
+						raw({ alignItems: "center" }),
+					]}
+				>
+					<BonsaiTimelapse />
+					<MissedWeekend />
+				</div>
+			</LandingSection>
+		);
+	};
 }
 
 /** A stage's file name under `bonsai/light/` and `bonsai/dark/`: its index and first day. */
@@ -146,128 +141,128 @@ function fillFrames(): Record<string, { scale: string }> {
  *
  * @returns The render function producing the time-lapse.
  */
-function BonsaiTimelapse() {
-	return () => (
-		<MotionLoop
-			pauseLabel="Pause the growing bonsai"
-			placement="start-end"
-			mix={[p(4), rounded("xl"), raw({ backgroundColor: "var(--wakaba-card)" }), at("md", p(8))]}
-		>
-			<div mix={[vstack({ gap: 5, align: "stretch" })]}>
-				<div mix={[grid(), raw({ placeItems: "center" })]}>
-					<div
-						aria-hidden="true"
-						mix={[
-							gridArea("1 / 1"),
-							is("full"),
-							maxIs("22rem"),
-							raw({ aspectRatio: "1", borderRadius: "50%", backgroundColor: "var(--wakaba-sun)" }),
-						]}
-					/>
-					{BONSAI_STAGES.map((days, index) => {
-						let final = index === BONSAI_STAGES.length - 1;
-						let name = `wakaba-bonsai-${index}`;
-						return (
+function BonsaiTimelapse(handle: Handle) {
+	return () => {
+		let t = copyOf(handle).bonsai;
+		return (
+			<MotionLoop
+				pauseLabel={t.pause}
+				placement="start-end"
+				mix={[p(4), rounded("xl"), raw({ backgroundColor: "var(--wakaba-card)" }), at("md", p(8))]}
+			>
+				<div mix={[vstack({ gap: 5, align: "stretch" })]}>
+					<div mix={[grid(), raw({ placeItems: "center" })]}>
+						<div
+							aria-hidden="true"
+							mix={[
+								gridArea("1 / 1"),
+								is("full"),
+								maxIs("22rem"),
+								raw({
+									aspectRatio: "1",
+									borderRadius: "50%",
+									backgroundColor: "var(--wakaba-sun)",
+								}),
+							]}
+						/>
+						{BONSAI_STAGES.map((days, index) => {
+							let final = index === BONSAI_STAGES.length - 1;
+							let name = `wakaba-bonsai-${index}`;
+							return (
+								<div
+									key={days}
+									data-stage={days}
+									aria-hidden={final ? undefined : "true"}
+									mix={[
+										gridArea("1 / 1"),
+										vstack({ gap: 2, align: "center" }),
+										m(0),
+										is("full"),
+										maxIs("26rem"),
+										raw({ opacity: final ? "1" : "0" }),
+										keyframes(name, stageFrames(index)),
+										motionSafe(
+											raw({
+												animationName: name,
+												animationDuration: `${CYCLE}s`,
+												animationTimingFunction: "linear",
+												animationIterationCount: "infinite",
+											}),
+										),
+									]}
+								>
+									<picture mix={[block(), is("full")]}>
+										<source
+											media="(prefers-color-scheme: dark)"
+											srcSet={`${WAKABA_ASSETS}/bonsai/dark/${stageFile(index, days)}.webp`}
+											width={480}
+											height={455}
+										/>
+										<img
+											src={`${WAKABA_ASSETS}/bonsai/light/${stageFile(index, days)}.webp`}
+											alt={final ? t.grownAlt : ""}
+											width={480}
+											height={455}
+											loading="lazy"
+											decoding="async"
+											mix={[block(), is("full"), raw({ blockSize: "auto" })]}
+										/>
+									</picture>
+								</div>
+							);
+						})}
+					</div>
+					<div aria-hidden="true" mix={[vstack({ gap: 2, align: "stretch" })]}>
+						<div
+							mix={[
+								raw({ marginInline: "5%", blockSize: "0.375rem", borderRadius: "9999px" }),
+								bg(),
+								raw({ overflow: "hidden" }),
+							]}
+						>
 							<div
-								key={days}
-								data-stage={days}
-								aria-hidden={final ? undefined : "true"}
 								mix={[
-									gridArea("1 / 1"),
-									vstack({ gap: 2, align: "center" }),
-									m(0),
-									is("full"),
-									maxIs("26rem"),
-									raw({ opacity: final ? "1" : "0" }),
-									keyframes(name, stageFrames(index)),
+									bs("full"),
+									bg("brand.solid"),
+									raw({ transformOrigin: "0 50%", scale: "1 1" }),
+									keyframes("wakaba-bonsai-fill", fillFrames()),
 									motionSafe(
 										raw({
-											animationName: name,
+											animationName: "wakaba-bonsai-fill",
 											animationDuration: `${CYCLE}s`,
 											animationTimingFunction: "linear",
 											animationIterationCount: "infinite",
 										}),
 									),
 								]}
-							>
-								<picture mix={[block(), is("full")]}>
-									<source
-										media="(prefers-color-scheme: dark)"
-										srcSet={`${WAKABA_ASSETS}/bonsai/dark/${stageFile(index, days)}.webp`}
-										width={480}
-										height={455}
-									/>
-									<img
-										src={`${WAKABA_ASSETS}/bonsai/light/${stageFile(index, days)}.webp`}
-										alt={
-											final
-												? "Wakaba's bonsai at a year of practice, fully grown, in the same pot it started in."
-												: ""
-										}
-										width={480}
-										height={455}
-										loading="lazy"
-										decoding="async"
-										mix={[block(), is("full"), raw({ blockSize: "auto" })]}
-									/>
-								</picture>
-							</div>
-						);
-					})}
-				</div>
-				<div aria-hidden="true" mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<div
-						mix={[
-							raw({ marginInline: "5%", blockSize: "0.375rem", borderRadius: "9999px" }),
-							bg(),
-							raw({ overflow: "hidden" }),
-						]}
-					>
+							/>
+						</div>
 						<div
 							mix={[
-								bs("full"),
-								bg("brand.solid"),
-								raw({ transformOrigin: "0 50%", scale: "1 1" }),
-								keyframes("wakaba-bonsai-fill", fillFrames()),
-								motionSafe(
-									raw({
-										animationName: "wakaba-bonsai-fill",
-										animationDuration: `${CYCLE}s`,
-										animationTimingFunction: "linear",
-										animationIterationCount: "infinite",
-									}),
-								),
+								grid(),
+								gridTemplate({ columns: repeat(BONSAI_STAGES.length, "minmax(0, 1fr)") }),
+								text("xs"),
+								fg("neutral"),
+								tabularNums(),
+								raw({ textAlign: "center" }),
 							]}
-						/>
+						>
+							{BONSAI_STAGES.map((days) => (
+								<span key={days}>{days}</span>
+							))}
+						</div>
 					</div>
-					<div
-						mix={[
-							grid(),
-							gridTemplate({ columns: repeat(BONSAI_STAGES.length, "minmax(0, 1fr)") }),
-							text("xs"),
-							fg("neutral"),
-							tabularNums(),
-							raw({ textAlign: "center" }),
-						]}
-					>
-						{BONSAI_STAGES.map((days) => (
-							<span key={days}>{days}</span>
-						))}
-					</div>
+					<p mix={[m(0), text("xs"), fg("neutral.muted"), raw({ textAlign: "center" })]}>
+						{t.timeline}
+					</p>
 				</div>
-				<p mix={[m(0), text("xs"), fg("neutral.muted"), raw({ textAlign: "center" })]}>
-					Practised days, from the first session to a year. Several sessions on one day count once.
-				</p>
-			</div>
-		</MotionLoop>
-	);
+			</MotionLoop>
+		);
+	};
 }
 
-/** The two days the missed-weekend card compares, as the app would count them. */
-const WEEKEND = [
-	{ day: "Friday", streak: "23 days", practised: "41", stage: "30-day tree" },
-	{ day: "Monday", streak: "1 day", practised: "42", stage: "30-day tree" },
-] as const;
+/** Friday's and Monday's practised days in the missed-weekend card, the same figures in every language. */
+const PRACTISED_DAYS = ["41", "42"] as const;
 
 /**
  * A missed weekend, Friday against Monday: the streak starts over, the practised days carry
@@ -275,41 +270,41 @@ const WEEKEND = [
  *
  * @returns The render function producing the card.
  */
-function MissedWeekend() {
-	return () => (
-		<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-			<div mix={[raw({ display: "flex", alignItems: "end", gap: "0.75rem" })]}>
-				<Mascot pose="kitsune-wave" size="sm" tilt={-6} />
-				<p mix={[m(0), font("display"), text("2xl"), weight("bold"), leading("tight")]}>
-					Skip the weekend, keep the tree.
-				</p>
+function MissedWeekend(handle: Handle) {
+	return () => {
+		let t = copyOf(handle).bonsai;
+		return (
+			<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+				<div mix={[raw({ display: "flex", alignItems: "end", gap: "0.75rem" })]}>
+					<Mascot pose="kitsune-wave" size="sm" tilt={-6} />
+					<p mix={[m(0), font("display"), text("2xl"), weight("bold"), leading("tight")]}>
+						{t.weekend.title}
+					</p>
+				</div>
+				<p mix={[m(0), fg("neutral")]}>{t.weekend.body}</p>
+				<dl
+					mix={[
+						grid(),
+						m(0),
+						gridTemplate({ columns: "auto minmax(0, 1fr) minmax(0, 1fr)" }),
+						raw({ columnGap: "1rem" }),
+						rounded("xl"),
+						pb(2),
+						pi(4),
+						border({ width: 1, color: "neutral" }),
+						raw({ backgroundColor: "var(--wakaba-card)" }),
+						text("sm"),
+						tabularNums(),
+					]}
+				>
+					<WeekendRow label={t.weekend.rows.day} values={t.weekend.days} heading />
+					<WeekendRow label={t.weekend.rows.streak} values={t.weekend.streaks} highlight />
+					<WeekendRow label={t.weekend.rows.practised} values={PRACTISED_DAYS} />
+					<WeekendRow label={t.weekend.rows.bonsai} values={[t.weekend.stage, t.weekend.stage]} />
+				</dl>
 			</div>
-			<p mix={[m(0), fg("neutral")]}>
-				The streak counts days in a row and starts over after a gap. The bonsai counts every day you
-				practised, so a busy weekend costs you the streak and nothing else.
-			</p>
-			<dl
-				mix={[
-					grid(),
-					m(0),
-					gridTemplate({ columns: "auto minmax(0, 1fr) minmax(0, 1fr)" }),
-					raw({ columnGap: "1rem" }),
-					rounded("xl"),
-					pb(2),
-					pi(4),
-					border({ width: 1, color: "neutral" }),
-					raw({ backgroundColor: "var(--wakaba-card)" }),
-					text("sm"),
-					tabularNums(),
-				]}
-			>
-				<WeekendRow label="" values={WEEKEND.map((entry) => entry.day)} heading />
-				<WeekendRow label="Streak" values={WEEKEND.map((entry) => entry.streak)} />
-				<WeekendRow label="Practised days" values={WEEKEND.map((entry) => entry.practised)} />
-				<WeekendRow label="Bonsai" values={WEEKEND.map((entry) => entry.stage)} />
-			</dl>
-		</div>
-	);
+		);
+	};
 }
 
 namespace WeekendRow {
@@ -320,6 +315,8 @@ namespace WeekendRow {
 		values: ReadonlyArray<string>;
 		/** Sets the row as the card's column heads, the two day names. */
 		heading?: boolean;
+		/** Marks Monday's value in the accent, the change the card is about. */
+		highlight?: boolean;
 	}
 }
 
@@ -332,7 +329,7 @@ namespace WeekendRow {
  */
 function WeekendRow(handle: Handle<WeekendRow.Props>) {
 	return () => {
-		let { heading, label, values } = handle.props;
+		let { heading, highlight, label, values } = handle.props;
 		return (
 			<div
 				mix={[
@@ -344,14 +341,16 @@ function WeekendRow(handle: Handle<WeekendRow.Props>) {
 					]),
 				]}
 			>
-				<dt mix={[fg("neutral")]}>{heading ? <span mix={[visuallyHidden()]}>Day</span> : label}</dt>
+				<dt mix={[fg("neutral")]}>
+					{heading ? <span mix={[visuallyHidden()]}>{label}</span> : label}
+				</dt>
 				{values.map((value, index) => (
 					<dd
 						key={index}
 						mix={[
 							m(0),
 							heading ? [fg("neutral.muted"), weight("medium")] : [weight("semibold")],
-							!heading && index === 1 && label === "Streak" ? fg("brand") : [],
+							!heading && index === 1 && highlight ? fg("brand") : [],
 						]}
 					>
 						{value}

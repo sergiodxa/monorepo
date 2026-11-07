@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { HourglassIcon, SmartphoneIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";
@@ -19,10 +19,55 @@ import { focusVisible, hover } from "@sdxc/u/state";
 import { leading, nowrap, text, weight } from "@sdxc/u/typography";
 import { interactiveTransition } from "@sdxc/ui/styles";
 
+import type { PageLocale } from "~/app/services/page-locale";
+import type { WakabaCopy } from "~/resources/content/wakaba/copy";
+
 import { appStoreUrl } from "~/config/wakaba";
+import { EN } from "~/resources/content/wakaba/en";
+import { ES } from "~/resources/content/wakaba/es-AR";
 
 /** Where the page's optimised images are served from. */
 export const WAKABA_ASSETS = "/apps/wakaba";
+
+/** Wakaba's pages in each language they are written in. */
+export const WAKABA_COPY: Record<PageLocale, WakabaCopy> = { en: EN, "es-AR": ES };
+
+namespace WakabaLanguage {
+	/** Props of the language provider. */
+	export interface Props {
+		copy: WakabaCopy;
+		children: RemixNode;
+	}
+}
+
+/**
+ * Hands one language's copy to every Wakaba component inside it, so the bands, the frames and
+ * the App Store call all print, and pick captures, in the page's language.
+ *
+ * @param handle Runtime handle carrying the copy and the page.
+ * @returns The render function producing the page unchanged.
+ */
+export function WakabaLanguage(handle: Handle<WakabaLanguage.Props, WakabaCopy>) {
+	return () => {
+		handle.context.set(handle.props.copy);
+		return handle.props.children;
+	};
+}
+
+/** What a component's handle offers for reading its ancestors' context. */
+interface ContextReader {
+	context: { get(component: unknown): unknown };
+}
+
+/**
+ * The copy of the language the nearest {@link WakabaLanguage} provides, English outside one.
+ *
+ * @param handle The reading component's runtime handle.
+ * @returns The page's copy.
+ */
+export function copyOf(handle: ContextReader): WakabaCopy {
+	return (handle.context.get(WakabaLanguage) as WakabaCopy | undefined) ?? EN;
+}
 
 /** The logo's strokes: the kanji 学 drawn as a curved trunk under three leaves. */
 const MARK_PATHS = [
@@ -71,7 +116,6 @@ export function WakabaMark(handle: Handle<WakabaMark.Props>) {
  */
 interface Screen {
 	file: string;
-	alt: string;
 	dark?: boolean;
 }
 
@@ -82,79 +126,61 @@ interface Screen {
  */
 export const SCREENS = {
 	"path-kitsune": {
-		file: "screenshots/path-kitsune",
-		alt: "Wakaba's learning path at Level 1: numbered session stones, with Kitsune pointing to the next one.",
+		file: "screenshots/{lang}/path-kitsune",
 	},
 	"flashcards-fish": {
-		file: "screenshots/flashcards-fish",
-		alt: "A flashcard for 魚, fish: furigana さかな above the kanji and the romaji sakana below.",
+		file: "screenshots/{lang}/flashcards-fish",
 		dark: true,
 	},
 	practice: {
-		file: "screenshots/practice",
-		alt: "A practice question asking for the meaning of みず, with Aka Oni beside the word and three answers below.",
+		file: "screenshots/{lang}/practice",
 		dark: true,
 	},
 	"flashcards-water": {
-		file: "screenshots/flashcards-water",
-		alt: "A flashcard for 水, water: furigana みず over the kanji, the meaning and the romaji mizu.",
+		file: "screenshots/{lang}/flashcards-water",
 	},
 	conjugations: {
-		file: "screenshots/conjugations",
-		alt: "The details of 食べる, to eat: its dictionary form and conjugations such as 食べます and 食べません.",
+		file: "screenshots/{lang}/conjugations",
 	},
 	"level-exam-path": {
-		file: "screenshots/level-exam-path",
-		alt: "The learning path reaching the Level 2 exam, with Kitsune beside the next sessions.",
+		file: "screenshots/{lang}/level-exam-path",
 	},
 	listening: {
-		file: "screenshots/listening",
-		alt: "A listening question: a speaker button plays the word and three meanings wait below.",
+		file: "screenshots/{lang}/listening",
 	},
 	speaking: {
-		file: "screenshots/speaking",
-		alt: "Speaking practice asking the learner to say みず aloud, with a microphone button.",
+		file: "screenshots/{lang}/speaking",
 	},
 	"build-sentence": {
-		file: "screenshots/build-sentence",
-		alt: "A sentence to build in Japanese from word tiles, for “I ask the teacher a question.”",
+		file: "screenshots/{lang}/build-sentence",
 	},
 	"conjugation-practice": {
-		file: "screenshots/conjugation-practice",
-		alt: "A conjugation question: write たべる, to eat, in its polite non-past form.",
+		file: "screenshots/{lang}/conjugation-practice",
 	},
 	"oni-correction": {
-		file: "screenshots/oni-correction",
-		alt: "Aka Oni after a wrong answer: the right word みず, water, and a note on how it differs.",
+		file: "screenshots/{lang}/oni-correction",
 	},
 	"kana-tracing": {
-		file: "screenshots/kana-tracing",
-		alt: "Katakana tracing practice: a stroke drawn over the guide, numbered in stroke order.",
+		file: "screenshots/{lang}/kana-tracing",
 	},
 	"stroke-guide": {
-		file: "screenshots/stroke-guide",
-		alt: "The stroke-order guide for 水, its second stroke highlighted and numbered.",
+		file: "screenshots/{lang}/stroke-guide",
 	},
 	"new-word": {
-		file: "screenshots/new-word",
-		alt: "A new word introduced before any question: みず, water, mizu, with Tengu and a Start exercise button.",
+		file: "screenshots/{lang}/new-word",
 	},
 	"practice-feedback": {
-		file: "screenshots/practice-feedback",
-		alt: "A correct answer: “You got it!” over みず, water, mizu, with a Next word button.",
+		file: "screenshots/{lang}/practice-feedback",
 	},
 	"oni-mistakes": {
-		file: "screenshots/oni-mistakes",
-		alt: "A review of earlier mistakes with Aka Oni, asking for the reading of みず in romaji.",
+		file: "screenshots/{lang}/oni-mistakes",
 	},
 	"widget-progress": {
-		file: "widgets/progress-medium",
-		alt: "The Practice bonsai widget in the iOS widget gallery: a bonsai, a 23-day streak, 36 words learned and “Practiced today”.",
+		file: "widgets/{lang}/progress-medium",
 		dark: true,
 	},
 	"widget-word": {
-		file: "widgets/word-large",
-		alt: "The Word of the day widget in the iOS widget gallery: 機, ki, machine (kanji component).",
+		file: "widgets/{lang}/word-large",
 		dark: true,
 	},
 } as const satisfies Record<string, Screen>;
@@ -183,8 +209,10 @@ namespace Phone {
 export function Phone(handle: Handle<Phone.Props>) {
 	return () => {
 		let { eager, screen } = handle.props;
+		let copy = copyOf(handle);
 		let shot: Screen = SCREENS[screen];
-		let base = shot.dark ? `${shot.file}-light` : shot.file;
+		let file = shot.file.replace("{lang}", copy.captures);
+		let base = shot.dark ? `${file}-light` : file;
 
 		return (
 			<div
@@ -202,14 +230,14 @@ export function Phone(handle: Handle<Phone.Props>) {
 					{shot.dark ? (
 						<source
 							media="(prefers-color-scheme: dark)"
-							srcSet={`${WAKABA_ASSETS}/${shot.file}-dark.webp`}
+							srcSet={`${WAKABA_ASSETS}/${file}-dark.webp`}
 							width={560}
 							height={1218}
 						/>
 					) : null}
 					<img
 						src={`${WAKABA_ASSETS}/${base}.webp`}
-						alt={shot.alt}
+						alt={copy.screens[screen]}
 						width={560}
 						height={1218}
 						loading={eager ? "eager" : "lazy"}
@@ -242,6 +270,7 @@ namespace AppStoreCall {
 export function AppStoreCall(handle: Handle<AppStoreCall.Props>) {
 	return () => {
 		let href = handle.props.href === undefined ? appStoreUrl() : handle.props.href;
+		let copy = copyOf(handle);
 
 		if (!href) {
 			return (
@@ -260,7 +289,7 @@ export function AppStoreCall(handle: Handle<AppStoreCall.Props>) {
 				>
 					<HourglassIcon size={18} aria-hidden="true" />
 					<span mix={[vstack({ gap: 0, align: "start" })]}>
-						<span mix={[text("xs"), leading("none")]}>Coming soon to the</span>
+						<span mix={[text("xs"), leading("none")]}>{copy.appStore.soon}</span>
 						<span mix={[text("base"), weight("semibold"), leading("tight"), nowrap()]}>
 							App Store
 						</span>
@@ -289,7 +318,7 @@ export function AppStoreCall(handle: Handle<AppStoreCall.Props>) {
 			>
 				<SmartphoneIcon size={18} aria-hidden="true" />
 				<span mix={[vstack({ gap: 0, align: "start" })]}>
-					<span mix={[text("xs"), leading("none")]}>Download on the</span>
+					<span mix={[text("xs"), leading("none")]}>{copy.appStore.available}</span>
 					<span mix={[text("base"), weight("semibold"), leading("tight"), nowrap()]}>
 						App Store
 					</span>

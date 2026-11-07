@@ -57,6 +57,8 @@
 	--ui-landing-display-weight: 750;
 	--ui-landing-display-tracking: -0.03em;
 	--ui-landing-display-max: 4.5rem;
+	/* A short climb into the hero, so the app's screens reach the first viewport */
+	--ui-landing-section-space-hero: clamp(1.5rem, 0.8rem + 3cqi, 3rem);
 	--ui-landing-chapter-tracking: -0.025em;
 	--ui-landing-cta-radius: 9999px;
 	--ui-landing-cta-height: 3rem;

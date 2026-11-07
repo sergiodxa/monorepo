@@ -32,7 +32,6 @@ import { when } from "@sdxc/u/state";
 import { font, leading, text, weight } from "@sdxc/u/typography";
 import { Accordion, HeadingScope, Link, LinkButton } from "@sdxc/ui";
 import {
-	AccentText,
 	CheckList,
 	CheckRow,
 	ClosingCta,
@@ -45,26 +44,31 @@ import {
 } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
 
+import type { PageLocale } from "~/app/services/page-locale";
 import type { MascotPose } from "~/resources/views/wakaba/parts";
 
 import { PATH_ADVANCE_ANIMATION, PathAutoplay } from "~/resources/components/path-autoplay";
 import { WakabaLayout } from "~/resources/layouts/wakaba";
 import { BonsaiBand } from "~/resources/views/wakaba/bonsai";
-import { AppStoreCall, Mascot, Phone, WAKABA_ASSETS } from "~/resources/views/wakaba/parts";
+import {
+	AppStoreCall,
+	copyOf,
+	Mascot,
+	Phone,
+	WAKABA_ASSETS,
+	WAKABA_COPY,
+	WakabaLanguage,
+} from "~/resources/views/wakaba/parts";
 import routes from "~/routes/web";
 
 /** Types used by the landing's renderer. */
 export namespace WakabaLandingView {
-	/** The landing renders from configuration alone, so its model is empty. */
-	export interface Model {}
+	/** Data required to render the page. */
+	export interface Model {
+		/** The language the page is written in. */
+		locale: PageLocale;
+	}
 }
-
-/** The landing's `<title>`, also its Open Graph title. */
-export const WAKABA_TITLE = "Wakaba: Japanese vocabulary for iPhone and iPad";
-
-/** The landing's meta description. */
-export const WAKABA_DESCRIPTION =
-	"Practise Japanese vocabulary a few minutes a day with flashcards, a ten-level path and four companions, while a bonsai grows with every day you practise. Free, with no ads, subscriptions or in-app purchases.";
 
 /**
  * Lays a band's heavy content out only as it nears the viewport, holding its place with an
@@ -82,16 +86,21 @@ function nearView(height: number) {
  * @returns View function rendering the landing.
  */
 export function WakabaLandingView() {
-	return ({ assets }: { model: WakabaLandingView.Model; assets: DocumentAssets }) => (
-		<WakabaLayout
-			assets={assets}
-			title={WAKABA_TITLE}
-			description={WAKABA_DESCRIPTION}
-			path={routes.wakaba.href()}
-		>
-			<WakabaLandingContent />
-		</WakabaLayout>
-	);
+	return ({ model, assets }: { model: WakabaLandingView.Model; assets: DocumentAssets }) => {
+		let copy = WAKABA_COPY[model.locale];
+		return (
+			<WakabaLayout
+				assets={assets}
+				copy={copy}
+				bilingual
+				title={copy.meta.title}
+				description={copy.meta.description}
+				path={routes.wakaba.href()}
+			>
+				<WakabaLandingContent locale={model.locale} />
+			</WakabaLayout>
+		);
+	};
 }
 
 /**
@@ -100,24 +109,26 @@ export function WakabaLandingView() {
  *
  * @returns The render function producing the bands.
  */
-export function WakabaLandingContent() {
+export function WakabaLandingContent(handle: Handle<{ locale?: PageLocale }>) {
 	return () => (
-		<main>
-			<HeadingScope>
-				<Hero />
-				<LearningPath />
-				<Companions />
-				<Flashcards />
-				<Exercises />
-				<KanaTracing />
-				<Details />
-				<BonsaiBand />
-				<Widgets />
-				<Privacy />
-				<Questions />
-				<Download />
-			</HeadingScope>
-		</main>
+		<WakabaLanguage copy={WAKABA_COPY[handle.props.locale ?? "en"]}>
+			<main>
+				<HeadingScope>
+					<Hero />
+					<LearningPath />
+					<Companions />
+					<Flashcards />
+					<Exercises />
+					<KanaTracing />
+					<Details />
+					<BonsaiBand />
+					<Widgets />
+					<Privacy />
+					<Questions />
+					<Download />
+				</HeadingScope>
+			</main>
+		</WakabaLanguage>
 	);
 }
 
@@ -127,41 +138,37 @@ export function WakabaLandingContent() {
  *
  * @returns The render function producing the hero.
  */
-function Hero() {
-	return () => (
-		<LandingHero
-			id="top"
-			tone="plain"
-			align="center"
-			mediaPlacement="below"
-			eyebrow="Japanese vocabulary for iPhone and iPad"
-			title={
-				<>
-					Grow with every <AccentText variant="color">session</AccentText>.
-				</>
-			}
-			description={
-				<>
-					For learners who know some grammar and want the words to stick: more than{" "}
-					<strong>1,190 words and 2,100 sentences</strong> to read, hear, write and say, a few
-					minutes at a time.
-				</>
-			}
-			actions={
-				<span
-					mix={[hstack({ gap: 3, align: "center", justify: "center" }), raw({ flexWrap: "wrap" })]}
-				>
-					<AppStoreCall />
-					<LinkButton href="#bonsai" variant="surface" mix={[landingCtaChrome()]}>
-						Watch the tree grow
-						<ArrowDownIcon size={16} aria-hidden="true" />
-					</LinkButton>
-				</span>
-			}
-			note="Free. No ads, subscriptions or in-app purchases. In English and Spanish."
-			media={<HeroStage />}
-		/>
-	);
+function Hero(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<LandingHero
+				id="top"
+				tone="plain"
+				align="center"
+				mediaPlacement="below"
+				eyebrow={t.hero.eyebrow}
+				title={t.hero.title}
+				description={t.hero.description}
+				actions={
+					<span
+						mix={[
+							hstack({ gap: 3, align: "center", justify: "center" }),
+							raw({ flexWrap: "wrap" }),
+						]}
+					>
+						<AppStoreCall />
+						<LinkButton href="#bonsai" variant="surface" mix={[landingCtaChrome()]}>
+							{t.hero.watch}
+							<ArrowDownIcon size={16} aria-hidden="true" />
+						</LinkButton>
+					</span>
+				}
+				note={t.hero.note}
+				media={<HeroStage />}
+			/>
+		);
+	};
 }
 
 /**
@@ -173,7 +180,7 @@ function Hero() {
  */
 function HeroStage() {
 	return () => (
-		<div mix={[container("wakaba-hero"), is("full")]}>
+		<div mix={[container("wakaba-hero"), is("full"), raw({ marginBlockStart: "-1.5rem" })]}>
 			<div
 				mix={[
 					raw({
@@ -182,7 +189,7 @@ function HeroStage() {
 						isolation: "isolate",
 						overflow: "hidden",
 						blockSize: "calc(var(--phone) * 1.62)",
-						paddingBlockStart: "clamp(2rem, 6cqi, 4rem)",
+						paddingBlockStart: "0.75rem",
 						borderRadius: "2rem 2rem 0 0",
 					}),
 				]}
@@ -296,67 +303,69 @@ function FannedPhone(handle: Handle<FannedPhone.Props>) {
  *
  * @returns The render function producing the band.
  */
-function LearningPath() {
-	return () => (
-		<FeatureBand
-			id="path"
-			mix={[nearView(900)]}
-			layout="stage"
-			stageName="wakaba-path"
-			stageLabel="How a word moves along the learning path"
-			eyebrow="The learning path"
-			title="Ten levels, a few minutes at a time"
-			description={
-				<>
-					Each session is short and the path always shows the next one.{" "}
-					<strong>Kanji and katakana arrive gradually</strong>, as you're ready for them.
-					<PathAutoplay />
-				</>
-			}
-		>
-			<TabbedStage.Item
-				mix={[pathStep(false)]}
-				value="meet"
-				defaultChecked
-				label="Meet the word"
-				description="A new word is introduced, read aloud and shown in every spelling before anything asks you for it."
+function LearningPath(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<FeatureBand
+				id="path"
+				mix={[nearView(900)]}
+				layout="stage"
+				stageName="wakaba-path"
+				stageLabel={t.path.stageLabel}
+				eyebrow={t.path.eyebrow}
+				title={t.path.title}
+				description={
+					<>
+						{t.path.description}
+						<PathAutoplay />
+					</>
+				}
 			>
-				<StageScreen>
-					<Phone screen="new-word" />
-				</StageScreen>
-			</TabbedStage.Item>
-			<TabbedStage.Item
-				mix={[pathStep(false)]}
-				value="practise"
-				label="Practise it in short sessions"
-				description="Meaning, reading, writing and listening, with speaking if you turn it on."
-			>
-				<StageScreen>
-					<Phone screen="practice-feedback" />
-				</StageScreen>
-			</TabbedStage.Item>
-			<TabbedStage.Item
-				mix={[pathStep(false)]}
-				value="exam"
-				label="Pass the level exam"
-				description="Each of the ten levels ends with an exam before the next one opens."
-			>
-				<StageScreen>
-					<Phone screen="level-exam-path" />
-				</StageScreen>
-			</TabbedStage.Item>
-			<TabbedStage.Item
-				mix={[pathStep(true)]}
-				value="review"
-				label="Review what slipped"
-				description="Spaced repetition brings words back, and Aka Oni offers a review of earlier mistakes."
-			>
-				<StageScreen>
-					<Phone screen="oni-mistakes" />
-				</StageScreen>
-			</TabbedStage.Item>
-		</FeatureBand>
-	);
+				<TabbedStage.Item
+					mix={[pathStep(false)]}
+					value="meet"
+					defaultChecked
+					label={t.path.steps[0].title}
+					description={t.path.steps[0].body}
+				>
+					<StageScreen>
+						<Phone screen="new-word" />
+					</StageScreen>
+				</TabbedStage.Item>
+				<TabbedStage.Item
+					mix={[pathStep(false)]}
+					value="practise"
+					label={t.path.steps[1].title}
+					description={t.path.steps[1].body}
+				>
+					<StageScreen>
+						<Phone screen="practice-feedback" />
+					</StageScreen>
+				</TabbedStage.Item>
+				<TabbedStage.Item
+					mix={[pathStep(false)]}
+					value="exam"
+					label={t.path.steps[2].title}
+					description={t.path.steps[2].body}
+				>
+					<StageScreen>
+						<Phone screen="level-exam-path" />
+					</StageScreen>
+				</TabbedStage.Item>
+				<TabbedStage.Item
+					mix={[pathStep(true)]}
+					value="review"
+					label={t.path.steps[3].title}
+					description={t.path.steps[3].body}
+				>
+					<StageScreen>
+						<Phone screen="oni-mistakes" />
+					</StageScreen>
+				</TabbedStage.Item>
+			</FeatureBand>
+		);
+	};
 }
 
 /** The four companions in the order the path introduces them, each with the role it plays. */
@@ -366,36 +375,24 @@ const COMPANIONS = [
 		pose: "kitsune-pointing",
 		name: "Kitsune",
 		kanji: "狐",
-		role: "The guide",
-		body: "Points you to the recommended session on the path, studies alongside you and cheers a right answer.",
-		alt: "Kitsune, a fox in a red scarf, pointing the way.",
 	},
 	{
 		id: "oni",
 		pose: "oni-correction",
 		name: "Aka Oni",
 		kanji: "赤鬼",
-		role: "The corrector",
-		body: "Turns up after a wrong answer to explain the right one, and offers a review of earlier mistakes.",
-		alt: "Aka Oni, a red oni, holding up a card marked with a cross.",
 	},
 	{
 		id: "tanuki",
 		pose: "tanuki-applause",
 		name: "Tanuki",
 		kanji: "狸",
-		role: "The cheerleader",
-		body: "Applauds the effort, celebrates a finished session and offers listening practice with words you know.",
-		alt: "Tanuki in a straw hat, clapping.",
 	},
 	{
 		id: "tengu",
 		pose: "tengu-teaching",
 		name: "Tengu",
 		kanji: "天狗",
-		role: "The teacher",
-		body: "Introduces new activities and offers kana practice from the path, reading and tracing.",
-		alt: "Tengu, a red-faced teacher in a robe, holding a page.",
 	},
 ] as const;
 
@@ -406,58 +403,62 @@ const COMPANIONS = [
  *
  * @returns The render function producing the band.
  */
-function Companions() {
-	return () => (
-		<LandingSection id="companions" tone="tinted" inset mix={[nearView(760)]}>
-			<LandingHeader
-				eyebrow="Companions"
-				description="Four characters from Japanese folklore keep you company, and each one turns up for a reason."
-			>
-				Four friends, one job each
-			</LandingHeader>
-			<ul
-				mix={[
-					grid(),
-					gap(4),
-					m(0),
-					p(0),
-					raw({ listStyle: "none" }),
-					at("md", gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") })),
-					at("xl", gridTemplate({ columns: repeat(4, "minmax(0, 1fr)") })),
-				]}
-			>
-				{COMPANIONS.map((companion) => (
-					<li
-						key={companion.id}
-						mix={[
-							vstack({ gap: 2, align: "start" }),
-							p(5),
-							rounded("xl"),
-							raw({ backgroundColor: `var(--wakaba-${companion.id})` }),
-						]}
-					>
-						<img
-							src={`${WAKABA_ASSETS}/characters/${companion.pose}.webp`}
-							alt={companion.alt}
-							width={360}
-							height={360}
-							loading="lazy"
-							decoding="async"
-							mix={[block(), raw({ inlineSize: "9rem", blockSize: "9rem" }), mi("auto")]}
-						/>
-						<p mix={[m(0), hstack({ gap: 2, align: "baseline" }), pbs(2)]}>
-							<span mix={[font("display"), text("xl"), weight("bold")]}>{companion.name}</span>
-							<span lang="ja" mix={[font("serif"), text("lg"), fg("brand")]}>
-								{companion.kanji}
-							</span>
-						</p>
-						<p mix={[m(0), text("sm"), weight("semibold"), fg("neutral")]}>{companion.role}</p>
-						<p mix={[m(0), text("sm"), leading("relaxed")]}>{companion.body}</p>
-					</li>
-				))}
-			</ul>
-		</LandingSection>
-	);
+function Companions(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<LandingSection id="companions" tone="tinted" inset mix={[nearView(760)]}>
+				<LandingHeader eyebrow={t.companions.eyebrow} description={t.companions.description}>
+					{t.companions.title}
+				</LandingHeader>
+				<ul
+					mix={[
+						grid(),
+						gap(4),
+						m(0),
+						p(0),
+						raw({ listStyle: "none" }),
+						at("md", gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") })),
+						at("xl", gridTemplate({ columns: repeat(4, "minmax(0, 1fr)") })),
+					]}
+				>
+					{COMPANIONS.map((companion) => (
+						<li
+							key={companion.id}
+							mix={[
+								vstack({ gap: 2, align: "start" }),
+								p(5),
+								rounded("xl"),
+								raw({ backgroundColor: `var(--wakaba-${companion.id})` }),
+							]}
+						>
+							<img
+								src={`${WAKABA_ASSETS}/characters/${companion.pose}.webp`}
+								alt={t.companions.roles[companion.id].alt}
+								width={360}
+								height={360}
+								loading="lazy"
+								decoding="async"
+								mix={[block(), raw({ inlineSize: "9rem", blockSize: "9rem" }), mi("auto")]}
+							/>
+							<p mix={[m(0), hstack({ gap: 2, align: "baseline" }), pbs(2)]}>
+								<span mix={[font("display"), text("xl"), weight("bold")]}>{companion.name}</span>
+								<span lang="ja" mix={[font("serif"), text("lg"), fg("brand")]}>
+									{companion.kanji}
+								</span>
+							</p>
+							<p mix={[m(0), text("sm"), weight("semibold"), fg("neutral")]}>
+								{t.companions.roles[companion.id].title}
+							</p>
+							<p mix={[m(0), text("sm"), leading("relaxed")]}>
+								{t.companions.roles[companion.id].body}
+							</p>
+						</li>
+					))}
+				</ul>
+			</LandingSection>
+		);
+	};
 }
 
 /**
@@ -466,76 +467,54 @@ function Companions() {
  *
  * @returns The render function producing the band.
  */
-function Flashcards() {
-	return () => (
-		<FeatureBand
-			id="flashcards"
-			mix={[nearView(780)]}
-			layout="split"
-			lean="media"
-			eyebrow="Flashcards"
-			title="Every way to write a word, on one card"
-			description={
-				<>
-					Swipe through the deck in your own time. <strong>Flip a card</strong> for its details and,
-					for a verb, its conjugations.
-				</>
-			}
-			media={
-				<div
-					mix={[
-						grid(),
-						gap(4),
-						gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
-						maxIs("30rem"),
-						mi("auto"),
-						is("full"),
-						raw({ alignItems: "start" }),
-					]}
-				>
-					<Phone screen="flashcards-water" />
-					<div mix={[pbs(10)]}>
-						<Phone screen="conjugations" />
+function Flashcards(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<FeatureBand
+				id="flashcards"
+				mix={[nearView(780)]}
+				layout="split"
+				lean="media"
+				eyebrow={t.flashcards.eyebrow}
+				title={t.flashcards.title}
+				description={t.flashcards.description}
+				media={
+					<div
+						mix={[
+							grid(),
+							gap(4),
+							gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
+							maxIs("30rem"),
+							mi("auto"),
+							is("full"),
+							raw({ alignItems: "start" }),
+						]}
+					>
+						<Phone screen="flashcards-water" />
+						<div mix={[pbs(10)]}>
+							<Phone screen="conjugations" />
+						</div>
 					</div>
-				</div>
-			}
-		>
-			<ul>
-				<li>Kanji with furigana, hiragana, katakana and romaji</li>
-				<li>The meaning in English or Spanish</li>
-				<li>Pronounced by your device's own Japanese voices</li>
-			</ul>
-		</FeatureBand>
-	);
+				}
+			>
+				<ul>
+					{t.flashcards.items.map((item) => (
+						<li key={item}>{item}</li>
+					))}
+				</ul>
+			</FeatureBand>
+		);
+	};
 }
 
-/** The five kinds of question, each with its real screen and what it asks of the learner. */
-const EXERCISES = [
-	{
-		screen: "listening",
-		title: "Listen and choose",
-		body: "Hear the word in a Japanese voice and pick its meaning.",
-	},
-	{
-		screen: "speaking",
-		title: "Say it aloud",
-		body: "Optional, and recognised on your device itself.",
-	},
-	{
-		screen: "build-sentence",
-		title: "Build the sentence",
-		body: "Put a real sentence back together from its words.",
-	},
-	{
-		screen: "conjugation-practice",
-		title: "Conjugate the verb",
-		body: "Turn たべる into the form the question asks for.",
-	},
-	{
-		screen: "oni-correction",
-		title: "Learn from a mistake",
-		body: "Aka Oni shows the right answer and what set it apart.",
-	},
+/** The real screen of each kind of question, in the order the copy lists them. */
+const EXERCISE_SCREENS = [
+	"listening",
+	"speaking",
+	"build-sentence",
+	"conjugation-practice",
+	"oni-correction",
 ] as const;
 
 /**
@@ -544,56 +523,53 @@ const EXERCISES = [
  *
  * @returns The render function producing the band.
  */
-function Exercises() {
-	return () => (
-		<LandingSection id="exercises" mix={[nearView(820)]}>
-			<LandingHeader
-				eyebrow="Practice"
-				description={
-					<>
-						A session mixes the questions, so you recognise a word, recall it, hear it and use it in
-						a sentence. <strong>Mistakes come back</strong> until they stop being mistakes.
-					</>
-				}
-			>
-				One word, asked five ways
-			</LandingHeader>
-			<ul
-				aria-label="Wakaba's exercises"
-				mix={[
-					grid(),
-					gap(4),
-					m(0),
-					p(0),
-					raw({
-						listStyle: "none",
-						gridAutoFlow: "column",
-						gridAutoColumns: "minmax(11rem, 1fr)",
-						overflowX: "auto",
-						scrollSnapType: "x mandatory",
-						scrollPaddingInline: "0",
-						paddingBlockEnd: "0.5rem",
-					}),
-				]}
-			>
-				{EXERCISES.map((exercise) => (
-					<li
-						key={exercise.screen}
-						mix={[
-							vstack({ gap: 3, align: "stretch" }),
-							raw({ scrollSnapAlign: "start", minInlineSize: "0" }),
-						]}
-					>
-						<Phone screen={exercise.screen} />
-						<span mix={[vstack({ gap: 1, align: "start" }), text("sm")]}>
-							<span mix={[weight("semibold"), text("base")]}>{exercise.title}</span>
-							<span mix={[fg("neutral")]}>{exercise.body}</span>
-						</span>
-					</li>
-				))}
-			</ul>
-		</LandingSection>
-	);
+function Exercises(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<LandingSection id="exercises" mix={[nearView(820)]}>
+				<LandingHeader eyebrow={t.exercises.eyebrow} description={t.exercises.description}>
+					{t.exercises.title}
+				</LandingHeader>
+				<ul
+					aria-label={t.exercises.listLabel}
+					mix={[
+						grid(),
+						gap(4),
+						m(0),
+						p(0),
+						raw({
+							listStyle: "none",
+							gridAutoFlow: "column",
+							gridAutoColumns: "minmax(11rem, 1fr)",
+							overflowX: "auto",
+							scrollSnapType: "x mandatory",
+							scrollPaddingInline: "0",
+							paddingBlockEnd: "0.5rem",
+						}),
+					]}
+				>
+					{EXERCISE_SCREENS.map((screen, index) => (
+						<li
+							key={screen}
+							mix={[
+								vstack({ gap: 3, align: "stretch" }),
+								raw({ scrollSnapAlign: "start", minInlineSize: "0" }),
+							]}
+						>
+							<Phone screen={screen} />
+							<span mix={[vstack({ gap: 1, align: "start" }), text("sm")]}>
+								<span mix={[weight("semibold"), text("base")]}>
+									{t.exercises.items[index]?.title}
+								</span>
+								<span mix={[fg("neutral")]}>{t.exercises.items[index]?.body}</span>
+							</span>
+						</li>
+					))}
+				</ul>
+			</LandingSection>
+		);
+	};
 }
 
 /** Seconds each step of the path tour stays before the next one takes over. */
@@ -670,105 +646,68 @@ function StageScreen(handle: Handle<{ children: RemixNode }>) {
  *
  * @returns The render function producing the band.
  */
-function KanaTracing() {
-	return () => (
-		<FeatureBand
-			id="writing"
-			mix={[nearView(760)]}
-			layout="split"
-			tone="tinted"
-			inset
-			eyebrow="Writing"
-			title="Trace kana with Apple Pencil"
-			description={
-				<>
-					Write hiragana and katakana with a finger on iPhone or with Apple Pencil on iPad.{" "}
-					<strong>Each stroke is checked against its stroke order</strong> as you draw.
-				</>
-			}
-			media={
-				<div
-					mix={[
-						grid(),
-						gap(4),
-						gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
-						maxIs("30rem"),
-						mi("auto"),
-						is("full"),
-						raw({ alignItems: "start" }),
-					]}
-				>
-					<Phone screen="kana-tracing" />
-					<div mix={[pbs(10)]}>
-						<Phone screen="stroke-guide" />
+function KanaTracing(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<FeatureBand
+				id="writing"
+				mix={[nearView(760)]}
+				layout="split"
+				tone="tinted"
+				inset
+				eyebrow={t.writing.eyebrow}
+				title={t.writing.title}
+				description={t.writing.description}
+				media={
+					<div
+						mix={[
+							grid(),
+							gap(4),
+							gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
+							maxIs("30rem"),
+							mi("auto"),
+							is("full"),
+							raw({ alignItems: "start" }),
+						]}
+					>
+						<Phone screen="kana-tracing" />
+						<div mix={[pbs(10)]}>
+							<Phone screen="stroke-guide" />
+						</div>
 					</div>
-				</div>
-			}
-		>
-			<ul>
-				<li>Animated stroke order for every kana and kanji</li>
-				<li>Hiragana and katakana tables to look things up</li>
-			</ul>
-		</FeatureBand>
-	);
+				}
+			>
+				<ul>
+					{t.writing.items.map((item) => (
+						<li key={item}>{item}</li>
+					))}
+				</ul>
+			</FeatureBand>
+		);
+	};
 }
 
-/** The smaller features, each with the real screen that shows it and the block it sits on. */
+/**
+ * The smaller features, each with the real screen that shows it, the block it sits on and the
+ * part of the screen the card shows. The languages card shows the app in the page's other
+ * language, since a reader already sees their own on every other screen.
+ */
 const DETAILS = [
-	{
-		screen: "kanji-index",
-		tint: "tengu",
-		focus: "0%",
-		title: "Kanji by stroke count",
-		body: "Every kanji in the reference, grouped by its strokes, with the words that use it.",
-		alt: "The kanji reference, grouped by stroke count: 一, 丁, 七 and the words that use each one.",
-	},
-	{
-		screen: "particle",
-		tint: "kitsune",
-		focus: "0%",
-		title: "Particles, explained",
-		body: "は, が, を and the rest: what each one does, with example sentences.",
-		alt: "The particle は, the topic marker, explained with two example sentences.",
-	},
-	{
-		screen: "phrases",
-		tint: "sky",
-		focus: "0%",
-		title: "More than 2,100 sentences",
-		body: "Real sentences for the words you learn, with the translation in your language.",
-		alt: "The phrases library: 2,134 sentences such as 水を下さい。, Water, please.",
-	},
-	{
-		screen: "practice-reminder",
-		tint: "plum",
-		focus: "banner",
-		title: "One quiet reminder",
-		body: "Once a day at the hour you pick, morning, noon, afternoon or evening. Or never.",
-		alt: "A notification on the Lock Screen: “A little Japanese today? Take a few minutes to practice your vocabulary.”",
-	},
-	{
-		screen: "flashcards-water-es",
-		tint: "oni",
-		focus: "55%",
-		title: "In English or Spanish",
-		body: "Meanings and every screen in either language, and each language keeps its own progress.",
-		alt: "The flashcard for 水 in Spanish: agua, mizu.",
-	},
-	{
-		screen: "add-word",
-		tint: "tanuki",
-		focus: "0%",
-		title: "Your own words",
-		body: "Add a word you met elsewhere and choose the level where practice introduces it.",
-		alt: "The Add word form: meaning in English and Spanish, Japanese spellings and the learning level.",
-	},
+	{ key: "kanji-index", screen: "kanji-index", tint: "tengu", focus: "0%" },
+	{ key: "particle", screen: "particle", tint: "kitsune", focus: "0%" },
+	{ key: "phrases", screen: "phrases", tint: "sky", focus: "0%" },
+	{ key: "practice-reminder", screen: "practice-reminder", tint: "plum", focus: "banner" },
+	{ key: "languages", screen: "flashcards-water", tint: "oni", focus: "55%" },
+	{ key: "add-word", screen: "add-word", tint: "tanuki", focus: "0%" },
 ] as const;
 
 namespace DetailScreen {
 	/** Props of one bento card's screen. */
 	export interface Props {
 		screen: string;
+		/** The folder of the language the capture was shot in. */
+		captures: "en" | "es";
 		/**
 		 * Which part of a full screen the card shows, as a vertical position, or `banner` for
 		 * a notification capture shown whole.
@@ -787,8 +726,8 @@ namespace DetailScreen {
  */
 function DetailScreen(handle: Handle<DetailScreen.Props>) {
 	return () => {
-		let { alt, focus, screen } = handle.props;
-		let src = `${WAKABA_ASSETS}/screenshots/${screen}.webp`;
+		let { alt, captures, focus, screen } = handle.props;
+		let src = `${WAKABA_ASSETS}/screenshots/${captures}/${screen}.webp`;
 
 		if (focus === "banner") {
 			return (
@@ -842,6 +781,11 @@ function DetailScreen(handle: Handle<DetailScreen.Props>) {
 	};
 }
 
+/** The capture folder of the language a page is not written in. */
+function otherCaptures(captures: "en" | "es"): "en" | "es" {
+	return captures === "en" ? "es" : "en";
+}
+
 /**
  * The small things as a bento: six colour blocks, each led by the top of the real screen
  * that shows the feature, fading out below, and shown at every width so a phone reader sees
@@ -849,56 +793,63 @@ function DetailScreen(handle: Handle<DetailScreen.Props>) {
  *
  * @returns The render function producing the band.
  */
-function Details() {
-	return () => (
-		<LandingSection id="details" mix={[nearView(1100)]}>
-			<LandingHeader
-				eyebrow="The small things"
-				description="The references and details you reach for between sessions."
-			>
-				Everything else in your pocket
-			</LandingHeader>
-			<ul
-				mix={[
-					grid(),
-					gap(4),
-					m(0),
-					p(0),
-					raw({ listStyle: "none" }),
-					at("md", gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") })),
-					at("xl", gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") })),
-				]}
-			>
-				{DETAILS.map((detail) => (
-					<li
-						key={detail.screen}
-						mix={[
-							vstack({ gap: 2, align: "stretch" }),
-							pbe(6),
-							rounded("xl"),
-							raw({ overflow: "hidden", backgroundColor: `var(--wakaba-${detail.tint})` }),
-						]}
-					>
-						<DetailScreen screen={detail.screen} focus={detail.focus} alt={detail.alt} />
-						<p
+function Details(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<LandingSection id="details" mix={[nearView(1100)]}>
+				<LandingHeader eyebrow={t.details.eyebrow} description={t.details.description}>
+					{t.details.title}
+				</LandingHeader>
+				<ul
+					mix={[
+						grid(),
+						gap(4),
+						m(0),
+						p(0),
+						raw({ listStyle: "none" }),
+						at("md", gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") })),
+						at("xl", gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") })),
+					]}
+				>
+					{DETAILS.map((detail) => (
+						<li
+							key={detail.key}
 							mix={[
-								m(0),
-								pi(6),
-								pbs(2),
-								font("display"),
-								text("xl"),
-								weight("bold"),
-								leading("tight"),
+								vstack({ gap: 2, align: "stretch" }),
+								pbe(6),
+								rounded("xl"),
+								raw({ overflow: "hidden", backgroundColor: `var(--wakaba-${detail.tint})` }),
 							]}
 						>
-							{detail.title}
-						</p>
-						<p mix={[m(0), pi(6), text("sm"), fg("neutral"), leading("relaxed")]}>{detail.body}</p>
-					</li>
-				))}
-			</ul>
-		</LandingSection>
-	);
+							<DetailScreen
+								screen={detail.screen}
+								captures={detail.key === "languages" ? otherCaptures(t.captures) : t.captures}
+								focus={detail.focus}
+								alt={t.details.items[detail.key].alt}
+							/>
+							<p
+								mix={[
+									m(0),
+									pi(6),
+									pbs(2),
+									font("display"),
+									text("xl"),
+									weight("bold"),
+									leading("tight"),
+								]}
+							>
+								{t.details.items[detail.key].title}
+							</p>
+							<p mix={[m(0), pi(6), text("sm"), fg("neutral"), leading("relaxed")]}>
+								{t.details.items[detail.key].body}
+							</p>
+						</li>
+					))}
+				</ul>
+			</LandingSection>
+		);
+	};
 }
 
 /**
@@ -908,48 +859,51 @@ function Details() {
  *
  * @returns The render function producing the band.
  */
-function Widgets() {
-	return () => (
-		<LandingSection id="widgets" tone="tinted" inset mix={[nearView(900)]}>
-			<LandingHeader
-				align="center"
-				eyebrow="Widgets"
-				description="Put the bonsai and a word on your Home Screen. Tap the word to open its flashcard."
-			>
-				Practice, one glance away
-			</LandingHeader>
-			<div
-				mix={[
-					grid(),
-					gap(6),
-					gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
-					mi("auto"),
-					is("full"),
-					raw({
-						maxInlineSize: "36rem",
-						"@container (min-width: 60rem)": { maxInlineSize: "64rem", columnGap: "1.5rem" },
-					}),
-				]}
-			>
-				<WidgetShot
-					side="start"
-					mascot="tanuki-celebrate"
-					screen="widget-progress"
-					title="Practice bonsai"
-					sizes="Small and medium"
-					body="Your tree, the streak, whether you practised today and the words you've learned."
-				/>
-				<WidgetShot
-					side="end"
-					mascot="tengu-teaching"
-					screen="widget-word"
-					title="Word of the day"
-					sizes="Small, medium and large"
-					body="Its Japanese spelling, its reading, the meaning and the romaji. Tap it for the flashcard."
-				/>
-			</div>
-		</LandingSection>
-	);
+function Widgets(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<LandingSection id="widgets" tone="tinted" inset mix={[nearView(900)]}>
+				<LandingHeader
+					align="center"
+					eyebrow={t.widgets.eyebrow}
+					description={t.widgets.description}
+				>
+					{t.widgets.title}
+				</LandingHeader>
+				<div
+					mix={[
+						grid(),
+						gap(6),
+						gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
+						mi("auto"),
+						is("full"),
+						raw({
+							maxInlineSize: "36rem",
+							"@container (min-width: 60rem)": { maxInlineSize: "64rem", columnGap: "1.5rem" },
+						}),
+					]}
+				>
+					<WidgetShot
+						side="start"
+						mascot="tanuki-celebrate"
+						screen="widget-progress"
+						title={t.widgets.progress.title}
+						sizes={t.widgets.progress.sizes}
+						body={t.widgets.progress.body}
+					/>
+					<WidgetShot
+						side="end"
+						mascot="tengu-teaching"
+						screen="widget-word"
+						title={t.widgets.word.title}
+						sizes={t.widgets.word.sizes}
+						body={t.widgets.word.body}
+					/>
+				</div>
+			</LandingSection>
+		);
+	};
 }
 
 namespace WidgetShot {
@@ -1045,87 +999,56 @@ function WidgetShot(handle: Handle<WidgetShot.Props>) {
  *
  * @returns The render function producing the band.
  */
-function Privacy() {
-	return () => (
-		<LandingSection id="privacy" mix={[nearView(520)]}>
-			<div
-				mix={[
-					grid(),
-					gap(8),
-					at("lg", gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" })),
-					raw({ alignItems: "center" }),
-				]}
-			>
-				<LandingHeader
-					eyebrow="Privacy"
-					description={
-						<>
-							No account and nothing to sign in to. Wakaba keeps your practice on your device and
-							your progress in your own iCloud.{" "}
-							<Link href={routes.wakabaPrivacy.href()}>Read the privacy policy</Link>.
-						</>
-					}
-				>
-					Your practice stays yours
-				</LandingHeader>
+function Privacy(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<LandingSection id="privacy" mix={[nearView(520)]}>
 				<div
 					mix={[
-						p(6),
-						rounded("xl"),
-						raw({ backgroundColor: "var(--wakaba-card)", position: "relative" }),
-						at("md", p(8)),
+						grid(),
+						gap(8),
+						at("lg", gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" })),
+						raw({ alignItems: "center" }),
 					]}
 				>
+					<LandingHeader
+						eyebrow={t.privacy.eyebrow}
+						description={
+							<>
+								{t.privacy.description}{" "}
+								<Link href={routes.wakabaPrivacy.href()}>{t.header.privacy}</Link>
+							</>
+						}
+					>
+						{t.privacy.title}
+					</LandingHeader>
 					<div
 						mix={[
-							raw({ position: "absolute", insetBlockStart: "-3.5rem", insetInlineEnd: "1rem" }),
+							p(6),
+							rounded("xl"),
+							raw({ backgroundColor: "var(--wakaba-card)", position: "relative" }),
+							at("md", p(8)),
 						]}
 					>
-						<Mascot pose="kitsune-study" size="md" tilt={3} />
+						<div
+							mix={[
+								raw({ position: "absolute", insetBlockStart: "-3.5rem", insetInlineEnd: "1rem" }),
+							]}
+						>
+							<Mascot pose="kitsune-study" size="md" tilt={3} />
+						</div>
+						<CheckList>
+							{t.privacy.checks.map((check) => (
+								<CheckRow key={check}>{check}</CheckRow>
+							))}
+						</CheckList>
 					</div>
-					<CheckList>
-						<CheckRow>No ads, analytics or tracking</CheckRow>
-						<CheckRow>Practice runs on your iPhone or iPad</CheckRow>
-						<CheckRow>Progress syncs through your private iCloud</CheckRow>
-						<CheckRow>Speaking practice is recognised on the device</CheckRow>
-					</CheckList>
 				</div>
-			</div>
-		</LandingSection>
-	);
+			</LandingSection>
+		);
+	};
 }
-
-/** The questions a learner asks before downloading, answered from what the app does. */
-const QUESTIONS: ReadonlyArray<ReadonlyArray<readonly [string, RemixNode]>> = [
-	[
-		[
-			"Who is Wakaba for?",
-			"People who already know some Japanese grammar and want to remember words, recognise them when they hear them and use them in context. It doesn't teach the whole language from scratch.",
-		],
-		[
-			"How much does it cost?",
-			"Nothing. Wakaba is free, with no ads, subscriptions or in-app purchases.",
-		],
-		[
-			"Which devices does it run on?",
-			"iPhone and iPad with iOS or iPadOS 17 or later. Your progress follows you between them through iCloud.",
-		],
-	],
-	[
-		[
-			"Which languages does it speak?",
-			"The app and every translation come in English and Spanish.",
-		],
-		[
-			"What happens if I miss a day?",
-			"Your streak starts over the next time you practise. The bonsai counts every day you've practised, so it stays exactly as it was.",
-		],
-		[
-			"Can I add my own words?",
-			"Yes. Add words to your library, edit any entry, and practise them alongside the built-in vocabulary.",
-		],
-	],
-];
 
 /**
  * The questions band: two columns of disclosures on white cards, one open at a time per
@@ -1133,55 +1056,58 @@ const QUESTIONS: ReadonlyArray<ReadonlyArray<readonly [string, RemixNode]>> = [
  *
  * @returns The render function producing the band.
  */
-function Questions() {
-	return () => (
-		<FaqBand
-			id="faq"
-			columns={2}
-			eyebrow="Questions"
-			title={
-				<span mix={[hstack({ gap: 3, align: "end" })]}>
-					Before you download
-					<Mascot pose="tengu-welcome" size="sm" tilt={6} />
-				</span>
-			}
-		>
-			{QUESTIONS.map((column, index) => (
-				<Accordion
-					key={index}
-					mix={[
-						vstack({ gap: 3, align: "stretch" }),
-						raw({ borderBlockStartWidth: "0" }),
-						index > 0
-							? raw({
-									paddingBlockStart: "0.75rem",
-									"@container ui-landing-faq (min-width: 64rem)": { paddingBlockStart: "0" },
-								})
-							: [],
-					]}
-				>
-					{column.map(([question, answer]) => (
-						<Accordion.Item
-							key={question}
-							name={`wakaba-faq-${index}`}
-							mix={[
-								raw({ paddingInline: "1.25rem", backgroundColor: "var(--wakaba-card)" }),
-								rounded("xl"),
-							]}
-						>
-							<Accordion.Trigger>
-								{question}
-								<ChevronDownIcon data-slot="icon" aria-hidden="true" />
-							</Accordion.Trigger>
-							<Accordion.Content>
-								<p>{answer}</p>
-							</Accordion.Content>
-						</Accordion.Item>
-					))}
-				</Accordion>
-			))}
-		</FaqBand>
-	);
+function Questions(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<FaqBand
+				id="faq"
+				columns={2}
+				eyebrow={t.faq.eyebrow}
+				title={
+					<span mix={[hstack({ gap: 3, align: "end" })]}>
+						{t.faq.title}
+						<Mascot pose="tengu-welcome" size="sm" tilt={6} />
+					</span>
+				}
+			>
+				{t.faq.columns.map((column, index) => (
+					<Accordion
+						key={index}
+						mix={[
+							vstack({ gap: 3, align: "stretch" }),
+							raw({ borderBlockStartWidth: "0" }),
+							index > 0
+								? raw({
+										paddingBlockStart: "0.75rem",
+										"@container ui-landing-faq (min-width: 64rem)": { paddingBlockStart: "0" },
+									})
+								: [],
+						]}
+					>
+						{column.map(([question, answer]) => (
+							<Accordion.Item
+								key={question}
+								name={`wakaba-faq-${index}`}
+								mix={[
+									raw({ paddingInline: "1.25rem", backgroundColor: "var(--wakaba-card)" }),
+									rounded("xl"),
+								]}
+							>
+								<Accordion.Trigger>
+									{question}
+									<ChevronDownIcon data-slot="icon" aria-hidden="true" />
+								</Accordion.Trigger>
+								<Accordion.Content>
+									<p>{answer}</p>
+								</Accordion.Content>
+							</Accordion.Item>
+						))}
+					</Accordion>
+				))}
+			</FaqBand>
+		);
+	};
 }
 
 /**
@@ -1190,25 +1116,28 @@ function Questions() {
  *
  * @returns The render function producing the band.
  */
-function Download() {
-	return () => (
-		<ClosingCta
-			id="download"
-			tone="tinted"
-			inset
-			eyebrow={<CelebratingCompanions />}
-			title="Plant the tree with one session"
-			description="Wakaba is free on iPhone and iPad, in English and Spanish."
-			actions={
-				<span mix={[vstack({ gap: 4, align: "center" })]}>
-					<AppStoreCall />
-					<Link href={routes.wakabaSupport.index.href()} mix={[text("sm")]}>
-						Questions? Write to support
-					</Link>
-				</span>
-			}
-		/>
-	);
+function Download(handle: Handle) {
+	return () => {
+		let t = copyOf(handle);
+		return (
+			<ClosingCta
+				id="download"
+				tone="tinted"
+				inset
+				eyebrow={<CelebratingCompanions />}
+				title={t.closing.title}
+				description={t.closing.description}
+				actions={
+					<span mix={[vstack({ gap: 4, align: "center" })]}>
+						<AppStoreCall />
+						<Link href={routes.wakabaSupport.index.href()} mix={[text("sm")]}>
+							{t.closing.support}
+						</Link>
+					</span>
+				}
+			/>
+		);
+	};
 }
 
 /**

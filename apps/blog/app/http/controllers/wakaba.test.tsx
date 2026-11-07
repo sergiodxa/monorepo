@@ -13,6 +13,7 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "~/app/initializers/router";
 
 import { pageRenderer } from "~/app/test/renderer";
+import { EN } from "~/resources/content/wakaba/en";
 import { wakabaMeta } from "~/resources/layouts/wakaba";
 import routes from "~/routes/web";
 
@@ -73,12 +74,12 @@ describe("GET /apps/wakaba", () => {
 		let html = await (await fetchPage("/apps/wakaba")).text();
 
 		for (let screen of [
-			"kanji-index",
-			"particle",
-			"phrases",
-			"practice-reminder",
-			"flashcards-water-es",
-			"add-word",
+			"en/kanji-index",
+			"en/particle",
+			"en/phrases",
+			"en/practice-reminder",
+			"es/flashcards-water",
+			"en/add-word",
 		]) {
 			expect(html).toContain(`src="/apps/wakaba/screenshots/${screen}.webp"`);
 		}
@@ -93,9 +94,47 @@ describe("GET /apps/wakaba", () => {
 	});
 });
 
+describe("GET /apps/wakaba in Spanish", () => {
+	test("answers a Spanish reader in Spanish, with the Spanish captures", async () => {
+		let response = await fetchPage("/apps/wakaba", { "accept-language": "es-MX,es;q=0.9" });
+		let html = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(response.headers.get("vary")).toContain("Accept-Language");
+		expect(html).toMatch(/<html lang="es-AR" class="system wakaba/);
+		expect(headingCount(html)).toBe(1);
+		expect(html).toMatch(/<h1[^>]*>[\s\S]*Crece con cada[\s\S]*práctica[\s\S]*<\/h1>/);
+		expect(html).toContain('src="/apps/wakaba/screenshots/es/path-kitsune.webp"');
+		expect(html).toContain("Muy pronto en la");
+		expect(html).toContain(
+			'content="https://sergiodxa.com/apps/wakaba/branding/social-card-es.png"',
+		);
+		expect(html).not.toContain('src="/apps/wakaba/screenshots/en/path-kitsune.webp"');
+	});
+
+	test("lets ?lang= override the browser and links both languages for search engines", async () => {
+		let html = await (
+			await fetchPage("/apps/wakaba?lang=en", { "accept-language": "es-AR" })
+		).text();
+
+		expect(html).toMatch(/<html lang="en"/);
+		expect(html).toContain('hreflang="es" href="https://sergiodxa.com/apps/wakaba?lang=es-AR"');
+		expect(html).toContain('hreflang="x-default" href="https://sergiodxa.com/apps/wakaba"');
+		expect(html).toMatch(/href="\/apps\/wakaba\?lang=es-AR"[^>]*hreflang="es-AR"/);
+	});
+
+	test("shows the languages card in the page's other language", async () => {
+		let english = await (await fetchPage("/apps/wakaba?lang=en")).text();
+		let spanish = await (await fetchPage("/apps/wakaba?lang=es-AR")).text();
+
+		expect(english).toContain('src="/apps/wakaba/screenshots/es/flashcards-water.webp"');
+		expect(spanish).toContain('src="/apps/wakaba/screenshots/en/flashcards-water.webp"');
+	});
+});
+
 describe("wakabaMeta", () => {
 	test("adds the smart banner once the listing has an id", () => {
-		let tags = wakabaMeta("Wakaba", "About", "https://sergiodxa.com/apps/wakaba", {
+		let tags = wakabaMeta("Wakaba", "About", "https://sergiodxa.com/apps/wakaba", EN, {
 			id: "6740000000",
 		});
 
