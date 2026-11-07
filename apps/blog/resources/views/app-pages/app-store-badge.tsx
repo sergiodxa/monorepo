@@ -24,6 +24,12 @@ export const APP_STORE_BADGES = "/apps/app-store";
 /** The languages Apple publishes the badge in that the app pages use. */
 export type BadgeLanguage = "en-us" | "es-mx" | "ja-jp";
 
+/**
+ * Each badge's width at the 48px height the page draws it, from Apple's artwork, so the page
+ * holds the badge's place before it loads; the Japanese badge is narrower.
+ */
+const BADGE_WIDTHS: Record<BadgeLanguage, number> = { "en-us": 144, "es-mx": 144, "ja-jp": 131 };
+
 /** Props of the badge. */
 export interface AppStoreBadgeProps {
 	/** The listing's URL, or `null` before release. */
@@ -91,6 +97,7 @@ export function AppStoreBadge(handle: Handle<AppStoreBadgeProps>) {
 					<img
 						src={`${APP_STORE_BADGES}/badge-${language}-black.svg`}
 						alt={label}
+						width={BADGE_WIDTHS[language]}
 						height={48}
 						mix={[raw({ display: "block", blockSize: "3rem", inlineSize: "auto" })]}
 					/>
