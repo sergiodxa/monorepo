@@ -84,10 +84,9 @@ export interface PlayingCardProps {
 }
 
 /**
- * A challenge card drawn as the app draws it: 320 × 460 points with 20-point corners, a warm
- * face (plum in dark) with ribbon flourishes cropped into its corners, a calm field in the
- * middle for the prompt, sparkles along the edges and a thin gold inner frame; or the ornate
- * plum back. It scales to its column, its type with it, so it reads the same at any size.
+ * A challenge card as the app draws it, 320 × 460 points, face or ornate back, scaling with
+ * its column and its type with it. Each line of text spans the card's width, which WebKit
+ * needs to size type set in `cqi`; otherwise the prompt collapses to nothing.
  *
  * @param handle Runtime handle carrying the card's words and which side shows.
  * @returns The render function producing the card.
@@ -120,6 +119,7 @@ export function PlayingCard(handle: Handle<PlayingCardProps>) {
 						mix={[
 							raw({
 								position: "absolute",
+								zIndex: "1",
 								inset: "0",
 								display: "flex",
 								flexDirection: "column",
@@ -136,6 +136,7 @@ export function PlayingCard(handle: Handle<PlayingCardProps>) {
 								weight("semibold"),
 								raw({
 									minBlockSize: "1.4em",
+									alignSelf: "stretch",
 									fontSize: "4cqi",
 									letterSpacing: "0.2em",
 									textTransform: "uppercase",
@@ -150,6 +151,7 @@ export function PlayingCard(handle: Handle<PlayingCardProps>) {
 								m(0),
 								raw({
 									marginBlock: "auto",
+									alignSelf: "stretch",
 									fontSize: "7cqi",
 									fontWeight: "500",
 									lineHeight: "1.3",

@@ -154,11 +154,15 @@ export const EncoreDraw = clientEntry(
 										},
 										"@media (prefers-reduced-motion: no-preference)": {
 											transition: "transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1)",
+											"& > *": { transition: "visibility 0s linear 0.15s" },
 											"&[data-leaving]": {
 												transition: `transform ${SWIPE_MS}ms ease-in, opacity ${SWIPE_MS}ms ease-in`,
 											},
 										},
 										"& > *": { gridArea: "1 / 1", backfaceVisibility: "hidden" },
+										"& > :last-child": { visibility: "hidden" },
+										"&[data-revealed] > :first-child": { visibility: "hidden" },
+										"&[data-revealed] > :last-child": { visibility: "visible" },
 									}),
 								]}
 							>

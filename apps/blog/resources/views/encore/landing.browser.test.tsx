@@ -70,6 +70,36 @@ describe("The questions", () => {
 	});
 });
 
+describe("Drawn cards", () => {
+	test("stretch each line of text across the card, which WebKit needs to size cqi type", () => {
+		let host = mount(1200);
+
+		let lines = Array.from(host.querySelectorAll<HTMLElement>("#nights li > div p"));
+		expect(lines.length).toBeGreaterThan(0);
+		for (let line of lines) {
+			expect(getComputedStyle(line).alignSelf).toBe("stretch");
+			expect(line.offsetWidth).toBeGreaterThan(line.parentElement!.clientWidth * 0.6);
+		}
+		host.remove();
+	});
+
+	test("keep a deck card's face hidden until it is flipped, without relying on backface culling", () => {
+		let host = mount(1200);
+
+		let flipper = host.querySelector<HTMLElement>("#deck li label > span[aria-hidden]");
+		let [back, face] = Array.from(flipper?.children ?? []) as Array<HTMLElement>;
+		expect(getComputedStyle(face!).visibility).toBe("hidden");
+		expect(getComputedStyle(back!).visibility).toBe("visible");
+
+		host.querySelector<HTMLLabelElement>("#deck li label")?.click();
+		for (let child of [back!, face!]) {
+			child.getAnimations().forEach((animation) => animation.finish());
+		}
+		expect(getComputedStyle(face!).visibility).toBe("visible");
+		host.remove();
+	});
+});
+
 describe("The deck", () => {
 	test("turns a card over when the reader taps it", () => {
 		let host = mount(1200);

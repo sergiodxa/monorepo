@@ -553,9 +553,13 @@ export function FlipCard(handle: Handle<FlipCard.Props>) {
 							transformStyle: "preserve-3d",
 							"@media (prefers-reduced-motion: no-preference)": {
 								transition: "transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1)",
+								"& > *": { transition: "visibility 0s linear 0.15s" },
 							},
 							":is(input:checked) ~ &": { transform: "rotateY(180deg)" },
 							"& > *": { gridArea: "1 / 1", backfaceVisibility: "hidden" },
+							"& > :last-child": { visibility: "hidden" },
+							":is(input:checked) ~ & > :first-child": { visibility: "hidden" },
+							":is(input:checked) ~ & > :last-child": { visibility: "visible" },
 						}),
 					]}
 				>
