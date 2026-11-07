@@ -1,7 +1,7 @@
 /**
- * Plays a round on Encore's playable card in a real browser: the first card waits face down
- * and names itself with the app's hint, a tap turns it over, and drawing deals the next card
- * face up while the count of cards left goes down.
+ * Plays Encore's sample in a real browser: the first card waits face down and names itself
+ * with the app's hint, a tap turns it over, drawing deals the next card face up, and after the
+ * last card the table ends on the App Store badge until a shuffle deals the sample again.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,7 +43,15 @@ const LABELS = {
 	draw: "Draw another",
 	shuffle: "Shuffle",
 	left: "Card {count} of {total}",
+	end: "That's your sample.",
 };
+
+/** The listing the table ends on. */
+const STORE = {
+	href: "https://apps.apple.com/app/id6813754400",
+	label: "Download on the App Store",
+	language: "en-us",
+} as const;
 
 /** Waits for the island's next render. */
 function frame(): Promise<void> {
@@ -53,7 +61,7 @@ function frame(): Promise<void> {
 describe("EncoreDraw", () => {
 	test("starts face down, turns over on a tap, and deals the next card face up", async () => {
 		document.documentElement.className = "system encore";
-		mounted = render(<EncoreDraw cards={CARDS} labels={LABELS} />);
+		mounted = render(<EncoreDraw cards={CARDS} labels={LABELS} store={STORE} />);
 		let card = mounted.container.querySelector<HTMLButtonElement>("button");
 
 		expect(card?.getAttribute("aria-label")).toBe("Tap to reveal");
@@ -71,5 +79,25 @@ describe("EncoreDraw", () => {
 		await frame();
 		expect(card?.textContent).toContain("ROAD TRIP");
 		expect(mounted.container.textContent).toContain("Card 2 of 3");
+
+		for (let step = 0; step < 2; step++) {
+			Array.from(mounted.container.querySelectorAll("button"))
+				.find((button) => button.textContent?.includes("Draw another"))
+				?.click();
+			await frame();
+		}
+		expect(mounted.container.textContent).toContain("That's your sample.");
+		expect(
+			mounted.container.querySelector('a[data-app-store="available"]')?.getAttribute("href"),
+		).toBe(STORE.href);
+
+		Array.from(mounted.container.querySelectorAll("button"))
+			.find((button) => button.textContent?.includes("Shuffle"))
+			?.click();
+		await frame();
+		expect(mounted.container.querySelector("button")?.getAttribute("aria-label")).toBe(
+			"Tap to reveal",
+		);
+		expect(mounted.container.textContent).toContain("Card 1 of 3");
 	});
 });

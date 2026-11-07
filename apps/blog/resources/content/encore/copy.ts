@@ -34,6 +34,9 @@ export interface CardText {
 /** The cards the pages draw, by the app's own card id. */
 export type CardId =
 	| "a001"
+	| "a008"
+	| "a024"
+	| "a090"
 	| "a002"
 	| "a011"
 	| "a015"
@@ -91,8 +94,10 @@ export interface EncoreCopy {
 	play: CopyBand & {
 		draw: string;
 		shuffle: string;
-		/** Where the reader is in the deck, with `{count}` and `{total}` where the numbers go. */
+		/** Where the reader is in the sample, with `{count}` and `{total}` where the numbers go. */
 		left: string;
+		/** What the table says once the sample runs out, before the App Store badge. */
+		end: string;
 	};
 	tour: CopyBand & { stageLabel: string; steps: [CopyItem, CopyItem, CopyItem, CopyItem] };
 	deck: CopyBand & {

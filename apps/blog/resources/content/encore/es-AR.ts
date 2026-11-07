@@ -46,10 +46,11 @@ export const ES: EncoreCopy = {
 		eyebrow: "Te toca",
 		title: "Elegí una carta, cualquier carta",
 		description:
-			"Este es el mazo de verdad: los 108 desafíos escritos a mano. Tocá la carta, leela en voz alta y cantá. Nadie está grabando.",
+			"Tres cartas de verdad del mazo, invita la casa. Tocá la carta, leela en voz alta y cantá. Nadie está grabando.",
 		draw: "Sacar otra",
 		shuffle: "Mezclar",
 		left: "Carta {count} de {total}",
+		end: "Esa fue la muestra. Las otras 105 cartas te esperan en Encore.",
 	},
 	tour: {
 		eyebrow: "Cómo se juega",
@@ -126,6 +127,18 @@ export const ES: EncoreCopy = {
 				"Cantá una canción de temporada—la que hace que la sala se sienta festiva al instante.",
 		},
 		a104: { title: "FAVORITA EXTRANJERA", prompt: "Cantá un éxito de un país que no es el tuyo." },
+		a008: {
+			title: "CANCIÓN DE DUCHA",
+			prompt: "Cantá la canción que realmente cantás en la ducha.",
+		},
+		a024: {
+			title: "TEATRO MUSICAL",
+			prompt: "Cantá una canción de un musical. Se espera pleno compromiso teatral.",
+		},
+		a090: {
+			title: "LA CONSTRUCCIÓN LENTA",
+			prompt: "Cantá una canción que empieza suave y acaba en algo parecido al caos.",
+		},
 		generated: { prompt: "Cantá una canción nostálgica de los años 90." },
 	},
 	watch: {

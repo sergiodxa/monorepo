@@ -33,11 +33,10 @@ import { landingCtaChrome } from "@sdxc/ui/styles";
 import type { EncoreLocale } from "~/config/encore";
 import type { CardId } from "~/resources/content/encore/copy";
 
-import { inLanguage } from "~/config/encore";
+import { ENCORE_APP_STORE_URL, inLanguage } from "~/config/encore";
 import { EncoreDraw } from "~/resources/components/encore-draw";
 import { PathAutoplay } from "~/resources/components/path-autoplay";
 import { ENCORE_COPY } from "~/resources/content/encore";
-import { ENCORE_DECK } from "~/resources/content/encore/deck";
 import { EncoreLayout } from "~/resources/layouts/encore";
 import { GuidedTour } from "~/resources/views/app-pages/guided-tour";
 import { Swipeable } from "~/resources/views/app-pages/swipeable";
@@ -436,24 +435,12 @@ function StageCard(handle: Handle<{ side: "start" | "end"; children: RemixNode }
 	};
 }
 
-/**
- * The deck in a fresh random order for each page view, so every visit deals differently.
- *
- * @param cards The deck in the app's order.
- * @returns A shuffled copy.
- */
-function shuffled<T>(cards: ReadonlyArray<T>): Array<T> {
-	let result = [...cards];
-	for (let i = result.length - 1; i > 0; i--) {
-		let j = Math.floor(Math.random() * (i + 1));
-		[result[i], result[j]] = [result[j] as T, result[i] as T];
-	}
-	return result;
-}
+/** The sample the playable card deals: three real cards no other band shows, never the deck. */
+const SAMPLE: ReadonlyArray<CardId> = ["a024", "a008", "a090"];
 
 /**
- * The reader's turn: one card from the real deck, face down on the game's backdrop, to flip,
- * sing and draw again, before the page explains anything else.
+ * The reader's turn: three real cards, face down on the game's backdrop, to flip, sing and
+ * draw again before the page explains anything else, ending on the App Store for the rest.
  *
  * @returns The render function producing the band.
  */
@@ -480,12 +467,14 @@ function YourTurn(handle: Handle) {
 				>
 					<Backdrop />
 					<EncoreDraw
-						cards={shuffled(ENCORE_DECK[t.locale])}
+						cards={SAMPLE.map((card) => t.cards[card])}
+						store={{ href: ENCORE_APP_STORE_URL, label: t.appStore, language: t.badge }}
 						labels={{
 							reveal: t.deck.reveal,
 							draw: t.play.draw,
 							shuffle: t.play.shuffle,
 							left: t.play.left,
+							end: t.play.end,
 						}}
 					/>
 				</div>

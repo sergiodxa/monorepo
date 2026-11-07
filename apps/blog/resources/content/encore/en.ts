@@ -40,10 +40,11 @@ export const EN: EncoreCopy = {
 		eyebrow: "Your turn",
 		title: "Pick a card, any card",
 		description:
-			"This is the real deck: all 108 hand-written challenges. Tap the card, read it out loud, and sing. Nobody's recording.",
+			"Three real cards from the deck, on the house. Tap the card, read it out loud, and sing. Nobody's recording.",
 		draw: "Draw another",
 		shuffle: "Shuffle",
 		left: "Card {count} of {total}",
+		end: "That's your sample. The other 105 cards are waiting in Encore.",
 	},
 	tour: {
 		eyebrow: "How to play",
@@ -117,6 +118,15 @@ export const EN: EncoreCopy = {
 			prompt: "Sing a seasonal song—the one that immediately makes the room feel festive.",
 		},
 		a104: { title: "FOREIGN FAVOURITE", prompt: "Sing a hit from a country that isn't your own." },
+		a008: { title: "SHOWER SONG", prompt: "Sing the song you actually sing in the shower." },
+		a024: {
+			title: "MUSICAL THEATRE",
+			prompt: "Sing a song from a musical. Full theatrical commitment expected.",
+		},
+		a090: {
+			title: "THE SLOW BUILD",
+			prompt: "Sing a song that starts quietly and ends in something close to chaos.",
+		},
 		generated: { prompt: "Sing a nostalgic song from the 1990s." },
 	},
 	watch: {

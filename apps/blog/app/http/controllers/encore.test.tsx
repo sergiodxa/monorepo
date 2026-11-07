@@ -95,15 +95,18 @@ describe("GET /apps/encore", () => {
 });
 
 describe("The playable card", () => {
-	test("deals from the real deck, face down, in the page's language", async () => {
+	test("deals a three-card sample in the page's language, never the whole deck", async () => {
 		let english = await (await fetchPage("/apps/encore")).text();
 		let japanese = await (await fetchPage("/apps/encore?lang=ja")).text();
 
 		expect(english).toContain("Pick a card, any card");
 		expect(english).toContain('aria-label="Tap to reveal"');
-		expect(english).toContain("KARAOKE CHAMPION");
+		expect(english).toContain("MUSICAL THEATRE");
+		expect(english).toContain("THE SLOW BUILD");
+		expect(english).not.toContain("THE WRONG DECADE");
+		expect(english).not.toContain("SOMEONE FAMOUS SHARES YOUR NAME");
 		expect(japanese).toContain("好きなカードを一枚どうぞ");
-		expect(japanese).toContain("カラオケチャンピオン");
+		expect(japanese).toContain("ミュージカル");
 	});
 });
 

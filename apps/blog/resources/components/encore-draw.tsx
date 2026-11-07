@@ -1,7 +1,7 @@
 /**
- * The playable card on Encore's landing: a round of the game in the page. Tap the card to
- * flip it, draw the next one, or shuffle the deck, with the app's own reveal and shuffle sounds
- * while the header's speaker is on.
+ * The playable card on Encore's landing: a taste of the game with a small sample of the deck.
+ * Tap to flip, draw the next one or shuffle, with the app's own sounds while the header's
+ * speaker is on; once the sample runs out the table points to the App Store for the rest.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,22 +15,33 @@ import { block } from "@sdxc/u/layout";
 import { Button } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
 
-import type { DeckEntry } from "~/resources/content/encore/deck";
+import type { BadgeLanguage } from "~/resources/views/app-pages/app-store-badge";
 
 import { play } from "~/resources/components/encore-sound";
+import { AppStoreBadge } from "~/resources/views/app-pages/app-store-badge";
 import { PlayingCard } from "~/resources/views/encore/card";
+
+/** One card of the sample: its uppercase title and its challenge. */
+export interface SampleCard {
+	title?: string;
+	prompt: string;
+}
 
 /** Props of the playable card. */
 export interface EncoreDrawProps {
-	/** The deck in the order it deals, already shuffled. */
-	cards: ReadonlyArray<DeckEntry>;
+	/** The sample, in the order it deals: a few real cards, never the whole deck. */
+	cards: ReadonlyArray<SampleCard>;
+	/** The App Store badge the table shows once the sample runs out. */
+	store: { href: string; label: string; language: BadgeLanguage };
 	labels: {
 		/** The app's hint on a face-down card, which names the card for assistive technology. */
 		reveal: string;
 		draw: string;
 		shuffle: string;
-		/** Where the reader is in the deck, with `{count}` and `{total}` where the numbers go. */
+		/** Where the reader is in the sample, with `{count}` and `{total}` where the numbers go. */
 		left: string;
+		/** What the table says once the sample runs out. */
+		end: string;
 	};
 }
 
@@ -63,10 +74,13 @@ export const EncoreDraw = clientEntry(
 			void handle.update();
 		}
 
-		/** Sends the card off the table and lands the next one face up, as a swipe does. */
+		/**
+		 * Sends the card off the table and lands the next one face up, as a swipe does; after the
+		 * last card of the sample, the table ends on the App Store.
+		 */
 		function draw() {
 			let next = () => {
-				index = (index + 1) % handle.props.cards.length;
+				index = Math.min(index + 1, handle.props.cards.length);
 				revealed = true;
 				leaving = false;
 				void handle.update();
@@ -78,9 +92,9 @@ export const EncoreDraw = clientEntry(
 			timer = setTimeout(next, SWIPE_MS);
 		}
 
-		/** Starts a fresh deck from a random card, face down, as a shake does. */
+		/** Deals the sample again from the first card, face down, as a shake does. */
 		function shuffle() {
-			index = Math.floor(Math.random() * handle.props.cards.length);
+			index = 0;
 			revealed = false;
 			leaving = false;
 			play("shuffle");
@@ -88,8 +102,56 @@ export const EncoreDraw = clientEntry(
 		}
 
 		return () => {
-			let { cards, labels } = handle.props;
-			let card = cards[index] ?? cards[0];
+			let { cards, labels, store } = handle.props;
+			let card = cards[index];
+			if (!card) {
+				return (
+					<div
+						mix={[
+							raw({
+								display: "grid",
+								justifyItems: "center",
+								gap: "1.25rem",
+								textAlign: "center",
+							}),
+						]}
+					>
+						<div mix={[raw({ inlineSize: "min(18rem, 78vw)", opacity: "0.85" })]}>
+							<PlayingCard faceDown />
+						</div>
+						<p
+							aria-live="polite"
+							mix={[
+								raw({
+									margin: "0",
+									maxInlineSize: "24rem",
+									fontSize: "1.125rem",
+									fontWeight: "600",
+									textWrap: "balance",
+								}),
+							]}
+						>
+							{labels.end}
+						</p>
+						<div
+							mix={[
+								raw({
+									display: "flex",
+									flexWrap: "wrap",
+									justifyContent: "center",
+									alignItems: "center",
+									gap: "0.75rem",
+								}),
+							]}
+						>
+							<AppStoreBadge href={store.href} label={store.label} language={store.language} />
+							<Button type="button" variant="surface" mix={[on("click", shuffle)]}>
+								{labels.shuffle}
+							</Button>
+						</div>
+					</div>
+				);
+			}
 			return (
 				<div
 					mix={[
@@ -147,10 +209,10 @@ export const EncoreDraw = clientEntry(
 								<PlayingCard faceDown />
 							</span>
 							<span mix={[block(), raw({ transform: "rotateY(180deg)" })]}>
-								<PlayingCard title={card?.title} prompt={card?.prompt} />
+								<PlayingCard title={card.title} prompt={card.prompt} />
 							</span>
 						</span>
-						{revealed && card ? (
+						{revealed ? (
 							<span mix={[visuallyHidden()]}>
 								{card.title}. {card.prompt}
 							</span>
