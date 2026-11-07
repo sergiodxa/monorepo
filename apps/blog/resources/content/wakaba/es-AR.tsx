@@ -48,6 +48,9 @@ export const ES: WakabaCopy = {
 		),
 		watch: "Mira crecer el árbol",
 		note: "Gratis. Sin anuncios, suscripciones ni compras dentro de la app. En español e inglés.",
+		pause: "Pausar las tarjetas flotantes",
+		streak: { title: "Racha de 23 días", detail: "Practicaste hoy · 36 palabras" },
+		word: { label: "Palabra del día", reading: "ki · máquina" },
 	},
 	path: {
 		eyebrow: "El camino de aprendizaje",

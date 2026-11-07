@@ -48,6 +48,9 @@ export const EN: WakabaCopy = {
 		),
 		watch: "Watch the tree grow",
 		note: "Free. No ads, subscriptions or in-app purchases. In English and Spanish.",
+		pause: "Pause the floating cards",
+		streak: { title: "23-day streak", detail: "Practised today · 36 words" },
+		word: { label: "Word of the day", reading: "ki · machine" },
 	},
 	path: {
 		eyebrow: "The learning path",

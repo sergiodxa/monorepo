@@ -24,6 +24,7 @@ import {
 	hidden,
 	hstack,
 	repeat,
+	shrink,
 	vstack,
 } from "@sdxc/u/layout";
 import { at, motionSafe } from "@sdxc/u/responsive";
@@ -40,6 +41,7 @@ import {
 	LandingHeader,
 	LandingHero,
 	LandingSection,
+	MotionLoop,
 	TabbedStage,
 } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
@@ -172,85 +174,195 @@ function Hero(handle: Handle) {
 }
 
 /**
+ * A slow vertical drift for something floating in the hero, offset by `delay` so neighbours
+ * never move together. It runs only for readers who allow motion.
+ */
+function drift(delay: string, distance = "0.5rem", seconds = 6) {
+	let name = `wakaba-drift-${distance.replace(".", "-")}`;
+	return [
+		keyframes(name, {
+			"0%, 100%": { translate: "0 0" },
+			"50%": { translate: `0 -${distance}` },
+		}),
+		motionSafe(
+			raw({
+				animationName: name,
+				animationDuration: `${seconds}s`,
+				animationTimingFunction: "ease-in-out",
+				animationIterationCount: "infinite",
+				animationDelay: delay,
+			}),
+		),
+	];
+}
+
+/**
  * The hero's picture: the learning path in front, a flashcard and a practice question fanned
  * behind it once the stage is wide enough, all real screens, over a vermilion sun cropped by
- * the stage's lower edge.
+ * the stage's lower edge. Kitsune and Tanuki bob beside the phones and, on a wide stage, the
+ * two widgets' content floats past, all paused by the frame's toggle.
  *
  * @returns The render function producing the stage.
  */
-function HeroStage() {
-	return () => (
-		<div mix={[container("wakaba-hero"), is("full"), raw({ marginBlockStart: "-1.5rem" })]}>
+function HeroStage(handle: Handle) {
+	return () => {
+		let t = copyOf(handle).hero;
+		return (
+			<div mix={[container("wakaba-hero"), is("full"), raw({ marginBlockStart: "-1.5rem" })]}>
+				<MotionLoop
+					pauseLabel={t.pause}
+					mix={[
+						raw({
+							"--phone": "min(16.5rem, 64cqi)",
+							position: "relative",
+							isolation: "isolate",
+							overflow: "hidden",
+							blockSize: "calc(var(--phone) * 1.62)",
+							paddingBlockStart: "0.75rem",
+							borderRadius: "2rem 2rem 0 0",
+						}),
+					]}
+				>
+					<div
+						aria-hidden="true"
+						mix={[
+							raw({
+								position: "absolute",
+								zIndex: "-1",
+								insetInline: "0",
+								marginInline: "auto",
+								insetBlockStart: "calc(var(--phone) * 0.2)",
+								inlineSize: "min(100%, calc(var(--phone) * 2.6))",
+								aspectRatio: "1",
+								borderRadius: "50%",
+								backgroundColor: "var(--wakaba-sun)",
+							}),
+						]}
+					/>
+					<div mix={[hstack({ gap: 0, align: "start", justify: "center" })]}>
+						<FannedPhone side="start">
+							<Phone screen="flashcards-fish" eager />
+						</FannedPhone>
+						<div mix={[raw({ inlineSize: "var(--phone)", flexShrink: "0", zIndex: "1" })]}>
+							<Phone screen="path-kitsune" eager />
+						</div>
+						<FannedPhone side="end">
+							<Phone screen="practice" eager />
+						</FannedPhone>
+					</div>
+					<div
+						mix={[
+							raw({
+								position: "absolute",
+								zIndex: "2",
+								insetBlockEnd: "-0.5rem",
+								insetInlineStart:
+									"max(0rem, calc(50% - var(--phone) * 0.5 - min(9rem, 27cqi) * 0.72))",
+								inlineSize: "min(9rem, 27cqi)",
+							}),
+							drift("0s", "0.375rem", 4.5),
+						]}
+					>
+						<Mascot pose="kitsune-pointing" size="fill" tilt={-4} />
+					</div>
+					<div
+						mix={[
+							raw({
+								position: "absolute",
+								zIndex: "2",
+								insetBlockEnd: "-0.5rem",
+								insetInlineEnd:
+									"max(0rem, calc(50% - var(--phone) * 0.5 - min(8rem, 24cqi) * 0.72))",
+								inlineSize: "min(8rem, 24cqi)",
+							}),
+							drift("-2.25s", "0.375rem", 4.5),
+						]}
+					>
+						<Mascot pose="tanuki-wave" size="fill" tilt={5} />
+					</div>
+					<FloatingCard side="start">
+						<picture mix={[block(), shrink(0), raw({ inlineSize: "2.75rem" })]}>
+							<source
+								media="(prefers-color-scheme: dark)"
+								srcSet={`${WAKABA_ASSETS}/bonsai/dark/05-day-030.webp`}
+								width={480}
+								height={455}
+							/>
+							<img
+								src={`${WAKABA_ASSETS}/bonsai/light/05-day-030.webp`}
+								alt=""
+								width={480}
+								height={455}
+								mix={[block(), is("full"), raw({ blockSize: "auto" })]}
+							/>
+						</picture>
+						<span mix={[vstack({ gap: 0, align: "start" })]}>
+							<span mix={[text("sm"), weight("semibold"), leading("snug")]}>{t.streak.title}</span>
+							<span mix={[text("xs"), fg("neutral")]}>{t.streak.detail}</span>
+						</span>
+					</FloatingCard>
+					<FloatingCard side="end">
+						<span lang="ja" mix={[font("serif"), text("3xl"), fg("brand"), leading("none")]}>
+							機
+						</span>
+						<span mix={[vstack({ gap: 0, align: "start" })]}>
+							<span mix={[text("xs"), weight("semibold"), fg("brand")]}>{t.word.label}</span>
+							<span mix={[text("sm"), weight("semibold"), leading("snug")]}>{t.word.reading}</span>
+						</span>
+					</FloatingCard>
+				</MotionLoop>
+			</div>
+		);
+	};
+}
+
+namespace FloatingCard {
+	/** Props of a card floating beside the hero's phones. */
+	export interface Props {
+		/** Which side of the phones it floats on. */
+		side: "start" | "end";
+		children: RemixNode;
+	}
+}
+
+/**
+ * A raised card drifting beside the phones, shown once the stage is wide enough to hold it
+ * clear of the fanned screens. Decorative: the widgets band shows the real captures.
+ *
+ * @param handle Runtime handle carrying the side and the card's content.
+ * @returns The render function producing the card.
+ */
+function FloatingCard(handle: Handle<FloatingCard.Props>) {
+	return () => {
+		let start = handle.props.side === "start";
+		return (
 			<div
+				aria-hidden="true"
 				mix={[
 					raw({
-						"--phone": "min(16.5rem, 64cqi)",
-						position: "relative",
-						isolation: "isolate",
-						overflow: "hidden",
-						blockSize: "calc(var(--phone) * 1.62)",
-						paddingBlockStart: "0.75rem",
-						borderRadius: "2rem 2rem 0 0",
+						display: "none",
+						position: "absolute",
+						zIndex: "3",
+						insetBlockStart: start ? "30%" : "52%",
+						insetInlineStart: start ? "3%" : "auto",
+						insetInlineEnd: start ? "auto" : "3%",
+						"@container wakaba-hero (min-width: 64rem)": { display: "flex" },
 					}),
+					hstack({ gap: 3, align: "center" }),
+					pi(4),
+					raw({
+						paddingBlock: "0.75rem",
+						borderRadius: "1.25rem",
+						backgroundColor: "var(--wakaba-card)",
+						boxShadow: "0 0 0 1px rgb(60 40 20 / 0.06), 0 18px 36px -16px rgb(60 40 20 / 0.3)",
+					}),
+					drift(start ? "-1s" : "-4s"),
 				]}
 			>
-				<div
-					aria-hidden="true"
-					mix={[
-						raw({
-							position: "absolute",
-							zIndex: "-1",
-							insetInline: "0",
-							marginInline: "auto",
-							insetBlockStart: "calc(var(--phone) * 0.2)",
-							inlineSize: "min(100%, calc(var(--phone) * 2.6))",
-							aspectRatio: "1",
-							borderRadius: "50%",
-							backgroundColor: "var(--wakaba-sun)",
-						}),
-					]}
-				/>
-				<div mix={[hstack({ gap: 0, align: "start", justify: "center" })]}>
-					<FannedPhone side="start">
-						<Phone screen="flashcards-fish" eager />
-					</FannedPhone>
-					<div mix={[raw({ inlineSize: "var(--phone)", flexShrink: "0", zIndex: "1" })]}>
-						<Phone screen="path-kitsune" eager />
-					</div>
-					<FannedPhone side="end">
-						<Phone screen="practice" eager />
-					</FannedPhone>
-				</div>
-				<div
-					mix={[
-						raw({
-							position: "absolute",
-							zIndex: "2",
-							insetBlockEnd: "-0.5rem",
-							insetInlineStart:
-								"max(0rem, calc(50% - var(--phone) * 0.5 - min(9rem, 27cqi) * 0.72))",
-							inlineSize: "min(9rem, 27cqi)",
-						}),
-					]}
-				>
-					<Mascot pose="kitsune-pointing" size="fill" tilt={-4} />
-				</div>
-				<div
-					mix={[
-						raw({
-							position: "absolute",
-							zIndex: "2",
-							insetBlockEnd: "-0.5rem",
-							insetInlineEnd: "max(0rem, calc(50% - var(--phone) * 0.5 - min(8rem, 24cqi) * 0.72))",
-							inlineSize: "min(8rem, 24cqi)",
-						}),
-					]}
-				>
-					<Mascot pose="tanuki-wave" size="fill" tilt={5} />
-				</div>
+				{handle.props.children}
 			</div>
-		</div>
-	);
+		);
+	};
 }
 
 namespace FannedPhone {

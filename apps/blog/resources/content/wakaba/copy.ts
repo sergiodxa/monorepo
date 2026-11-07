@@ -64,7 +64,17 @@ export interface WakabaCopy {
 		madeBy: string;
 	};
 	appStore: { soon: string; available: string };
-	hero: { eyebrow: string; title: RemixNode; description: RemixNode; watch: string; note: string };
+	hero: {
+		eyebrow: string;
+		title: RemixNode;
+		description: RemixNode;
+		watch: string;
+		note: string;
+		pause: string;
+		/** The cards drifting beside the phones, drawn from the app's two widgets. */
+		streak: { title: string; detail: string };
+		word: { label: string; reading: string };
+	};
 	path: CopyBand & { stageLabel: string; steps: [CopyItem, CopyItem, CopyItem, CopyItem] };
 	companions: CopyBand & {
 		roles: Record<"kitsune" | "oni" | "tanuki" | "tengu", CopyItem & { alt: string }>;
