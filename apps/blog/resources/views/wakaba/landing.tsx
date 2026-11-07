@@ -994,6 +994,7 @@ function Privacy(handle: Handle) {
 									flexShrink: "0",
 									paddingBlockStart: "1.5rem",
 									inlineSize: "clamp(4.5rem, 20cqi, 7.5rem)",
+									marginInlineStart: "auto",
 									[PRIVACY_SIDE_BY_SIDE]: { display: "none" },
 								}),
 							]}
