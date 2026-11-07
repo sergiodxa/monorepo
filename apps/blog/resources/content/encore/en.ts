@@ -164,7 +164,7 @@ export const EN: EncoreCopy = {
 	},
 	privacy: {
 		eyebrow: "Privacy",
-		title: "What happens at karaoke stays at karaoke",
+		title: "What happens at karaoke\nstays at karaoke",
 		description:
 			"Encore never opens the microphone. Your singing stays in the room, and the game keeps nothing about it.",
 		checks: [

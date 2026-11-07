@@ -173,7 +173,7 @@ export const ES: EncoreCopy = {
 	},
 	privacy: {
 		eyebrow: "Privacidad",
-		title: "Lo que pasa en el karaoke queda en el karaoke",
+		title: "Lo que pasa en el karaoke\nqueda en el karaoke",
 		description:
 			"Encore nunca abre el micrófono. Lo que cantás queda en la sala, y el juego no guarda nada de eso.",
 		checks: [

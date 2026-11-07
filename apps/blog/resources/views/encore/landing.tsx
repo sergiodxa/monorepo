@@ -723,40 +723,38 @@ function Privacy(handle: Handle) {
 		let t = copyOf(handle);
 		return (
 			<LandingSection id="privacy" tone="tinted" inset mix={[nearView(520)]}>
+				<LandingHeader eyebrow={t.privacy.eyebrow} mix={[raw({ maxInlineSize: "none" })]}>
+					{t.privacy.title.split("\n").map((line) => (
+						<span key={line} mix={[raw({ display: "block" })]}>
+							{line}
+						</span>
+					))}
+				</LandingHeader>
 				<div
 					mix={[
 						grid(),
 						gap(8),
 						raw({
-							alignItems: "center",
+							alignItems: "start",
 							"@container (min-width: 56rem)": {
 								gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
 							},
 						}),
 					]}
 				>
-					<LandingHeader
-						eyebrow={t.privacy.eyebrow}
-						description={
-							<>
-								{t.privacy.description}{" "}
-								<Link href={inLanguage(routes.encorePrivacy.href(), t.locale)}>
-									{t.privacy.policy}
-								</Link>
-							</>
-						}
-					>
-						{t.privacy.title}
-					</LandingHeader>
-					<div
-						mix={[p(6), rounded("xl"), raw({ backgroundColor: "var(--app-card)" }), at("md", p(8))]}
-					>
-						<CheckList>
-							{t.privacy.checks.map((check) => (
-								<CheckRow key={check}>{check}</CheckRow>
-							))}
-						</CheckList>
+					<div mix={[vstack({ gap: 4, align: "start" }), text("base"), fg("neutral")]}>
+						<p mix={[m(0), leading("relaxed")]}>{t.privacy.description}</p>
+						<p mix={[m(0)]}>
+							<Link href={inLanguage(routes.encorePrivacy.href(), t.locale)}>
+								{t.privacy.policy}
+							</Link>
+						</p>
 					</div>
+					<CheckList>
+						{t.privacy.checks.map((check) => (
+							<CheckRow key={check}>{check}</CheckRow>
+						))}
+					</CheckList>
 				</div>
 			</LandingSection>
 		);

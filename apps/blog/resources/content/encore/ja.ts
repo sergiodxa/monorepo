@@ -152,7 +152,7 @@ export const JA: EncoreCopy = {
 	},
 	privacy: {
 		eyebrow: "プライバシー",
-		title: "カラオケでの出来事は、カラオケの中だけに",
+		title: "カラオケでの出来事は、\nカラオケの中だけに",
 		description:
 			"Encore はマイクを一切使いません。歌声はその部屋の中だけ。ゲームは何も記録しません。",
 		checks: [

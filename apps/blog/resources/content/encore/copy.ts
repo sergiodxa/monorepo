@@ -106,6 +106,7 @@ export interface EncoreCopy {
 	details: CopyBand & {
 		items: Record<"karaoke" | "road" | "holiday" | "abroad" | "newYear" | "everyone", CopyItem>;
 	};
+	/** The title breaks into lines at each `\n`, where the phrase turns. */
 	privacy: CopyBand & { checks: Array<string>; policy: string };
 	faq: { eyebrow: string; title: string; columns: Array<Array<readonly [string, string]>> };
 	closing: { title: string; description: string; support: string };
