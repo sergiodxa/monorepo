@@ -33,7 +33,7 @@ import { PROFILE } from "~/config/profile";
 import { ENCORE_COPY } from "~/resources/content/encore";
 import DocumentLayout from "~/resources/layouts/document";
 import { AppFooter, QuietLink } from "~/resources/views/app-pages/footer";
-import { copyOf, EncoreLanguage, Wordmark } from "~/resources/views/encore/parts";
+import { copyOf, EncoreLanguage, Sparkles, Wordmark } from "~/resources/views/encore/parts";
 import routes from "~/routes/web";
 
 /** Types used by Encore's page shell. */
@@ -48,6 +48,12 @@ export namespace EncoreLayout {
 		children: RemixNode;
 		/** The request's document assets, which the renderer hands every view. */
 		assets: DocumentAssets;
+		/**
+		 * How many sparkles shine down the page's gutters: a long page takes more so the sky
+		 * stays as dense as on a short one.
+		 * @default 20
+		 */
+		sparkles?: number;
 	}
 }
 
@@ -85,9 +91,9 @@ export function encoreMeta(
 }
 
 /**
- * The page in Encore's scope: warm paper or the plum night from edge to edge, a header naming
- * the app and a footer with its policies and languages, around the page's `main`. Every
- * language of the page is advertised to search engines at its `?lang=` address.
+ * The page in Encore's scope: paper or plum night edge to edge, sparkles down both gutters,
+ * and its own header and footer around `main`. Every language of the page is advertised to
+ * search engines at its `?lang=` address.
  *
  * @param handle Runtime handle carrying the page's metadata, language, assets and content.
  * @returns The render function producing the whole document.
@@ -128,9 +134,18 @@ export function EncoreLayout(handle: Handle<EncoreLayout.Props>) {
 				]}
 			>
 				<EncoreLanguage copy={ENCORE_COPY[locale]}>
-					<EncoreHeader path={path} />
-					<div mix={[grow(1), vstack({ gap: 0, align: "stretch" })]}>{children}</div>
-					<EncoreFooter path={path} />
+					<div
+						mix={[
+							grow(1),
+							vstack({ gap: 0, align: "stretch" }),
+							raw({ position: "relative", isolation: "isolate" }),
+						]}
+					>
+						<Sparkles seed={7} count={handle.props.sparkles ?? 20} />
+						<EncoreHeader path={path} />
+						<div mix={[grow(1), vstack({ gap: 0, align: "stretch" })]}>{children}</div>
+						<EncoreFooter path={path} />
+					</div>
 				</EncoreLanguage>
 			</DocumentLayout>
 		);

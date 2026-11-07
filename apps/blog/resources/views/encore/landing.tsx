@@ -52,7 +52,6 @@ import {
 	EncoreMark,
 	FlipCard,
 	Phone,
-	Sparkles,
 	Watch,
 } from "~/resources/views/encore/parts";
 import routes from "~/routes/web";
@@ -91,6 +90,7 @@ export function EncoreLandingView() {
 				title={copy.meta.title}
 				description={copy.meta.description}
 				path={routes.encore.href()}
+				sparkles={64}
 			>
 				<EncoreLandingContent locale={model.locale} />
 			</EncoreLayout>
@@ -107,8 +107,7 @@ export function EncoreLandingView() {
 export function EncoreLandingContent(handle: Handle<{ locale?: EncoreLocale }>) {
 	return () => (
 		<EncoreLanguage copy={ENCORE_COPY[handle.props.locale ?? "en"]}>
-			<main mix={[raw({ position: "relative", isolation: "isolate" })]}>
-				<Sparkles seed={7} count={60} />
+			<main>
 				<HeadingScope>
 					<Hero />
 					<YourTurn />
@@ -335,7 +334,7 @@ function HeroStage() {
 						overflow: "hidden",
 						blockSize: "calc(var(--phone) * 1.62)",
 						paddingBlockStart: "1.75rem",
-						borderRadius: "2rem 2rem 0 0",
+						borderRadius: "2rem",
 					}),
 				]}
 			>

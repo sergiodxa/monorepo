@@ -379,8 +379,9 @@ const SPARKLE_MASK = `url("data:image/svg+xml,${encodeURIComponent(
 )}")`;
 
 /**
- * Where the sparkles sit: a deterministic scatter, alternating sides, each placed a fraction of
- * the way into its side's gutter, so the same render always draws the same sky.
+ * Where the sparkles sit: one per slice of the page's height on each side, the sides offset by
+ * half a slice so the sky stays even from the top down, each a fraction of the way into its
+ * side's gutter. Deterministic, so the same render always draws the same sky.
  */
 function scatter(seed: number, count: number) {
 	let state = seed * 9301 + 49297;
@@ -388,13 +389,15 @@ function scatter(seed: number, count: number) {
 		state = (state * 9301 + 49297) % 233280;
 		return state / 233280;
 	};
+	let rows = Math.ceil(count / 2);
 	return Array.from({ length: count }, (_, index) => {
 		let side = index % 2 === 0;
+		let row = Math.floor(index / 2) + (side ? 0 : 0.5);
 		return {
 			key: index,
 			start: side,
 			depth: 0.15 + next() * 0.7,
-			y: 4 + next() * 92,
+			y: ((row + 0.15 + next() * 0.5) / (rows + 0.5)) * 100,
 			size: 8 + Math.round(next() * 10),
 			color: SPARKLE_COLORS[Math.floor(next() * SPARKLE_COLORS.length)] ?? SPARKLE_COLORS[0],
 			duration: 2.4 + next() * 2.6,
