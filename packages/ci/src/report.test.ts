@@ -202,6 +202,26 @@ describe("actionsReporter", () => {
 			"::error title=script threw outside a step::boom%0D%0Aat line 2\n",
 		);
 	});
+
+	test("trims a log's trailing newlines in linear time, however many newline runs it holds", () => {
+		let { written, write } = sink();
+		let reporter = actionsReporter(write);
+		let output = `${"\n".repeat(50_000)}x`.repeat(4);
+		let started = performance.now();
+		reporter.step(step({ output: `${output}\n\n\n` }));
+		expect(performance.now() - started).toBeLessThan(500);
+		expect(written[1]).toBe(`${output}\n`);
+	});
+});
+
+describe("formatStep", () => {
+	test("indents a logged step's output and drops its trailing newlines", () => {
+		let output = `${"\n".repeat(50_000)}x`;
+		let started = performance.now();
+		let line = formatStep(step({ status: "failed", output: `${output}\n\n` }), PLAIN, false);
+		expect(performance.now() - started).toBeLessThan(500);
+		expect(line.endsWith("  x\n")).toBe(true);
+	});
 });
 
 describe("job summary", () => {

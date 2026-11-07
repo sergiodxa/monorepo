@@ -38,10 +38,19 @@ export const PLAIN: Palette = {
 	bold: (text) => text,
 };
 
+/**
+ * `text` without its trailing newlines, found by scanning back from the end so the cost stays
+ * linear on a step log of any shape.
+ */
+function trimTrailingNewlines(text: string): string {
+	let end = text.length;
+	while (end > 0 && text[end - 1] === "\n") end--;
+	return text.slice(0, end);
+}
+
 /** `text` with every line indented by two spaces, without a trailing newline. */
 function indent(text: string): string {
-	return text
-		.replace(/\n+$/, "")
+	return trimTrailingNewlines(text)
 		.split("\n")
 		.map((line) => `  ${line}`)
 		.join("\n");
@@ -314,7 +323,7 @@ export function actionsReporter(write: (text: string) => void): Reporter {
 			}
 			let mark = record.status === "passed" ? "✓" : "✗";
 			let flaky = record.flaky ? `  ${describeFlaky(record)}` : "";
-			let output = record.output.replace(/\n+$/, "");
+			let output = trimTrailingNewlines(record.output);
 			write(`::group::${mark} ${record.label}  ${describeTime(record)}${flaky}\n`);
 			if (output !== "") write(`${output}\n`);
 			write("::endgroup::\n");
