@@ -41,8 +41,8 @@ export namespace WakabaLayout {
 		/** The page's words, which also set its language. English by default. */
 		copy?: WakabaCopy;
 		/**
-		 * Whether the page is written in both languages: it then links the other one from the
-		 * header and advertises both to search engines, each at `?lang=`.
+		 * Whether the page is written in both languages: it then advertises both to search
+		 * engines, each at `?lang=`.
 		 */
 		bilingual?: boolean;
 		children: RemixNode;
@@ -129,13 +129,6 @@ export function WakabaLayout(handle: Handle<WakabaLayout.Props>) {
 					{ hreflang: "x-default", href: new URL(path, PROFILE.canonical.origin).href },
 				]
 			: [];
-		let switchTo = bilingual
-			? {
-					href: `${path}?lang=${copy.switchLanguage.locale}`,
-					label: copy.switchLanguage.label,
-					locale: copy.switchLanguage.locale,
-				}
-			: undefined;
 
 		return (
 			<DocumentLayout
@@ -161,7 +154,7 @@ export function WakabaLayout(handle: Handle<WakabaLayout.Props>) {
 				]}
 			>
 				<WakabaLanguage copy={copy}>
-					<WakabaHeader switchTo={switchTo} />
+					<WakabaHeader />
 					<div mix={[grow(1), vstack({ gap: 0, align: "stretch" })]}>{children}</div>
 					<WakabaFooter />
 				</WakabaLanguage>

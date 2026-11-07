@@ -22,7 +22,6 @@ export const ES: WakabaCopy = {
 		socialCard: "branding/social-card-es.png",
 		socialCardAlt: "Wakaba: Crece con cada práctica. Un bonsái bermellón junto al logo 学.",
 	},
-	switchLanguage: { label: "English", locale: "en" },
 	header: { support: "Soporte", privacy: "Privacidad", navLabel: "Wakaba" },
 	footer: {
 		tagline: "Crece con cada práctica. Práctica de vocabulario japonés para iPhone y iPad, gratis.",

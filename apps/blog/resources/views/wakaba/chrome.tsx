@@ -1,7 +1,7 @@
 /**
  * The parts of Wakaba's shell that render the same in a browser test as on the server: the
  * wordmark, the quiet links and the header, which reads its labels from the page's copy and
- * links the page in the other language when it has one.
+ * labels follow the page's language.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -77,26 +77,15 @@ export function QuietLink(handle: Handle<NavLink>) {
 	);
 }
 
-export namespace WakabaHeader {
-	/** Props of the header. */
-	export interface Props {
-		/** The same page in the other language, on a page written in both. */
-		switchTo?: NavLink & { locale: string };
-	}
-}
-
 /**
- * The header: the wordmark home, then Support and Privacy, and on a bilingual page the
- * other language, named in that language. The short links fit beside the wordmark at 320px,
- * so the header needs no menu.
+ * The header: the wordmark home, then Support and Privacy. The two short links fit beside
+ * the wordmark at 320px in either language, so the header needs no menu.
  *
- * @param handle Runtime handle carrying the link to the other language.
  * @returns The render function producing the header.
  */
-export function WakabaHeader(handle: Handle<WakabaHeader.Props>) {
+export function WakabaHeader(handle: Handle) {
 	return () => {
 		let copy = copyOf(handle);
-		let { switchTo } = handle.props;
 		return (
 			<header mix={[pi(4), at("md", pi(6))]}>
 				<nav
@@ -109,46 +98,9 @@ export function WakabaHeader(handle: Handle<WakabaHeader.Props>) {
 					]}
 				>
 					<Wordmark />
-					<span
-						mix={[
-							hstack({ gap: 4, align: "center" }),
-							text("sm"),
-							at("md", raw({ gap: "1.25rem" })),
-						]}
-					>
+					<span mix={[hstack({ gap: 5, align: "center" }), text("sm")]}>
 						<QuietLink href={routes.wakabaSupport.index.href()} label={copy.header.support} />
-						<span
-							mix={[raw({ display: "contents", "@media (max-width: 22rem)": { display: "none" } })]}
-						>
-							<QuietLink href={routes.wakabaPrivacy.href()} label={copy.header.privacy} />
-						</span>
-						{switchTo ? (
-							<a
-								href={switchTo.href}
-								hreflang={switchTo.locale}
-								lang={switchTo.locale}
-								aria-label={switchTo.label}
-								mix={[
-									fg("brand"),
-									weight("semibold"),
-									raw({ textDecoration: "none" }),
-									hover(fg("brand.emphasis")),
-									focusVisible(raw({ outline: "2px solid currentColor", outlineOffset: "4px" })),
-								]}
-							>
-								<span mix={[raw({ "@media (max-width: 30rem)": { display: "none" } })]}>
-									{switchTo.label}
-								</span>
-								<span
-									aria-hidden="true"
-									mix={[
-										raw({ display: "none", "@media (max-width: 30rem)": { display: "inline" } }),
-									]}
-								>
-									{switchTo.locale.slice(0, 2).toUpperCase()}
-								</span>
-							</a>
-						) : null}
+						<QuietLink href={routes.wakabaPrivacy.href()} label={copy.header.privacy} />
 					</span>
 				</nav>
 			</header>

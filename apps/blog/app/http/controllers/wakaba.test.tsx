@@ -112,7 +112,14 @@ describe("GET /apps/wakaba in Spanish", () => {
 		expect(html).not.toContain('src="/apps/wakaba/screenshots/en/path-kitsune.webp"');
 	});
 
-	test("lets ?lang= override the browser and links both languages for search engines", async () => {
+	test("keeps the language out of the header", async () => {
+		let html = await (await fetchPage("/apps/wakaba")).text();
+
+		expect(html).not.toContain(">Español<");
+		expect(html).not.toMatch(/<a [^>]*hreflang=/);
+	});
+
+	test("lets ?lang= override the browser and lists both languages for search engines", async () => {
 		let html = await (
 			await fetchPage("/apps/wakaba?lang=en", { "accept-language": "es-AR" })
 		).text();
@@ -120,7 +127,6 @@ describe("GET /apps/wakaba in Spanish", () => {
 		expect(html).toMatch(/<html lang="en"/);
 		expect(html).toContain('hreflang="es" href="https://sergiodxa.com/apps/wakaba?lang=es-AR"');
 		expect(html).toContain('hreflang="x-default" href="https://sergiodxa.com/apps/wakaba"');
-		expect(html).toMatch(/href="\/apps\/wakaba\?lang=es-AR"[^>]*hreflang="es-AR"/);
 	});
 
 	test("shows the languages card in the page's other language", async () => {

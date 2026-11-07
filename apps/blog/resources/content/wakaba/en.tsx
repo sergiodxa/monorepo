@@ -22,7 +22,6 @@ export const EN: WakabaCopy = {
 		socialCard: "branding/social-card.png",
 		socialCardAlt: "Wakaba: Grow with every session. A vermilion bonsai beside the 学 logo.",
 	},
-	switchLanguage: { label: "Español", locale: "es-AR" },
 	header: { support: "Support", privacy: "Privacy", navLabel: "Wakaba" },
 	footer: {
 		tagline: "Grow with every session. Japanese vocabulary practice for iPhone and iPad, for free.",

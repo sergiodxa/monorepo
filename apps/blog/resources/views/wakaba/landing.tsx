@@ -177,17 +177,17 @@ function Hero(handle: Handle) {
  * A slow vertical drift for something floating in the hero, offset by `delay` so neighbours
  * never move together. It runs only for readers who allow motion.
  */
-function drift(delay: string, distance = "0.5rem", seconds = 6) {
-	let name = `wakaba-drift-${distance.replace(".", "-")}`;
+function drift(delay: string) {
+	let name = "wakaba-drift";
 	return [
 		keyframes(name, {
 			"0%, 100%": { translate: "0 0" },
-			"50%": { translate: `0 -${distance}` },
+			"50%": { translate: "0 -0.5rem" },
 		}),
 		motionSafe(
 			raw({
 				animationName: name,
-				animationDuration: `${seconds}s`,
+				animationDuration: "6s",
 				animationTimingFunction: "ease-in-out",
 				animationIterationCount: "infinite",
 				animationDelay: delay,
@@ -199,8 +199,8 @@ function drift(delay: string, distance = "0.5rem", seconds = 6) {
 /**
  * The hero's picture: the learning path in front, a flashcard and a practice question fanned
  * behind it once the stage is wide enough, all real screens, over a vermilion sun cropped by
- * the stage's lower edge. Kitsune and Tanuki bob beside the phones and, on a wide stage, the
- * two widgets' content floats past, all paused by the frame's toggle.
+ * the stage's lower edge, with Kitsune and Tanuki beside them. On a wide stage the two
+ * widgets' content floats past, paused by the frame's toggle.
  *
  * @returns The render function producing the stage.
  */
@@ -260,7 +260,6 @@ function HeroStage(handle: Handle) {
 									"max(0rem, calc(50% - var(--phone) * 0.5 - min(9rem, 27cqi) * 0.72))",
 								inlineSize: "min(9rem, 27cqi)",
 							}),
-							drift("0s", "0.375rem", 4.5),
 						]}
 					>
 						<Mascot pose="kitsune-pointing" size="fill" tilt={-4} />
@@ -275,7 +274,6 @@ function HeroStage(handle: Handle) {
 									"max(0rem, calc(50% - var(--phone) * 0.5 - min(8rem, 24cqi) * 0.72))",
 								inlineSize: "min(8rem, 24cqi)",
 							}),
-							drift("-2.25s", "0.375rem", 4.5),
 						]}
 					>
 						<Mascot pose="tanuki-wave" size="fill" tilt={5} />

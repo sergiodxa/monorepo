@@ -53,8 +53,6 @@ export interface WakabaCopy {
 	/** The folder of the captures shot in this language, under `screenshots/` and `widgets/`. */
 	captures: "en" | "es";
 	meta: { title: string; description: string; socialCard: string; socialCardAlt: string };
-	/** The link to the same page in the other language, named in that language. */
-	switchLanguage: { label: string; locale: PageLocale };
 	header: { support: string; privacy: string; navLabel: string };
 	footer: {
 		tagline: string;

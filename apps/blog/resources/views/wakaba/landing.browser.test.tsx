@@ -91,21 +91,18 @@ describe("WakabaLandingContent in Spanish", () => {
 });
 
 describe("WakabaHeader", () => {
-	test("fits a 320px screen with the language link, in the longer Spanish labels", async () => {
+	test("fits a 320px screen in the longer Spanish labels", async () => {
 		await page.viewport(320, 800);
 		document.documentElement.className = "system wakaba";
 		mounted = render(
 			<WakabaLanguage copy={ES}>
-				<WakabaHeader switchTo={{ href: "/apps/wakaba?lang=en", label: "English", locale: "en" }} />
+				<WakabaHeader />
 			</WakabaLanguage>,
 		);
 
 		let nav = mounted.container.querySelector("nav");
 		expect(nav).not.toBeNull();
 		expect(nav && nav.scrollWidth).toBeLessThanOrEqual(nav?.clientWidth ?? 0);
-		expect(mounted.container.querySelector('a[hreflang="en"]')?.getAttribute("aria-label")).toBe(
-			"English",
-		);
 		await page.viewport(1280, 900);
 	});
 });
