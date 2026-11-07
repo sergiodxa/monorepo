@@ -57,10 +57,12 @@
 	--ui-landing-display-max: 4.75rem;
 	--ui-landing-section-space-hero: clamp(1.5rem, 0.8rem + 3cqi, 3rem);
 	--ui-landing-chapter-tracking: -0.01em;
-	--ui-landing-cta-radius: 9999px;
+	/* Apple's badge corner (8.4 of its 40 units) at the 48px the badge stands, so every
+	   button beside it reads as the same shape and height */
+	--ui-landing-cta-radius: 0.625rem;
 	--ui-landing-cta-height: 3rem;
 	--ui-landing-cta-weight: 600;
-	--ui-button-radius: 9999px;
+	--ui-button-radius: 0.625rem;
 	/* Eyebrows set like the card titles: small, semibold, uppercase, widely tracked */
 	--ui-landing-eyebrow-font: var(--ui-font-sans);
 	--ui-landing-eyebrow-transform: uppercase;
