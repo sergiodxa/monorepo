@@ -85,7 +85,7 @@ export interface WakabaCopy {
 	writing: CopyBand & { items: Array<string> };
 	details: CopyBand & {
 		items: Record<
-			"kanji-index" | "particle" | "phrases" | "practice-reminder" | "languages" | "add-word",
+			"kanji-index" | "particle" | "phrases" | "kana-tables" | "languages" | "add-word",
 			CopyItem & { alt: string }
 		>;
 	};

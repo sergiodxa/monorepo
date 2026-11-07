@@ -77,7 +77,7 @@ describe("GET /apps/wakaba", () => {
 			"en/kanji-index",
 			"en/particle",
 			"en/phrases",
-			"en/practice-reminder",
+			"en/hiragana",
 			"es/flashcards-water",
 			"en/add-word",
 		]) {

@@ -72,6 +72,25 @@ describe("WakabaLandingContent", () => {
 	});
 });
 
+describe("Swipe rows", () => {
+	test("snap one card at a time to the start, with no hint text under the row", () => {
+		document.documentElement.className = "system wakaba";
+		let host = document.createElement("div");
+		host.style.inlineSize = "390px";
+		document.body.appendChild(host);
+		mounted = render(<WakabaLandingContent />, { container: host });
+
+		let rows = Array.from(host.querySelectorAll<HTMLElement>("[data-swipe]"));
+		expect(rows.length).toBeGreaterThanOrEqual(3);
+		for (let row of rows) {
+			let card = row.querySelector("li");
+			expect(card && getComputedStyle(card).scrollSnapAlign).toContain("start");
+		}
+		expect(host.textContent).not.toContain("Swipe for more");
+		host.remove();
+	});
+});
+
 describe("Hero cards", () => {
 	test("stay hidden on a phone, where they would cover the screens", () => {
 		document.documentElement.className = "system wakaba";

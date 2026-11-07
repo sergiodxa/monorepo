@@ -1,7 +1,7 @@
 /**
  * Wakaba's landing in English: every heading, sentence and alt text the English page prints,
  * in the order the bands appear. The figures come from the app: its vocabulary, sentences,
- * levels, reminder hours and widget sizes.
+ * levels and widget sizes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -158,7 +158,7 @@ export const EN: WakabaCopy = {
 		),
 		items: [
 			"Animated stroke order for every kana and kanji",
-			"Hiragana and katakana tables to look things up",
+			"Kana practice offered from the path, with Tengu",
 		],
 	},
 	details: {
@@ -181,10 +181,10 @@ export const EN: WakabaCopy = {
 				body: "Real sentences for the words you learn, with the translation in your language.",
 				alt: "The phrases library: 2,134 sentences such as 水を下さい。, Water, please.",
 			},
-			"practice-reminder": {
-				title: "One quiet reminder",
-				body: "Once a day at the hour you pick, morning, noon, afternoon or evening. Or never.",
-				alt: "A notification on the Lock Screen: “A little Japanese today? Take a few minutes to practice your vocabulary.”",
+			"kana-tables": {
+				title: "Kana at a glance",
+				body: "Hiragana and katakana tables, each character with its romaji, to look up between sessions.",
+				alt: "The hiragana table: あ, い, う, え, お and the rest of the syllabary with their romaji.",
 			},
 			languages: {
 				title: "In English or Spanish",
@@ -240,7 +240,7 @@ export const EN: WakabaCopy = {
 		eyebrow: "Privacy",
 		title: "Your practice stays yours",
 		description:
-			"No account and nothing to sign in to. Wakaba keeps your practice on your device and your progress in your own iCloud.",
+			"No account. Your practice stays on your device, your progress in your own iCloud.",
 		checks: [
 			"No ads, analytics or tracking",
 			"Practice runs on your iPhone or iPad",

@@ -158,7 +158,7 @@ export const ES: WakabaCopy = {
 		),
 		items: [
 			"Orden de trazos animado para cada kana y kanji",
-			"Tablas de hiragana y katakana para consultar",
+			"Práctica de kana desde el camino, con Tengu",
 		],
 	},
 	details: {
@@ -181,10 +181,10 @@ export const ES: WakabaCopy = {
 				body: "Frases reales para las palabras que aprendes, con la traducción en tu idioma.",
 				alt: "La biblioteca de frases: 2134 frases como 水を下さい。, Agua, por favor.",
 			},
-			"practice-reminder": {
-				title: "Un recordatorio tranquilo",
-				body: "Una vez al día, a la hora que elijas: mañana, mediodía, tarde o noche. O nunca.",
-				alt: "Una notificación en la pantalla bloqueada que invita a practicar un poco de japonés hoy.",
+			"kana-tables": {
+				title: "Kana de un vistazo",
+				body: "Tablas de hiragana y katakana, cada carácter con su romaji, para consultar entre sesiones.",
+				alt: "La tabla de hiragana: あ, い, う, え, お y el resto del silabario con su romaji.",
 			},
 			languages: {
 				title: "En español o en inglés",
@@ -241,7 +241,7 @@ export const ES: WakabaCopy = {
 		eyebrow: "Privacidad",
 		title: "Tu práctica es tuya",
 		description:
-			"Sin cuenta y sin nada que iniciar. Wakaba guarda tu práctica en tu dispositivo y tu progreso en tu propio iCloud.",
+			"Sin cuenta. Tu práctica queda en tu dispositivo y tu progreso, en tu propio iCloud.",
 		checks: [
 			"Sin anuncios, analíticas ni rastreo",
 			"La práctica funciona en tu iPhone o iPad",

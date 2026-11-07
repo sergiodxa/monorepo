@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { ArrowDownIcon, ChevronDownIcon } from "@sdxc/icons";
 import { keyframes } from "@sdxc/u/animation";
-import { bg, fg } from "@sdxc/u/color";
+import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import {
@@ -29,7 +29,6 @@ import {
 } from "@sdxc/u/layout";
 import { at, motionSafe } from "@sdxc/u/responsive";
 import { is, m, maxIs, mi, p, pbe, pbs, pi } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
 import { font, leading, text, weight } from "@sdxc/u/typography";
 import { Accordion, HeadingScope, Link, LinkButton } from "@sdxc/ui";
 import {
@@ -42,14 +41,12 @@ import {
 	LandingHero,
 	LandingSection,
 	MotionLoop,
-	TabbedStage,
 } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { PageLocale } from "~/app/services/page-locale";
 import type { MascotPose } from "~/resources/views/wakaba/parts";
 
-import { PATH_ADVANCE_ANIMATION, PathAutoplay } from "~/resources/components/path-autoplay";
 import { inLanguage } from "~/resources/content/wakaba/pages";
 import { WakabaLayout } from "~/resources/layouts/wakaba";
 import { BonsaiBand } from "~/resources/views/wakaba/bonsai";
@@ -62,6 +59,7 @@ import {
 	WAKABA_COPY,
 	WakabaLanguage,
 } from "~/resources/views/wakaba/parts";
+import { PathBand, Swipeable } from "~/resources/views/wakaba/path";
 import routes from "~/routes/web";
 
 /** Types used by the landing's renderer. */
@@ -118,7 +116,7 @@ export function WakabaLandingContent(handle: Handle<{ locale?: PageLocale }>) {
 			<main>
 				<HeadingScope>
 					<Hero />
-					<LearningPath />
+					<PathBand />
 					<Companions />
 					<Flashcards />
 					<Exercises />
@@ -409,77 +407,6 @@ function FannedPhone(handle: Handle<FannedPhone.Props>) {
 	};
 }
 
-/**
- * The learning path as a tour: the four moments a word goes through, each beside its own
- * real screen, switched with native radios so the band keeps one height.
- *
- * @returns The render function producing the band.
- */
-function LearningPath(handle: Handle) {
-	return () => {
-		let t = copyOf(handle);
-		return (
-			<FeatureBand
-				id="path"
-				mix={[nearView(900)]}
-				layout="stage"
-				stageName="wakaba-path"
-				stageLabel={t.path.stageLabel}
-				eyebrow={t.path.eyebrow}
-				title={t.path.title}
-				description={
-					<>
-						{t.path.description}
-						<PathAutoplay />
-					</>
-				}
-			>
-				<TabbedStage.Item
-					mix={[pathStep(false)]}
-					value="meet"
-					defaultChecked
-					label={t.path.steps[0].title}
-					description={t.path.steps[0].body}
-				>
-					<StageScreen>
-						<Phone screen="new-word" />
-					</StageScreen>
-				</TabbedStage.Item>
-				<TabbedStage.Item
-					mix={[pathStep(false)]}
-					value="practise"
-					label={t.path.steps[1].title}
-					description={t.path.steps[1].body}
-				>
-					<StageScreen>
-						<Phone screen="practice-feedback" />
-					</StageScreen>
-				</TabbedStage.Item>
-				<TabbedStage.Item
-					mix={[pathStep(false)]}
-					value="exam"
-					label={t.path.steps[2].title}
-					description={t.path.steps[2].body}
-				>
-					<StageScreen>
-						<Phone screen="level-exam-path" />
-					</StageScreen>
-				</TabbedStage.Item>
-				<TabbedStage.Item
-					mix={[pathStep(true)]}
-					value="review"
-					label={t.path.steps[3].title}
-					description={t.path.steps[3].body}
-				>
-					<StageScreen>
-						<Phone screen="oni-mistakes" />
-					</StageScreen>
-				</TabbedStage.Item>
-			</FeatureBand>
-		);
-	};
-}
-
 /** The four companions in the order the path introduces them, each with the role it plays. */
 const COMPANIONS = [
 	{
@@ -643,30 +570,21 @@ function Exercises(handle: Handle) {
 				<LandingHeader eyebrow={t.exercises.eyebrow} description={t.exercises.description}>
 					{t.exercises.title}
 				</LandingHeader>
-				<ul
-					aria-label={t.exercises.listLabel}
-					mix={[
-						grid(),
-						gap(4),
-						m(0),
-						p(0),
-						raw({
-							listStyle: "none",
-							gridAutoFlow: "column",
-							gridAutoColumns: "minmax(11rem, 1fr)",
-							overflowX: "auto",
-							scrollSnapType: "x mandatory",
-							scrollPaddingInline: "0",
-							paddingBlockEnd: "0.5rem",
-						}),
-					]}
+				<Swipeable
+					label={t.exercises.listLabel}
+					column="82%"
+					fitsFrom="60rem"
+					fitColumn="minmax(0, 1fr)"
 				>
 					{EXERCISE_SCREENS.map((screen, index) => (
 						<li
 							key={screen}
 							mix={[
 								vstack({ gap: 3, align: "stretch" }),
-								raw({ scrollSnapAlign: "start", minInlineSize: "0" }),
+								maxIs("16rem"),
+								mi("auto"),
+								is("full"),
+								raw({ minInlineSize: "0" }),
 							]}
 						>
 							<Phone screen={screen} />
@@ -678,78 +596,10 @@ function Exercises(handle: Handle) {
 							</span>
 						</li>
 					))}
-				</ul>
+				</Swipeable>
 			</LandingSection>
 		);
 	};
-}
-
-/** Seconds each step of the path tour stays before the next one takes over. */
-const PATH_STEP_SECONDS = 7;
-
-/**
- * The progress line a path step grows down the rail while it is active, from its dot to the
- * next one, in the brand ink. It runs only while the tour plays on screen and the reader
- * allows motion, and holds still while the pointer or focus is in the tour; its end is what
- * advances the tour.
- *
- * @param last Whether the step is the last, whose line stops at the end of the rail.
- */
-function pathStep(last: boolean) {
-	let line = `[data-autoplay] & > input:checked + label::after`;
-	return [
-		keyframes(PATH_ADVANCE_ANIMATION, {
-			from: { scale: "1 0" },
-			to: { scale: "1 1" },
-		}),
-		motionSafe(
-			when(line, [
-				bg("brand.solid"),
-				raw({
-					content: '""',
-					position: "absolute",
-					insetInlineStart: "-1.5px",
-					inlineSize: "2px",
-					insetBlockStart: "1.625rem",
-					insetBlockEnd: last ? "0" : "-1.625rem",
-					transformOrigin: "50% 0",
-					animationName: PATH_ADVANCE_ANIMATION,
-					animationDuration: `${PATH_STEP_SECONDS}s`,
-					animationTimingFunction: "linear",
-					animationFillMode: "forwards",
-				}),
-			]),
-		),
-		when(
-			`[data-slot="tabbed-stage"]:is(:hover, :focus-within) & > input:checked + label::after`,
-			raw({ animationPlayState: "paused" }),
-		),
-	];
-}
-
-/**
- * Sets a tour screen on a sun-tinted panel at a phone's width, so every stop of the tour
- * fills the stage at the same size.
- *
- * @param handle Runtime handle carrying the framed screen.
- * @returns The render function producing the centered screen.
- */
-function StageScreen(handle: Handle<{ children: RemixNode }>) {
-	return () => (
-		<div
-			mix={[
-				is("full"),
-				rounded("xl"),
-				raw({
-					paddingBlock: "clamp(1.5rem, 5cqi, 3rem)",
-					paddingInline: "clamp(2rem, 12cqi, 6rem)",
-					backgroundColor: "var(--wakaba-sun)",
-				}),
-			]}
-		>
-			<div mix={[maxIs("16rem"), mi("auto"), is("full")]}>{handle.props.children}</div>
-		</div>
-	);
 }
 
 /**
@@ -809,7 +659,7 @@ const DETAILS = [
 	{ key: "kanji-index", screen: "kanji-index", tint: "tengu", focus: "0%" },
 	{ key: "particle", screen: "particle", tint: "kitsune", focus: "0%" },
 	{ key: "phrases", screen: "phrases", tint: "sky", focus: "0%" },
-	{ key: "practice-reminder", screen: "practice-reminder", tint: "plum", focus: "banner" },
+	{ key: "kana-tables", screen: "hiragana", tint: "plum", focus: "0%" },
 	{ key: "languages", screen: "flashcards-water", tint: "oni", focus: "55%" },
 	{ key: "add-word", screen: "add-word", tint: "tanuki", focus: "0%" },
 ] as const;
@@ -820,10 +670,7 @@ namespace DetailScreen {
 		screen: string;
 		/** The folder of the language the capture was shot in. */
 		captures: "en" | "es";
-		/**
-		 * Which part of a full screen the card shows, as a vertical position, or `banner` for
-		 * a notification capture shown whole.
-		 */
+		/** Which part of the screen the card shows, as a vertical position. */
 		focus: string;
 		alt: string;
 	}
@@ -831,7 +678,7 @@ namespace DetailScreen {
 
 /**
  * The real screen leading a bento card: the top of a full screenshot cropped to one height
- * and fading out below, or a notification banner shown whole in the same space.
+ * and fading out below.
  *
  * @param handle Runtime handle carrying the screen, its crop and its alt text.
  * @returns The render function producing the screen.
@@ -840,32 +687,6 @@ function DetailScreen(handle: Handle<DetailScreen.Props>) {
 	return () => {
 		let { alt, captures, focus, screen } = handle.props;
 		let src = `${WAKABA_ASSETS}/screenshots/${captures}/${screen}.webp`;
-
-		if (focus === "banner") {
-			return (
-				<div
-					mix={[grid(), raw({ blockSize: "15.5rem", placeItems: "center", paddingInline: "8%" })]}
-				>
-					<img
-						src={src}
-						alt={alt}
-						width={560}
-						height={113}
-						loading="lazy"
-						decoding="async"
-						mix={[
-							block(),
-							is("full"),
-							raw({
-								blockSize: "auto",
-								borderRadius: "1rem",
-								boxShadow: "0 12px 24px -12px rgb(0 0 0 / 0.35)",
-							}),
-						]}
-					/>
-				</div>
-			);
-		}
 
 		return (
 			<div mix={[raw({ paddingInline: "12%", paddingBlockStart: "1.5rem" })]}>
@@ -985,33 +806,41 @@ function Widgets(handle: Handle) {
 				</LandingHeader>
 				<div
 					mix={[
-						grid(),
-						gap(6),
-						gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
 						mi("auto"),
 						is("full"),
 						raw({
 							maxInlineSize: "36rem",
-							"@container (min-width: 60rem)": { maxInlineSize: "64rem", columnGap: "1.5rem" },
+							"@container (min-width: 60rem)": { maxInlineSize: "64rem" },
 						}),
 					]}
 				>
-					<WidgetShot
-						side="start"
-						mascot="tanuki-celebrate"
-						screen="widget-progress"
-						title={t.widgets.progress.title}
-						sizes={t.widgets.progress.sizes}
-						body={t.widgets.progress.body}
-					/>
-					<WidgetShot
-						side="end"
-						mascot="tengu-teaching"
-						screen="widget-word"
-						title={t.widgets.word.title}
-						sizes={t.widgets.word.sizes}
-						body={t.widgets.word.body}
-					/>
+					<Swipeable
+						label={t.widgets.title}
+						column="82%"
+						fitsFrom="36rem"
+						fitColumn="minmax(0, 1fr)"
+					>
+						<li mix={[raw({ minInlineSize: "0" })]}>
+							<WidgetShot
+								side="start"
+								mascot="tanuki-celebrate"
+								screen="widget-progress"
+								title={t.widgets.progress.title}
+								sizes={t.widgets.progress.sizes}
+								body={t.widgets.progress.body}
+							/>
+						</li>
+						<li mix={[raw({ minInlineSize: "0" })]}>
+							<WidgetShot
+								side="end"
+								mascot="tengu-teaching"
+								screen="widget-word"
+								title={t.widgets.word.title}
+								sizes={t.widgets.word.sizes}
+								body={t.widgets.word.body}
+							/>
+						</li>
+					</Swipeable>
 				</div>
 			</LandingSection>
 		);
@@ -1064,7 +893,10 @@ function WidgetShot(handle: Handle<WidgetShot.Props>) {
 				<div
 					mix={[
 						raw({
-							"@container (min-width: 60rem)": { order: start ? "2" : "1" },
+							inlineSize: "100%",
+							maxInlineSize: "16rem",
+							marginInline: "auto",
+							"@container (min-width: 60rem)": { order: start ? "2" : "1", maxInlineSize: "none" },
 						}),
 					]}
 				>
@@ -1108,6 +940,7 @@ function WidgetShot(handle: Handle<WidgetShot.Props>) {
 /**
  * Privacy as plain facts, each one checked against the app's code: no account, practice on
  * the device, progress in the learner's own iCloud and speech recognised on the device.
+ * Kitsune sits on the card's corner on a wide band and beside the title on a narrow one.
  *
  * @returns The render function producing the band.
  */
@@ -1124,19 +957,41 @@ function Privacy(handle: Handle) {
 						raw({ alignItems: "center" }),
 					]}
 				>
-					<LandingHeader
-						eyebrow={t.privacy.eyebrow}
-						description={
-							<>
-								{t.privacy.description}{" "}
-								<Link href={inLanguage(routes.wakabaPrivacy.href(), t.locale)}>
-									{t.header.privacy}
-								</Link>
-							</>
-						}
+					<div
+						mix={[
+							raw({
+								display: "flex",
+								alignItems: "start",
+								gap: "1rem",
+								"--ui-landing-header-end": "0",
+							}),
+						]}
 					>
-						{t.privacy.title}
-					</LandingHeader>
+						<div
+							mix={[
+								raw({
+									flexShrink: "0",
+									paddingBlockStart: "1.5rem",
+									"@container (min-width: 48rem)": { display: "none" },
+								}),
+							]}
+						>
+							<Mascot pose="kitsune-study" size="sm" tilt={-3} />
+						</div>
+						<LandingHeader
+							eyebrow={t.privacy.eyebrow}
+							description={
+								<>
+									{t.privacy.description}{" "}
+									<Link href={inLanguage(routes.wakabaPrivacy.href(), t.locale)}>
+										{t.header.privacy}
+									</Link>
+								</>
+							}
+						>
+							{t.privacy.title}
+						</LandingHeader>
+					</div>
 					<div
 						mix={[
 							p(6),
@@ -1147,7 +1002,13 @@ function Privacy(handle: Handle) {
 					>
 						<div
 							mix={[
-								raw({ position: "absolute", insetBlockStart: "-3.5rem", insetInlineEnd: "1rem" }),
+								raw({
+									display: "none",
+									position: "absolute",
+									insetBlockStart: "-3.5rem",
+									insetInlineEnd: "1rem",
+									"@container (min-width: 48rem)": { display: "block" },
+								}),
 							]}
 						>
 							<Mascot pose="kitsune-study" size="md" tilt={3} />
@@ -1179,9 +1040,11 @@ function Questions(handle: Handle) {
 				columns={2}
 				eyebrow={t.faq.eyebrow}
 				title={
-					<span mix={[hstack({ gap: 3, align: "end" })]}>
+					<span mix={[raw({ display: "inline-flex", alignItems: "center", gap: "0.75rem" })]}>
 						{t.faq.title}
-						<Mascot pose="tengu-welcome" size="sm" tilt={6} />
+						<span mix={[raw({ flexShrink: "0", marginBlock: "-1rem" })]}>
+							<Mascot pose="tengu-welcome" size="sm" tilt={6} />
+						</span>
 					</span>
 				}
 			>
@@ -1236,6 +1099,7 @@ function Download(handle: Handle) {
 		return (
 			<ClosingCta
 				id="download"
+				spacing="compact"
 				tone="tinted"
 				inset
 				eyebrow={<CelebratingCompanions />}
@@ -1262,7 +1126,13 @@ function Download(handle: Handle) {
  */
 function CelebratingCompanions() {
 	return () => (
-		<span mix={[hstack({ gap: 0, align: "end", justify: "center" }), pbs(2)]}>
+		<span
+			mix={[
+				hstack({ gap: 0, align: "end", justify: "center" }),
+				pbs(2),
+				raw({ marginBlockEnd: "1rem" }),
+			]}
+		>
 			<Mascot pose="kitsune-celebrate" size="sm" tilt={-8} />
 			<Mascot pose="tanuki-celebrate" size="sm" tilt={4} />
 			<Mascot pose="oni-checkpoint" size="sm" />

@@ -50,8 +50,8 @@ export function BonsaiBand(handle: Handle) {
 					mix={[
 						grid(),
 						gap(6),
-						at("lg", gridTemplate({ columns: "minmax(0, 3fr) minmax(0, 2fr)" })),
-						raw({ alignItems: "center" }),
+						at("lg", gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" })),
+						raw({ alignItems: "end" }),
 					]}
 				>
 					<BonsaiTimelapse />
@@ -157,7 +157,7 @@ function BonsaiTimelapse(handle: Handle) {
 							mix={[
 								gridArea("1 / 1"),
 								is("full"),
-								maxIs("22rem"),
+								maxIs("14rem"),
 								raw({
 									aspectRatio: "1",
 									borderRadius: "50%",
@@ -178,7 +178,7 @@ function BonsaiTimelapse(handle: Handle) {
 										vstack({ gap: 2, align: "center" }),
 										m(0),
 										is("full"),
-										maxIs("26rem"),
+										maxIs("16rem"),
 										raw({ opacity: final ? "1" : "0" }),
 										keyframes(name, stageFrames(index)),
 										motionSafe(
