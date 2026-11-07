@@ -98,7 +98,7 @@ describe("flowcharts", () => {
 			).length;
 
 		expect(shapes("A[rect]")[0]?.name).toBe("rect");
-		expect(shapes("A(round)")[0]?.attributes.rx).toBe("8");
+		expect(shapes("A(round)")[0]?.attributes.rx).toBe("12");
 		expect(Number(shapes("A([stadium])")[0]?.attributes.rx)).toBeGreaterThan(8);
 		expect(shapes("A((circle))")[0]?.name).toBe("circle");
 		expect(
@@ -199,6 +199,50 @@ describe("flowcharts", () => {
 			"flowchart LR\nA:::hot --> B\nclassDef hot fill:#f00\nclass A hot\nstyle B stroke:#333\nlinkStyle 0 stroke:red\nclick A callback";
 
 		expect(texts(source)).toEqual(expect.arrayContaining(["A", "B"]));
+	});
+
+	test("tints a node marked accent or muted, from ::: or class", () => {
+		let viaMark = "flowchart LR\nA[Primary]:::accent --> B[Quiet]:::muted --> C[Plain]";
+		let viaClass = "flowchart LR\nA[Primary] --> B[Quiet]\nclass A accent\nclass B muted";
+
+		for (let source of [viaMark, viaClass]) {
+			let shapes = elements(source).filter((node) => node.name === "rect");
+			expect(shapes.some((node) => node.attributes.style?.includes("diagram-accent-fill"))).toBe(
+				true,
+			);
+			expect(shapes.some((node) => node.attributes.style?.includes("diagram-muted-fill"))).toBe(
+				true,
+			);
+			expect(shapes.some((node) => node.attributes.stroke?.includes("diagram-accent"))).toBe(true);
+		}
+	});
+
+	test("tints a subgraph marked accent on the declaration or by class", () => {
+		let viaMark = "flowchart TD\nsubgraph APP:::accent [Application]\nA\nend\nB --> A";
+		let viaClass = "flowchart TD\nsubgraph APP [Application]\nA\nend\nB --> A\nclass APP accent";
+
+		for (let source of [viaMark, viaClass]) {
+			let frame = elements(source).find(
+				(node) => node.name === "rect" && node.attributes.style?.includes("diagram-accent-fill"),
+			);
+			expect(frame?.attributes.rx).toBe("14");
+			expect(frame?.attributes.stroke).toContain("diagram-accent");
+		}
+	});
+
+	test("draws an author title above the chart as well as the accessible name", () => {
+		let source = "flowchart LR\ntitle Server architecture\nA --> B";
+		let labels = elements(source).filter(
+			(node) =>
+				node.name === "text" &&
+				node.children.some(
+					(child) => child.type === "text" && child.value === "Server architecture",
+				),
+		);
+
+		expect(labels).toHaveLength(1);
+		expect(labels[0]?.attributes["font-weight"]).toBe("bold");
+		expect(texts(source)).toEqual(expect.arrayContaining(["Server architecture", "A", "B"]));
 	});
 
 	test("draws a subgraph around the nodes named in it, wherever they were first named", () => {

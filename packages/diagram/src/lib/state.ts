@@ -14,11 +14,11 @@ import type { DiagramSource, Statement } from "./source.js";
 import type { SvgElement, SvgNode } from "./tree.js";
 
 import { layoutCompound } from "./compound.js";
-import { backedLabel, connector, label, rect, svgRoot, translate } from "./draw.js";
+import { backedLabel, connector, label, rect, svgRoot, titleBand, translate } from "./draw.js";
 import { DiagramError } from "./errors.js";
 import { clip } from "./geometry.js";
 import { unquote } from "./source.js";
-import { BACKGROUND, STROKE, TINT } from "./style.js";
+import { BACKGROUND, GROUP_RADIUS, NODE_RADIUS, STROKE, TINT } from "./style.js";
 import { LINE_HEIGHT, blockSize, splitLines } from "./text.js";
 import { element, num } from "./tree.js";
 
@@ -59,7 +59,7 @@ const TRANSITION = new RegExp(
 const STYLING = /^(classDef|class|style)\s/;
 
 /** Space around the whole drawing. */
-const MARGIN = 8;
+const MARGIN = 16;
 
 /** The scope of the top level, which no state may take as its id. */
 const ROOT = "";
@@ -305,11 +305,11 @@ function draw(diagram: DiagramSource, model: Model): SvgElement {
 		let top = box.y - box.height / 2;
 		let left = box.x - box.width / 2;
 		let header = blockSize(state.lines).height + 14;
-		back.push(rect(left, top, box.width, box.height, { style: BACKGROUND, radius: 8 }));
-		back.push(label(state.lines, box.x, top + header / 2));
+		back.push(rect(left, top, box.width, box.height, { style: TINT, radius: GROUP_RADIUS }));
+		back.push(label(state.lines, box.x, top + header / 2, { bold: true, muted: true }));
 		back.push(
 			element("path", {
-				d: `M${num(left)} ${num(top + header)} H${num(left + box.width)}`,
+				d: `M${num(left + 12)} ${num(top + header)} H${num(left + box.width - 12)}`,
 				...STROKE,
 				fill: "none",
 			}),
@@ -362,12 +362,17 @@ function draw(diagram: DiagramSource, model: Model): SvgElement {
 		shapes.push(label(note.lines, box.x, box.y));
 	}
 
+	let width = layout.width + 2 * MARGIN;
+	let band = titleBand(diagram.title, width);
 	return svgRoot(
-		layout.width + 2 * MARGIN,
-		layout.height + 2 * MARGIN,
+		width,
+		layout.height + 2 * MARGIN + band.height,
 		diagram.title ?? "State diagram",
 		diagram.description,
-		[translate(MARGIN, MARGIN, [...back, ...lines, ...shapes, ...labels])],
+		[
+			...band.nodes,
+			translate(MARGIN, MARGIN + band.height, [...back, ...lines, ...shapes, ...labels]),
+		],
 	);
 }
 
@@ -436,7 +441,7 @@ function drawState(state: State, box: Box): SvgNode[] {
 
 	let name = blockSize(state.lines).height + 16;
 	let nodes: SvgNode[] = [
-		rect(left, top, box.width, box.height, { style: BACKGROUND, radius: 8 }),
+		rect(left, top, box.width, box.height, { style: BACKGROUND, radius: NODE_RADIUS }),
 		label(state.lines, box.x, top + name / 2),
 	];
 	if (state.descriptions.length > 0) {

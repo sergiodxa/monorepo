@@ -139,7 +139,7 @@ describe("state diagrams", () => {
 			"[*] --> Active\nstate Active {\n[*] --> Working\nWorking --> Paused\n}\nActive --> Done";
 		let frame = elements(body).find(
 			(node) =>
-				node.name === "rect" && node.attributes.rx === "8" && Number(node.attributes.height) > 100,
+				node.name === "rect" && node.attributes.rx === "14" && Number(node.attributes.height) > 100,
 		);
 		let top = Number(frame?.attributes.y);
 
