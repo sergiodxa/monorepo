@@ -10,6 +10,7 @@
 /** Every package with a command line, by name, with what its command line does. */
 export const PACKAGE_COMMAND_LINES: Readonly<Record<string, string>> = {
 	bench: "bundle-weight budgets and HTTP latency samples against a running URL",
+	blueprint: "generate files from the .stub blueprints in .config/blueprint",
 	ci: "run a CI script locally or on a CI host, and sign green commits off on GitHub",
 	cron: "upcoming runs, descriptions and validation for cron schedules",
 	crypto: "tokens, digests, MACs, one-time codes and password hashes",
