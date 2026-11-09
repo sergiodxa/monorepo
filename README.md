@@ -328,6 +328,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | Package                                                   | Description                                                                                                    |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | [@sdxc/cli](packages/cli)                                 | Build command-line tools with generated help, prompts bound to flags, tasks and a test harness                 |
+| [@sdxc/blueprint](packages/blueprint)                     | Generate files from .stub templates with placeholders, filters and blocks, in code or with sdxc-blueprint      |
 | [@sdxc/data-model](packages/data-model)                   | Models over remix/data-table tables with scopes, async callbacks and typed meta fields                         |
 | [@sdxc/database-middleware](packages/database-middleware) | Middleware that publishes a remix/data-table database as ctx.db on a request, a job or a command               |
 | [@sdxc/dates](packages/dates)                             | Zone-aware date operations with Intl-only formatting                                                           |

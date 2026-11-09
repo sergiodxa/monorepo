@@ -786,6 +786,21 @@
         "@sdxc/cli",
       ],
     },
+    "packages/blueprint": {
+      "name": "@sdxc/blueprint",
+      "version": "0.0.1",
+      "bin": {
+        "sdxc-blueprint": "./src/cli.ts",
+      },
+      "dependencies": {
+        "@sdxc/cli": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/strings": "workspace:*",
+        "@sdxc/yaml": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.2.0",
+      },
+    },
     "packages/bracket-params": {
       "name": "@sdxc/bracket-params",
       "version": "0.0.1",
@@ -3333,6 +3348,8 @@
     "@sdxc/bench": ["@sdxc/bench@workspace:packages/bench"],
 
     "@sdxc/billing": ["@sdxc/billing@workspace:packages/billing"],
+
+    "@sdxc/blueprint": ["@sdxc/blueprint@workspace:packages/blueprint"],
 
     "@sdxc/bracket-params": ["@sdxc/bracket-params@workspace:packages/bracket-params"],
 

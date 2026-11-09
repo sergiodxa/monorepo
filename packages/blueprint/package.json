@@ -1,0 +1,24 @@
+{
+	"name": "@sdxc/blueprint",
+	"version": "0.0.1",
+	"description": "Generate files from .stub templates with placeholders, filters and blocks, in code or with sdxc-blueprint",
+	"license": "MIT",
+	"bin": {
+		"sdxc-blueprint": "./src/cli.ts"
+	},
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/cli": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/strings": "workspace:*",
+		"@sdxc/yaml": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"remix": "3.2.0"
+	}
+}
