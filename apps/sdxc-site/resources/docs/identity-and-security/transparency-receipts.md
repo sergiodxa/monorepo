@@ -2,9 +2,9 @@
 title: Publish transparent statements with SCITT
 description: Sign a statement about a release, register it with a SCITT Transparency Service, attach the Receipt, and verify a Transparent Statement offline before trusting what it says.
 section:
-    title: Identity & security
-    order: 6
-order: 16
+    title: Security
+    order: 6.5
+order: 9
 lastUpdated: 2026-10-25
 outcomes:
     - "How to sign a SCITT Signed Statement about a release with an `@sdxc/jwt` key"

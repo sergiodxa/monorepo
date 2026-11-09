@@ -2,9 +2,9 @@
 title: Generate files
 description: Write a controller, job, model, migration or any other kind of file where the app layout puts it, declared, mapped and tested, with sdxc make.
 section:
-    title: The sdxc command
-    order: 2
-order: 2
+    title: Generate files
+    order: 2.5
+order: 1
 lastUpdated: 2026-10-25
 outcomes:
     - "Which file each `sdxc make` kind writes, and what it edits to wire the file in"

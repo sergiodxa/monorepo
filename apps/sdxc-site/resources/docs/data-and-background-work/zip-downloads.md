@@ -2,9 +2,9 @@
 title: Stream several files as a ZIP
 description: Bundle generated text, CSV streams and stored files into one ZIP download that starts at once, holds one entry in memory at a time, and refuses entry names an unarchiver would write outside its folder.
 section:
-    title: Data & background work
-    order: 7
-order: 17
+    title: File & data formats
+    order: 7.6
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to bundle text, CSV streams and stored files into one ZIP with `@sdxc/zip`"

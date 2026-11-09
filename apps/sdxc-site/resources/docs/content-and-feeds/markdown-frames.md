@@ -2,9 +2,9 @@
 title: Load live regions into markdown
 description: Write a frame tag in a markdown document to hold a region a route renders per request, such as an interactive island, while the prose around it stays parsed once and cached.
 section:
-    title: Content & feeds
+    title: Markdown
     order: 8
-order: 32
+order: 4
 lastUpdated: 2026-10-25
 outcomes:
     - "How to write a frame tag that holds a region a route renders per request"

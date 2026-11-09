@@ -2,7 +2,7 @@
 title: "Wire the router: middleware, context and services"
 description: Build the global middleware chain once, publish services onto the request context, and let tests swap them.
 section:
-    title: Building Remix apps
+    title: Routing & forms
     order: 4
 order: 1
 lastUpdated: 2026-10-25

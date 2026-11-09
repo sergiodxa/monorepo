@@ -2,9 +2,9 @@
 title: Retry on a growing delay
 description: Wait longer after each failure, with a ceiling and jitter, in queue jobs, in-process retries, polled rows and sign-in lockouts.
 section:
-    title: Data & background work
-    order: 7
-order: 9
+    title: Jobs, email & alerts
+    order: 7.3
+order: 2
 lastUpdated: 2026-10-25
 outcomes:
     - "How to build one backoff schedule with `@sdxc/backoff` and honor `Retry-After`"

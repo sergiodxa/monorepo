@@ -2,9 +2,9 @@
 title: Full-text search over SQLite
 description: Keep an FTS5 index beside the tables you already have, parse what a reader types without a syntax error, rank title matches above body matches, highlight them, and page the results.
 section:
-    title: Data & background work
+    title: Data & billing
     order: 7
-order: 18
+order: 4
 lastUpdated: 2026-10-25
 outcomes:
     - "How to keep an FTS5 index beside your tables with `@sdxc/search`"

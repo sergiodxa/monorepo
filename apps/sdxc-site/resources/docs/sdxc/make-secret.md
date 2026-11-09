@@ -2,9 +2,9 @@
 title: Make a secret
 description: Declare a secret the Worker reads from env with sdxc make secret, which writes its bindings.secret() and its .env.example line, then give it values for development, tests and production.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.16
+    title: Generate files
+    order: 2.5
+order: 19
 lastUpdated: 2026-10-25
 outcomes:
     - "What `make secret` writes, and the two places it leaves to you"

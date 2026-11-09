@@ -4,7 +4,7 @@ description: Copy an @sdxc/ui component into your project to edit it, see how a 
 section:
     title: The sdxc command
     order: 2
-order: 4
+order: 2
 lastUpdated: 2026-10-19
 outcomes:
     - "How to copy an `@sdxc/ui` component into your project and edit it"

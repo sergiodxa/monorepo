@@ -2,9 +2,9 @@
 title: Dates, text and identifiers
 description: Mint prefixed record IDs, slug and summarize titles, show dates in the viewer's zone, and compare client versions.
 section:
-    title: Building Remix apps
+    title: Routing & forms
     order: 4
-order: 6
+order: 5
 lastUpdated: 2026-11-01
 outcomes:
     - "How to mint prefixed record IDs and keep UUIDs typed below the edge"

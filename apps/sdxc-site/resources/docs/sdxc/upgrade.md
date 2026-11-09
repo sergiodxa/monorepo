@@ -4,7 +4,7 @@ description: Move every @sdxc package to a newer release, catch up the ones that
 section:
     title: The sdxc command
     order: 2
-order: 5
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to move every `@sdxc` package to a newer release, or catch up the ones that lag"

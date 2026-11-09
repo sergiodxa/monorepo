@@ -2,9 +2,9 @@
 title: Import and export DNS zone files
 description: Read a pasted BIND zone file into typed records with every unusable line reported, check them against live DNS, and hand the zone back as a file.
 section:
-    title: Data & background work
-    order: 7
-order: 15
+    title: File & data formats
+    order: 7.6
+order: 11
 lastUpdated: 2026-11-01
 outcomes:
     - "How to read a pasted BIND zone file into typed records with `@sdxc/zone-file`"

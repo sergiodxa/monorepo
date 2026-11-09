@@ -2,9 +2,9 @@
 title: Address JSON with JSON Pointer
 description: Parse, stringify, get and set RFC 6901 JSON Pointers, so a member named a/b still points at itself in a problem, a schema path or a patch.
 section:
-    title: HTTP APIs
-    order: 5
-order: 6
+    title: File & data formats
+    order: 7.6
+order: 4
 lastUpdated: 2026-10-25
 outcomes:
     - "How to parse and stringify RFC 6901 pointers with `@sdxc/json-pointer`"

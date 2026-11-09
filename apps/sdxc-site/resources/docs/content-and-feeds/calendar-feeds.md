@@ -2,9 +2,9 @@
 title: Publish calendar feeds
 description: Serve your events as an iCalendar feed people subscribe to, with time zones and recurrence, and read uploaded .ics files back.
 section:
-    title: Content & feeds
-    order: 8
-order: 4
+    title: Feeds & federation
+    order: 8.3
+order: 2
 lastUpdated: 2026-11-01
 outcomes:
     - "How to serve your events as an iCalendar feed people subscribe to"

@@ -2,9 +2,9 @@
 title: Fetch URLs a stranger chose
 description: Refuse private hosts at the endpoint, fetch in a job under one deadline and a byte cap on every redirect, and cap a request body before you read it.
 section:
-    title: Identity & security
-    order: 6
-order: 11
+    title: Security
+    order: 6.5
+order: 5
 lastUpdated: 2026-10-25
 outcomes:
     - "How to refuse private hosts at the endpoint before a URL is stored"

@@ -2,9 +2,9 @@
 title: Render TeX math
 description: Turn TeX formulas in markdown and in components into MathML the browser draws natively, with broken formulas caught at build time.
 section:
-    title: Content & feeds
-    order: 8
-order: 30
+    title: Images & documents
+    order: 8.6
+order: 6
 lastUpdated: 2026-10-25
 outcomes:
     - "How to convert TeX formulas into MathML with `@sdxc/math`"

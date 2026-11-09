@@ -2,9 +2,9 @@
 title: Generate PDF documents
 description: Write an invoice as a PDF inside a Worker, with an embedded font, a logo, right-aligned amounts, a wrapped paragraph holding a link, and terms that flow onto as many pages as they need, and serve it as a download.
 section:
-    title: Content & feeds
-    order: 8
-order: 21
+    title: Images & documents
+    order: 8.6
+order: 8
 lastUpdated: 2026-10-26
 outcomes:
     - "How to create a PDF with an embedded font and an image using `@sdxc/pdf`"

@@ -2,9 +2,9 @@
 title: Canonical URLs, lazy routes and header fields
 description: Redirect to one canonical host and path, end a request with a thrown Response, load routes on demand, and read structured header fields.
 section:
-    title: Building Remix apps
+    title: Routing & forms
     order: 4
-order: 7
+order: 4
 lastUpdated: 2026-10-25
 outcomes:
     - "How to redirect to one canonical host and path with the trailing-slash and no-www middleware"

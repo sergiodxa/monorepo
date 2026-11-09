@@ -2,9 +2,9 @@
 title: Make a policy
 description: Add a resource's create, read, update and delete abilities to the app's catalog and grant them in its policy with sdxc make policy, with the test that decides them.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.09
+    title: Generate files
+    order: 2.5
+order: 12
 lastUpdated: 2026-10-25
 outcomes:
     - "How `make policy` adds a resource's abilities to the catalog"

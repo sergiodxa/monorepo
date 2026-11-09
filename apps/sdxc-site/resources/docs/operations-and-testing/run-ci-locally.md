@@ -2,9 +2,9 @@
 title: Run CI on your machine
 description: Write your app's CI as a TypeScript script, run it with sdxc ci before you push, and let GitHub Actions skip its own run for a commit you already signed off.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 2.6
+order: 6
 lastUpdated: 2026-11-04
 outcomes:
     - "How to write a CI script with steps, parallel groups and a matrix over workspaces"

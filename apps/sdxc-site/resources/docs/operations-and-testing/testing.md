@@ -2,9 +2,9 @@
 title: Test Workers apps
 description: Vitest through Vite+, real bindings in the Workers pool, in-memory mocks, and MSW for outbound HTTP.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 3
+order: 2
 lastUpdated: 2026-10-25
 outcomes:
     - "How the template runs Vitest through Vite+"

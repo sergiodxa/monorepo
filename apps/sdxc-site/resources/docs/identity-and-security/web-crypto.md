@@ -2,9 +2,9 @@
 title: Hash, sign and encrypt with Web Crypto
 description: Reset links backed by hashed tokens, scrypt passwords, HMAC-signed links and secrets sealed at rest with AES-GCM.
 section:
-    title: Identity & security
-    order: 6
-order: 7
+    title: Security
+    order: 6.5
+order: 4
 lastUpdated: 2026-11-01
 outcomes:
     - "How to pick the Web Crypto primitive by what happens to the value next"

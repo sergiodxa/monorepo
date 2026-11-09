@@ -2,9 +2,9 @@
 title: Make an email
 description: Write an email with sdxc make email, its props declared from the fields you name, its template mapped on the email registry, and the test that renders it.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.11
+    title: Generate files
+    order: 2.5
+order: 14
 lastUpdated: 2026-10-25
 outcomes:
     - "How fields become an email's props, subject and body"

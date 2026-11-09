@@ -2,9 +2,9 @@
 title: Keyboard shortcuts
 description: Bind page-wide keys with keymap(), print each hint in the reader's own key caps, list them in a shortcuts panel, and announce what a key did.
 section:
-    title: Building Remix apps
-    order: 4
-order: 11
+    title: Interface
+    order: 4.5
+order: 5
 lastUpdated: 2026-10-25
 outcomes:
     - "How to bind page-wide keys with `keymap()` from one combo definition"

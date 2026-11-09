@@ -2,9 +2,9 @@
 title: Background jobs and cron
 description: Declare jobs once, enqueue them from handlers, run them on Cloudflare Queues and cron triggers, and validate schedules users type.
 section:
-    title: Data & background work
-    order: 7
-order: 4
+    title: Jobs, email & alerts
+    order: 7.3
+order: 1
 lastUpdated: 2026-11-01
 outcomes:
     - "How to declare jobs once and write handlers with `@sdxc/jobs`"

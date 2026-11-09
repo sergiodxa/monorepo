@@ -2,9 +2,9 @@
 title: Rules your users write
 description: Let customers write conditions as text or JSON, store them as data, refuse a broken one with its path, and evaluate it in a request or a job.
 section:
-    title: Data & background work
+    title: Data & billing
     order: 7
-order: 10
+order: 6
 lastUpdated: 2026-10-25
 outcomes:
     - "How to define a condition dialect once with `@sdxc/expression`"

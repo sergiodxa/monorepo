@@ -4,7 +4,7 @@ description: Read what an app holds without opening its files, with sdxc models,
 section:
     title: The sdxc command
     order: 2
-order: 7.5
+order: 6
 lastUpdated: 2026-10-25
 outcomes:
     - "How to see each model's table and whether its migrations match it"

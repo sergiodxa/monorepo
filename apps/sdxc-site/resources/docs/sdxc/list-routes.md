@@ -4,7 +4,7 @@ description: Print every route your contracts declare with its controller and th
 section:
     title: The sdxc command
     order: 2
-order: 7
+order: 5
 lastUpdated: 2026-10-25
 outcomes:
     - "How to read the table `sdxc routes` prints"

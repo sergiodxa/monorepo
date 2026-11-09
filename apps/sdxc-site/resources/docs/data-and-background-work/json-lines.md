@@ -2,9 +2,9 @@
 title: Stream JSON Lines
 description: Export records as a JSON Lines download that streams as it is read, import uploads row by row with errors that name the line, and resume a long import where it stopped.
 section:
-    title: Data & background work
-    order: 7
-order: 19
+    title: File & data formats
+    order: 7.6
+order: 2
 lastUpdated: 2026-10-25
 outcomes:
     - "How to export records as a streaming JSON Lines download with `@sdxc/jsonl`"

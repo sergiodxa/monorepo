@@ -132,14 +132,25 @@ const SECTION_DESCRIPTIONS: Readonly<Record<string, string>> = {
 	"Packages à la carte":
 		"Install a few packages into a project you already have, with or without Remix.",
 	Recipes: "Whole features end to end: a blog, a contact form, API keys, paging on an outage.",
-	"The sdxc command": "Start a project, generate files where they belong, check it and deploy it.",
+	"The sdxc command": "Start a project, inspect and check it, run its commands and deploy it.",
+	"Generate files": "One guide per sdxc make kind: where each file goes and how to fill it in.",
 	Conventions: "The rules every package keeps: results over throws, naming, logging, validation.",
-	"Building Remix apps": "The interface, forms, routing and the browser side of a Remix app.",
-	"HTTP APIs": "JSON APIs with problem details, typed clients, and the formats they speak.",
-	"Identity & security": "Sign-in, passkeys, tokens, permissions, and keeping abuse out.",
-	"Data & background work": "Tables, queries, caching, jobs, payments and notifications.",
-	"Content & feeds": "Markdown, diagrams, math, feeds, calendars and ebooks from your content.",
-	"Operations & testing": "Command lines, configuration, specs, health checks and costs.",
+	"Routing & forms": "Wire the router, validate input, translate pages and serve them to crawlers.",
+	Interface: "Build pages with remix/component: landings, search, shortcuts and calendars.",
+	"HTTP APIs": "JSON APIs with problem details, OpenAPI, typed clients and safe writes.",
+	"Sign-in & access": "OpenID Connect, passkeys, two-factor, tokens, SSO and permissions.",
+	Security: "Webhooks, headers, signatures and keeping bots and abuse out.",
+	"Data & billing": "Tables, queries, caching, search, flags and charging for your app.",
+	"Jobs, email & alerts": "Background jobs and cron, sending and reading mail, and notifications.",
+	"File & data formats":
+		"CSV, JSON Lines, ZIP, CBOR, JSON Pointer and other formats to read and write.",
+	Markdown: "A markdown pipeline with plugins, variables, live regions and embeds.",
+	"Feeds & federation": "RSS, Atom, calendar feeds, IndieWeb and ActivityPub.",
+	"Images & documents": "Social cards, QR codes, charts, diagrams, math, PDFs and ebooks.",
+	"Testing & monitoring":
+		"Tests, specs, budgets, CI, then logs, health checks and costs in production.",
+	"Command lines": "Your app's command line, your own tools, and configuration files.",
+	"Agents & MCP": "Expose your app over MCP, call other servers, and bridge older clients.",
 	Releases: "How releases are numbered, what breaks between them, and the license.",
 };
 

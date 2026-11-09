@@ -2,9 +2,9 @@
 title: Calendars, date ranges and time zones
 description: Lay out a month calendar in the viewer's zone, read a report's day range from the query string, and let people pick their time zone from the runtime's own list.
 section:
-    title: Building Remix apps
-    order: 4
-order: 12
+    title: Interface
+    order: 4.5
+order: 6
 lastUpdated: 2026-10-25
 outcomes:
     - "How to lay out a month grid and place events on it in the viewer's zone with `@sdxc/dates`"

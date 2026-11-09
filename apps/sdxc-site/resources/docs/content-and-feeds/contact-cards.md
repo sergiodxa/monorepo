@@ -2,9 +2,9 @@
 title: Offer and import contact cards
 description: Describe people as RFC 9553 JSContact Cards, serve them as vCard downloads, read uploaded vCards back, and localize a card for each reader.
 section:
-    title: Content & feeds
-    order: 8
-order: 37
+    title: File & data formats
+    order: 7.6
+order: 10
 lastUpdated: 2026-11-01
 outcomes:
     - "How to build a JSContact Card with `@sdxc/jscontact` and serve it as a vCard download"

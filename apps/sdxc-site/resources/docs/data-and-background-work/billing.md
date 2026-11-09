@@ -2,9 +2,9 @@
 title: Charge for your app
 description: Sell through a hosted checkout, keep your own copy of what each customer holds, and gate features on it without calling the platform.
 section:
-    title: Data & background work
+    title: Data & billing
     order: 7
-order: 7
+order: 8
 lastUpdated: 2026-10-25
 outcomes:
     - "How to link accounts to customers and open a hosted checkout with `@sdxc/billing`"

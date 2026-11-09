@@ -2,9 +2,9 @@
 title: Encode and decode CBOR
 description: Accept and answer application/cbor bodies within limits, store values in a deterministic byte form, and sign payloads with COSE_Sign1.
 section:
-    title: HTTP APIs
-    order: 5
-order: 12
+    title: File & data formats
+    order: 7.6
+order: 7
 lastUpdated: 2026-10-25
 outcomes:
     - "How to read an `application/cbor` request body within limits and answer in CBOR"

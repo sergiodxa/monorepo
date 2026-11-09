@@ -2,9 +2,9 @@
 title: Make a factory
 description: Write the factory tests seed a model's rows with, through the model itself, with sdxc make factory.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.07
+    title: Generate files
+    order: 2.5
+order: 10
 lastUpdated: 2026-10-19
 outcomes:
     - "Why a factory builds rows through the model"

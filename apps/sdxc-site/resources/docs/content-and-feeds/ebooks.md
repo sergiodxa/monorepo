@@ -2,9 +2,9 @@
 title: Offer posts as EPUB ebooks
 description: Turn a markdown post into an EPUB with a nested table of contents and accessibility metadata, refused at build time wherever epubcheck would reject it, and serve it as a download.
 section:
-    title: Content & feeds
-    order: 8
-order: 20
+    title: Images & documents
+    order: 8.6
+order: 9
 lastUpdated: 2026-11-08
 outcomes:
     - "How to turn a markdown post into an EPUB with `@sdxc/epub`"

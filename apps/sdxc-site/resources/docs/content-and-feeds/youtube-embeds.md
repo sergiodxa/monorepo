@@ -2,9 +2,9 @@
 title: Embed YouTube videos in markdown
 description: Turn a YouTube URL pasted on its own line into a lazy-loaded, privacy-enhanced player, keeping its start time, with a plain link left for feeds.
 section:
-    title: Content & feeds
+    title: Markdown
     order: 8
-order: 33
+order: 5
 lastUpdated: 2026-10-25
 outcomes:
     - "How to turn a pasted YouTube URL into a lazy-loaded player with `@sdxc/markdown`"

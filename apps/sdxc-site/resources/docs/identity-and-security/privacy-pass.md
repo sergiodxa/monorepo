@@ -2,9 +2,9 @@
 title: Accept Privacy Pass tokens instead of a CAPTCHA
 description: Challenge clients with WWW-Authenticate PrivateToken, redeem the tokens an issuer signed for them, and show a CAPTCHA only to clients that hold none.
 section:
-    title: Identity & security
-    order: 6
-order: 17
+    title: Security
+    order: 6.5
+order: 10
 lastUpdated: 2026-10-25
 outcomes:
     - "How to challenge a client for a Privacy Pass token and redeem the one it sends back"

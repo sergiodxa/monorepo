@@ -4,7 +4,7 @@ description: Parse and stringify RFC 8288 Link headers, keep foreign parameters 
 section:
     title: HTTP APIs
     order: 5
-order: 7
+order: 6
 lastUpdated: 2026-10-25
 outcomes:
     - "How to parse and write RFC 8288 `Link` headers with `@sdxc/link-header`"

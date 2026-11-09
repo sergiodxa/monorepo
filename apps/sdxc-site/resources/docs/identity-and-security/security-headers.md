@@ -2,9 +2,9 @@
 title: Security headers and CSP
 description: Remix CSP for nonces, plus typed HSTS and Permissions-Policy, violation reports, and a security.txt.
 section:
-    title: Identity & security
-    order: 6
-order: 5
+    title: Security
+    order: 6.5
+order: 3
 lastUpdated: 2026-11-04
 outcomes:
     - "How to write CSP with Remix's `csp()` and the rest as one typed policy"

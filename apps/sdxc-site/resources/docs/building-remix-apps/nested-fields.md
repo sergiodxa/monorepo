@@ -2,9 +2,9 @@
 title: Read nested query strings and forms
 description: Read bracket keys like filter[status][] and items[0][quantity] into typed objects and arrays, from a URL or a form post, and write them back.
 section:
-    title: Building Remix apps
+    title: Routing & forms
     order: 4
-order: 8
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to read bracket keys like `filter[status][]` into typed objects and arrays"

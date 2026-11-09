@@ -4,7 +4,7 @@ description: Take RFC 6902 patches on a PATCH endpoint, answer each failure with
 section:
     title: HTTP APIs
     order: 5
-order: 8
+order: 7
 lastUpdated: 2026-11-01
 outcomes:
     - "How to apply an `application/json-patch+json` body to a resource, all or nothing"

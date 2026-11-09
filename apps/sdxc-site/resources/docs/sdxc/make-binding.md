@@ -2,9 +2,9 @@
 title: Make a binding
 description: Declare a KV namespace, D1 database, R2 bucket, queue, rate limit, email sender or Durable Object binding in cloudflare.config.ts with sdxc make binding, then type, use and test it.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.15
+    title: Generate files
+    order: 2.5
+order: 18
 lastUpdated: 2026-10-25
 outcomes:
     - "What each `make binding` helper writes, and which placeholder to replace before deploying"

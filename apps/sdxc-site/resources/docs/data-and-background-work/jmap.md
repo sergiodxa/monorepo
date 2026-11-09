@@ -2,9 +2,9 @@
 title: Read and send mail over JMAP
 description: Read a mailbox and send as the account's identity on a JMAP server such as Fastmail, from a Worker, with batched calls and MSW tests.
 section:
-    title: Data & background work
-    order: 7
-order: 21
+    title: Jobs, email & alerts
+    order: 7.3
+order: 5
 lastUpdated: 2026-10-25
 outcomes:
     - "How to read the latest emails in an inbox with one batched JMAP request"

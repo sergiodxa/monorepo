@@ -2,9 +2,9 @@
 title: Make a migration
 description: Write the next numbered SQL migration of a chain with sdxc make migration, from fields that create, alter or drop, from a model, or empty for your own statements.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.06
+    title: Generate files
+    order: 2.5
+order: 9
 lastUpdated: 2026-10-25
 outcomes:
     - "How migration names create, alter and drop tables from fields"

@@ -4,7 +4,7 @@ description: Run the command line your app ships in bootstrap/cli.ts from any fo
 section:
     title: The sdxc command
     order: 2
-order: 8
+order: 7
 lastUpdated: 2026-10-25
 outcomes:
     - "How `sdxc run` finds and runs your app's command line"

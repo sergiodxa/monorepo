@@ -2,9 +2,9 @@
 title: Feature flags
 description: Declare flags in a typed catalog, target them by rule or percentage, and evaluate them on ctx.flags in handlers and jobs.
 section:
-    title: Data & background work
+    title: Data & billing
     order: 7
-order: 6
+order: 5
 lastUpdated: 2026-10-25
 outcomes:
     - "How to declare flags in a typed catalog and publish `ctx.flags`"

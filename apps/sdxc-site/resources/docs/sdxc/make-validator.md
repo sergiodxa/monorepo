@@ -2,9 +2,9 @@
 title: Make a validator
 description: Write the schema a form's fields pass before an action trusts them with sdxc make validator, and the test that submits it.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.03
+    title: Generate files
+    order: 2.5
+order: 6
 lastUpdated: 2026-10-19
 outcomes:
     - "What `make validator` writes"

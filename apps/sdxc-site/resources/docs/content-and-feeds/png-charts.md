@@ -2,9 +2,9 @@
 title: Draw charts as PNG images
 description: Draw a response-time chart with an area fill, a stroked line, labels and a daily status strip on a canvas inside a Worker, and serve it as a PNG an email client shows where SVG and scripts never run.
 section:
-    title: Content & feeds
-    order: 8
-order: 35
+    title: Images & documents
+    order: 8.6
+order: 4
 lastUpdated: 2026-10-25
 outcomes:
     - "How to draw a response-time chart on a canvas inside a Worker with `@sdxc/raster`"

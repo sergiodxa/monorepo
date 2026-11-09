@@ -2,9 +2,9 @@
 title: Expose your app over MCP
 description: Declare tools and resources, answer them with your app's own context, cache the expensive ones, and mount the server as a route.
 section:
-    title: Operations & testing
-    order: 9
-order: 2
+    title: Agents & MCP
+    order: 9.6
+order: 1
 lastUpdated: 2026-10-25
 outcomes:
     - "How to declare MCP tools and resources for your app"

@@ -2,9 +2,9 @@
 title: Expand URI templates
 description: Expand, publish and match RFC 6570 URI templates, so an API client builds the URLs a discovery document describes and a server reads them back.
 section:
-    title: HTTP APIs
-    order: 5
-order: 10
+    title: File & data formats
+    order: 7.6
+order: 8
 lastUpdated: 2026-10-25
 outcomes:
     - "How to expand RFC 6570 templates with `@sdxc/uri-template`, every operator included"

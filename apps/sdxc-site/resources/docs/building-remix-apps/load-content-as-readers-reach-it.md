@@ -2,9 +2,9 @@
 title: Load content as readers reach it
 description: Defer a list's next page until the reader scrolls near it and a dialog's content until it opens, keep the address bar on the page being read, and keep plain links for browsers running no script.
 section:
-    title: Building Remix apps
-    order: 4
-order: 10
+    title: Interface
+    order: 4.5
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to load a list's next page as the reader scrolls with `@sdxc/lazy-frame`"

@@ -2,9 +2,9 @@
 title: Model events and tasks as JSCalendar
 description: Store and serve events and tasks as RFC 8984 JSCalendar JSON, expand their recurrences into an agenda, edit them with PatchObjects, and convert them to and from iCalendar.
 section:
-    title: Content & feeds
-    order: 8
-order: 36
+    title: File & data formats
+    order: 7.6
+order: 9
 lastUpdated: 2026-11-01
 outcomes:
     - "How to validate JSCalendar events and tasks from a request with `@sdxc/jscalendar`"

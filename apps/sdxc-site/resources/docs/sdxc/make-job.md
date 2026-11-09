@@ -2,9 +2,9 @@
 title: Make a job
 description: Write a background job with sdxc make job, declared in app/jobs/index.ts and mapped on the dispatcher, or a scheduled one with --cron and the Worker trigger that fires it.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.04
+    title: Generate files
+    order: 2.5
+order: 7
 lastUpdated: 2026-10-19
 outcomes:
     - "How `make job` declares a job and maps it on the dispatcher"

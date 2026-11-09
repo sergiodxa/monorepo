@@ -2,7 +2,7 @@
 title: Add passkeys
 description: Enroll a passkey for a signed-in account and sign in with it, verifying both WebAuthn ceremonies on the server.
 section:
-    title: Identity & security
+    title: Sign-in & access
     order: 6
 order: 2
 lastUpdated: 2026-10-25

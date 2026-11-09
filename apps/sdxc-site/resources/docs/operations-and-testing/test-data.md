@@ -2,7 +2,7 @@
 title: Generate believable test data
 description: Seed test databases and component fixtures with realistic data that comes out identical on every run, so failures replay and snapshots hold.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
 order: 4
 lastUpdated: 2026-10-25

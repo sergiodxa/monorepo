@@ -2,9 +2,9 @@
 title: Send browser push notifications
 description: Subscribe a browser from a click, store the subscription safely, and send encrypted Web Push from a Worker, directly or as one more messaging destination.
 section:
-    title: Data & background work
-    order: 7
-order: 14
+    title: Jobs, email & alerts
+    order: 7.3
+order: 8
 lastUpdated: 2026-11-01
 outcomes:
     - "How to subscribe a browser from a click and store the subscription with `@sdxc/web-push`"

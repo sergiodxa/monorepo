@@ -2,9 +2,9 @@
 title: Sample HTTP latency against a running app
 description: Time requests against a URL that is already up, assert p95 and p99 in Vitest, and gate the same budgets from the command line with @sdxc/bench.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 3.6
+order: 8
 lastUpdated: 2026-11-04
 outcomes:
     - "How to sample latency with `@sdxc/bench` against a running base URL"

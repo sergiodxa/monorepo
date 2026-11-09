@@ -2,9 +2,9 @@
 title: Run a newsletter list
 description: Subscribe readers to Buttondown or Kit through one contract, credit the campaign they came from, follow confirmations and unsubscribes from webhooks, and test against an in-memory list.
 section:
-    title: Data & background work
-    order: 7
-order: 11
+    title: Jobs, email & alerts
+    order: 7.3
+order: 4
 lastUpdated: 2026-10-25
 outcomes:
     - "How to subscribe readers to Buttondown or Kit through one `@sdxc/newsletter` contract"

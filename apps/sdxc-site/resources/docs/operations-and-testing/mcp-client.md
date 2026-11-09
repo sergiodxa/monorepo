@@ -2,9 +2,9 @@
 title: Call an MCP server
 description: Call a modern Streamable HTTP MCP endpoint from a Worker, browser, Node, or Bun.
 section:
-    title: Operations & testing
-    order: 9
-order: 2.1
+    title: Agents & MCP
+    order: 9.6
+order: 2
 lastUpdated: 2026-10-28
 outcomes:
     - "How to open a session with connect and prefer using so it closes with the scope"

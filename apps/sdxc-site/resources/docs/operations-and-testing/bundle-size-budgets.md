@@ -2,9 +2,9 @@
 title: Hold a package to a size budget
 description: Weigh a package entry as a minified browser bundle, assert its gzipped size in Vitest, and check the same budget from the command line with @sdxc/bench.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 3.5
+order: 7
 lastUpdated: 2026-11-04
 outcomes:
     - "How to weigh a package entry with `@sdxc/bench` and read minified and gzipped bytes"

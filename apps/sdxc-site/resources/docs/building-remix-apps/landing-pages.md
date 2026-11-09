@@ -2,9 +2,9 @@
 title: Build a landing page
 description: Assemble a landing page from @sdxc/ui's landing patterns, give it your brand through tokens, and drop to the primitives when a band needs its own shape.
 section:
-    title: Building Remix apps
-    order: 4
-order: 10
+    title: Interface
+    order: 4.5
+order: 2
 lastUpdated: 2026-10-30
 outcomes:
     - "How to stack a landing from hero, proof, feature, FAQ and closing bands"

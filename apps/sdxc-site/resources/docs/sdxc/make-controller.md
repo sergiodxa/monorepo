@@ -2,9 +2,9 @@
 title: Make a controller
 description: Write a page, a form or a JSON endpoint with sdxc make controller, its route declared in a contract, mapped on the router, decided in the sitemap and guarded by a resource's abilities.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.01
+    title: Generate files
+    order: 2.5
+order: 4
 lastUpdated: 2026-10-25
 outcomes:
     - "How to add a page, a form or a JSON endpoint with its route declared and mapped"

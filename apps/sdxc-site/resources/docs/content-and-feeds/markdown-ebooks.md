@@ -2,9 +2,9 @@
 title: Write a book in Markdown
 description: Keep a book as a folder of Markdown chapters and build it into an EPUB from the terminal with sdxc pkg epub, with a title page, embedded fonts and images, checked in CI.
 section:
-    title: Content & feeds
-    order: 8
-order: 20.5
+    title: Images & documents
+    order: 8.6
+order: 10
 lastUpdated: 2026-11-09
 outcomes:
     - "How to lay out a book as `index.md` and `ch<N>.md` files that `sdxc pkg epub` builds"

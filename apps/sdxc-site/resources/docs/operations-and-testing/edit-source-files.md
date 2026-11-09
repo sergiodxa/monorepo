@@ -2,9 +2,9 @@
 title: Edit source files
 description: Find the modules a project imports, rename a package across every file, move names to another module, and add declarations and calls, changing only the text each edit touches.
 section:
-    title: Operations & testing
-    order: 9
-order: 11
+    title: Command lines
+    order: 9.3
+order: 5
 lastUpdated: 2026-10-25
 outcomes:
     - "How to find the modules a project imports"

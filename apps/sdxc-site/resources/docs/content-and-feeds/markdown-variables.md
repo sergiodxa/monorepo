@@ -2,9 +2,9 @@
 title: Fill markdown templates with variables
 description: Write one markdown document with holes for per-render values and fill them per tenant, plan or locale.
 section:
-    title: Content & feeds
+    title: Markdown
     order: 8
-order: 9
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to write one markdown document with holes for per-render values"

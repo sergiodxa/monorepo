@@ -4,7 +4,7 @@ description: Lint a project for release drift, missing secrets, stale Worker typ
 section:
     title: The sdxc command
     order: 2
-order: 6
+order: 4
 lastUpdated: 2026-11-04
 outcomes:
     - "What each `sdxc doctor` check looks for, and the fix it names when it fails"

@@ -2,9 +2,9 @@
 title: Know where visitors come from
 description: Record a visitor's first and last touch from UTM parameters, click IDs and referrers, then store it with the account, the checkout or the newsletter reader they become.
 section:
-    title: Data & background work
+    title: Data & billing
     order: 7
-order: 12
+order: 7
 lastUpdated: 2026-10-25
 outcomes:
     - "How to record a visitor's first and last touch with `@sdxc/attribution`"

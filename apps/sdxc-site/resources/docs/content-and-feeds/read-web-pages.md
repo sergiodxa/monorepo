@@ -2,8 +2,8 @@
 title: Read other people's pages
 description: Save links for later by fetching each page under bounds in a job, pulling out its article, and building preview cards.
 section:
-    title: Content & feeds
-    order: 8
+    title: Feeds & federation
+    order: 8.3
 order: 5
 lastUpdated: 2026-11-01
 outcomes:

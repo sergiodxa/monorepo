@@ -2,7 +2,7 @@
 title: Generate reference docs from JSDoc
 description: Read the JSDoc in your TypeScript source at build time, emit JSON, and serve an API reference page for every public symbol.
 section:
-    title: Content & feeds
+    title: Markdown
     order: 8
 order: 6
 lastUpdated: 2026-11-01

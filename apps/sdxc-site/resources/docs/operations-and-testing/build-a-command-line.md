@@ -2,9 +2,9 @@
 title: Build a command line
 description: Declare commands as a contract, answer them with typed handlers, ask for what a flag left out, show progress, share services through middleware, and test every command without a terminal.
 section:
-    title: Operations & testing
-    order: 9
-order: 8
+    title: Command lines
+    order: 9.3
+order: 2
 lastUpdated: 2026-10-25
 outcomes:
     - "How to declare commands as a contract and answer them with typed handlers"

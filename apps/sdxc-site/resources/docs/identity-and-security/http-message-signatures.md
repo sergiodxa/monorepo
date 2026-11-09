@@ -2,9 +2,9 @@
 title: Sign and verify HTTP requests
 description: Sign requests with RFC 9421 or draft-cavage, verify them with a freshness window and replay checks, and attach and check Content-Digest and Repr-Digest.
 section:
-    title: Identity & security
-    order: 6
-order: 14
+    title: Security
+    order: 6.5
+order: 7
 lastUpdated: 2026-11-01
 outcomes:
     - "How to sign outgoing requests with RFC 9421 and draft-cavage"

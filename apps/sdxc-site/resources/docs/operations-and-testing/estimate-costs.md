@@ -2,9 +2,9 @@
 title: Estimate what your Worker costs
 description: Turn requests, CPU time, KV reads and D1 rows into cents with Cloudflare's list prices, and warn before a month runs over budget.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 6
+order: 11
 lastUpdated: 2026-10-25
 outcomes:
     - "How to turn requests, CPU time, KV reads and D1 rows into cents"

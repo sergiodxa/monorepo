@@ -2,9 +2,9 @@
 title: Make a command
 description: Write a command for your app's own command line with sdxc make command, declared in app/commands/index.ts, mapped through lazy() and run with sdxc run.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.13
+    title: Generate files
+    order: 2.5
+order: 16
 lastUpdated: 2026-10-25
 outcomes:
     - "How the name you pass becomes the words you type after `sdxc run`"

@@ -2,9 +2,9 @@
 title: Translate your app
 description: Detect each request's language, translate MessageFormat 2 messages in handlers, views, jobs and islands, and catch broken copy in a test.
 section:
-    title: Building Remix apps
+    title: Routing & forms
     order: 4
-order: 4
+order: 6
 lastUpdated: 2026-10-25
 outcomes:
     - "How to detect each request's language and translate MessageFormat 2 messages in handlers and views"

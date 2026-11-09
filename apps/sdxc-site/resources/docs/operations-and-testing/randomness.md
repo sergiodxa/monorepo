@@ -2,9 +2,9 @@
 title: Randomness you can replay
 description: Pass random streams into your own code, seed them in tests, store the seed behind a draw, and resume a stream from storage.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 7
+order: 5
 lastUpdated: 2026-10-25
 outcomes:
     - "How to accept a `Random` in your own functions and seed it in tests"

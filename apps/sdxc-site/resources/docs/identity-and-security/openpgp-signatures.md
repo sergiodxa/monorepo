@@ -2,9 +2,9 @@
 title: Sign files and security.txt with OpenPGP
 description: Make an OpenPGP signing key, serve a cleartext-signed security.txt, publish detached signatures beside your downloads, and verify a file someone else signed.
 section:
-    title: Identity & security
-    order: 6
-order: 15
+    title: Security
+    order: 6.5
+order: 8
 lastUpdated: 2026-11-01
 outcomes:
     - "How to make an OpenPGP signing key GnuPG can verify against"

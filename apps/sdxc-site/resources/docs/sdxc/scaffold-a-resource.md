@@ -2,9 +2,9 @@
 title: Scaffold a resource
 description: Write the model, migration, pages, validator, abilities and tests a resource needs to be listed, read, created, changed and deleted, with one sdxc scaffold command.
 section:
-    title: The sdxc command
-    order: 2
-order: 3
+    title: Generate files
+    order: 2.5
+order: 2
 lastUpdated: 2026-10-25
 outcomes:
     - "Every file `sdxc scaffold` writes for one resource"

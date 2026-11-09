@@ -2,9 +2,9 @@
 title: Make a service
 description: Write a business rule that spans several models with sdxc make service, returning a Result its callers branch on.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.08
+    title: Generate files
+    order: 2.5
+order: 11
 lastUpdated: 2026-10-19
 outcomes:
     - "When a rule belongs in a service rather than on a model"

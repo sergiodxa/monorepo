@@ -2,9 +2,9 @@
 title: Make an MCP tool or resource
 description: Write an MCP tool, or a resource with --resource, with sdxc make mcp, declared beside the others and mapped on the app's MCP server through lazy().
 section:
-    title: The sdxc command
-    order: 2
-order: 2.12
+    title: Generate files
+    order: 2.5
+order: 15
 lastUpdated: 2026-10-25
 outcomes:
     - "How to add an MCP tool, or a resource with `--resource`"

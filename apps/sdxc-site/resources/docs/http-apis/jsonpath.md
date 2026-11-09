@@ -2,9 +2,9 @@
 title: Query JSON with JSONPath
 description: Select values from JSON documents with RFC 9535 JSONPath, let clients narrow a response with a query parameter, and patch every node a query finds.
 section:
-    title: HTTP APIs
-    order: 5
-order: 9
+    title: File & data formats
+    order: 7.6
+order: 5
 lastUpdated: 2026-11-01
 outcomes:
     - "How to select values from a fetched JSON document with `@sdxc/jsonpath`"

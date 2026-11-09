@@ -2,9 +2,9 @@
 title: Decide who can do what
 description: Name every ability once, grant them through additive roles, refuse through guards, and check them in routes, handlers, jobs and MCP tools from facts loaded once.
 section:
-    title: Identity & security
+    title: Sign-in & access
     order: 6
-order: 13
+order: 7
 lastUpdated: 2026-10-25
 outcomes:
     - "How to name every ability once and grant them through additive roles"

@@ -2,9 +2,9 @@
 title: Hash and sign JSON in canonical form
 description: Serialize JSON with the RFC 8785 JSON Canonicalization Scheme, so equal values hash, sign and deduplicate to the same bytes whatever their key order.
 section:
-    title: HTTP APIs
-    order: 5
-order: 11
+    title: File & data formats
+    order: 7.6
+order: 6
 lastUpdated: 2026-11-01
 outcomes:
     - "Why `JSON.stringify` is the wrong input for a hash or a signature"

@@ -2,9 +2,9 @@
 title: Send email
 description: Declare emails in a registry, translate them when they render, send, defer or queue them by name from requests, jobs and commands, and test what was sent with an in-memory transport.
 section:
-    title: Data & background work
-    order: 7
-order: 5
+    title: Jobs, email & alerts
+    order: 7.3
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to declare emails in a `@sdxc/mail` registry and write their templates"

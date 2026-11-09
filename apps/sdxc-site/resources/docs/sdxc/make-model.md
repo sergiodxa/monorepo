@@ -2,9 +2,9 @@
 title: Make a model
 description: Write a model with a column per field typed by its name, the migration that creates its table and a factory for its tests, with sdxc make model, registered as ctx.models.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.05
+    title: Generate files
+    order: 2.5
+order: 8
 lastUpdated: 2026-10-25
 outcomes:
     - "How field names type a model's columns"

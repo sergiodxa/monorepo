@@ -2,9 +2,9 @@
 title: Read the visitor's browser and device
 description: Parse the User-Agent header once per request, pick a download for the visitor's system, ask platform questions from any view, name devices in a session list and keep bots out of your counts.
 section:
-    title: Building Remix apps
+    title: Routing & forms
     order: 4
-order: 16
+order: 8
 lastUpdated: 2026-11-01
 outcomes:
     - "How to parse the `User-Agent` header once per request and read it as `ctx.userAgent`"

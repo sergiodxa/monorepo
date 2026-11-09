@@ -2,9 +2,9 @@
 title: Check a domain's email authentication
 description: Read the DMARC, SPF and DKIM records a sending domain publishes, serve an MTA-STS policy for your own domain, and parse the DMARC aggregate reports receivers send back.
 section:
-    title: Data & background work
-    order: 7
-order: 20
+    title: Jobs, email & alerts
+    order: 7.3
+order: 6
 lastUpdated: 2026-11-01
 outcomes:
     - "How to check a customer's DMARC policy, SPF lookups and DKIM key before you send from their domain"

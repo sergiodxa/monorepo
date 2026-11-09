@@ -2,9 +2,9 @@
 title: Accept PNG avatars and draw placeholders
 description: Check an uploaded PNG's size before inflating it, decode it to prove it is an image, crop it square and store a clean copy, and draw an identicon from pixels for everyone who has not uploaded one.
 section:
-    title: Building Remix apps
-    order: 4
-order: 15
+    title: Images & documents
+    order: 8.6
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to check an uploaded PNG's size before decoding it with `@sdxc/png`"

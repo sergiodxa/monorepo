@@ -2,9 +2,9 @@
 title: Anchor, polish and lint markdown
 description: Give headings anchors and a table of contents, rewrite links, set typographic punctuation, turn pasted URLs into embeds, and check content in CI.
 section:
-    title: Content & feeds
+    title: Markdown
     order: 8
-order: 8
+order: 2
 lastUpdated: 2026-10-25
 outcomes:
     - "How to give headings anchors and build a table of contents"

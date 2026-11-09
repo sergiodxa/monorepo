@@ -2,9 +2,9 @@
 title: Use a package from the terminal
 description: Run a package's own command line with sdxc pkg to decode a token, check a domain, render a diagram or convert a contact card, and script it with --json and exit codes.
 section:
-    title: Operations & testing
-    order: 9
-order: 8.5
+    title: Command lines
+    order: 9.3
+order: 3
 lastUpdated: 2026-11-09
 outcomes:
     - "How to run any package's command line with `sdxc pkg`, without installing the package"

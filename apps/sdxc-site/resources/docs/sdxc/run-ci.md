@@ -4,7 +4,7 @@ description: Run your project's CI script on your machine with sdxc ci, narrow i
 section:
     title: The sdxc command
     order: 2
-order: 8.5
+order: 8
 lastUpdated: 2026-11-04
 outcomes:
     - "Which script `sdxc ci` runs, and which workspaces a run covers"

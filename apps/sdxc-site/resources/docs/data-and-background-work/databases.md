@@ -2,7 +2,7 @@
 title: Query D1 and Durable Object SQL
 description: Run remix/data-table models on D1 or a Durable Object's SQLite, publish the database on ctx.db, and test against real SQL.
 section:
-    title: Data & background work
+    title: Data & billing
     order: 7
 order: 2
 lastUpdated: 2026-10-25

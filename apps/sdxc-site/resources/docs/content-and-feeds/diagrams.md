@@ -2,9 +2,9 @@
 title: Draw diagrams from text
 description: Turn Mermaid sequence, class, state and flowchart diagrams in markdown into SVG drawn on the server, with broken diagrams caught at build time.
 section:
-    title: Content & feeds
-    order: 8
-order: 31
+    title: Images & documents
+    order: 8.6
+order: 5
 lastUpdated: 2026-11-01
 outcomes:
     - "How to draw Mermaid diagrams as SVG on the server with `@sdxc/diagram`"

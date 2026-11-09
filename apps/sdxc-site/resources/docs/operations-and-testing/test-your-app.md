@@ -2,9 +2,9 @@
 title: Test your app
 description: Read the tests sdxc make and sdxc scaffold write beside each file, run one file or one case while you work, and turn a generated test into one that pins your app's behavior.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 2.5
+order: 1
 lastUpdated: 2026-10-25
 outcomes:
     - "What each test `sdxc make` writes checks, and what is left for you"

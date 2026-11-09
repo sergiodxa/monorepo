@@ -2,9 +2,9 @@
 title: Dependency health checks
 description: Answer GET /health with a report on every store and service your Worker depends on, in the application/health+json format monitors read.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 1.5
+order: 10
 lastUpdated: 2026-10-25
 outcomes:
     - "How to answer `GET /health` with a dependency report from `@sdxc/health`"

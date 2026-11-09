@@ -2,9 +2,9 @@
 title: Build a search dialog
 description: Open a search dialog from every page's header, show live results in a frame as the reader types, fall back to a plain results page, and announce what each search found.
 section:
-    title: Building Remix apps
-    order: 4
-order: 13
+    title: Interface
+    order: 4.5
+order: 4
 lastUpdated: 2026-10-25
 outcomes:
     - "How to open a search dialog from every page's header and show live results in a frame"

@@ -2,9 +2,9 @@
 title: Import and export CSV
 description: Read an uploaded CSV into validated rows with errors that name the line, and stream exports that spreadsheets open safely.
 section:
-    title: Data & background work
-    order: 7
-order: 8
+    title: File & data formats
+    order: 7.6
+order: 1
 lastUpdated: 2026-10-25
 outcomes:
     - "How to read an uploaded CSV into validated rows with errors that name the line"

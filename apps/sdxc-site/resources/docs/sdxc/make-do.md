@@ -2,9 +2,9 @@
 title: Make a Durable Object
 description: Write a Durable Object class with sdxc make do, re-exported from bootstrap/worker.ts with its export and its binding declared in cloudflare.config.ts.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.14
+    title: Generate files
+    order: 2.5
+order: 17
 lastUpdated: 2026-10-25
 outcomes:
     - "How `make do` declares a Durable Object's class, export and binding in one run"

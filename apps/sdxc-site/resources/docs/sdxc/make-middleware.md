@@ -2,9 +2,9 @@
 title: Make a middleware
 description: Write a middleware with sdxc make middleware and, with --mount, call it last in the router's chain or in a controller chain such as page or api.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.02
+    title: Generate files
+    order: 2.5
+order: 5
 lastUpdated: 2026-10-19
 outcomes:
     - "What `make middleware` writes"

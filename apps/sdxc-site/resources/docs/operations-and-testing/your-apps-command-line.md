@@ -2,9 +2,9 @@
 title: Your app's command line
 description: Give your app commands for work that belongs to no request, and publish its log, database, models, translations and mailer to them through the same middleware its routes use.
 section:
-    title: Operations & testing
-    order: 9
-order: 9
+    title: Command lines
+    order: 9.3
+order: 1
 lastUpdated: 2026-10-25
 outcomes:
     - "How to add commands for work that belongs to no request"

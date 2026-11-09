@@ -2,9 +2,9 @@
 title: Read configuration files
 description: Parse JSON with comments and trailing commas, point a mistake at its line and column, validate the result, and hand it to every command of a command line.
 section:
-    title: Operations & testing
-    order: 9
-order: 10
+    title: Command lines
+    order: 9.3
+order: 4
 lastUpdated: 2026-11-01
 outcomes:
     - "How to parse JSONC with comments and trailing commas"

@@ -2,9 +2,9 @@
 title: Undo a make
 description: Remove a file sdxc make wrote, its test, the mapping that loads it and the declaration it names, with sdxc destroy, after one look at the plan.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.5
+    title: Generate files
+    order: 2.5
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to remove a controller, job, tool, command, email or model and everything make wired for it"

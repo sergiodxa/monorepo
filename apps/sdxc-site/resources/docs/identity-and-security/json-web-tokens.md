@@ -2,9 +2,9 @@
 title: Issue and verify JWTs
 description: Sign short-lived tokens with keys kept in R2, publish them as a JWKS, verify tokens by issuer and audience, and rotate keys safely.
 section:
-    title: Identity & security
+    title: Sign-in & access
     order: 6
-order: 6
+order: 4
 lastUpdated: 2026-11-01
 outcomes:
     - "How to sign short-lived JWTs with `@sdxc/jwt` keys kept in R2"

@@ -2,9 +2,9 @@
 title: Write executable specs
 description: Describe your running app's behavior in .spec files, run them against a dev server with named grants, and gate CI on them.
 section:
-    title: Operations & testing
+    title: Testing & monitoring
     order: 9
-order: 5
+order: 3
 lastUpdated: 2026-10-25
 outcomes:
     - "How to describe your running app's behavior in `.spec` files"

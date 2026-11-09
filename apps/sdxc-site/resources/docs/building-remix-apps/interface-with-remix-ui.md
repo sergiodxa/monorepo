@@ -2,9 +2,9 @@
 title: Build the interface with remix/component
 description: Compose pages from @sdxc/ui components, lay them out with @sdxc/u mixins, and hydrate only the island that needs script.
 section:
-    title: Building Remix apps
-    order: 4
-order: 3
+    title: Interface
+    order: 4.5
+order: 1
 lastUpdated: 2026-10-25
 outcomes:
     - "How to compose a page from `@sdxc/ui` components and lay it out with `@sdxc/u` mixins"

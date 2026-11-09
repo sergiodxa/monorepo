@@ -2,9 +2,9 @@
 title: Make an initializer
 description: Write the module that builds the one instance of something the app shares, such as a client, a cache or a configured package, with sdxc make initializer.
 section:
-    title: The sdxc command
-    order: 2
-order: 2.10
+    title: Generate files
+    order: 2.5
+order: 13
 lastUpdated: 2026-10-19
 outcomes:
     - "What belongs in an initializer, and what belongs in a service"

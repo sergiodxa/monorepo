@@ -2,9 +2,9 @@
 title: Watch when a domain expires
 description: Read a domain's expiry date, status and registrar from its registry over RDAP, sweep every tracked domain on a schedule, and alert before the registration lapses.
 section:
-    title: Data & background work
-    order: 7
-order: 16
+    title: Jobs, email & alerts
+    order: 7.3
+order: 9
 lastUpdated: 2026-11-01
 outcomes:
     - "How to look up a domain's expiry, status and registrar over RDAP with `@sdxc/rdap`"

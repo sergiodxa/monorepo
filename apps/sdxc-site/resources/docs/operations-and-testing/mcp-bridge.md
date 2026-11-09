@@ -2,9 +2,9 @@
 title: Bridge Agents to a modern MCP server
 description: Connect handshake-era agents to a modern Streamable HTTP MCP endpoint.
 section:
-    title: Operations & testing
-    order: 9
-order: 2.2
+    title: Agents & MCP
+    order: 9.6
+order: 3
 lastUpdated: 2026-10-28
 outcomes:
     - "Why a modern-only MCP URL refuses a handshake-era initialize"

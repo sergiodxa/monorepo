@@ -2,7 +2,7 @@
 title: Model your tables
 description: Wrap remix/data-table tables in models with scopes, callbacks and typed meta fields, bind them per request as ctx.models, and dispatch jobs only after a write commits.
 section:
-    title: Data & background work
+    title: Data & billing
     order: 7
 order: 3
 lastUpdated: 2026-10-25
