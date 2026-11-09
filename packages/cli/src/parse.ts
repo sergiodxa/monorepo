@@ -60,7 +60,7 @@ export function parseArgv(tree: Tree, argv: readonly string[], withVersion: bool
 		issues: [],
 	};
 	let index = 0;
-	let rest = false;
+	let rest = tree.root.rest;
 	/** Flag tokens read at a group, replayed against the member the command line goes on to name. */
 	let atGroup: string[] = [];
 	/** How many issues stood before the current group's flags were read. */

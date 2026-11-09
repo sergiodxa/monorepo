@@ -560,10 +560,53 @@ describe("argument.rest", () => {
 		});
 
 		expect(() => createCLI({ name: "prog", commands: withFlag })).toThrow(
-			"argument.rest() is a command's only argument, with no flags",
+			"argument.rest() is the only argument of a command, or of a program with no commands, with no flags",
 		);
 		expect(() => createCLI({ name: "prog", commands: withArgument })).toThrow(
-			"argument.rest() is a command's only argument, with no flags",
+			"argument.rest() is the only argument of a command, or of a program with no commands, with no flags",
+		);
+	});
+});
+
+describe("argument.rest on the program", () => {
+	/** A single-purpose program that reads its own command line, flags and --help included. */
+	let program = commands({
+		description: "Forward every token",
+		arguments: { args: argument.rest() },
+	});
+
+	/** The CLI under test, printing the tokens the program received. */
+	function forwarding() {
+		let cli = createCLI({ name: "prog", commands: program });
+		cli.map(program, (ctx) => {
+			expectTypeOf(ctx.arguments.args).toEqualTypeOf<string[]>();
+			ctx.stdout(`${JSON.stringify(ctx.arguments.args)}\n`);
+			return success();
+		});
+		return cli;
+	}
+
+	test("receives every token, --help included, unparsed", async () => {
+		let run = await invoke(forwarding(), ["controller", "--name", "users", "--help"]);
+
+		expect(run.code).toBe(0);
+		expect(run.stdout).toBe('["controller","--name","users","--help"]\n');
+	});
+
+	test("receives nothing when the program is run bare", async () => {
+		let run = await invoke(forwarding(), []);
+
+		expect(run.stdout).toBe("[]\n");
+	});
+
+	test("refuses a program rest argument beside commands", () => {
+		let withMember = commands({
+			arguments: { args: argument.rest() },
+			run: command({}),
+		});
+
+		expect(() => createCLI({ name: "prog", commands: withMember })).toThrow(
+			"argument.rest() is the only argument of a command, or of a program with no commands",
 		);
 	});
 });

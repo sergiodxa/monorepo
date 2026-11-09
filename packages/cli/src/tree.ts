@@ -115,8 +115,12 @@ export function buildTree(name: string, root: Group): Tree {
 			args.push({ key, spec });
 		});
 		let rest = args.some((arg) => arg.spec.rest);
-		if (rest && (isGroup(node) || flags.length > 0 || args.length !== 1)) {
-			throw new Error(`${title}: argument.rest() is a command's only argument, with no flags`);
+		let nested =
+			isGroup(node) && (path.length > 0 || Object.keys(groupSpec(node).members).length > 0);
+		if (rest && (nested || flags.length > 0 || args.length !== 1)) {
+			throw new Error(
+				`${title}: argument.rest() is the only argument of a command, or of a program with no commands, with no flags`,
+			);
 		}
 		let entry: Entry = {
 			node,

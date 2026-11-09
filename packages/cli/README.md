@@ -141,6 +141,8 @@ Every token after the command's name, unparsed, to hand to another program.
 command({ arguments: { args: argument.rest() } }); // prog run users --help → ["users", "--help"]
 ```
 
+A program with no commands can declare it on `commands({ arguments: { args: argument.rest() } })` and map a handler to the program itself, so it reads its whole command line, `--help` included.
+
 #### `flag.boolean(name, options?)`
 
 `--name`, and `--no-name` to turn it off.
