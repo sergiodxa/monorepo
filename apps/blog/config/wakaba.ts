@@ -1,7 +1,7 @@
 /**
  * Wakaba's App Store listing and the colours the browser chrome paints around its pages.
- * The listing is unpublished until launch: every call to download reads it from here, so
- * setting the id once turns the "coming soon" state into a link and enables the smart banner.
+ * Every call to download reads the listing from here, and its id also drives the Safari
+ * smart banner; a `null` id renders every call as "Coming soon" instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,10 +13,10 @@ export interface AppStoreListing {
 }
 
 /**
- * The App Store listing. `null` while the app awaits release, which renders every download
- * call as "Coming soon to the App Store" and leaves out the `apple-itunes-app` banner.
+ * The published App Store listing, which every download call links and the
+ * `apple-itunes-app` smart banner names.
  */
-export const APP_STORE: AppStoreListing = { id: null };
+export const APP_STORE: AppStoreListing = { id: "6831914175" };
 
 /**
  * The listing's URL, or `null` until {@link APP_STORE} has an id.

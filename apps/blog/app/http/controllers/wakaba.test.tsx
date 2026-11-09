@@ -60,14 +60,13 @@ describe("GET /apps/wakaba", () => {
 		expect(html).toContain('rel="apple-touch-icon"');
 	});
 
-	test("shows the App Store as coming soon, with no link and no smart banner", async () => {
+	test("links the published App Store listing and names it in the smart banner", async () => {
 		let html = await (await fetchPage("/apps/wakaba")).text();
 
-		expect(html).toContain('data-app-store="coming-soon"');
-		expect(html).toContain("Coming soon to the");
-		expect(html).not.toContain('data-app-store="available"');
-		expect(html).not.toContain("apps.apple.com");
-		expect(html).not.toContain("apple-itunes-app");
+		expect(html).toContain('data-app-store="available"');
+		expect(html).toContain('href="https://apps.apple.com/app/id6831914175"');
+		expect(html).toContain('name="apple-itunes-app" content="app-id=6831914175"');
+		expect(html).not.toContain('data-app-store="coming-soon"');
 	});
 
 	test("shows each of the small things with its real screen, in both appearances", async () => {
@@ -118,7 +117,7 @@ describe("GET /apps/wakaba in Spanish", () => {
 		expect(html).toMatch(/<h1[^>]*>[\s\S]*Crece con cada[\s\S]*práctica[\s\S]*<\/h1>/);
 		expect(html).toContain('src="/apps/wakaba/screenshots/es/path-progress-light.webp"');
 		expect(html).toContain('srcset="/apps/wakaba/screenshots/es/path-progress-dark.webp"');
-		expect(html).toContain("Muy pronto en la");
+		expect(html).toContain("Descárgala en la");
 		expect(html).toContain(
 			'content="https://sergiodxa.com/apps/wakaba/branding/social-card-es.png"',
 		);
