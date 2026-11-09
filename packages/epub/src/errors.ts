@@ -39,7 +39,8 @@ export namespace EpubError {
 		| "missing-resource"
 		| "remote-resource"
 		| "unsupported-media"
-		| "invalid-path";
+		| "invalid-path"
+		| "invalid-font";
 }
 
 /** Required metadata is missing, `modified` is not a date, or a language tag is malformed. */
@@ -121,5 +122,22 @@ export class EpubPathError extends EpubError {
 	 */
 	constructor(message: string, path?: string) {
 		super("invalid-path", message, path);
+	}
+}
+
+/**
+ * A font cannot be read as TrueType, OpenType, WOFF or WOFF2, or its license forbids embedding
+ * it in a document; `cause` carries the font reader's error.
+ */
+export class EpubFontError extends EpubError {
+	declare readonly code: "invalid-font";
+
+	/**
+	 * @param message - What is wrong with the font, for logs
+	 * @param path - The font's path
+	 * @param options - The font reader's error, as `cause`
+	 */
+	constructor(message: string, path?: string, options?: ErrorOptions) {
+		super("invalid-font", message, path, options);
 	}
 }

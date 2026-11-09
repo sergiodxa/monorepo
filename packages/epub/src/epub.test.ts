@@ -388,6 +388,23 @@ describe("invalid-path", () => {
 });
 
 describe("the written publication", () => {
+	test("asks Apple Books to use embedded fonts only when the book holds one", () => {
+		let withFont = EPUB.build(
+			input({
+				styles: [{ path: "book.css", text: '@font-face { font-family: X; src: url("x.woff2"); }' }],
+				resources: [{ path: "x.woff2", bytes: BYTES }],
+			}),
+		);
+		let without = EPUB.build(input());
+
+		let opf = fileText(withFont, "EPUB/package.opf");
+		expect(opf).toContain(
+			'prefix="ibooks: http://vocabulary.itunes.apple.com/rdf/ibooks/vocabulary-extensions-1.0/"',
+		);
+		expect(opf).toContain('<meta property="ibooks:specified-fonts">true</meta>');
+		expect(fileText(without, "EPUB/package.opf")).not.toContain("ibooks");
+	});
+
 	test("resolves named entities to characters and preserves whitespace", () => {
 		let text = fileText(
 			EPUB.build(

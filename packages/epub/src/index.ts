@@ -10,6 +10,7 @@ export { EPUB } from "./epub.js";
 export {
 	EpubContentError,
 	EpubError,
+	EpubFontError,
 	EpubMediaTypeError,
 	EpubMetadataError,
 	EpubMissingResourceError,

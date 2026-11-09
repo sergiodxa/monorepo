@@ -3,22 +3,29 @@
 	"version": "0.0.1",
 	"description": "Build EPUB 3.3 publications from XHTML chapters, checked against what epubcheck rejects",
 	"license": "MIT",
+	"bin": {
+		"sdxc-epub": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./markdown": "./src/markdown.ts"
 	},
 	"scripts": {
 		"epubcheck": "bun scripts/epubcheck.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
+		"@sdxc/font": "workspace:*",
 		"@sdxc/iife": "workspace:*",
+		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/xml": "workspace:*",
-		"@sdxc/zip": "workspace:*"
+		"@sdxc/zip": "workspace:*",
+		"remix": "3.2.0"
 	},
 	"devDependencies": {
-		"@sdxc/markdown": "workspace:*",
 		"fflate": "0.8.3"
 	}
 }

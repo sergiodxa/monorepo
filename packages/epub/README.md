@@ -83,6 +83,35 @@ let built = EPUB.build({
 Chapters are written at `text/<id>.xhtml`, so a body references a file as `../<path>` and another
 chapter as `<id>.xhtml`. Every stylesheet is linked from every chapter, in order.
 
+### Build a book from Markdown
+
+`fromMarkdown` from `@sdxc/epub/markdown` makes the input from a Markdown file, or from a folder
+holding `index.md`, `ch1.md`, `ch2.md`… and `styles.css`. Every file comes through your `read`,
+so the book can live on a disk, in a bucket or in memory.
+
+```typescript
+import { EPUB } from "@sdxc/epub";
+import { fromMarkdown } from "@sdxc/epub/markdown";
+import { isFailure } from "@sdxc/result";
+
+let book = await fromMarkdown({
+	source: { files: ["index.md", "ch1.md", "ch2.md", "img/map.png"] },
+	read: async (path) => ({ bytes: await bucket.bytes(`book/${path}`) }),
+});
+if (isFailure(book)) throw book.error;
+let built = EPUB.build(book.data.input);
+```
+
+The `#` heading is the title, set alone on a centered title page; each `##` heading starts a
+chapter, and deeper headings fill the contents down to `tocDepth` (default `3`). Text between
+the title and the first chapter gets its own page. Chapter files sort by their number, so
+`ch10.md` follows `ch9.md`, and may hold only `##` chapters.
+
+Images, the cover and stylesheet `url()`s are read once each and stored at paths that mirror the
+folder. `metadata` overrides the frontmatter (`title`, `author`, `language`, `date`, `cover`…),
+`fonts` embeds font files with the `@font-face` rules read from them, `remote: true` reads
+`http(s)` images through `read` too, and `onProgress` reports every read against its total.
+
 ### Handle a failure
 
 ```typescript
@@ -111,6 +140,8 @@ properties (`svg`, `mathml`, `nav`, `cover-image`) are derived from the content.
 | `resources` | `[]`    | `{ path, bytes }` images, fonts and audio the chapters and styles use |
 | `legacyNcx` | `true`  | Writes `toc.ncx` for EPUB 2 reading systems and Kindle's converter    |
 | `labels`    | English | `contents`, `landmarks`, `cover` and `start` text of the navigation   |
+
+A book that holds a font also asks Apple Books to show it with `ibooks:specified-fonts`.
 
 Resource and stylesheet paths are relative, `/`-separated, use `A–Z`, `a–z`, `0–9`, `.`, `_`
 and `-`, and stay unique ignoring case. The media type comes from the extension: CSS, JPEG, PNG,
@@ -145,6 +176,7 @@ Carries `code`, the chapter id or path it concerns as `path`, and the XML parser
 | `remote-resource`   | `EpubRemoteResourceError`  | An image, stylesheet or font loads from the web (links to the web are fine)             |
 | `unsupported-media` | `EpubMediaTypeError`       | A resource's extension maps to no EPUB core media type                                  |
 | `invalid-path`      | `EpubPathError`            | A path or id is malformed, or two differ only in case                                   |
+| `invalid-font`      | `EpubFontError`            | `fromMarkdown` cannot read a font, or its license forbids embedding it                  |
 
 A chapter with both `linear: false` and `toc: false` must be linked from another chapter, or it fails
 with `invalid-content`.
@@ -186,7 +218,24 @@ The shapes of `cover`, `styles`, `resources`, `labels` and `files` listed above.
 
 #### `EpubError.Code`
 
-The union of the six codes.
+The union of the seven codes.
+
+## Command line
+
+```sh
+bunx @sdxc/epub --help
+```
+
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg epub …` runs the same command line, using the version your project installs.
+
+`build` writes a book from a Markdown file, a book folder or stdin, beside the input unless `--output` says where. Progress goes to stderr, a line per step with its count, and `--json` prints the chapters, files, fonts and downloads on stdout.
+
+```sh
+bunx @sdxc/epub build book/ --font Literata-Regular.woff2 --font Literata-Italic.woff2
+bunx @sdxc/epub build post.md --author "Ana Pérez" --cover cover.jpg -o dist/post.epub
+```
+
+`--allow-remote` downloads images referenced by `http(s)` URLs into the book, at your own risk. `SOURCE_DATE_EPOCH` fixes the modified date, so two builds of one source are byte for byte equal. `check` runs the whole build and writes nothing, exiting 1 with the first problem.
 
 ## Pattern: Downloading Markdown As A Book
 

@@ -190,6 +190,10 @@ const LANGUAGE_TAG = /^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/;
 /** Where every file the caller names lives inside the container. */
 const ROOT = "EPUB/";
 
+/** Apple's vocabulary, which holds the switch that makes Apple Books use embedded fonts. */
+const IBOOKS_PREFIX =
+	"ibooks: http://vocabulary.itunes.apple.com/rdf/ibooks/vocabulary-extensions-1.0/";
+
 /**
  * A complete EPUB 3.3 publication. `EPUB.build` is the only way to get one, so every instance
  * holds a publication that passed the package's verification.
@@ -622,6 +626,7 @@ function writeFiles(
 	};
 	let legacyNcx = input.legacyNcx !== false;
 	let styles = [...assets.values()].filter((asset) => asset.kind === "style");
+	let embedsFonts = [...assets.values()].some((asset) => asset.mediaType.startsWith("font/"));
 
 	let taken = new Set(chapters.map((chapter) => chapter.input.id.toLowerCase()));
 	let ids = {
@@ -705,10 +710,11 @@ function writeFiles(
 			packageDocument({
 				language: metadata.language,
 				uniqueIdentifier: ids.publication,
-				metadata: metadataElements(metadata, ids.publication, coverImageId, taken),
+				metadata: metadataElements(metadata, ids.publication, coverImageId, taken, embedsFonts),
 				manifest,
 				spine,
 				ncxId: ids.ncx,
+				prefix: embedsFonts ? IBOOKS_PREFIX : undefined,
 			}),
 		],
 		[
@@ -791,14 +797,15 @@ function sectionEntries(path: string, sections: readonly EPUB.Section[]): TocEnt
 
 /**
  * The package metadata as Dublin Core and `<meta>` elements. Creator roles and sort names
- * refine their creator by id, and the cover is named by `<meta name="cover">` too, which EPUB
- * 2 reading systems and Kindle's converter read.
+ * refine their creator by id, the cover is named by `<meta name="cover">` for EPUB 2 reading
+ * systems and Kindle's converter, and a book with fonts asks Apple Books to show them.
  */
 function metadataElements(
 	metadata: EPUB.Metadata,
 	publicationId: string,
 	coverImageId: string | undefined,
 	taken: Set<string>,
+	embedsFonts: boolean,
 ): XML.Element[] {
 	let elements: XML.Element[] = [
 		element("dc:identifier", { id: publicationId }, [metadata.identifier]),
@@ -831,6 +838,9 @@ function metadataElements(
 		]),
 	);
 	if (coverImageId) elements.push(element("meta", { name: "cover", content: coverImageId }));
+	if (embedsFonts) {
+		elements.push(element("meta", { property: "ibooks:specified-fonts" }, ["true"]));
+	}
 
 	let a11y = metadata.accessibility;
 	if (a11y) {

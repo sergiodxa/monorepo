@@ -66,6 +66,8 @@ export interface PackageInput {
 	manifest: ManifestItem[];
 	spine: SpineItem[];
 	ncxId?: string;
+	/** Vocabulary prefixes the metadata uses beyond the reserved ones, as `name: IRI` pairs. */
+	prefix?: string;
 }
 
 /** The text of `EPUB/package.opf`: metadata, the manifest and the spine. */
@@ -87,6 +89,7 @@ export function packageDocument(input: PackageInput): Result<string, Error> {
 			xmlns: "http://www.idpf.org/2007/opf",
 			version: "3.0",
 			"unique-identifier": input.uniqueIdentifier,
+			...(input.prefix ? { prefix: input.prefix } : {}),
 			"xml:lang": input.language,
 		},
 		[

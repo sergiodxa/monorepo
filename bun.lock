@@ -1132,14 +1132,20 @@
     "packages/epub": {
       "name": "@sdxc/epub",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-epub": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
+        "@sdxc/font": "workspace:*",
         "@sdxc/iife": "workspace:*",
+        "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/xml": "workspace:*",
         "@sdxc/zip": "workspace:*",
+        "remix": "3.2.0",
       },
       "devDependencies": {
-        "@sdxc/markdown": "workspace:*",
         "fflate": "0.8.3",
       },
     },
