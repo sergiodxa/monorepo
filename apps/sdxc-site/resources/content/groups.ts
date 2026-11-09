@@ -176,6 +176,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"rdap",
 			"mcp",
 			"cli",
+			"blueprint",
 			"cloudflare-pricing",
 		],
 	},
