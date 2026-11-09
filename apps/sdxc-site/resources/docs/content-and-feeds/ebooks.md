@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 20
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-08
 outcomes:
     - "How to turn a markdown post into an EPUB with `@sdxc/epub`"
     - "How to read a build failure when epubcheck would reject the book"
@@ -290,6 +290,17 @@ test("builds a book that opens", async () => {
 
 The ZIP's first entry name starts at byte 30, so reading `mimetype` there proves the container
 begins the way every reading system expects.
+
+## Run it from the terminal
+
+A book kept as Markdown files builds without any code:
+
+```bash
+sdxc pkg epub build book/
+```
+
+[Write a book in Markdown](/docs/content-and-feeds/markdown-ebooks) covers the folder layout,
+fonts, images and checking the book in CI.
 
 ## Where to go next
 

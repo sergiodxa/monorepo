@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 8.5
-lastUpdated: 2026-11-01
+lastUpdated: 2026-11-09
 outcomes:
     - "How to run any package's command line with `sdxc pkg`, without installing the package"
     - "How every package command line reads input, prints reports and exits, so scripts and CI can rely on it"
@@ -91,6 +91,7 @@ The step fails when a policy is missing, and the JSON report is there to read.
 | [`@sdxc/doh`](/api/doh)                           | `sdxc pkg doh`              | DNS lookups over HTTPS                                                  |
 | [`@sdxc/email-address`](/api/email-address)       | `sdxc pkg email-address`    | Check addresses for syntax, disposable domains and mail servers         |
 | [`@sdxc/email-auth`](/api/email-auth)             | `sdxc pkg email-auth`       | Check a domain's DMARC, SPF, MTA-STS, TLS-RPT, BIMI and DKIM            |
+| [`@sdxc/epub`](/api/epub)                         | `sdxc pkg epub`             | Build an EPUB from a Markdown file or a folder of chapters, or check it |
 | [`@sdxc/font`](/api/font)                         | `sdxc pkg font`             | Inspect a font, or subset it to the characters a page uses              |
 | [`@sdxc/html`](/api/html)                         | `sdxc pkg html`             | Query a page by role and accessible name, or print its outline          |
 | [`@sdxc/http-signatures`](/api/http-signatures)   | `sdxc pkg http-signatures`  | Sign a request, or verify a signed one                                  |
