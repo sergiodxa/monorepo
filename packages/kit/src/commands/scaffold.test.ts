@@ -204,6 +204,9 @@ describe("scaffold", () => {
 			expect(written).not.toContain("app/http/validators/post.ts");
 			expect(written).not.toContain("resources/views/posts/form.tsx");
 			let read = (path: string) => readFile(join(root, path), "utf8");
+			expect(await read("app/http/controllers/api/posts/index.tsx")).toContain(
+				"`POSTS_INDEX` operation",
+			);
 			expect(await read("spec/posts.spec")).toContain("use http");
 			expect(await read("spec/posts.spec")).toContain('http.get "/api/posts"');
 			let routes = await read("routes/api.ts");
@@ -324,7 +327,7 @@ describe("scaffold", () => {
 		]);
 	});
 
-	test("refuses an unknown field type, a name with folders, a reference and only optional fields", async () => {
+	test("refuses an unknown field type, a name with folders, a reference, only optional fields and a plural equal to the name", async () => {
 		let root = await mkdtemp(join(tmpdir(), "sdxc-scaffold-"));
 		DIRECTORIES.push(root);
 		await writeFile(join(root, "package.json"), '{ "name": "blog" }\n');
@@ -334,6 +337,7 @@ describe("scaffold", () => {
 		let empty = await invoke(["post"], root);
 		let reference = await invoke(["comment", "post_id", "body"], root);
 		let optional = await invoke(["post", "subtitle?"], root);
+		let uncountable = await invoke(["news", "title"], root);
 
 		expect(unknown.code).toBe(1);
 		expect(unknown.stderr).toContain('"varchar" in "title:varchar" is not a field type');
@@ -341,6 +345,9 @@ describe("scaffold", () => {
 		expect(empty.stderr).toContain("at least one field");
 		expect(reference.stderr).toContain("post_id is a reference");
 		expect(optional.stderr).toContain("at least one field without ?");
+		expect(uncountable.stderr).toContain(
+			'"news" reads the same in the plural; name the plural with --plural',
+		);
 		expect(await files(root)).toEqual(["package.json"]);
 	});
 });

@@ -14,6 +14,7 @@ import { dirname, join } from "node:path";
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
+import { pluralize } from "@sdxc/strings";
 
 import type { DeclarationRequest, FileEdit } from "../make/declare.js";
 import type { PlannedFile } from "../make/generate.js";
@@ -35,7 +36,7 @@ import { projectPackageManager } from "../package-manager.js";
 
 import type { OperationLocals, Resource } from "./render.js";
 
-import { parseFields, pluralize } from "./fields.js";
+import { parseFields } from "./fields.js";
 import {
 	apiOperationNames,
 	apiOperations,
@@ -205,8 +206,8 @@ export async function scaffold(
 }
 
 /**
- * The resource `input` names: one name without folders, its plural from `--plural` or the
- * English rules, and at least one field a form must fill. A reference is refused, since every
+ * The resource `input` names: one name without folders, its plural from `--plural` or English
+ * inflection, different from the singular, and at least one field a form must fill. A reference is refused, since every
  * generated test would need a row of the referenced table to point at.
  */
 function parseResource(input: ScaffoldInput): Result<Resource, Error> {
@@ -217,6 +218,13 @@ function parseResource(input: ScaffoldInput): Result<Resource, Error> {
 	}
 	let plural = parseName(input.plural ?? pluralize(singular.data.base));
 	if (isFailure(plural)) return plural;
+	if (plural.data.base === singular.data.base) {
+		return failure(
+			new Error(
+				`"${singular.data.base}" reads the same in the plural; name the plural with --plural`,
+			),
+		);
+	}
 	if (plural.data.segments.length > 1) {
 		return failure(new Error(`A plural cannot hold folders: ${input.plural ?? ""}`));
 	}

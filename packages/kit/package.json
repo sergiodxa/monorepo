@@ -17,6 +17,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/blueprint": "workspace:*",
 		"@sdxc/ci": "workspace:*",
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/codemod": "workspace:*",
@@ -29,6 +30,7 @@
 		"@sdxc/messageformat": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/semver": "workspace:*",
+		"@sdxc/strings": "workspace:*",
 		"oxc-parser": "^0.154.0"
 	},
 	"devDependencies": {

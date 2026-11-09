@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-11-09
+**Implemented** - 2026-11-09
 
 ## Background
 
@@ -162,7 +162,7 @@ runs. `@sdxc/cli` gains that ability: a program with no commands may declare
 - **Self-documenting blueprints** - the values a blueprint takes are read from its stubs, so its
   help is always current.
 - **Agent-friendly** - `--dry-run --json` names every conflict before anything is written.
-- **One set of case rules** - filters use `@sdxc/strings`, so the kit's own casing helpers can go.
+- **One set of plural rules** - filters and the kit's table and scaffold names both pluralize with `@sdxc/strings`.
 
 ### Negative
 
@@ -191,8 +191,10 @@ runs. `@sdxc/cli` gains that ability: a program with no commands may declare
 
 **Priority:** Medium
 
-1. `sdxc make` and `sdxc scaffold` render stubs with `blueprint.render`.
-2. Drop the kit's placeholder renderer and its casing helpers.
+1. `sdxc make` and `sdxc scaffold` render stubs with `blueprint.render`, keeping the kit's own
+   error for a placeholder a kind does not define.
+2. Drop the kit's placeholder renderer and its three-rule `pluralize` for `@sdxc/strings`, and
+   refuse a scaffold whose name reads the same in the plural unless `--plural` names one.
 
 ## Alternatives Considered
 
@@ -230,5 +232,5 @@ command line uses.
 
 ## Current Progress
 
-- [ ] Phase 1: Package and command line
-- [ ] Phase 2: The kit renders through it
+- [x] Phase 1: Package and command line
+- [x] Phase 2: The kit renders through it

@@ -17,6 +17,7 @@ import type { AnyCommandContext } from "@sdxc/cli";
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
+import { pluralize } from "@sdxc/strings";
 
 import type { Project } from "../middleware.js";
 import type { Field } from "../scaffold/fields.js";
@@ -25,13 +26,7 @@ import { missingDependencies } from "../dependencies.js";
 import { unifiedDiff } from "../diff.js";
 import { formatFiles } from "../format.js";
 import { projectPackageManager } from "../package-manager.js";
-import {
-	columnSource,
-	factorySource,
-	parseFields,
-	pluralize,
-	resolveReferences,
-} from "../scaffold/fields.js";
+import { columnSource, factorySource, parseFields, resolveReferences } from "../scaffold/fields.js";
 
 import type { Declared } from "./declare.js";
 import type { MakeRequest, PlannedFile } from "./generate.js";

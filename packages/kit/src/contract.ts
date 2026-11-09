@@ -694,7 +694,8 @@ export const SDXC_COMMANDS = commands({
 		flags: {
 			plural: flag.string("plural", {
 				valueName: "word",
-				description: "The plural the table, URLs and folders take (default: <name>s)",
+				description:
+					"The plural the table, URLs and folders take (default: the English plural of <name>)",
 			}),
 			mcp: flag.boolean("mcp", {
 				description: "Also write MCP tools to list, get, create, update and delete",
@@ -719,7 +720,7 @@ export const SDXC_COMMANDS = commands({
 		},
 		examples: [
 			"scaffold post title body published_at featured view_count:integer",
-			"scaffold person name email website 'bio?' born_on --plural people --mcp --command",
+			"scaffold person name email website 'bio?' born_on --mcp --command",
 			"scaffold post title body --skip model,migration,factory",
 			"scaffold post title body --api",
 		],

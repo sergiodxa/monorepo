@@ -1,7 +1,8 @@
 /**
  * The stubs `sdxc make` writes files from. A project overrides any of them by keeping a file
  * of the same name in `make.stubs`; every other stub comes from the `@sdxc/kit` package. A stub is
- * the file's text with `{{placeholder}}`s, and one the kind does not define is an error.
+ * the file's text in the `@sdxc/blueprint` format, and a placeholder the kind does not define is
+ * an error.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,6 +13,7 @@ import { join } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
+import * as blueprint from "@sdxc/blueprint";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
 import type { KindName } from "./kinds.js";
@@ -29,9 +31,6 @@ export interface CopiedStubs {
 	written: string[];
 	kept: string[];
 }
-
-/** A placeholder as stubs spell it: `{{name}}`, spaces inside the braces allowed. */
-const PLACEHOLDER = /\{\{\s*([A-Za-z]+)\s*\}\}/g;
 
 /** Whether a stub is the main file, its Vitest sibling, or its pairing `.spec`. */
 export type StubRole = "main" | "test" | "spec";
@@ -78,38 +77,30 @@ export async function loadStub(
 }
 
 /**
- * `stub`'s text with every placeholder replaced by its value. A multi-line value standing alone
- * on an indented line takes that indentation on every line, so a block lands at its depth. A
- * placeholder without a value is a failure naming the stub, the placeholder and the ones accepted.
+ * `stub`'s text rendered with `values` by `@sdxc/blueprint`, filters and blocks included. A
+ * placeholder without a value fails naming the stub and the placeholders this kind accepts, so
+ * an edited project stub points at the name to fix.
  */
 export function renderStub(
 	stub: Stub,
 	values: Readonly<Record<string, string>>,
 ): Result<string, Error> {
-	let unknown = [...stub.text.matchAll(PLACEHOLDER)]
-		.map((match) => match[1] ?? "")
-		.filter((name) => !Object.hasOwn(values, name));
-	if (unknown.length > 0) {
+	let template = blueprint.compile(stub.text, stub.source);
+	if (isFailure(template)) return template;
+	let used = blueprint.variables([template.data]);
+	if (isFailure(used)) return used;
+	let unknown = used.data.find((variable) => !Object.hasOwn(values, variable.name));
+	if (unknown !== undefined) {
 		let accepted = Object.keys(values)
 			.map((name) => `{{${name}}}`)
 			.join(", ");
 		return failure(
 			new Error(
-				`${stub.source} uses {{${unknown[0]}}}, which this kind does not define; it accepts ${accepted}`,
+				`${stub.source} uses {{${unknown.name}}}, which this kind does not define; it accepts ${accepted}`,
 			),
 		);
 	}
-	return success(
-		stub.text.replace(PLACEHOLDER, (match: string, name: string, offset: number) => {
-			let value = values[name] ?? "";
-			let start = stub.text.lastIndexOf("\n", offset - 1) + 1;
-			let indent = stub.text.slice(start, offset);
-			let end = stub.text.indexOf("\n", offset);
-			let rest = stub.text.slice(offset + match.length, end === -1 ? undefined : end);
-			if (!/^[ \t]+$/.test(indent) || rest.trim() !== "") return value;
-			return value.replaceAll(/\n(?=.)/g, `\n${indent}`);
-		}),
-	);
+	return blueprint.render(template.data, values);
 }
 
 /**

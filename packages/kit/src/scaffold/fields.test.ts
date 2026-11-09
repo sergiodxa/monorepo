@@ -1,6 +1,6 @@
 /**
  * How `sdxc scaffold` and `sdxc make model` read their fields, the type each bare name takes by
- * convention, the columns a field becomes, and how a name is pluralized.
+ * convention, and the columns a field becomes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,7 +21,6 @@ import {
 	columnSource,
 	conventionalType,
 	parseFields,
-	pluralize,
 	resolveReferences,
 } from "./fields.js";
 
@@ -235,18 +234,5 @@ describe("resolveReferences", () => {
 			{ model: "author", table: "author", key: "integer" },
 			{ model: "editor", table: "editors", key: "text" },
 		]);
-	});
-});
-
-describe("pluralize", () => {
-	test.each([
-		["post", "posts"],
-		["blog-post", "blog-posts"],
-		["box", "boxes"],
-		["match", "matches"],
-		["category", "categories"],
-		["day", "days"],
-	])("%s becomes %s", (singular, plural) => {
-		expect(pluralize(singular)).toBe(plural);
 	});
 });

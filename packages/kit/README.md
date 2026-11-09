@@ -481,7 +481,7 @@ Write a resource's model, migration, pages, tests and more, declared and mapped
 
 | Flag              | Does                                                                                                                  |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `--plural <word>` | The plural the table, URLs and folders take (default: &lt;name&gt;s)                                                  |
+| `--plural <word>` | The plural the table, URLs and folders take (default: the English plural of &lt;name&gt;)                             |
 | `--mcp`           | Also write MCP tools to list, get, create, update and delete                                                          |
 | `--command`       | Also write app commands to list, show, create and delete                                                              |
 | `--api`           | JSON endpoints in routes/api.ts with their OpenAPI operations, instead of pages                                       |

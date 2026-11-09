@@ -14,6 +14,7 @@ import type { Result } from "@sdxc/result";
 import type { AnyTable, ColumnBuilder, ColumnNamespace } from "remix/data-table";
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
+import { pluralize } from "@sdxc/strings";
 import { column, table } from "remix/data-table";
 
 import { quote } from "../make/schema.js";
@@ -499,16 +500,6 @@ export function factorySource(field: Field): string | null {
 	if (field.type === "email") return "({ sequence }) => `person${sequence}@example.com`";
 	if (field.type === "url") return "({ sequence }) => `https://example.com/${sequence}`";
 	return `({ sequence }) => \`${field.label} \${sequence}\``;
-}
-
-/**
- * The plural of a kebab-case `name`, pluralizing its last word by three English rules: a
- * sibilant ending adds `es`, a consonant before `y` becomes `ies`, and anything else adds `s`.
- */
-export function pluralize(name: string): string {
-	if (/(s|x|z|ch|sh)$/.test(name)) return `${name}es`;
-	if (/[^aeiou]y$/.test(name)) return `${name.slice(0, -1)}ies`;
-	return `${name}s`;
 }
 
 /** `word` with its first letter upper case. */

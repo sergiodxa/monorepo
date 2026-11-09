@@ -15,11 +15,11 @@ import { dirname, join } from "node:path";
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
+import { pluralize } from "@sdxc/strings";
 
 import type { Config } from "../config.js";
 
 import { headerTags, resolveAuthor } from "../author.js";
-import { pluralize } from "../scaffold/fields.js";
 
 import type { KindName } from "./kinds.js";
 import type { Name } from "./names.js";

@@ -173,6 +173,16 @@ describe("make model with fields", () => {
 		expect(result.stdout).toContain("// TODO: add the columns the migration creates");
 	});
 
+	test("names the table with the English plural, irregular nouns included", async () => {
+		let root = unwrap(await materialize("app"));
+		DIRECTORIES.push(dirname(root));
+
+		let result = await make(["model", "person", "name", "--dry-run", "--no-test"], root);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain('name: "people"');
+	});
+
 	test("refuses fields when the project's model stub has nowhere to put them", async () => {
 		let root = await mkdtemp(join(tmpdir(), "sdxc-make-model-"));
 		DIRECTORIES.push(root);
