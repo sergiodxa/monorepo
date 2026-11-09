@@ -85,11 +85,12 @@ foreign key from the same field.
 ## Names and plurals
 
 The name is singular, such as `post` or `blog-post`, and holds no folders. The table, URLs,
-folders and locale key take the plural: `post` becomes `posts` and `category` becomes
-`categories`. Pass `--plural` for any other plural:
+folders and locale key take the English plural: `post` becomes `posts`, `category` becomes
+`categories` and `person` becomes `people`. A name that reads the same in the plural, such as
+`news`, needs `--plural`, and so does any other plural you want:
 
 ```bash
-sdxc scaffold person name email --plural people
+sdxc scaffold news title --plural news-items
 ```
 
 ## MCP tools and app commands
