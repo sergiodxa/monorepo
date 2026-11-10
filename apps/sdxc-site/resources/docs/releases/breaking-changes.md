@@ -5,7 +5,7 @@ section:
     title: Releases
     order: 10
 order: 2
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-10
 outcomes:
     - "Where a breaking change is marked in the GitHub Release, the changelog and `sdxc upgrade`"
     - "How to list every breaking change between your pinned release and a newer one"
@@ -25,12 +25,13 @@ A breaking change is a commit whose Conventional subject carries a `!` after its
 into something you read at a glance:
 
 - **The GitHub Release** of the day lists each package under its own heading, and its breaking
-  changes come first, marked `**Breaking:**` before the summary.
-- **The [Changelog](/docs/releases/changelog)** shows those same notes for every release, newest
-  first, each release headed by its version.
+  changes come first, marked `**Breaking:**` before the summary, with a link to the commit that
+  holds the migration note.
+- **The [Changelog](/docs/releases/changelog)** shows those same Release notes for every release,
+  newest first, each release headed by its version.
 - **`sdxc upgrade`** lists the breaking changes in the packages your code imports before it
-  touches `package.json`, and its prompt gathers them under `## Breaking changes`, ahead of the
-  features and fixes.
+  touches `package.json`, and its prompt gathers the full migration notes under
+  `## Breaking changes`, ahead of the features and fixes.
 
 A breaking change sits under the package whose API changed. A package that republished only
 because one of its dependencies changed says so in one line, "Republished because `@sdxc/result`
@@ -38,38 +39,44 @@ changed.", and asks nothing of your code.
 
 ## Read the migration note
 
-The note under a breaking change opens with what changed and who it affects, then lists the
-migration as numbered steps, each with the code before and after. The steps cover every call
-site the change reaches, so a note that applies only to some projects says which ones in its
-migration line. In the GitHub Release of `2026.10.25`, the `@sdxc/jmap` note reads, shortened
-here to its opening paragraph and its migration:
+The migration note lives on the commit (and in the prompt `sdxc upgrade` writes). It opens with
+what changed and who it affects, then lists the migration as numbered steps, each with the code
+before and after. The steps cover every call site the change reaches, so a note that applies only
+to some projects says which ones in its migration line. On the GitHub Release the entry is the
+summary and the commit link; open the commit for the full note. For the `@sdxc/jmap` change in
+`2026.10.25`, that looks like:
 
 ```text
 ## @sdxc/jmap
-- **Breaking:** Expand Session URL templates with @sdxc/uri-template
-	`@sdxc/jmap` now expands the Session's `uploadUrl`, `downloadUrl` and
-	`eventSourceUrl` with `@sdxc/uri-template`, a full RFC 6570 level 1-4
-	implementation, and no longer exports its own level 1 `expand` function.
-
-	Migration, only if you imported `expand` from `@sdxc/jmap`:
-
-	1. Install `@sdxc/uri-template`.
-
-	2. Import `expand` from it. It returns a `Result` instead of a string.
-
-	   Before:
-
-	       import { expand } from "@sdxc/jmap";
-	       let url = expand(session.downloadUrl, { accountId, blobId, name, type });
-
-	   After:
-
-	       import { unwrap } from "@sdxc/result";
-	       import { expand } from "@sdxc/uri-template";
-	       let url = unwrap(expand(session.downloadUrl, { accountId, blobId, name, type }));
+- **Breaking:** Expand Session URL templates with @sdxc/uri-template (abc1234)
 ```
 
-The same text is what `sdxc upgrade` hands your agent.
+and on the commit, shortened here to its opening paragraph and its migration:
+
+```text
+`@sdxc/jmap` now expands the Session's `uploadUrl`, `downloadUrl` and
+`eventSourceUrl` with `@sdxc/uri-template`, a full RFC 6570 level 1-4
+implementation, and no longer exports its own level 1 `expand` function.
+
+Migration, only if you imported `expand` from `@sdxc/jmap`:
+
+1. Install `@sdxc/uri-template`.
+
+2. Import `expand` from it. It returns a `Result` instead of a string.
+
+   Before:
+
+       import { expand } from "@sdxc/jmap";
+       let url = expand(session.downloadUrl, { accountId, blobId, name, type });
+
+   After:
+
+       import { unwrap } from "@sdxc/result";
+       import { expand } from "@sdxc/uri-template";
+       let url = unwrap(expand(session.downloadUrl, { accountId, blobId, name, type }));
+```
+
+The commit body is what `sdxc upgrade` hands your agent.
 
 > [!WARNING]
 > A breaking change takes effect in the release that carries it. The old export is removed in that
