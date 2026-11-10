@@ -47,7 +47,7 @@ describe("GET /apps", () => {
 		expect(html).toContain("Apps I ");
 		expect(html).toContain(">built<");
 		expect(html).toContain("App Store and the web");
-		expect(html).toContain("See the apps");
+		expect(html).not.toContain("See the apps");
 		for (let name of ["Wakaba", "Encore", "Uptime", "Reader"]) {
 			expect(html).toContain(name);
 		}

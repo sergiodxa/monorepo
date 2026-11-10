@@ -1,5 +1,5 @@
 /**
- * View for `/apps`: a landing-style hero, then each shipped product as its own band — copy
+ * View for `/apps`: a short page opener, then each shipped product as its own band — copy
  * on one side, screenshots or a product window on the other, sides alternating so the page
  * reads as a tour. Renders in either language from the same structured page.
  *
@@ -10,7 +10,6 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
-import { ArrowDownIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
@@ -23,7 +22,6 @@ import type { AppsPage } from "~/app/services/apps-page";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import {
-	AppsHeroStage,
 	EncoreStage,
 	ReaderStage,
 	UptimeStage,
@@ -96,44 +94,23 @@ function mediaFor(app: AppsPage.App, page: AppsPage): RemixNode {
 }
 
 /**
- * The page hero: title, pitch, a scroll CTA and a fan of product screens.
+ * The page opener: eyebrow, title and pitch only, so the first product band carries the
+ * visual rather than a second staged collage above it.
  */
 function Hero(handle: Handle<{ page: AppsPage }>) {
 	return () => {
 		let { page } = handle.props;
-		let browseHref = `#${page.apps[0]?.id ?? "wakaba"}`;
 
 		return (
 			<LandingHero
 				id="top"
-				tone="tinted"
-				align="center"
-				entrance
-				mediaPlacement="below"
+				tone="plain"
+				align="start"
+				spacing="compact"
 				eyebrow={page.eyebrow}
 				eyebrowVariant="quiet"
 				title={accentTitle(page.heading, page.accent)}
 				description={page.intro}
-				actions={
-					<span
-						mix={[
-							hstack({ gap: 3, align: "center", justify: "center" }),
-							raw({ flexWrap: "wrap" }),
-						]}
-					>
-						<LinkButton href={browseHref} variant="solid" mix={[landingCtaChrome()]}>
-							{page.browseCta}
-							<ArrowDownIcon size={16} aria-hidden="true" />
-						</LinkButton>
-					</span>
-				}
-				media={
-					<AppsHeroStage
-						locale={page.locale}
-						label={page.labels.stages.hero}
-						pauseLabel={page.labels.pause}
-					/>
-				}
 			/>
 		);
 	};
