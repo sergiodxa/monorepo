@@ -18,11 +18,12 @@ const handlers = cloudflare.worker(dispatcher);
 export default {
 	async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext) {
 		let IS_PROD = resolveIsProd(request);
+		let localDev = isLoopback(request);
 
 		let [CLIENT_ID, CLIENT_SECRET, COOKIE_SESSION_SECRET] = await Promise.all([
-			env.CLIENT_ID.get(),
-			env.CLIENT_SECRET.get(),
-			env.COOKIE_SESSION_SECRET.get(),
+			readSecret(env.CLIENT_ID, "CLIENT_ID", localDev),
+			readSecret(env.CLIENT_SECRET, "CLIENT_SECRET", localDev),
+			readSecret(env.COOKIE_SESSION_SECRET, "COOKIE_SESSION_SECRET", localDev),
 		]);
 
 		let router = createWebRouter({
@@ -73,4 +74,32 @@ function resolveIsProd(request: Request) {
 	if (hostname === "127.0.0.1") return false;
 	if (hostname.endsWith(".workers.dev")) return false;
 	return true;
+}
+
+/** Whether the request is aimed at a loopback host where Secrets Store may be empty. */
+function isLoopback(request: Request) {
+	let hostname = new URL(request.url).hostname;
+	return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+/**
+ * Reads a Secrets Store binding, falling back to a loopback placeholder only when the
+ * store is empty on localhost so `bun dev` can still render public pages.
+ */
+async function readSecret(
+	binding: { get(): Promise<string> },
+	name: "CLIENT_ID" | "CLIENT_SECRET" | "COOKIE_SESSION_SECRET",
+	localDev: boolean,
+): Promise<string> {
+	try {
+		return await binding.get();
+	} catch (error) {
+		if (!localDev) throw error;
+		let fallbacks = {
+			CLIENT_ID: "local-dev-client-id",
+			CLIENT_SECRET: "local-dev-client-secret",
+			COOKIE_SESSION_SECRET: "local-dev-session-secret-for-preview",
+		} as const;
+		return fallbacks[name];
+	}
 }
