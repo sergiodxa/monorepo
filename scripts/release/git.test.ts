@@ -9,7 +9,7 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { correctionFiles, hasCommit } from "./git.js";
+import { commitFiles, correctionFiles, hasCommit } from "./git.js";
 
 describe("correctionFiles", () => {
 	test("answers an empty list when the named sha is not in this clone", async () => {
@@ -23,14 +23,15 @@ describe("correctionFiles", () => {
 		expect(files.data).toEqual([]);
 	});
 
-	test("answers the paths a known commit touched when the sha is present", async () => {
-		let sha = "6997964d998f975b8914cdafa1d6f25f954d0fd7";
-		expect(await hasCommit(sha)).toBe(true);
+	test("answers the same paths commitFiles does when the sha is present", async () => {
+		expect(await hasCommit("HEAD")).toBe(true);
 
-		let files = await correctionFiles(sha);
+		let files = await correctionFiles("HEAD");
+		let shown = await commitFiles("HEAD");
 
 		expect(isSuccess(files)).toBe(true);
-		if (isFailure(files)) return;
-		expect(files.data).toContain("packages/ci/src/worktree.ts");
+		expect(isSuccess(shown)).toBe(true);
+		if (isFailure(files) || isFailure(shown)) return;
+		expect(files.data).toEqual(shown.data);
 	});
 });
