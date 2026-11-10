@@ -26,6 +26,7 @@ const EN: AppsPage = {
 			wakaba: "Wakaba on iPhone: learning path, flashcards and practice",
 			encore: "Encore on iPhone: challenge card, card back and swipe",
 		},
+		pause: "Pause the animation",
 	},
 	apps: [
 		{
