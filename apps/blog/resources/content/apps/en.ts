@@ -22,9 +22,7 @@ const EN: AppsPage = {
 	intro:
 		"Products I ship myself — on the App Store and on the web — each with its own home to try or download.",
 	browseCta: "See the apps",
-	otherLanguage: { locale: "es-AR", label: "Español" },
 	labels: {
-		viewMarkdown: "View as Markdown",
 		stages: {
 			hero: "Wakaba and Encore on iPhone",
 			wakaba: "Wakaba on iPhone: learning path, flashcards and practice",

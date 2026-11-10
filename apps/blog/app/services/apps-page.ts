@@ -27,8 +27,6 @@ export interface AppsPage {
 	intro: string;
 	/** Scrolls the hero into the first product band. */
 	browseCta: string;
-	/** The other language's name, written in that language, for the switcher. */
-	otherLanguage: { locale: PageLocale; label: string };
 	labels: AppsPage.Labels;
 	apps: ReadonlyArray<AppsPage.App>;
 }
@@ -37,7 +35,6 @@ export interface AppsPage {
 export namespace AppsPage {
 	/** Small interface strings around the list. */
 	export interface Labels {
-		viewMarkdown: string;
 		/** Accessible name for each app's screenshot stage. */
 		stages: {
 			hero: string;
