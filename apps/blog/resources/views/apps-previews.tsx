@@ -1,7 +1,7 @@
 /**
- * Visual previews for the `/apps` showcase cards: real screenshots for the App Store apps,
- * and CSS miniatures for the web apps, so every card shows what the product looks like
- * before its name is read — the same idea as the demos gallery on sdxc.dev.
+ * CSS miniatures for the `/apps` showcase cards: each card opens with a small drawn UI of
+ * the product so every preview shares the same stage height — the same idea as the demos
+ * gallery on sdxc.dev.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,70 +14,7 @@ import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
 import { bs, is, m, p, pi } from "@sdxc/u/size";
-import { font, text, truncate, weight } from "@sdxc/u/typography";
-
-/** One light/dark pair of a product screenshot under `/apps/…`. */
-interface Shot {
-	light: string;
-	dark: string;
-	alt: string;
-}
-
-/** The capture each App Store card opens with. */
-const SHOTS: Record<"wakaba" | "encore", Shot> = {
-	wakaba: {
-		light: "/apps/wakaba/screenshots/en/path-progress-light.webp",
-		dark: "/apps/wakaba/screenshots/en/path-progress-dark.webp",
-		alt: "Wakaba's learning path on iPhone",
-	},
-	encore: {
-		light: "/apps/encore/screenshots/en/challenge-light.webp",
-		dark: "/apps/encore/screenshots/en/challenge-dark.webp",
-		alt: "Encore's challenge card on iPhone",
-	},
-};
-
-/**
- * A light/dark product screenshot cropped into the same stage height as the web-app
- * miniatures, so every card in the gallery lines up.
- *
- * @returns The render function producing the miniature.
- */
-export function AppShot(handle: Handle<{ app: "wakaba" | "encore" }>) {
-	return () => {
-		let shot = SHOTS[handle.props.app];
-		return (
-			<Stage label={shot.alt}>
-				<picture
-					mix={[
-						raw({
-							display: "block",
-							inlineSize: "100%",
-							blockSize: "100%",
-						}),
-					]}
-				>
-					<source media="(prefers-color-scheme: dark)" srcset={shot.dark} />
-					<img
-						src={shot.light}
-						alt=""
-						width={780}
-						height={1688}
-						mix={[
-							raw({
-								display: "block",
-								inlineSize: "100%",
-								blockSize: "100%",
-								objectFit: "cover",
-								objectPosition: "center top",
-							}),
-						]}
-					/>
-				</picture>
-			</Stage>
-		);
-	};
-}
+import { font, text, tracking, truncate, weight } from "@sdxc/u/typography";
 
 namespace Stage {
 	export interface Props {
@@ -86,7 +23,7 @@ namespace Stage {
 	}
 }
 
-/** The stage every CSS miniature shares, so cards in a row line up. */
+/** The stage every miniature shares, so cards in a row line up. */
 function Stage(handle: Handle<Stage.Props>) {
 	return () => (
 		<div
@@ -140,6 +77,135 @@ function Line(handle: Handle<{ width: string; strong?: boolean }>) {
 				}),
 			]}
 		/>
+	);
+}
+
+/** Sessions on Wakaba's learning path, with the next one still open. */
+const WAKABA_SESSIONS = [
+	{ name: "Session 38", done: true },
+	{ name: "Session 39", done: true },
+	{ name: "Session 40", done: false },
+	{ name: "Session 41", done: false },
+] as const;
+
+/**
+ * Wakaba in miniature: a streak strip and a short path list, so the card reads as Japanese
+ * practice before its name is read.
+ *
+ * @returns The render function producing the miniature.
+ */
+export function WakabaPreview() {
+	return () => (
+		<Stage label="Wakaba learning path">
+			<div mix={[vstack({ gap: 2, align: "stretch" }), p(3), is("100%"), bs("100%")]}>
+				<div
+					mix={[
+						hstack({ gap: 2, align: "center", justify: "between" }),
+						p(2),
+						rounded("md"),
+						bg("brand.tint"),
+					]}
+				>
+					<span mix={[text("xs"), weight("semibold"), fg("brand.emphasis")]}>23-day streak</span>
+					<span mix={[text("xs"), fg("brand")]}>Level 3</span>
+				</div>
+				<ul mix={[m(0), p(0), vstack({ gap: 1.5 }), raw({ listStyle: "none" })]}>
+					{WAKABA_SESSIONS.map((session) => (
+						<li
+							key={session.name}
+							mix={[hstack({ gap: 2, align: "center" }), p(2), rounded("md"), bg("neutral.bg")]}
+						>
+							<span
+								aria-hidden="true"
+								mix={[
+									is(2),
+									bs(2),
+									rounded("full"),
+									session.done ? bg("success.solid") : bg("neutral.border"),
+									raw({ flexShrink: "0" }),
+								]}
+							/>
+							<span mix={[truncate(), text("xs"), weight(session.done ? "normal" : "medium")]}>
+								{session.name}
+							</span>
+						</li>
+					))}
+				</ul>
+			</div>
+		</Stage>
+	);
+}
+
+/** Challenge cards Encore would deal next. */
+const ENCORE_CARDS = [
+	{ title: "EARWORM", prompt: "A song stuck in your head" },
+	{ title: "GUILTY PLEASURE", prompt: "One you're embarrassed to love" },
+	{ title: "ONE-HIT WONDER", prompt: "Their only charting single" },
+] as const;
+
+/**
+ * Encore in miniature: a short stack of challenge cards, so the card reads as a music party
+ * game before its name is read.
+ *
+ * @returns The render function producing the miniature.
+ */
+export function EncorePreview() {
+	return () => (
+		<Stage label="Encore challenge cards">
+			<div mix={[vstack({ gap: 1.5, align: "stretch" }), p(3), is("100%"), bs("100%")]}>
+				<div mix={[hstack({ gap: 2, align: "center", justify: "between" }), pi(1)]}>
+					<span mix={[weight("semibold"), text("xs")]}>Next up</span>
+					<span
+						mix={[
+							pi(2),
+							rounded("full"),
+							bg("brand.tint"),
+							fg("brand.emphasis"),
+							text("xs"),
+							weight("medium"),
+						]}
+					>
+						108
+					</span>
+				</div>
+				<ul mix={[m(0), p(0), vstack({ gap: 1 }), raw({ listStyle: "none" })]}>
+					{ENCORE_CARDS.map((card) => (
+						<li
+							key={card.title}
+							mix={[
+								grid(),
+								gap(1),
+								gridTemplate({ columns: "0.4rem 1fr" }),
+								p(2),
+								rounded("md"),
+								bg("neutral.bg"),
+							]}
+						>
+							<span
+								aria-hidden="true"
+								mix={[
+									is(1.5),
+									bs(1.5),
+									rounded("full"),
+									bg("brand.solid"),
+									raw({ alignSelf: "start", marginBlockStart: "0.35rem" }),
+								]}
+							/>
+							<span mix={[vstack({ gap: 1, align: "start" }), raw({ minInlineSize: 0 })]}>
+								<span
+									mix={[text("xs"), weight("semibold"), tracking("wide"), truncate(), is("100%")]}
+								>
+									{card.title}
+								</span>
+								<span mix={[text("xs"), fg("neutral.muted"), truncate(), is("100%")]}>
+									{card.prompt}
+								</span>
+							</span>
+						</li>
+					))}
+				</ul>
+			</div>
+		</Stage>
 	);
 }
 

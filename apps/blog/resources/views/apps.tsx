@@ -23,7 +23,12 @@ import { Feature } from "@sdxc/ui/landing";
 import type { AppsPage } from "~/app/services/apps-page";
 
 import { BlogLayout } from "~/resources/layouts/blog";
-import { AppShot, ReaderPreview, UptimePreview } from "~/resources/views/apps-previews";
+import {
+	EncorePreview,
+	ReaderPreview,
+	UptimePreview,
+	WakabaPreview,
+} from "~/resources/views/apps-previews";
 import routes from "~/routes/web";
 
 /**
@@ -42,15 +47,15 @@ function appsHref(locale: string): string {
 }
 
 /**
- * The visual each app's card opens with: a cropped screenshot for the App Store apps, a CSS
- * miniature for the web ones — every one on the same stage height.
+ * The visual each app's card opens with: a CSS miniature of the product on a shared stage
+ * height, so every card in the gallery lines up.
  */
 function previewFor(id: string): RemixNode {
 	switch (id) {
 		case "wakaba":
-			return <AppShot app="wakaba" />;
+			return <WakabaPreview />;
 		case "encore":
-			return <AppShot app="encore" />;
+			return <EncorePreview />;
 		case "uptime":
 			return <UptimePreview />;
 		case "reader":
