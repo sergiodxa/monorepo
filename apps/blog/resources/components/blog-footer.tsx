@@ -73,6 +73,7 @@ export const FOOTER_TRACKS: Array<Array<BlogFooter.Column>> = [
 			title: "About",
 			links: [
 				{ label: "About me", href: routes.about.href() },
+				{ label: "Apps", href: routes.apps.href() },
 				{ label: "Press kit", href: routes.press.index.href() },
 				{ label: "Now", href: routes.now.href() },
 				{ label: "Uses", href: routes.uses.href() },

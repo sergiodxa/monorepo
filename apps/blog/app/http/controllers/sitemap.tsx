@@ -53,6 +53,8 @@ export default createAction(
 			health: false,
 			mcp: false,
 			mcpMarkdown: false,
+			apps: true,
+			appsMarkdown: false,
 			encore: true,
 			encoreSupport: { index: true },
 			encorePrivacy: true,

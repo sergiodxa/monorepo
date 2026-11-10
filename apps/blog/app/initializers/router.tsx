@@ -354,6 +354,14 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		supportDesk(env, options.mailTransport, options.spamFilter),
 	];
 	router.map(
+		routes.apps,
+		lazy(() => import("~/app/http/controllers/apps")),
+	);
+	router.map(
+		routes.appsMarkdown,
+		lazy(() => import("~/app/http/controllers/apps").then((it) => it.markdownPage)),
+	);
+	router.map(
 		routes.encore,
 		lazy(() => import("~/app/http/controllers/encore")),
 	);

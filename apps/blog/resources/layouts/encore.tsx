@@ -258,6 +258,7 @@ function footerColumns(copy: EncoreCopy): Array<FooterColumn> {
 			title: copy.footer.columns.more,
 			links: [
 				{ href: routes.feed.href(), label: copy.footer.blog },
+				{ href: routes.apps.href(), label: "Apps" },
 				{ href: routes.wakaba.href(), label: "Wakaba" },
 				{ href: "https://uptime.sergiodxa.com", label: "Uptime" },
 				{ href: "https://sdxc.dev", label: "sdxc.dev" },
