@@ -60,13 +60,25 @@ function mediaStart() {
 function mediaFor(app: AppsPage.App, page: AppsPage): RemixNode {
 	switch (app.id) {
 		case "wakaba":
-			return <WakabaStage locale={page.locale} label={page.labels.stages.wakaba} />;
+			return (
+				<WakabaStage
+					locale={page.locale}
+					label={page.labels.stages.wakaba}
+					pauseLabel={page.labels.pause}
+				/>
+			);
 		case "encore":
-			return <EncoreStage locale={page.locale} label={page.labels.stages.encore} />;
+			return (
+				<EncoreStage
+					locale={page.locale}
+					label={page.labels.stages.encore}
+					pauseLabel={page.labels.pause}
+				/>
+			);
 		case "uptime":
-			return <UptimeStage />;
+			return <UptimeStage pauseLabel={page.labels.pause} />;
 		case "reader":
-			return <ReaderStage />;
+			return <ReaderStage pauseLabel={page.labels.pause} />;
 		default:
 			return null;
 	}
@@ -170,6 +182,7 @@ export function AppsView() {
 				title={page.title}
 				description={page.description}
 				activePath={routes.apps.href()}
+				wide
 			>
 				<main mix={[vstack({ gap: 0, align: "stretch" }), minIs(0)]}>
 					<div mix={[vstack({ gap: 10, align: "stretch" }), raw({ paddingBlockEnd: "2rem" })]}>

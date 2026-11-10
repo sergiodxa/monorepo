@@ -91,6 +91,11 @@ export namespace BlogLayout {
 		 * `/search` page passes its own query so the dialog continues that search.
 		 */
 		searchQuery?: string;
+		/**
+		 * Widens the content column to the landing measure so split bands can sit side by
+		 * side; the reading pages stay on the tighter `85ch` column.
+		 */
+		wide?: boolean;
 		children: RemixNode;
 		/** The request's document assets, which the renderer hands every view. */
 		assets: DocumentAssets;
@@ -139,6 +144,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 			meta = [],
 			searchQuery,
 			title,
+			wide,
 		} = handle.props;
 		let resolvedCard = resolveCard({ activePath, canonical, card, description, locale, title });
 
@@ -170,7 +176,15 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 					}),
 				]}
 			>
-				<div mix={[maxIs("85ch"), mi("auto"), pbs(8), pi(4), pbe(12)]}>
+				<div
+					mix={[
+						maxIs(wide ? "var(--ui-landing-measure, 72rem)" : "85ch"),
+						mi("auto"),
+						pbs(8),
+						pi(4),
+						pbe(12),
+					]}
+				>
 					<header
 						mix={[
 							mbe(8),

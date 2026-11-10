@@ -37,6 +37,8 @@ export namespace AppsPage {
 			wakaba: string;
 			encore: string;
 		};
+		/** Pause control on each looping stage (WCAG 2.2.2). */
+		pause: string;
 	}
 
 	/** One shipped product on the showcase. */

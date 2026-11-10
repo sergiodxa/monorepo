@@ -58,6 +58,7 @@ describe("GET /apps", () => {
 		expect(html).toContain("Unread");
 		expect(html).toContain("Open Wakaba");
 		expect(html).toContain("Open Encore");
+		expect(html).toContain("Pause the animation");
 		expect(html).toContain('href="/apps?lang=es-AR"');
 		expect(html).toContain('href="/apps.md?lang=en"');
 		expect(html).toContain('property="og:image" content="https://sergiodxa.com/apps.png?v=');
