@@ -34,9 +34,6 @@ const EXTENSIONS: Record<string, string> = {
 	"text/css": "css",
 };
 
-/** Every `url()` value in a stylesheet, quoted or bare, with the quote it was written with. */
-const CSS_URL = /url\(\s*(?:"([^"\n]*)"|'([^'\n]*)'|([^)"'\s][^)\s]*))\s*\)/gu;
-
 /**
  * Whether a reference names a file of the book: anything but an in-page fragment, a `data:`
  * URL and an empty value.
@@ -44,6 +41,86 @@ const CSS_URL = /url\(\s*(?:"([^"\n]*)"|'([^'\n]*)'|([^)"'\s][^)\s]*))\s*\)/gu;
 export function isFileReference(reference: string): boolean {
 	let value = reference.trim();
 	return value !== "" && !value.startsWith("#") && !value.startsWith("data:");
+}
+
+/** Whether `char` is whitespace as CSS `\s` defines it. */
+function isCssSpace(char: string | undefined): boolean {
+	return char !== undefined && /\s/u.test(char);
+}
+
+/**
+ * One closed `url()` in a stylesheet: the span to rewrite and the value as written, found with
+ * forward scans so a long run of unfinished `url(` openers still costs linear time.
+ */
+interface CssUrlMatch {
+	/** Index of the `u` in `url(`. */
+	start: number;
+	/** Index just past the closing `)`. */
+	end: number;
+	/** The quoted or bare value, without surrounding whitespace. */
+	value: string;
+}
+
+/**
+ * Every closed `url()` in `css`, in order. A quote may not span a newline; a bare value runs
+ * until the next whitespace or `)`. An opener that runs to the end of the string without a
+ * closer ends the search, so a long run of unfinished `url(` still costs linear time.
+ */
+function cssUrlMatches(css: string): CssUrlMatch[] {
+	let matches: CssUrlMatch[] = [];
+	let position = 0;
+	while (position < css.length) {
+		let open = css.indexOf("url(", position);
+		if (open === -1) break;
+
+		let index = open + 4;
+		while (isCssSpace(css[index])) index++;
+
+		let value: string | undefined;
+		let quote = css[index];
+		if (quote === '"' || quote === "'") {
+			let close = -1;
+			let brokenByNewline = false;
+			for (let cursor = index + 1; cursor < css.length; cursor++) {
+				let char = css[cursor];
+				if (char === "\n") {
+					brokenByNewline = true;
+					break;
+				}
+				if (char === quote) {
+					close = cursor;
+					break;
+				}
+			}
+			if (close === -1) {
+				if (!brokenByNewline) break;
+				position = open + 4;
+				continue;
+			}
+			value = css.slice(index + 1, close);
+			index = close + 1;
+		} else if (index < css.length && !isCssSpace(css[index]) && css[index] !== ")") {
+			let start = index;
+			index++;
+			while (index < css.length && css[index] !== ")" && !isCssSpace(css[index])) index++;
+			if (index === css.length) break;
+			value = css.slice(start, index);
+		} else {
+			position = open + 4;
+			continue;
+		}
+
+		while (isCssSpace(css[index])) index++;
+		if (index === css.length) break;
+		if (css[index] !== ")") {
+			position = open + 4;
+			continue;
+		}
+
+		matches.push({ start: open, end: index + 1, value });
+		position = index + 1;
+	}
+	return matches;
 }
 
 /**
@@ -183,9 +260,8 @@ export async function remotePath(
  */
 export function cssReferences(css: string): string[] {
 	let references: string[] = [];
-	for (let match of css.matchAll(CSS_URL)) {
-		let value = match[1] ?? match[2] ?? match[3] ?? "";
-		if (isFileReference(value)) references.push(value);
+	for (let match of cssUrlMatches(css)) {
+		if (isFileReference(match.value)) references.push(match.value);
 	}
 	return references;
 }
@@ -198,12 +274,27 @@ export function rewriteCss(
 	css: string,
 	rewrite: (reference: string) => string | undefined,
 ): string {
-	return css.replace(CSS_URL, (whole, double?: string, single?: string, bare?: string) => {
-		let value = double ?? single ?? bare ?? "";
-		if (!isFileReference(value)) return whole;
-		let next = rewrite(value);
-		return next === undefined ? whole : `url("${next.replaceAll('"', "%22")}")`;
-	});
+	let matches = cssUrlMatches(css);
+	if (matches.length === 0) return css;
+
+	let parts: string[] = [];
+	let cursor = 0;
+	for (let match of matches) {
+		parts.push(css.slice(cursor, match.start));
+		if (!isFileReference(match.value)) {
+			parts.push(css.slice(match.start, match.end));
+		} else {
+			let next = rewrite(match.value);
+			parts.push(
+				next === undefined
+					? css.slice(match.start, match.end)
+					: `url("${next.replaceAll('"', "%22")}")`,
+			);
+		}
+		cursor = match.end;
+	}
+	parts.push(css.slice(cursor));
+	return parts.join("");
 }
 
 /** Whether a reference loads from the web rather than from the book's folder. */
