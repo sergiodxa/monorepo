@@ -206,6 +206,7 @@ export function ResumeView() {
 				locale={resume.locale}
 				title={resume.title}
 				description={resume.description}
+				activePath={routes.resume.href()}
 			>
 				<main mix={[grid(), gap(12), minIs(0)]}>
 					<Header resume={resume} />

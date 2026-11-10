@@ -40,6 +40,12 @@ const POST_CACHE_CONTROL = "public, max-age=3600, s-maxage=2592000";
 const LISTING_CACHE_CONTROL = "public, max-age=3600, s-maxage=3600";
 
 /**
+ * A standalone page's card for a day. Only a deploy changes the copy those cards draw, and
+ * each deploy starts on an empty edge cache.
+ */
+const PAGE_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400";
+
+/**
  * Answers a `GET` for `<page>.png` with that page's card: the stored one, or one rendered,
  * stored after the response, and returned. A `.png` path naming no published page continues
  * to the router. The drawing code and fonts load on the first card drawn.
@@ -64,7 +70,9 @@ export default function socialCards(
 		let key = socialCardKey(content);
 		let stored = await cards.get(key);
 		let tag = cardTag(content, pagePath);
-		let cacheControl = content.kind === "post" ? POST_CACHE_CONTROL : LISTING_CACHE_CONTROL;
+		let cacheControl = PAGE_CACHE_CONTROL;
+		if (content.kind === "post") cacheControl = POST_CACHE_CONTROL;
+		else if (content.kind === "listing") cacheControl = LISTING_CACHE_CONTROL;
 		if (stored) return png(stored, tag, cacheControl);
 
 		let [{ socialCardFonts }, { renderSocialCard }] = await Promise.all([
@@ -107,8 +115,12 @@ async function renderPage(
  * purged by every write that adds or changes a post.
  */
 function cardTag(content: SocialCard.Content, pagePath: string): CacheTag {
-	let [, postType = "", postSlug = ""] = pagePath.split("/");
-	return content.kind === "post" ? TAGS.post(postType, postSlug) : TAGS.postList();
+	if (content.kind === "post") {
+		let [, postType = "", postSlug = ""] = pagePath.split("/");
+		return TAGS.post(postType, postSlug);
+	}
+	if (content.kind === "listing") return TAGS.postList();
+	return TAGS.page(pagePath);
 }
 
 /** The card as an image response, tagged like its page and cacheable by any shared cache. */

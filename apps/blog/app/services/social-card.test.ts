@@ -75,7 +75,21 @@ describe("readSocialCard", () => {
 		expect(card?.kind === "post" && card.eyebrow).toBe("Note");
 	});
 
-	test("a page publishing no entry or feed has no card", () => {
+	test("a page with neither entry nor feed still draws from its title", () => {
+		let html = `<!doctype html><html><head>
+<title>Apps</title>
+<meta name="description" content="Products I ship.">
+</head><body><h1>Apps I built</h1></body></html>`;
+		expect(readSocialCard(html, "/apps")).toEqual({
+			kind: "page",
+			eyebrow: "Apps",
+			title: "Apps",
+			description: "Products I ship.",
+			url: "sergiodxa.com/apps",
+		});
+	});
+
+	test("markup with no title or description has no card", () => {
 		expect(readSocialCard("<p>Hello</p>", "/colors")).toBeNull();
 	});
 });
