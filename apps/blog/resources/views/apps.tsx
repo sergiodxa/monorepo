@@ -1,8 +1,7 @@
 /**
- * View for `/apps`: a showcase of the products the author ships, each a feature card with a
- * visual preview, its name, where it runs and a short pitch — the whole card opens the app,
- * the same gallery shape as the demos on sdxc.dev. Renders in either language from the same
- * structured page.
+ * View for `/apps`: each shipped product as its own band — copy on one side, screenshots or
+ * a product window on the other, sides alternating so the page reads as a tour rather than
+ * a card grid. Renders in either language from the same structured page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,23 +10,23 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
-import { fg, outline } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, gap, grid, hstack, vstack } from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
 import { m, maxIs, minIs } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
 import { balance, leading, text, tracking } from "@sdxc/u/typography";
-import { Badge, Heading, Link } from "@sdxc/ui";
-import { Feature } from "@sdxc/ui/landing";
+import { Heading, Link, LinkButton } from "@sdxc/ui";
+import { FeatureBand } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppsPage } from "~/app/services/apps-page";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import {
-	EncorePreview,
-	ReaderPreview,
-	UptimePreview,
-	WakabaPreview,
+	EncoreStage,
+	ReaderStage,
+	UptimeStage,
+	WakabaStage,
 } from "~/resources/views/apps-previews";
 import routes from "~/routes/web";
 
@@ -47,19 +46,27 @@ function appsHref(locale: string): string {
 }
 
 /**
- * The visual each app's card opens with: a CSS miniature of the product on a shared stage
- * height, so every card in the gallery lines up.
+ * Puts the media column on the inline start once the split is two columns, so every other
+ * band can flip sides without a second Split layout.
  */
-function previewFor(id: string): RemixNode {
-	switch (id) {
+function mediaStart() {
+	return [at("lg", "ui-landing-split", raw({ order: -1 }))];
+}
+
+/**
+ * The visual each app's band opens with: fanned phone captures for App Store apps, a
+ * product window for the web ones.
+ */
+function mediaFor(app: AppsPage.App, page: AppsPage): RemixNode {
+	switch (app.id) {
 		case "wakaba":
-			return <WakabaPreview />;
+			return <WakabaStage locale={page.locale} label={page.labels.stages.wakaba} />;
 		case "encore":
-			return <EncorePreview />;
+			return <EncoreStage locale={page.locale} label={page.labels.stages.encore} />;
 		case "uptime":
-			return <UptimePreview />;
+			return <UptimeStage />;
 		case "reader":
-			return <ReaderPreview />;
+			return <ReaderStage />;
 		default:
 			return null;
 	}
@@ -99,51 +106,50 @@ function Header(handle: Handle<{ page: AppsPage }>) {
 	};
 }
 
+namespace AppBand {
+	export interface Props {
+		app: AppsPage.App;
+		page: AppsPage;
+		/** Zero-based index in the showcase, used to alternate media side and tone. */
+		index: number;
+	}
+}
+
 /**
- * One app's card: its preview on top, then the name as the stretched link, a platform badge
- * and the pitch, so a screen reader announces the name alone while the whole card opens it.
+ * One app as a split band: platform as eyebrow, name as title, pitch and checks beside a
+ * screenshot stage that flips sides every band.
+ *
+ * @returns The render function producing the band.
  */
-function AppCard(handle: Handle<{ app: AppsPage.App }>) {
+function AppBand(handle: Handle<AppBand.Props>) {
 	return () => {
-		let { app } = handle.props;
+		let { app, index, page } = handle.props;
+		let mediaOnStart = index % 2 === 1;
 
 		return (
-			<Feature
-				mix={[
-					raw({ transition: "background-color 150ms" }),
-					when(
-						"&:has([data-slot='app-link']:hover)",
-						raw({
-							backgroundColor:
-								"color-mix(in oklch, var(--ui-surface-raised, Canvas), var(--ui-brand-bg-solid) 6%)",
-						}),
-					),
-					when(
-						"&:has([data-slot='app-link']:focus-visible)",
-						outline({ color: "brand.ring", width: 2, offset: 2 }),
-					),
-				]}
+			<FeatureBand
+				id={app.id}
+				layout="split"
+				lean="media"
+				tone={index % 2 === 0 ? "plain" : "tinted"}
+				eyebrow={app.platform}
+				eyebrowVariant="quiet"
+				title={app.name}
+				description={app.blurb}
+				media={mediaFor(app, page)}
+				parts={mediaOnStart ? { media: mediaStart() } : undefined}
 			>
-				{previewFor(app.id)}
-				<div mix={[hstack({ gap: 2, align: "center" }), raw({ flexWrap: "wrap" })]}>
-					<Feature.Title>
-						<a
-							href={app.href}
-							data-slot="app-link"
-							mix={[
-								raw({ color: "inherit", textDecoration: "none", outline: "none" }),
-								when("&::after", raw({ content: '""', position: "absolute", inset: "0" })),
-							]}
-						>
-							{app.name}
-						</a>
-					</Feature.Title>
-					<Badge color="brand">{app.platform}</Badge>
-				</div>
-				<Feature.Description>
-					<p mix={[m(0), fg("neutral.emphasis"), leading("snug")]}>{app.blurb}</p>
-				</Feature.Description>
-			</Feature>
+				<ul>
+					{app.highlights.map((highlight) => (
+						<li key={highlight}>{highlight}</li>
+					))}
+				</ul>
+				<span mix={[hstack({ gap: 3, align: "center" }), flexWrap("wrap")]}>
+					<LinkButton href={app.href} variant="solid" mix={[landingCtaChrome()]}>
+						{app.cta}
+					</LinkButton>
+				</span>
+			</FeatureBand>
 		);
 	};
 }
@@ -165,13 +171,13 @@ export function AppsView() {
 				description={page.description}
 				activePath={routes.apps.href()}
 			>
-				<main mix={[vstack({ gap: 10, align: "stretch" }), minIs(0)]}>
-					<Header page={page} />
-					<Feature.Grid columns={2}>
-						{page.apps.map((app) => (
-							<AppCard key={app.id} app={app} />
-						))}
-					</Feature.Grid>
+				<main mix={[vstack({ gap: 0, align: "stretch" }), minIs(0)]}>
+					<div mix={[vstack({ gap: 10, align: "stretch" }), raw({ paddingBlockEnd: "2rem" })]}>
+						<Header page={page} />
+					</div>
+					{page.apps.map((app, index) => (
+						<AppBand key={app.id} app={app} page={page} index={index} />
+					))}
 				</main>
 			</BlogLayout>
 		);

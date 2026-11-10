@@ -52,10 +52,12 @@ describe("GET /apps", () => {
 		expect(html).toContain('href="/apps/encore"');
 		expect(html).toContain('href="https://uptime.sergiodxa.com"');
 		expect(html).toContain('href="https://reader.sergiodxa.com"');
-		expect(html).toContain("23-day streak");
-		expect(html).toContain("EARWORM");
+		expect(html).toContain("/apps/wakaba/screenshots/en/path-progress-light.webp");
+		expect(html).toContain("/apps/encore/screenshots/en/challenge-light.webp");
 		expect(html).toContain("All systems up");
 		expect(html).toContain("Unread");
+		expect(html).toContain("Open Wakaba");
+		expect(html).toContain("Open Encore");
 		expect(html).toContain('href="/apps?lang=es-AR"');
 		expect(html).toContain('href="/apps.md?lang=en"');
 		expect(html).toContain('property="og:image" content="https://sergiodxa.com/apps.png?v=');

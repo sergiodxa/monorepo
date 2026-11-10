@@ -20,7 +20,13 @@ const EN: AppsPage = {
 	intro:
 		"Products I ship myself — on the App Store and on the web — each with its own home to try or download.",
 	otherLanguage: { locale: "es-AR", label: "Español" },
-	labels: { viewMarkdown: "View as Markdown" },
+	labels: {
+		viewMarkdown: "View as Markdown",
+		stages: {
+			wakaba: "Wakaba on iPhone: learning path, flashcards and practice",
+			encore: "Encore on iPhone: challenge card, card back and swipe",
+		},
+	},
 	apps: [
 		{
 			id: "wakaba",
@@ -29,6 +35,12 @@ const EN: AppsPage = {
 			platform: "App Store",
 			blurb:
 				"Japanese vocabulary practice a few minutes a day on iPhone and iPad: flashcards, a ten-level path and four companions, while a bonsai grows with every session. Free, with no ads or in-app purchases.",
+			highlights: [
+				"Ten-level path with short daily sessions",
+				"Flashcards, listening and speaking practice",
+				"A bonsai that grows with every day you practise",
+			],
+			cta: "Open Wakaba",
 		},
 		{
 			id: "encore",
@@ -37,6 +49,12 @@ const EN: AppsPage = {
 			platform: "App Store",
 			blurb:
 				"A music party card game for iPhone, iPad, Apple Watch and Mac: reveal a card, pick a song that fits the challenge, and sing. Out now on the App Store.",
+			highlights: [
+				"108 hand-written singing challenges",
+				"Tap to reveal, swipe for the next card",
+				"Apple Watch remote for the room",
+			],
+			cta: "Open Encore",
 		},
 		{
 			id: "uptime",
@@ -45,6 +63,12 @@ const EN: AppsPage = {
 			platform: "Web",
 			blurb:
 				"Simple, reliable uptime monitoring for developers: websites, APIs, DNS, SSL certificates and cron jobs, with alerts and public status pages.",
+			highlights: [
+				"HTTP, DNS, SSL and cron in one place",
+				"Alerts when a check fails",
+				"Public status pages for your users",
+			],
+			cta: "Open Uptime",
 		},
 		{
 			id: "reader",
@@ -53,6 +77,12 @@ const EN: AppsPage = {
 			platform: "Web",
 			blurb:
 				"Follow any site that publishes RSS or Atom and read everything it writes in one place — your own library of feeds, folders and saved posts.",
+			highlights: [
+				"Any RSS or Atom feed",
+				"Folders and saved posts",
+				"Your library, not a timeline",
+			],
+			cta: "Open Reader",
 		},
 	],
 };
