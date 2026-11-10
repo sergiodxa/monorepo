@@ -38,18 +38,43 @@ const SHOTS: Record<"wakaba" | "encore", Shot> = {
 };
 
 /**
- * A light/dark product screenshot that fills a feature card's media slot.
+ * A light/dark product screenshot cropped into the same stage height as the web-app
+ * miniatures, so every card in the gallery lines up.
  *
- * @returns The render function producing the picture.
+ * @returns The render function producing the miniature.
  */
 export function AppShot(handle: Handle<{ app: "wakaba" | "encore" }>) {
 	return () => {
 		let shot = SHOTS[handle.props.app];
 		return (
-			<picture>
-				<source media="(prefers-color-scheme: dark)" srcset={shot.dark} />
-				<img src={shot.light} alt={shot.alt} width={780} height={1688} />
-			</picture>
+			<Stage label={shot.alt}>
+				<picture
+					mix={[
+						raw({
+							display: "block",
+							inlineSize: "100%",
+							blockSize: "100%",
+						}),
+					]}
+				>
+					<source media="(prefers-color-scheme: dark)" srcset={shot.dark} />
+					<img
+						src={shot.light}
+						alt=""
+						width={780}
+						height={1688}
+						mix={[
+							raw({
+								display: "block",
+								inlineSize: "100%",
+								blockSize: "100%",
+								objectFit: "cover",
+								objectPosition: "center top",
+							}),
+						]}
+					/>
+				</picture>
+			</Stage>
 		);
 	};
 }

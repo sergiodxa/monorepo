@@ -42,23 +42,15 @@ function appsHref(locale: string): string {
 }
 
 /**
- * The visual each app's card opens with: a real screenshot for the App Store apps, a CSS
- * miniature for the web ones.
+ * The visual each app's card opens with: a cropped screenshot for the App Store apps, a CSS
+ * miniature for the web ones — every one on the same stage height.
  */
 function previewFor(id: string): RemixNode {
 	switch (id) {
 		case "wakaba":
-			return (
-				<Feature.Media>
-					<AppShot app="wakaba" />
-				</Feature.Media>
-			);
+			return <AppShot app="wakaba" />;
 		case "encore":
-			return (
-				<Feature.Media>
-					<AppShot app="encore" />
-				</Feature.Media>
-			);
+			return <AppShot app="encore" />;
 		case "uptime":
 			return <UptimePreview />;
 		case "reader":
