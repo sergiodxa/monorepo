@@ -32,6 +32,11 @@ export namespace AppsPage {
 	/** Small interface strings around the list. */
 	export interface Labels {
 		viewMarkdown: string;
+		/** Accessible name for each app's screenshot stage. */
+		stages: {
+			wakaba: string;
+			encore: string;
+		};
 	}
 
 	/** One shipped product on the showcase. */
@@ -42,6 +47,10 @@ export namespace AppsPage {
 		/** Where it runs, such as "Web" or "iPhone and iPad". */
 		platform: string;
 		blurb: string;
+		/** Short claims under the pitch, shown as checks beside the media. */
+		highlights: ReadonlyArray<string>;
+		/** The button that opens the app from its band. */
+		cta: string;
 	}
 }
 
