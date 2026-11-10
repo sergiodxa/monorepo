@@ -17,12 +17,16 @@ const ES_AR: AppsPage = {
 	description:
 		"Apps que construyó Sergio Xalambrí: vocabulario japonés, un juego de música, monitoreo de uptime y un lector de feeds.",
 	heading: "Apps que construí",
+	accent: "construí",
+	eyebrow: "App Store y la web",
 	intro:
 		"Productos que publico yo — en el App Store y en la web —, cada uno con su propio hogar para probar o descargar.",
+	browseCta: "Ver las apps",
 	otherLanguage: { locale: "en", label: "English" },
 	labels: {
 		viewMarkdown: "Ver como Markdown",
 		stages: {
+			hero: "Wakaba y Encore en iPhone",
 			wakaba: "Wakaba en iPhone: camino de aprendizaje, flashcards y práctica",
 			encore: "Encore en iPhone: carta de desafío, dorso y swipe",
 		},

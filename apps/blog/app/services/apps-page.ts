@@ -19,8 +19,14 @@ export interface AppsPage {
 	description: string;
 	/** The H1 a visitor reads first. */
 	heading: string;
+	/** The word inside `heading` drawn with AccentText. */
+	accent: string;
+	/** Quiet line above the hero title. */
+	eyebrow: string;
 	/** What the page is, shown under the heading. */
 	intro: string;
+	/** Scrolls the hero into the first product band. */
+	browseCta: string;
 	/** The other language's name, written in that language, for the switcher. */
 	otherLanguage: { locale: PageLocale; label: string };
 	labels: AppsPage.Labels;
@@ -34,6 +40,7 @@ export namespace AppsPage {
 		viewMarkdown: string;
 		/** Accessible name for each app's screenshot stage. */
 		stages: {
+			hero: string;
 			wakaba: string;
 			encore: string;
 		};
