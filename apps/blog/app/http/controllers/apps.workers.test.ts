@@ -44,7 +44,10 @@ describe("GET /apps", () => {
 		expect(response.status).toBe(200);
 		expect(html).toMatch(/<title[^>]*>Apps<\/title>/);
 		expect(html).toContain('lang="en"');
-		expect(html).toContain("Apps I built");
+		expect(html).toContain("Apps I ");
+		expect(html).toContain(">built<");
+		expect(html).toContain("App Store and the web");
+		expect(html).toContain("See the apps");
 		for (let name of ["Wakaba", "Encore", "Uptime", "Reader"]) {
 			expect(html).toContain(name);
 		}
@@ -76,7 +79,8 @@ describe("GET /apps", () => {
 		for (let html of [byHeader, byQuery]) {
 			expect(html).toMatch(/<title[^>]*>Apps<\/title>/);
 			expect(html).toContain('lang="es-AR"');
-			expect(html).toContain("Apps que construí");
+			expect(html).toContain("Apps que ");
+			expect(html).toContain(">construí<");
 			expect(html).toContain("App Store");
 		}
 	});

@@ -278,6 +278,114 @@ function captureLang(locale: string): CaptureLang {
 	return locale === "en" ? "en" : "es";
 }
 
+namespace AppsHeroStage {
+	export interface Props {
+		locale: string;
+		label: string;
+		pauseLabel: string;
+	}
+}
+
+/**
+ * The hero's media: three phones from the App Store apps fanned on a stage, so the page
+ * opens on real product screens before the first band.
+ *
+ * @returns The render function producing the hero stage.
+ */
+export function AppsHeroStage(handle: Handle<AppsHeroStage.Props>) {
+	return () => {
+		let lang = captureLang(handle.props.locale);
+		let wakaba = `/apps/wakaba/screenshots/${lang}`;
+		let encore = `/apps/encore/screenshots/${lang}`;
+		return (
+			<MotionLoop pauseLabel={handle.props.pauseLabel}>
+				<div
+					role="img"
+					aria-label={handle.props.label}
+					mix={[
+						raw({
+							"--phone": "min(12.5rem, 42cqi)",
+							position: "relative",
+							isolation: "isolate",
+							overflow: "visible",
+							paddingBlock: "1rem 1.5rem",
+							containerType: "inline-size",
+							containerName: "apps-hero-stage",
+						}),
+					]}
+				>
+					<div mix={[hstack({ gap: 0, align: "start", justify: "center" })]}>
+						<div
+							mix={[
+								raw({
+									inlineSize: "var(--phone)",
+									flexShrink: "0",
+									marginBlockStart: "calc(var(--phone) * 0.12)",
+									marginInlineEnd: "calc(var(--phone) * -0.14)",
+									scale: "0.9",
+									transformOrigin: "100% 0%",
+									zIndex: "0",
+								}),
+								bob("apps-hero-start", "-1.1s", "-0.45rem", "-8deg"),
+							]}
+						>
+							<AppPhone
+								bezel="#161412"
+								shot={{
+									base: `${wakaba}/flashcards-fish`,
+									alt: "",
+								}}
+							/>
+						</div>
+						<div
+							mix={[
+								raw({
+									inlineSize: "var(--phone)",
+									flexShrink: "0",
+									zIndex: "1",
+									transformOrigin: "50% 100%",
+								}),
+								bob("apps-hero-front", "-0.3s", "-0.55rem", "-1deg"),
+							]}
+						>
+							<AppPhone
+								bezel="#1a0830"
+								shot={{
+									base: `${encore}/challenge`,
+									alt: "",
+									eager: true,
+								}}
+							/>
+						</div>
+						<div
+							mix={[
+								raw({
+									inlineSize: "var(--phone)",
+									flexShrink: "0",
+									marginBlockStart: "calc(var(--phone) * 0.12)",
+									marginInlineStart: "calc(var(--phone) * -0.14)",
+									scale: "0.9",
+									transformOrigin: "0% 0%",
+									zIndex: "0",
+								}),
+								bob("apps-hero-end", "-2.6s", "-0.4rem", "8deg"),
+							]}
+						>
+							<AppPhone
+								bezel="#161412"
+								shot={{
+									base: `${wakaba}/path-progress`,
+									alt: "",
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+			</MotionLoop>
+		);
+	};
+}
+
 namespace WakabaStage {
 	export interface Props {
 		locale: string;

@@ -1,7 +1,7 @@
 /**
- * View for `/apps`: each shipped product as its own band — copy on one side, screenshots or
- * a product window on the other, sides alternating so the page reads as a tour rather than
- * a card grid. Renders in either language from the same structured page.
+ * View for `/apps`: a landing-style hero, then each shipped product as its own band — copy
+ * on one side, screenshots or a product window on the other, sides alternating so the page
+ * reads as a tour. Renders in either language from the same structured page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,19 +10,21 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
+import { ArrowDownIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
-import { flexWrap, gap, grid, hstack, vstack } from "@sdxc/u/layout";
+import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
-import { m, maxIs, minIs } from "@sdxc/u/size";
-import { balance, leading, text, tracking } from "@sdxc/u/typography";
-import { Heading, Link, LinkButton } from "@sdxc/ui";
-import { FeatureBand } from "@sdxc/ui/landing";
+import { minIs } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Link, LinkButton } from "@sdxc/ui";
+import { AccentText, FeatureBand, LandingHero } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppsPage } from "~/app/services/apps-page";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import {
+	AppsHeroStage,
 	EncoreStage,
 	ReaderStage,
 	UptimeStage,
@@ -51,6 +53,21 @@ function appsHref(locale: string): string {
  */
 function mediaStart() {
 	return [at("lg", "ui-landing-split", raw({ order: -1 }))];
+}
+
+/**
+ * Draws `heading` with `accent` wrapped in AccentText when that word appears in it.
+ */
+function accentTitle(heading: string, accent: string): RemixNode {
+	let index = heading.indexOf(accent);
+	if (index < 0) return heading;
+	return (
+		<>
+			{heading.slice(0, index)}
+			<AccentText>{accent}</AccentText>
+			{heading.slice(index + accent.length)}
+		</>
+	);
 }
 
 /**
@@ -85,14 +102,16 @@ function mediaFor(app: AppsPage.App, page: AppsPage): RemixNode {
 }
 
 /**
- * The header: the other language and the Markdown twin, then the title and intro.
+ * The page hero: language and Markdown links, then a landing hero with the title, pitch,
+ * a scroll CTA and a fan of product screens.
  */
-function Header(handle: Handle<{ page: AppsPage }>) {
+function Hero(handle: Handle<{ page: AppsPage }>) {
 	return () => {
 		let { page } = handle.props;
+		let browseHref = `#${page.apps[0]?.id ?? "wakaba"}`;
 
 		return (
-			<header mix={[grid(), gap(6)]}>
+			<div mix={[vstack({ gap: 4, align: "stretch" })]}>
 				<div mix={[hstack({ gap: 4, justify: "end", align: "center" }), flexWrap("wrap")]}>
 					<Link
 						href={appsHref(page.otherLanguage.locale)}
@@ -106,14 +125,38 @@ function Header(handle: Handle<{ page: AppsPage }>) {
 						{page.labels.viewMarkdown}
 					</Link>
 				</div>
-
-				<div mix={[vstack({ gap: 3, align: "start" }), maxIs("40rem")]}>
-					<Heading level={1} mix={[m(0), text("5xl"), tracking("tight"), balance()]}>
-						{page.heading}
-					</Heading>
-					<p mix={[m(0), text("lg"), leading("relaxed")]}>{page.intro}</p>
-				</div>
-			</header>
+				<LandingHero
+					id="top"
+					tone="tinted"
+					align="center"
+					entrance
+					mediaPlacement="below"
+					eyebrow={page.eyebrow}
+					eyebrowVariant="quiet"
+					title={accentTitle(page.heading, page.accent)}
+					description={page.intro}
+					actions={
+						<span
+							mix={[
+								hstack({ gap: 3, align: "center", justify: "center" }),
+								raw({ flexWrap: "wrap" }),
+							]}
+						>
+							<LinkButton href={browseHref} variant="solid" mix={[landingCtaChrome()]}>
+								{page.browseCta}
+								<ArrowDownIcon size={16} aria-hidden="true" />
+							</LinkButton>
+						</span>
+					}
+					media={
+						<AppsHeroStage
+							locale={page.locale}
+							label={page.labels.stages.hero}
+							pauseLabel={page.labels.pause}
+						/>
+					}
+				/>
+			</div>
 		);
 	};
 }
@@ -185,9 +228,7 @@ export function AppsView() {
 				wide
 			>
 				<main mix={[vstack({ gap: 0, align: "stretch" }), minIs(0)]}>
-					<div mix={[vstack({ gap: 10, align: "stretch" }), raw({ paddingBlockEnd: "2rem" })]}>
-						<Header page={page} />
-					</div>
+					<Hero page={page} />
 					{page.apps.map((app, index) => (
 						<AppBand key={app.id} app={app} page={page} index={index} />
 					))}
