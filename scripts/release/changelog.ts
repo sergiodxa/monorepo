@@ -20,7 +20,7 @@ import type { Package } from "./workspace.js";
 
 import { run } from "./command.js";
 import { attributeCommits, attributeCorrections, parseCommits, releaseSummary } from "./commits.js";
-import { commitFiles, commitLog } from "./git.js";
+import { commitLog, correctionFiles } from "./git.js";
 import { HISTORY_PACKAGE } from "./plan.js";
 import { REPO_ROOT } from "./workspace.js";
 
@@ -136,7 +136,7 @@ async function releaseHistory(packages: Package[]): Promise<Result<ReleaseCommit
 		if (isFailure(log)) return log;
 		let parsed = parseCommits(log.data);
 		if (isFailure(parsed)) return parsed;
-		let commits = await attributeCorrections(parsed.data, commitFiles);
+		let commits = await attributeCorrections(parsed.data, correctionFiles);
 		if (isFailure(commits)) return commits;
 		releases.push({
 			version: tag.slice(1),

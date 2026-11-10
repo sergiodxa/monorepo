@@ -200,7 +200,9 @@ export function isMissingBody(body: string): boolean {
 /**
  * Corrections attributed to the packages of the commit they correct: each commit with a
  * `Release-Note-For` trailer gains the files `filesOf` reports for the named sha, so an empty
- * correction publishes under the same packages as the note it replaces.
+ * correction publishes under the same packages as the note it replaces. Callers pass a `filesOf`
+ * that answers an empty list when the named sha is gone, so a rewritten history keeps the run
+ * moving.
  */
 export async function attributeCorrections(
 	commits: Commit[],

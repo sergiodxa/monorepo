@@ -87,6 +87,15 @@ export async function commitFiles(sha: string): Promise<Result<string[], Command
 	);
 }
 
+/**
+ * Paths a `Release-Note-For` target touched: the named commit's files when it is still in this
+ * clone, otherwise none, so a trailer that survived a rewrite does not abort the release.
+ */
+export async function correctionFiles(sha: string): Promise<Result<string[], CommandError>> {
+	if (!(await hasCommit(sha))) return success([]);
+	return commitFiles(sha);
+}
+
 /** Whether `sha` names a commit in this clone, which a `gitHead` from npm may not after a rewrite. */
 export async function hasCommit(sha: string): Promise<boolean> {
 	return isSuccess(await git(["cat-file", "-e", `${sha}^{commit}`]));
