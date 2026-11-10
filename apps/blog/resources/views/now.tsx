@@ -173,6 +173,7 @@ export function NowView() {
 				locale={page.locale}
 				title={page.title}
 				description={page.description}
+				activePath={routes.now.href()}
 			>
 				<main mix={[grid(), gap(10), minIs(0)]}>
 					<Header page={page} />

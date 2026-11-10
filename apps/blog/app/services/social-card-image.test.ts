@@ -85,4 +85,17 @@ describe("renderSocialCard", () => {
 		expect(accentPixels(image, [100, 340, 600, 390])).toBeGreaterThan(100);
 		expect(accentPixels(image, [100, 500, 600, 560])).toBe(0);
 	});
+
+	test("a page card carries its path pill and the site in emerald", async () => {
+		let image = await draw({
+			kind: "page",
+			eyebrow: "Apps",
+			title: "Apps I built",
+			description: "Products I ship myself.",
+			url: "sergiodxa.com/apps",
+		});
+		expect([image.width, image.height]).toEqual([SOCIAL_CARD_SIZE.width, SOCIAL_CARD_SIZE.height]);
+		expect(accentPixels(image, [900, 60, 1130, 120])).toBeGreaterThan(50);
+		expect(accentPixels(image, [900, 520, 1130, 580])).toBeGreaterThan(50);
+	});
 });

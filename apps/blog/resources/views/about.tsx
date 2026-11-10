@@ -323,6 +323,7 @@ export function AboutView() {
 				locale={page.locale}
 				title={page.title}
 				description={page.description}
+				activePath={routes.about.href()}
 			>
 				<main mix={[container("about"), grid(), gap(12), minIs(0)]}>
 					<Hero page={page} />

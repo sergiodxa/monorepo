@@ -521,6 +521,7 @@ export function PressView() {
 				locale={kit.locale}
 				title={kit.title}
 				description={kit.description}
+				activePath={routes.press.index.href()}
 			>
 				<main mix={[grid(), gap(12), minIs(0)]}>
 					<Cover kit={kit} />

@@ -1,7 +1,8 @@
 /**
  * Draws the blog's social cards in its own reading style: a serif face on the dark radial
  * sheen the pages sit on, the tracked author line, and the emerald accent. A post card leads
- * with its title and byline; a listing card shows its heading over its newest entries.
+ * with its title and byline; a listing card shows its heading over its newest entries; a
+ * page card leads with a path pill and the page's title.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,7 +87,8 @@ export async function renderSocialCard(
 		paint: PALETTE.quiet,
 	});
 	if (content.kind === "post") drawPost(canvas, content, fonts, sheen);
-	else drawListing(canvas, content, fonts);
+	else if (content.kind === "listing") drawListing(canvas, content, fonts);
+	else drawPage(canvas, content, fonts, sheen);
 	return canvas.toPNG();
 }
 
@@ -199,6 +201,65 @@ function drawPill(
 		x: left + width / 2,
 		y: top + 28,
 		align: "center",
+		paint: PALETTE.accent,
+	});
+}
+
+/**
+ * A standalone page's card: a path pill, the title and summary, and the author with the
+ * site under a rule — the same reading style as a post, for every URL that is not one.
+ */
+function drawPage(
+	canvas: Canvas,
+	content: SocialCard.Page,
+	fonts: SocialCardImage.Fonts,
+	sheen: Raster.Paint,
+): void {
+	let right = canvas.width - MARGIN;
+	drawPill(canvas, content.eyebrow.toUpperCase(), right, fonts, sheen);
+
+	let title = canvas.text(content.title, {
+		font: fonts.semibold,
+		size: 76,
+		minSize: 52,
+		tracking: -1,
+		lineHeight: 1.12,
+		maxWidth: right - MARGIN,
+		maxLines: 3,
+		x: MARGIN,
+		y: 250,
+		paint: PALETTE.title,
+	});
+	let descriptionBaseline = 250 + (title.lines.length - 1) * title.size * 1.12 + 68;
+	if (content.description && descriptionBaseline < 480) {
+		canvas.text(content.description, {
+			font: fonts.regular,
+			size: 30,
+			lineHeight: 1.4,
+			maxWidth: right - MARGIN,
+			maxLines: descriptionBaseline + 42 < 480 ? 2 : 1,
+			x: MARGIN,
+			y: descriptionBaseline,
+			paint: PALETTE.description,
+		});
+	}
+
+	canvas.fillRect(MARGIN, 499, right - MARGIN, 2, PALETTE.border);
+	canvas.text(`By ${PROFILE.name}`, {
+		font: fonts.regular,
+		size: 26,
+		maxWidth: 760,
+		maxLines: 1,
+		x: MARGIN,
+		y: 560,
+		paint: PALETTE.byline,
+	});
+	canvas.text(new URL(PROFILE.canonical.origin).host, {
+		font: fonts.regular,
+		size: 26,
+		x: right,
+		y: 560,
+		align: "end",
 		paint: PALETTE.accent,
 	});
 }

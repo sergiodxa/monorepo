@@ -36,7 +36,7 @@ import { Frame } from "remix/component";
 import type { SocialCard } from "~/app/services/social-card";
 
 import { KINDS, POST_KINDS } from "~/app/models/kinds";
-import { SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
+import { SOCIAL_CARD_SIZE, socialCardUrl, socialCardVersion } from "~/app/services/social-card";
 import { PROFILE } from "~/config/profile";
 import { BlogFooter } from "~/resources/components/blog-footer";
 import { NavPill, WIDE_SCREEN } from "~/resources/components/nav-pill";
@@ -80,8 +80,10 @@ export namespace BlogLayout {
 		activity?: string;
 		meta?: Array<MetaTag>;
 		/**
-		 * The page's social card. With it the page advertises a large image card, replacing
-		 * any `twitter:card` in `meta`, so every platform shows the drawn card.
+		 * The page's social card. When omitted, the layout builds one from `activePath` (or
+		 * the canonical path) and the title and description, so every public URL advertises
+		 * a unique large image. Pass an explicit reference when the version must follow more
+		 * than the title — a feed's newest entries, a post's publish date.
 		 */
 		card?: SocialCard.Reference;
 		/**
@@ -138,6 +140,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 			searchQuery,
 			title,
 		} = handle.props;
+		let resolvedCard = resolveCard({ activePath, canonical, card, description, locale, title });
 
 		return (
 			<DocumentLayout
@@ -147,7 +150,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 				description={description}
 				canonical={canonical}
 				activity={activity}
-				meta={card ? withCard(meta, card, title) : meta}
+				meta={resolvedCard ? withCard(meta, resolvedCard, title) : meta}
 				bodyMix={[
 					m(0),
 					minBs("100vh"),
@@ -251,6 +254,30 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 				</div>
 			</DocumentLayout>
 		);
+	};
+}
+
+/**
+ * The card a page advertises: the explicit one when the view passed it, otherwise one keyed
+ * on `activePath` or the canonical path and versioned from the title and description so a
+ * copy change fetches a fresh image.
+ */
+function resolveCard(input: {
+	activePath?: string;
+	canonical?: string;
+	card?: SocialCard.Reference;
+	description: string;
+	locale?: string;
+	title: string;
+}): SocialCard.Reference | undefined {
+	if (input.card) return input.card;
+	let path =
+		input.activePath ??
+		(input.canonical ? new URL(input.canonical, PROFILE.canonical.origin).pathname : undefined);
+	if (!path) return undefined;
+	return {
+		path,
+		version: socialCardVersion(input.title, input.description, input.locale),
 	};
 }
 
