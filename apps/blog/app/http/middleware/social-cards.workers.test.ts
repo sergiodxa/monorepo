@@ -134,4 +134,17 @@ describe("GET <page>.png", () => {
 		expect((await request("/articles/no-such-post.png")).status).toBe(404);
 		expect((await request("/index.png.png")).status).toBe(404);
 	});
+
+	test("a standalone page advertises and renders its own card", async () => {
+		let card = await advertisedCard("/apps");
+		expect(card).toMatch(/^\/apps\.png\?v=[0-9a-z]+$/);
+		let response = await request(card);
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toBe("image/png");
+		expect(response.headers.get("cache-tag")).toBe("page:apps");
+		expect(response.headers.get("cache-control")).toContain("s-maxage=86400");
+		let about = await advertisedCard("/about");
+		expect(about).toMatch(/^\/about\.png\?v=/);
+		expect(about).not.toBe(card);
+	});
 });

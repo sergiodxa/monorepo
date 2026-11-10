@@ -20,6 +20,8 @@ export const TAGS = createTags({
 	post: (postType: string, postSlug: string) => `post:${postType}:${postSlug}`,
 	postList: () => "posts",
 	sponsors: () => "sponsors",
+	/** A standalone page's card, keyed by its path so a deploy replaces only that image. */
+	page: (path: string) => `page:${path === "/" ? "index" : path.replace(/^\//, "")}`,
 });
 
 /**

@@ -177,6 +177,7 @@ export function UsesView() {
 				locale={page.locale}
 				title={page.title}
 				description={page.description}
+				activePath={routes.uses.href()}
 			>
 				<main mix={[grid(), gap(12), minIs(0)]}>
 					<Header page={page} />

@@ -58,6 +58,8 @@ describe("GET /apps", () => {
 		expect(html).toContain("Unread");
 		expect(html).toContain('href="/apps?lang=es-AR"');
 		expect(html).toContain('href="/apps.md?lang=en"');
+		expect(html).toContain('property="og:image" content="https://sergiodxa.com/apps.png?v=');
+		expect(html).toContain('name="twitter:card" content="summary_large_image"');
 	});
 
 	test("answers in Spanish for a Spanish browser or ?lang=es", async () => {

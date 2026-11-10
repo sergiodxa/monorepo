@@ -1,7 +1,8 @@
 /**
  * What a page's social card says and where it is served from. The card route reads the
- * text from the rendered page's own microformats — a post's `h-entry`, a listing's `h-feed`
- * and its first entries — so a card always says what the page publishes.
+ * text from the rendered page: a post's `h-entry`, a listing's `h-feed` and its first
+ * entries, or a standalone page's title and description — so every public URL draws a
+ * unique image of what it publishes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,7 +51,19 @@ export namespace SocialCard {
 		url: string;
 	}
 
-	export type Content = Post | Listing;
+	/**
+	 * A standalone page's card: its title and summary, with a short eyebrow from the path,
+	 * for every public URL that is neither a post nor a feed.
+	 */
+	export interface Page {
+		kind: "page";
+		eyebrow: string;
+		title: string;
+		description: string;
+		url: string;
+	}
+
+	export type Content = Post | Listing | Page;
 }
 
 /** The size social platforms render a large card at. */
@@ -130,9 +143,10 @@ export function socialCardVersion(...parts: Array<string | null | undefined>): s
 }
 
 /**
- * Reads a rendered page's card from its microformats, or `null` when the page publishes
- * neither a feed nor an entry. A listing's `h-feed` wins over the entries inside it; a
- * post's title comes from its `og:title`, since a note's entry has no name of its own.
+ * Reads a rendered page's card from its microformats, or from its title and description
+ * when the page is neither a feed nor an entry. A listing's `h-feed` wins over the entries
+ * inside it; a post's title comes from its `og:title`, since a note's entry has no name of
+ * its own; every other HTML page becomes a page card so each URL draws a unique image.
  *
  * @param html - The page as the router rendered it
  * @param path - The page's path, which names a post's kind and sets the card's address
@@ -164,19 +178,49 @@ export function readSocialCard(html: string, path: string): SocialCard.Content |
 	}
 
 	let entry = findItem(document.data, "h-entry");
-	if (!entry) return null;
-	let title = metaContent(html, "property", "og:title") ?? firstValue(entry, "name");
-	let date = formatDate(firstValue(entry, "published"), LONG_DATE);
-	let segment = path.split("/")[1];
-	let eyebrow = isPublicTypePath(segment) ? POST_KINDS[kindAt(segment)].label : "Post";
+	if (entry) {
+		let title = metaContent(html, "property", "og:title") ?? firstValue(entry, "name");
+		let date = formatDate(firstValue(entry, "published"), LONG_DATE);
+		let segment = path.split("/")[1];
+		let eyebrow = isPublicTypePath(segment) ? POST_KINDS[kindAt(segment)].label : "Post";
+		return {
+			kind: "post",
+			eyebrow,
+			title,
+			description,
+			byline: date ? `By ${PROFILE.name} · ${date}` : `By ${PROFILE.name}`,
+			url: address,
+		};
+	}
+
+	let title = metaContent(html, "property", "og:title") ?? documentTitle(html);
+	if (!title) return null;
 	return {
-		kind: "post",
-		eyebrow,
+		kind: "page",
+		eyebrow: pageEyebrow(path),
 		title,
 		description,
-		byline: date ? `By ${PROFILE.name} · ${date}` : `By ${PROFILE.name}`,
 		url: address,
 	};
+}
+
+/**
+ * A short label for a standalone page's card pill, taken from the last path segment so
+ * `/apps` reads "Apps" and `/press` reads "Press".
+ */
+function pageEyebrow(path: string): string {
+	let segment = path.split("/").filter(Boolean).at(-1);
+	if (!segment) return "Home";
+	return segment
+		.split("-")
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
+}
+
+/** The text of the document's `<title>`, or `null` when the page has none. */
+function documentTitle(html: string): string | null {
+	let match = /<title\b[^>]*>([^<]*)<\/title>/i.exec(html);
+	return match ? decodeEntities(match[1] ?? "").trim() || null : null;
 }
 
 /** A property's first value, trimmed, or an empty string when the item lacks it. */
