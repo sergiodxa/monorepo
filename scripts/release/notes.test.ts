@@ -1,13 +1,13 @@
 /**
  * Release-notes rendering against the exact format the GitHub Release shows: one section per
- * package in alphabetical order, commits oldest first with their bodies indented, and the
- * one-line explanations for republished and first-time packages.
+ * package in alphabetical order, commits as titles linked to their commits, and the one-line
+ * explanations for republished and first-time packages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { unwrap } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { Commit } from "./commits.js";
@@ -54,38 +54,45 @@ function commit(overrides: Partial<Commit>): Commit {
 	};
 }
 
+/** The linked-title line `renderNotes` prints for a commit. */
+function linked(summary: string, sha = "0".repeat(40), breaking = false): string {
+	let marker = breaking ? "**Breaking:** " : "";
+	return `- ${marker}${summary} ([${sha.slice(0, 7)}](${REPO_URL}/commit/${sha}))`;
+}
+
 describe("renderNotes", () => {
-	test("renders sections alphabetically with commits, a republish reason and a first release", () => {
-		let notes = renderNotes({
-			version: "2026.9.3",
-			previousTag: "v2026.9.2",
-			members: [
-				{ name: "@sdxc/xml", reason: "new" },
-				{ name: "@sdxc/spec", reason: "dependency" },
-				{ name: "@sdxc/jwt", reason: "changed" },
-			],
-			commitsByPackage: new Map([
-				[
-					"@sdxc/jwt",
-					[
-						commit({
-							title: "add ES512 signing keys",
-							body: "Body paragraphs of the commit, indented with a tab.",
-						}),
-						commit({ type: "fix", title: "reject tokens whose `exp` already passed" }),
-					],
+	test("renders sections alphabetically with linked titles, a republish reason and a first release", () => {
+		let notes = unwrap(
+			renderNotes({
+				version: "2026.9.3",
+				previousTag: "v2026.9.2",
+				members: [
+					{ name: "@sdxc/xml", reason: "new" },
+					{ name: "@sdxc/spec", reason: "dependency" },
+					{ name: "@sdxc/jwt", reason: "changed" },
 				],
-			]),
-			packages: PACKAGES,
-			repoUrl: REPO_URL,
-		});
+				commitsByPackage: new Map([
+					[
+						"@sdxc/jwt",
+						[
+							commit({
+								title: "add ES512 signing keys",
+								body: "Body paragraphs of the commit stay on the commit page.",
+							}),
+							commit({ type: "fix", title: "reject tokens whose `exp` already passed" }),
+						],
+					],
+				]),
+				packages: PACKAGES,
+				repoUrl: REPO_URL,
+			}),
+		);
 
 		expect(notes).toBe(
 			[
 				"## @sdxc/jwt",
-				"- Add ES512 signing keys",
-				"\tBody paragraphs of the commit, indented with a tab.",
-				"- Reject tokens whose `exp` already passed",
+				linked("Add ES512 signing keys"),
+				linked("Reject tokens whose `exp` already passed"),
 				"",
 				"## @sdxc/spec",
 				"Republished because `@sdxc/jwt` changed.",
@@ -97,186 +104,162 @@ describe("renderNotes", () => {
 				"",
 			].join("\n"),
 		);
+		expect(notes).not.toContain("Body paragraphs");
 	});
 
 	test("omits the compare footer on the first release ever", () => {
-		let notes = renderNotes({
-			version: "2026.9.3",
-			previousTag: null,
-			members: [{ name: "@sdxc/xml", reason: "new" }],
-			commitsByPackage: new Map(),
-			packages: PACKAGES,
-			repoUrl: REPO_URL,
-		});
+		let notes = unwrap(
+			renderNotes({
+				version: "2026.9.3",
+				previousTag: null,
+				members: [{ name: "@sdxc/xml", reason: "new" }],
+				commitsByPackage: new Map(),
+				packages: PACKAGES,
+				repoUrl: REPO_URL,
+			}),
+		);
 
 		expect(notes).toBe("## @sdxc/xml\nFirst release.\n");
 	});
 
-	test("marks breaking commits and keeps blank lines inside a body as empty lines", () => {
-		let notes = renderNotes({
-			version: "2026.9.3",
-			previousTag: null,
-			members: [{ name: "@sdxc/jwt", reason: "changed" }],
-			commitsByPackage: new Map([
-				[
-					"@sdxc/jwt",
+	test("marks breaking commits with a linked title and leaves the body off the release page", () => {
+		let sha = "b".repeat(40);
+		let notes = unwrap(
+			renderNotes({
+				version: "2026.9.3",
+				previousTag: null,
+				members: [{ name: "@sdxc/jwt", reason: "changed" }],
+				commitsByPackage: new Map([
 					[
-						commit({
-							breaking: true,
-							title: "drop HS256",
-							body: "First paragraph.\n\nSecond paragraph.",
-						}),
+						"@sdxc/jwt",
+						[
+							commit({
+								sha,
+								breaking: true,
+								title: "drop HS256",
+								body: "First paragraph.\n\nSecond paragraph.",
+							}),
+						],
 					],
-				],
-			]),
-			packages: PACKAGES,
-			repoUrl: REPO_URL,
-		});
-
-		expect(notes).toBe(
-			[
-				"## @sdxc/jwt",
-				"- **Breaking:** Drop HS256",
-				"\tFirst paragraph.",
-				"",
-				"\tSecond paragraph.",
-				"",
-			].join("\n"),
+				]),
+				packages: PACKAGES,
+				repoUrl: REPO_URL,
+			}),
 		);
+
+		expect(notes).toBe(["## @sdxc/jwt", linked("Drop HS256", sha, true), ""].join("\n"));
+		expect(notes).not.toContain("First paragraph");
 	});
 
 	test("names the alphabetically first changed dependency of a republished package", () => {
-		let notes = renderNotes({
-			version: "2026.9.3",
-			previousTag: null,
-			members: [
-				{ name: "@sdxc/spec", reason: "dependency" },
-				{ name: "@sdxc/sample", reason: "changed" },
-				{ name: "@sdxc/jwt", reason: "changed" },
-			],
-			commitsByPackage: new Map(),
-			packages: PACKAGES,
-			repoUrl: REPO_URL,
-		});
+		let notes = unwrap(
+			renderNotes({
+				version: "2026.9.3",
+				previousTag: null,
+				members: [
+					{ name: "@sdxc/spec", reason: "dependency" },
+					{ name: "@sdxc/sample", reason: "changed" },
+					{ name: "@sdxc/jwt", reason: "changed" },
+				],
+				commitsByPackage: new Map(),
+				packages: PACKAGES,
+				repoUrl: REPO_URL,
+			}),
+		);
 
 		expect(notes).toContain("## @sdxc/spec\nRepublished because `@sdxc/jwt` changed.");
 	});
 
 	test("lists a new package's commits and says Republished for a changed one without any", () => {
-		let notes = renderNotes({
-			version: "2026.9.3",
-			previousTag: null,
-			members: [
-				{ name: "@sdxc/xml", reason: "new" },
-				{ name: "@sdxc/dates", reason: "changed" },
-			],
-			commitsByPackage: new Map([["@sdxc/xml", [commit({ title: "add the writer" })]]]),
-			packages: PACKAGES,
-			repoUrl: REPO_URL,
-		});
+		let notes = unwrap(
+			renderNotes({
+				version: "2026.9.3",
+				previousTag: null,
+				members: [
+					{ name: "@sdxc/xml", reason: "new" },
+					{ name: "@sdxc/dates", reason: "changed" },
+				],
+				commitsByPackage: new Map([["@sdxc/xml", [commit({ title: "add the writer" })]]]),
+				packages: PACKAGES,
+				repoUrl: REPO_URL,
+			}),
+		);
 
 		expect(notes).toBe(
-			["## @sdxc/dates", "Republished.", "", "## @sdxc/xml", "- Add the writer", ""].join("\n"),
+			["## @sdxc/dates", "Republished.", "", "## @sdxc/xml", linked("Add the writer"), ""].join(
+				"\n",
+			),
 		);
 	});
 
 	test("lists a package's breaking commits before its other commits", () => {
-		let notes = renderNotes({
-			version: "2026.9.3",
-			previousTag: null,
-			members: [{ name: "@sdxc/jwt", reason: "changed" }],
-			commitsByPackage: new Map([
-				[
-					"@sdxc/jwt",
+		let notes = unwrap(
+			renderNotes({
+				version: "2026.9.3",
+				previousTag: null,
+				members: [{ name: "@sdxc/jwt", reason: "changed" }],
+				commitsByPackage: new Map([
 					[
-						commit({ type: "fix", title: "Reject expired tokens" }),
-						commit({ breaking: true, title: "Drop HS256" }),
-						commit({ title: "Add ES512 signing keys" }),
+						"@sdxc/jwt",
+						[
+							commit({ type: "fix", title: "Reject expired tokens" }),
+							commit({ breaking: true, title: "Drop HS256" }),
+							commit({ title: "Add ES512 signing keys" }),
+						],
 					],
-				],
-			]),
-			packages: PACKAGES,
-			repoUrl: REPO_URL,
-		});
+				]),
+				packages: PACKAGES,
+				repoUrl: REPO_URL,
+			}),
+		);
 
 		expect(notes).toBe(
 			[
 				"## @sdxc/jwt",
-				"- **Breaking:** Drop HS256",
-				"- Reject expired tokens",
-				"- Add ES512 signing keys",
+				linked("Drop HS256", "0".repeat(40), true),
+				linked("Reject expired tokens"),
+				linked("Add ES512 signing keys"),
 				"",
 			].join("\n"),
 		);
 	});
 
-	test("carries no trailer from a parsed commit into the notes", () => {
+	test("prints only the linked title of a parsed commit, never its trailers", () => {
 		let sha = "a".repeat(40);
 		let body = "Adds keys.\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n";
 		let log = `${RECORD}${sha}${FIELD}feat(jwt): add keys${FIELD}${body}${FIELD}\n\npackages/jwt/src/jwk.ts\n`;
-		let notes = renderNotes({
-			version: "2026.9.3",
-			previousTag: null,
-			members: [{ name: "@sdxc/jwt", reason: "changed" }],
-			commitsByPackage: new Map([["@sdxc/jwt", unwrap(parseCommits(log))]]),
-			packages: PACKAGES,
-			repoUrl: REPO_URL,
-		});
+		let notes = unwrap(
+			renderNotes({
+				version: "2026.9.3",
+				previousTag: null,
+				members: [{ name: "@sdxc/jwt", reason: "changed" }],
+				commitsByPackage: new Map([["@sdxc/jwt", unwrap(parseCommits(log))]]),
+				packages: PACKAGES,
+				repoUrl: REPO_URL,
+			}),
+		);
 
-		expect(notes).toBe("## @sdxc/jwt\n- Add keys\n\tAdds keys.\n");
+		expect(notes).toBe(`## @sdxc/jwt\n${linked("Add keys", sha)}\n`);
+		expect(notes).not.toContain("Adds keys");
 		expect(notes).not.toContain("Co-Authored-By");
 	});
 
-	test("shortens the largest section to linked titles until the notes fit", () => {
-		let input = {
+	test("fails naming the size when the notes still exceed GitHub's body limit", () => {
+		let result = renderNotes({
 			version: "2026.9.3",
 			previousTag: null,
-			members: [
-				{ name: "@sdxc/jwt", reason: "changed" as const },
-				{ name: "@sdxc/xml", reason: "changed" as const },
-			],
-			commitsByPackage: new Map([
-				[
-					"@sdxc/jwt",
-					[commit({ sha: "b".repeat(40), title: "add keys", body: "Long note. ".repeat(20) })],
-				],
-				["@sdxc/xml", [commit({ title: "add the writer", body: "Short note." })]],
-			]),
-			packages: PACKAGES,
-			repoUrl: REPO_URL,
-		};
-		let full = renderNotes(input);
-		let notes = renderNotes({ ...input, maxLength: full.length - 1 });
-
-		expect(notes).toBe(
-			[
-				"## @sdxc/jwt",
-				"Shortened to fit the release page; each change links to its full note.",
-				`- Add keys ([bbbbbbb](${REPO_URL}/commit/${"b".repeat(40)}))`,
-				"",
-				"## @sdxc/xml",
-				"- Add the writer",
-				"\tShort note.",
-				"",
-			].join("\n"),
-		);
-	});
-
-	test("renders every section shortened when even that exceeds the limit", () => {
-		let notes = renderNotes({
-			version: "2026.9.3",
-			previousTag: null,
-			members: [
-				{ name: "@sdxc/jwt", reason: "changed" },
-				{ name: "@sdxc/spec", reason: "dependency" },
-			],
-			commitsByPackage: new Map([["@sdxc/jwt", [commit({ title: "add keys", body: "Note." })]]]),
+			members: [{ name: "@sdxc/jwt", reason: "changed" }],
+			commitsByPackage: new Map([["@sdxc/jwt", [commit({ title: "add keys" })]]]),
 			packages: PACKAGES,
 			repoUrl: REPO_URL,
 			maxLength: 1,
 		});
 
-		expect(notes).toContain("- Add keys ([0000000]");
-		expect(notes).toContain("## @sdxc/spec\nRepublished because `@sdxc/jwt` changed.");
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error.message).toMatch(
+				/Release notes are \d+ characters; GitHub accepts at most 1\./,
+			);
+		}
 	});
 });

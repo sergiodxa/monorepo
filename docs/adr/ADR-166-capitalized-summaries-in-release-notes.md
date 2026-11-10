@@ -36,12 +36,12 @@ a digit or punctuation is fine; the rule is that it never starts with a lowercas
 **Release notes print the summary alone.** The type stays in git and in the fields the release
 derives from it; the published text drops it.
 
-| Surface                     | Entry                                                                                  |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| GitHub Release body         | `- Summary`, or `- **Breaking:** Summary`; a package's breaking entries come first     |
-| `changelog.jsonl` (`title`) | `Summary`, with `type` and `breaking` unchanged beside it                              |
-| `sdxc upgrade` prompt       | `### @sdxc/<name>: Summary`, under the breaking/features/fixes sections it already has |
-| sdxc.dev `/changelog`       | Older releases' `- type!: summary` items rewritten to the shape above when rendered    |
+| Surface                     | Entry                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Release body         | `- Summary ([sha](…/commit/sha))`, or `- **Breaking:** Summary ([sha](…))` (ADR-194); a package's breaking entries come first |
+| `changelog.jsonl` (`title`) | `Summary`, with `type` and `breaking` unchanged beside it                                                                     |
+| `sdxc upgrade` prompt       | `### @sdxc/<name>: Summary`, under the breaking/features/fixes sections it already has                                        |
+| sdxc.dev `/changelog`       | Older releases' `- type!: summary` items rewritten to the shape above when rendered                                           |
 
 Every surface uppercases the first letter of the summary it prints, so a commit written before
 this decision reads exactly like one written after it.

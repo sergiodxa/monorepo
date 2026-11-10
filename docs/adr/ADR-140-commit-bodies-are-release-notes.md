@@ -6,8 +6,9 @@
 
 ## Background
 
-The daily release publishes each package's commits verbatim, title and body, as that package's
-section of the GitHub Release (ADR-007). ADR-007 makes the body optional: "the body, when
+The daily release attributes each package's commits as that package's section of the GitHub
+Release (ADR-007); ADR-194 prints each as a title linked to the commit, and the body stays the
+full note on the commit and in `changelog.jsonl`. ADR-007 made the body optional: "the body, when
 present, explains it". `sdxc upgrade` (ADR-144) turns the same commits into the prompt an AI
 agent follows to move a project between releases, so a commit without instructions leaves the
 agent guessing at what to change.
@@ -100,7 +101,8 @@ Release-Note-For: 3f2a91c
 
 ### Positive
 
-- **Release notes a consumer can act on**, for every change, without opening the diff.
+- **Release notes a consumer can act on**, for every change, on the commit and through
+  `sdxc upgrade`, without opening the diff.
 - **`sdxc upgrade` prompts with real instructions**, since they are the commit bodies.
 - **Breaking changes arrive with their migration**, written by the author while the change is
   fresh.

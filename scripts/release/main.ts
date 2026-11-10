@@ -201,12 +201,13 @@ export async function runRelease(options: ReleaseOptions = {}): Promise<Result<v
 		packages,
 		repoUrl: REPOSITORY_PAGE,
 	});
+	if (isFailure(notes)) return notes;
 	if (!publishing) {
-		say(`\nRelease notes for ${tag} (dry run, nothing was published):\n\n${notes}`);
+		say(`\nRelease notes for ${tag} (dry run, nothing was published):\n\n${notes.data}`);
 		return success(undefined);
 	}
 	let notesFile = join(stagingRoot.data, "release-notes.md");
-	let written = await wrap(() => writeFile(notesFile, notes));
+	let written = await wrap(() => writeFile(notesFile, notes.data));
 	if (isFailure(written)) return written;
 	let release = await createRelease({ tag, target: head, title: today, notesFile });
 	if (isFailure(release)) return release;
