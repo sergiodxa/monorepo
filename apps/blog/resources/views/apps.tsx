@@ -18,7 +18,7 @@ import { minIs } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Link, LinkButton } from "@sdxc/ui";
 import { AccentText, FeatureBand, LandingHero } from "@sdxc/ui/landing";
-import { landingCtaChrome } from "@sdxc/ui/styles";
+import { landingContainer, landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppsPage } from "~/app/services/apps-page";
 
@@ -112,7 +112,13 @@ function Hero(handle: Handle<{ page: AppsPage }>) {
 
 		return (
 			<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-				<div mix={[hstack({ gap: 4, justify: "end", align: "center" }), flexWrap("wrap")]}>
+				<div
+					mix={[
+						landingContainer(),
+						hstack({ gap: 4, justify: "end", align: "center" }),
+						flexWrap("wrap"),
+					]}
+				>
 					<Link
 						href={appsHref(page.otherLanguage.locale)}
 						hreflang={page.otherLanguage.locale}
@@ -172,7 +178,8 @@ namespace AppBand {
 
 /**
  * One app as a split band: platform as eyebrow, name as title, pitch and checks beside a
- * screenshot stage that flips sides every band.
+ * screenshot stage that flips sides every band. When media leads via `order`, lean flips
+ * too so the first auto-placed track stays the wider one.
  *
  * @returns The render function producing the band.
  */
@@ -185,7 +192,7 @@ function AppBand(handle: Handle<AppBand.Props>) {
 			<FeatureBand
 				id={app.id}
 				layout="split"
-				lean="media"
+				lean={mediaOnStart ? "copy" : "media"}
 				tone={index % 2 === 0 ? "plain" : "tinted"}
 				eyebrow={app.platform}
 				eyebrowVariant="quiet"
