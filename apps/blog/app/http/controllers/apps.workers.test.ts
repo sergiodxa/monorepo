@@ -54,8 +54,10 @@ describe("GET /apps", () => {
 		expect(html).toContain('href="https://reader.sergiodxa.com"');
 		expect(html).toContain("/apps/wakaba/screenshots/en/path-progress-light.webp");
 		expect(html).toContain("/apps/encore/screenshots/en/challenge-light.webp");
-		expect(html).toContain("All systems up");
-		expect(html).toContain("Unread");
+		expect(html).toContain("api.example.com/health");
+		expect(html).toContain("99.97%");
+		expect(html).toContain("Harbor Daily");
+		expect(html).toContain("2 feeds still arriving");
 		expect(html).toContain("Open Wakaba");
 		expect(html).toContain("Open Encore");
 		expect(html).toContain("Pause the animation");
