@@ -5,7 +5,7 @@ section:
     title: Releases
     order: 10
 order: 3
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-10
 outcomes:
     - "What a correction to a published release note looks like"
     - "Where to read the current text of a note: GitHub, the changelog or `sdxc upgrade`"
@@ -21,24 +21,17 @@ the commit whose note it replaces in a `Release-Note-For` trailer.
 
 A correction is published like any other change: as an entry in the release of the day it went
 out, under the same packages as the note it replaces. Its summary says which note it replaces,
-and its body is the whole replacement, worded to stand on its own. On the Changelog, the
-`@sdxc/cli` section of `2026.10.16` holds a note for a `passthrough: true` command option, the
-note for `argument.rest()` that replaced it, and the correction to the first, shown here
-without the section's other notes and with the first two cut after their opening paragraph:
+and its body is the whole replacement, worded to stand on its own. On the GitHub Release the
+entry is that summary linked to the correction commit; open the commit for the replacement text.
+On the Changelog, the `@sdxc/cli` section of `2026.10.16` holds a note for a `passthrough: true`
+command option, the note for `argument.rest()` that replaced it, and the correction to the first,
+shown here without the section's other notes:
 
 ```text
 ## @sdxc/cli
-- Hand a command's arguments to another program with passthrough
-	A command declared with `passthrough: true` receives every token after its
-	name exactly as typed, flags and `--help` included, in its one variadic
-	argument, so it can run another program with them:
-- Take another program's arguments with argument.rest(), and expose ctx.argv
-	`argument.rest()` declares an argument that receives every token after the
-	command's name exactly as typed, flags and `--help` included, for a command
-	that runs another program with them:
-- Supersede the passthrough release note
-	`passthrough: true` was replaced within the same release by
-	`argument.rest()`, whose note describes the shipped API. Nothing to do.
+- Hand a command's arguments to another program with passthrough (aaa1111)
+- Take another program's arguments with argument.rest(), and expose ctx.argv (bbb2222)
+- Supersede the passthrough release note (ccc3333)
 ```
 
 The trailer stays out of the published text, so the summary is how you match a correction to its
@@ -48,12 +41,12 @@ note. A correction can ship in the same release as its note, as here, or in any 
 
 Each surface that shows release notes treats a correction differently:
 
-- **The GitHub Release that carried the original** keeps the original text, unchanged.
-- **The GitHub Release of the correction's day** shows the replacement, as an entry of its own
-  under the corrected packages.
+- **The GitHub Release that carried the original** keeps the original entry, unchanged.
+- **The GitHub Release of the correction's day** lists the replacement as an entry of its own
+  under the corrected packages, linked to the correction commit.
 - **The [Changelog](/docs/releases/changelog)** renders the GitHub Releases as they are, newest
   first, so you meet the replacement before the note it replaces.
-- **`sdxc upgrade`** shows the replacement in place of the original, under the original's
+- **`sdxc upgrade`** shows the replacement body in place of the original, under the original's
   summary and release, so the prompt your agent reads holds one current note for the change.
   When your project already had the original's release, the prompt of the upgrade that crosses
   the correction's release lists the replacement under `## Corrected notes`.

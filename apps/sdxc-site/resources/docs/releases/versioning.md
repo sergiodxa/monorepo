@@ -5,7 +5,7 @@ section:
     title: Releases
     order: 10
 order: 1
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-10
 outcomes:
     - "What a dated version like `2026.9.4` tells you"
     - "Why a dependency is written as one exact date"
@@ -40,10 +40,11 @@ pin is the one you trust.
 ## Read what changed
 
 Each day's release is published as one set of notes, grouped by package, and the
-[Changelog](/docs/releases/changelog) shows every release. An entry is one change: a sentence
-that says what changed for you, then a note on how to use it, whether you need to act, or, for a
-breaking change marked **Breaking:**, every migration step. [`sdxc upgrade`](/docs/sdxc/upgrade)
-reads the same notes when it moves your pins and hands them to an AI agent.
+[Changelog](/docs/releases/changelog) shows every release. On the GitHub Release, an entry is the
+sentence that says what changed for you, linked to the commit that holds the full note — how to
+use it, whether you need to act, or, for a breaking change marked **Breaking:**, every migration
+step. [`sdxc upgrade`](/docs/sdxc/upgrade) reads those full notes when it moves your pins and
+hands them to an AI agent.
 
 ## Where to go next
 
