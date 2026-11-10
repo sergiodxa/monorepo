@@ -15,10 +15,9 @@ import { raw } from "@sdxc/u/general";
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { minIs } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { Link, LinkButton } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { AccentText, FeatureBand, LandingHero } from "@sdxc/ui/landing";
-import { landingContainer, landingCtaChrome } from "@sdxc/ui/styles";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppsPage } from "~/app/services/apps-page";
 
@@ -40,11 +39,6 @@ export namespace AppsView {
 	export interface Model {
 		page: AppsPage;
 	}
-}
-
-/** The page's URL in `locale`, which a shared link keeps regardless of the reader's browser. */
-function appsHref(locale: string): string {
-	return `${routes.apps.href()}?lang=${locale}`;
 }
 
 /**
@@ -102,8 +96,7 @@ function mediaFor(app: AppsPage.App, page: AppsPage): RemixNode {
 }
 
 /**
- * The page hero: language and Markdown links, then a landing hero with the title, pitch,
- * a scroll CTA and a fan of product screens.
+ * The page hero: title, pitch, a scroll CTA and a fan of product screens.
  */
 function Hero(handle: Handle<{ page: AppsPage }>) {
 	return () => {
@@ -111,58 +104,37 @@ function Hero(handle: Handle<{ page: AppsPage }>) {
 		let browseHref = `#${page.apps[0]?.id ?? "wakaba"}`;
 
 		return (
-			<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-				<div
-					mix={[
-						landingContainer(),
-						hstack({ gap: 4, justify: "end", align: "center" }),
-						flexWrap("wrap"),
-					]}
-				>
-					<Link
-						href={appsHref(page.otherLanguage.locale)}
-						hreflang={page.otherLanguage.locale}
-						lang={page.otherLanguage.locale}
-						mix={[text("sm")]}
+			<LandingHero
+				id="top"
+				tone="tinted"
+				align="center"
+				entrance
+				mediaPlacement="below"
+				eyebrow={page.eyebrow}
+				eyebrowVariant="quiet"
+				title={accentTitle(page.heading, page.accent)}
+				description={page.intro}
+				actions={
+					<span
+						mix={[
+							hstack({ gap: 3, align: "center", justify: "center" }),
+							raw({ flexWrap: "wrap" }),
+						]}
 					>
-						{page.otherLanguage.label}
-					</Link>
-					<Link href={`${routes.appsMarkdown.href()}?lang=${page.locale}`} mix={[text("sm")]}>
-						{page.labels.viewMarkdown}
-					</Link>
-				</div>
-				<LandingHero
-					id="top"
-					tone="tinted"
-					align="center"
-					entrance
-					mediaPlacement="below"
-					eyebrow={page.eyebrow}
-					eyebrowVariant="quiet"
-					title={accentTitle(page.heading, page.accent)}
-					description={page.intro}
-					actions={
-						<span
-							mix={[
-								hstack({ gap: 3, align: "center", justify: "center" }),
-								raw({ flexWrap: "wrap" }),
-							]}
-						>
-							<LinkButton href={browseHref} variant="solid" mix={[landingCtaChrome()]}>
-								{page.browseCta}
-								<ArrowDownIcon size={16} aria-hidden="true" />
-							</LinkButton>
-						</span>
-					}
-					media={
-						<AppsHeroStage
-							locale={page.locale}
-							label={page.labels.stages.hero}
-							pauseLabel={page.labels.pause}
-						/>
-					}
-				/>
-			</div>
+						<LinkButton href={browseHref} variant="solid" mix={[landingCtaChrome()]}>
+							{page.browseCta}
+							<ArrowDownIcon size={16} aria-hidden="true" />
+						</LinkButton>
+					</span>
+				}
+				media={
+					<AppsHeroStage
+						locale={page.locale}
+						label={page.labels.stages.hero}
+						pauseLabel={page.labels.pause}
+					/>
+				}
+			/>
 		);
 	};
 }

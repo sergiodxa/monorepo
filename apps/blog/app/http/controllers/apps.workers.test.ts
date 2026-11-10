@@ -64,8 +64,8 @@ describe("GET /apps", () => {
 		expect(html).toContain("Open Wakaba");
 		expect(html).toContain("Open Encore");
 		expect(html).toContain("Pause the animation");
-		expect(html).toContain('href="/apps?lang=es-AR"');
-		expect(html).toContain('href="/apps.md?lang=en"');
+		expect(html).not.toContain('href="/apps?lang=es-AR"');
+		expect(html).not.toContain('href="/apps.md?lang=en"');
 		expect(html).toContain('property="og:image" content="https://sergiodxa.com/apps.png?v=');
 		expect(html).toContain('name="twitter:card" content="summary_large_image"');
 	});
