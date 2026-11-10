@@ -750,7 +750,7 @@ export function ReaderStage(handle: Handle<ReaderStage.Props>) {
 					lights
 					title="Reading"
 					url="reader.sergiodxa.com/reading"
-					designWidth="28rem"
+					designWidth="32rem"
 					fit="scale"
 					role="img"
 					aria-label="Reader unread queue"

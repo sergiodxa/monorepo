@@ -31,6 +31,7 @@ import { when } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typography";
 import { Dialog } from "@sdxc/ui";
+import { landingContainer } from "@sdxc/ui/styles";
 import { Frame } from "remix/component";
 
 import type { SocialCard } from "~/app/services/social-card";
@@ -92,8 +93,8 @@ export namespace BlogLayout {
 		 */
 		searchQuery?: string;
 		/**
-		 * Widens the content column to the landing measure so split bands can sit side by
-		 * side; the reading pages stay on the tighter `85ch` column.
+		 * Drops the reading measure so landing bands paint edge to edge; each band still
+		 * centres its own column. Reading pages stay on the tighter `85ch` column.
 		 */
 		wide?: boolean;
 		children: RemixNode;
@@ -176,17 +177,10 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 					}),
 				]}
 			>
-				<div
-					mix={[
-						maxIs(wide ? "var(--ui-landing-measure, 72rem)" : "85ch"),
-						mi("auto"),
-						pbs(8),
-						pi(4),
-						pbe(12),
-					]}
-				>
+				<div mix={[wide ? is("100%") : [maxIs("85ch"), mi("auto"), pi(4)], pbs(8), pbe(12)]}>
 					<header
 						mix={[
+							wide ? landingContainer() : [],
 							mbe(8),
 							grid(),
 							gridTemplate({
@@ -264,7 +258,9 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 						</Dialog>
 					</header>
 					{children}
-					<BlogFooter />
+					<div mix={[wide ? landingContainer() : []]}>
+						<BlogFooter />
+					</div>
 				</div>
 			</DocumentLayout>
 		);
