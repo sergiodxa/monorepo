@@ -200,9 +200,9 @@ export function isMissingBody(body: string): boolean {
 /**
  * Corrections attributed to the packages of the commit they correct: each commit with a
  * `Release-Note-For` trailer gains the files `filesOf` reports for the named sha, so an empty
- * correction publishes under the same packages as the note it replaces. Callers pass a `filesOf`
- * that answers an empty list when the named sha is gone, so a rewritten history keeps the run
- * moving.
+ * correction publishes under the same packages as the note it replaces. A missing or unreadable
+ * sha contributes no paths — the correction keeps its own files — so a rewritten history or a
+ * shallow clone never aborts the release over a dangling trailer.
  */
 export async function attributeCorrections(
 	commits: Commit[],
@@ -215,8 +215,8 @@ export async function attributeCorrections(
 			continue;
 		}
 		let files = await filesOf(commit.corrects);
-		if (isFailure(files)) return files;
-		attributed.push({ ...commit, files: [...new Set([...commit.files, ...files.data])] });
+		let extra = isFailure(files) ? [] : files.data;
+		attributed.push({ ...commit, files: [...new Set([...commit.files, ...extra])] });
 	}
 	return success(attributed);
 }

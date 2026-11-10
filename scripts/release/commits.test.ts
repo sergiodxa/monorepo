@@ -202,12 +202,16 @@ describe("Release-Note-For", () => {
 		expect(attributed[0]?.files).toEqual(["packages/ci/src/worktree.ts"]);
 	});
 
-	test("fails when the named commit cannot be read", async () => {
-		let result = await attributeCorrections([{ ...commit("2", []), corrects: "1" }], async () =>
-			failure(new Error("unknown revision")),
+	test("keeps the correction's own files when the named commit cannot be read", async () => {
+		let correction = {
+			...commit("2", ["packages/ci/src/worktree.ts"]),
+			corrects: "1",
+		};
+		let attributed = unwrap(
+			await attributeCorrections([correction], async () => failure(new Error("unknown revision"))),
 		);
 
-		expect(isFailure(result)).toBe(true);
+		expect(attributed[0]?.files).toEqual(["packages/ci/src/worktree.ts"]);
 	});
 });
 

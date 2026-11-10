@@ -1,10 +1,15 @@
 /**
  * Release notes rendered from the commits a release ships, one section per package, so the
- * GitHub Release reads as a per-package changelog written in the commit messages themselves.
+ * GitHub Release reads as a per-package list of titles that link to the commit holding each
+ * full note.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Result } from "@sdxc/result";
+
+import { failure, success } from "@sdxc/result";
 
 import type { Commit } from "./commits.js";
 import type { Member } from "./plan.js";
@@ -28,11 +33,12 @@ export interface NotesInput {
 
 /**
  * Markdown for the GitHub Release: packages alphabetical, breaking commits first and each group
- * oldest first, as `- Summary` (`- **Breaking:** Summary`) with the body indented by a tab, one
+ * oldest first, as `- Summary ([sha](…/commit/sha))` (`- **Breaking:** Summary ([sha](…))`), one
  * line explaining a package that ships without commits, and a compare link to the previous tag.
- * Past `maxLength`, the largest sections shrink to commit titles linked to their commits.
+ * The commit body stays on the commit and in `changelog.jsonl` for `sdxc upgrade`. Fails when the
+ * body would still exceed GitHub's limit, naming the size so the run stops before `gh` returns 422.
  */
-export function renderNotes(input: NotesInput): string {
+export function renderNotes(input: NotesInput): Result<string, Error> {
 	let memberNames = new Set(input.members.map((member) => member.name));
 	let members = [...input.members].sort((a, b) => compareNames(a.name, b.name));
 	let sections = members.map((member) =>
@@ -41,61 +47,35 @@ export function renderNotes(input: NotesInput): string {
 			input.commitsByPackage.get(member.name) ?? [],
 			memberNames,
 			input.packages,
-			null,
+			input.repoUrl,
 		),
 	);
 	let footer =
 		input.previousTag === null
 			? []
 			: [`Compare: ${input.repoUrl}/compare/${input.previousTag}...v${input.version}`];
+	let notes = `${[...sections, ...footer].join("\n\n")}\n`;
 	let maxLength = input.maxLength ?? RELEASE_BODY_LIMIT;
-	let shortened = new Set<number>();
-	while (notesLength(sections, footer) > maxLength) {
-		let largest = largestSection(sections, shortened, members, input.commitsByPackage);
-		if (largest === null) break;
-		shortened.add(largest);
-		let member = members[largest] as Member;
-		sections[largest] = renderSection(
-			member,
-			input.commitsByPackage.get(member.name) ?? [],
-			memberNames,
-			input.packages,
-			input.repoUrl,
+	if (notes.length > maxLength) {
+		return failure(
+			new Error(
+				`Release notes are ${notes.length} characters; GitHub accepts at most ${maxLength}.`,
+			),
 		);
 	}
-	return `${[...sections, ...footer].join("\n\n")}\n`;
-}
-
-function notesLength(sections: string[], footer: string[]): number {
-	return `${[...sections, ...footer].join("\n\n")}\n`.length;
-}
-
-/** The index of the longest section that has commits and still carries their bodies. */
-function largestSection(
-	sections: string[],
-	shortened: Set<number>,
-	members: Member[],
-	commitsByPackage: Map<string, Commit[]>,
-): number | null {
-	let largest: number | null = null;
-	for (let [index, section] of sections.entries()) {
-		if (shortened.has(index)) continue;
-		if ((commitsByPackage.get((members[index] as Member).name) ?? []).length === 0) continue;
-		if (largest === null || section.length > (sections[largest] as string).length) largest = index;
-	}
-	return largest;
+	return success(notes);
 }
 
 /**
- * A package's section; with `linkTo` set, each commit renders as its summary linked to the
- * commit on that repository page, so a shortened section still leads to every full note.
+ * A package's section: each commit as its summary linked to the commit on that repository, so
+ * the release page stays a scan of what changed and the full note is one click away.
  */
 function renderSection(
 	member: Member,
 	commits: Commit[],
 	memberNames: Set<string>,
 	packages: DependencyNode[],
-	linkTo: string | null,
+	repoUrl: string,
 ): string {
 	let lines = [`## ${member.name}`];
 	if (commits.length > 0) {
@@ -103,12 +83,7 @@ function renderSection(
 			...commits.filter((commit) => commit.breaking),
 			...commits.filter((commit) => !commit.breaking),
 		];
-		if (linkTo !== null) {
-			lines.push("Shortened to fit the release page; each change links to its full note.");
-		}
-		for (let commit of ordered) {
-			lines.push(...(linkTo === null ? renderCommit(commit) : [renderLinkedTitle(commit, linkTo)]));
-		}
+		for (let commit of ordered) lines.push(renderLinkedTitle(commit, repoUrl));
 	} else if (member.reason === "new") {
 		lines.push("First release.");
 	} else if (member.reason === "dependency") {
@@ -119,19 +94,6 @@ function renderSection(
 		lines.push("Republished.");
 	}
 	return lines.join("\n");
-}
-
-/**
- * The commit as a list item headed by its summary, the `type(scope):` prefix left to git: a
- * reader of one package's notes needs the change, and a breaking one says so in words.
- */
-function renderCommit(commit: Commit): string[] {
-	let marker = commit.breaking ? "**Breaking:** " : "";
-	let lines = [`- ${marker}${releaseSummary(commit.title)}`];
-	if (commit.body !== "") {
-		for (let line of commit.body.split("\n")) lines.push(line.trim() === "" ? "" : `\t${line}`);
-	}
-	return lines;
 }
 
 /** The commit as one list item: its summary, then a link to the commit holding the full note. */

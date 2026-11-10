@@ -243,14 +243,13 @@ An `E401` or `E404` at publish time is reported with the package name and the tr
 
 ### Release Notes
 
-Notes come from the same commit range. Packages appear in alphabetical order, breaking commits first and then the rest, each group oldest first:
+Notes come from the same commit range. Packages appear in alphabetical order, breaking commits first and then the rest, each group oldest first. Each entry is the commit's summary linked to the commit that holds the full note (ADR-194); bodies stay on the commit and in `changelog.jsonl` for `sdxc upgrade`:
 
 ```
 ## @sdxc/jwt
-- **Breaking:** Drop HS256
-- Add ES512 signing keys
-	Body paragraphs of the commit, indented with a tab.
-- Reject tokens whose `exp` already passed
+- **Breaking:** Drop HS256 ([abc1234](https://github.com/sergiodxa/monorepo/commit/abc1234…))
+- Add ES512 signing keys ([def5678](https://github.com/sergiodxa/monorepo/commit/def5678…))
+- Reject tokens whose `exp` already passed ([9ab0cde](https://github.com/sergiodxa/monorepo/commit/9ab0cde…))
 
 ## @sdxc/spec
 Republished because `@sdxc/sample` changed.
@@ -259,15 +258,15 @@ Republished because `@sdxc/sample` changed.
 First release.
 ```
 
-| Input                                       | Rendering                                                                                                         |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `type(scope): Title`, `type(scope)!: Title` | `- Title`, `- **Breaking:** Title`; the first letter is uppercased for older lowercase titles                     |
-| Commit body                                 | Paragraphs indented with a tab under the entry; git trailers such as `Co-Authored-By:` are dropped                |
-| A commit touching several packages          | Listed under each of them                                                                                         |
-| A member reached through the cascade alone  | `Republished because \`@sdxc/<dependency>\` changed.`                                                             |
-| A touched member with no commit in range    | `Republished.`, the case `--force` produces                                                                       |
-| A new package with no commit in range       | `First release.`; a new package with commits lists them like any other                                            |
-| Footer                                      | A compare link, `https://github.com/sergiodxa/monorepo/compare/v2026.9.3...v2026.9.4`, once a previous tag exists |
+| Input                                       | Rendering                                                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `type(scope): Title`, `type(scope)!: Title` | `- Title ([sha](…/commit/sha))`, `- **Breaking:** Title ([sha](…))`; the first letter is uppercased for older lowercase titles |
+| Commit body                                 | Kept on the commit and in `changelog.jsonl`; not copied into the GitHub Release                                                |
+| A commit touching several packages          | Listed under each of them                                                                                                      |
+| A member reached through the cascade alone  | `Republished because \`@sdxc/<dependency>\` changed.`                                                                          |
+| A touched member with no commit in range    | `Republished.`, the case `--force` produces                                                                                    |
+| A new package with no commit in range       | `First release.`; a new package with commits lists them like any other                                                         |
+| Footer                                      | A compare link, `https://github.com/sergiodxa/monorepo/compare/v2026.9.3...v2026.9.4`, once a previous tag exists              |
 
 `gh release create v<version> --target <sha> --title <version> --notes-file <file>` creates the tag and the Release in one call, after every publish succeeded. A rerun that publishes nothing but finds no tag for today still creates the Release, so a failed `gh` call heals on the next run.
 
