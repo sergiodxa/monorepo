@@ -28,8 +28,8 @@ import {
 } from "./commits.js";
 import {
 	changedFiles,
-	commitFiles,
 	commitLog,
+	correctionFiles,
 	fetchTags,
 	hasCommit,
 	headSha,
@@ -118,7 +118,7 @@ export async function runRelease(options: ReleaseOptions = {}): Promise<Result<v
 	if (isFailure(log)) return log;
 	let parsed = parseCommits(log.data);
 	if (isFailure(parsed)) return parsed;
-	let commits = await attributeCorrections(parsed.data, commitFiles);
+	let commits = await attributeCorrections(parsed.data, correctionFiles);
 	if (isFailure(commits)) return commits;
 	let commitsByPackage = attributeCommits(commits.data, packages);
 	let planned = planRelease({
