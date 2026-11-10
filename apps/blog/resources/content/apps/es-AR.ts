@@ -21,10 +21,8 @@ const ES_AR: AppsPage = {
 	eyebrow: "App Store y la web",
 	intro:
 		"Productos que publico yo — en el App Store y en la web —, cada uno con su propio hogar para probar o descargar.",
-	browseCta: "Ver las apps",
 	labels: {
 		stages: {
-			hero: "Wakaba y Encore en iPhone",
 			wakaba: "Wakaba en iPhone: camino de aprendizaje, flashcards y práctica",
 			encore: "Encore en iPhone: carta de desafío, dorso y swipe",
 		},

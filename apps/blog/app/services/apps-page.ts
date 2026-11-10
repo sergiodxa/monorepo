@@ -25,8 +25,6 @@ export interface AppsPage {
 	eyebrow: string;
 	/** What the page is, shown under the heading. */
 	intro: string;
-	/** Scrolls the hero into the first product band. */
-	browseCta: string;
 	labels: AppsPage.Labels;
 	apps: ReadonlyArray<AppsPage.App>;
 }
@@ -35,9 +33,8 @@ export interface AppsPage {
 export namespace AppsPage {
 	/** Small interface strings around the list. */
 	export interface Labels {
-		/** Accessible name for each app's screenshot stage. */
+		/** Accessible name for each App Store app's screenshot stage. */
 		stages: {
-			hero: string;
 			wakaba: string;
 			encore: string;
 		};
