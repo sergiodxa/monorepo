@@ -76,6 +76,13 @@ export default route({
 	mcpMarkdown: get("/mcp.md"),
 
 	/**
+	 * A showcase of the apps the author ships — Wakaba, Encore, Uptime and Reader — plus the
+	 * same list as Markdown.
+	 */
+	apps: get("/apps"),
+	appsMarkdown: get("/apps.md"),
+
+	/**
 	 * Encore's landing, the Marketing URL of its App Store listing, drawn in the app's own
 	 * look, in English, Argentine Spanish or Japanese.
 	 */

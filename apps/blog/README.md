@@ -216,6 +216,10 @@ text/markdown`) writes the same page as Markdown.
   this point in his life, in the nownownow.com tradition, with the day it was last updated,
   from one structured page per language in `resources/content/now/`; bump `NOW_UPDATED_AT`
   there with every edit. `/now.md` (or `Accept: text/markdown`) writes the same page as Markdown.
+- Apps (`/apps`, in English or Spanish like the press kit): a showcase of the products the
+  author ships — Wakaba, Encore, Uptime and Reader — each with a short pitch and a link to
+  its home, from one structured page per language in `resources/content/apps/`. `/apps.md`
+  (or `Accept: text/markdown`) writes the same list as Markdown.
 - Uses (`/uses`, in English or Spanish like the press kit): the hardware, editor, stack, services
   and apps the author works with, each a card with a link and a line on why, from one
   structured page per language in `resources/content/uses/`. `/uses.md` (or `Accept:
@@ -269,8 +273,11 @@ text/markdown`) writes the same list as Markdown.
 | `/.well-known/webfinger` | WebFinger; `self` is the ActivityPub actor             |
 | `/.well-known/nodeinfo`  | Links the NodeInfo 2.1 document                        |
 | `/nodeinfo/2.1`          | NodeInfo: software, one user, post count               |
+| `/apps`                  | Showcase of apps the author ships (`.md` for Markdown) |
+| `/apps/encore`           | Encore App Store landing                               |
 | `/apps/encore/support`   | Encore support page and form                           |
 | `/apps/encore/privacy`   | Encore privacy policy (`.md` for Markdown)             |
+| `/apps/wakaba`           | Wakaba App Store landing                               |
 | `/about`                 | Who the author is (`.md` for Markdown)                 |
 | `/press`                 | Press kit for events and podcasts (`.md` for Markdown) |
 | `/now`                   | What the author is focused on now (`.md` for Markdown) |
