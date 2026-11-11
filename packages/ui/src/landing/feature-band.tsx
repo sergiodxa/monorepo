@@ -83,6 +83,12 @@ export namespace FeatureBand {
 		 * Media for `layout="split"`. Every other layout carries its media in its items.
 		 */
 		media?: RemixNode;
+		/**
+		 * Which side the media column sits on when `layout="split"`. Defaults to `"end"`
+		 * (copy then media). `"start"` puts media first and leans the wide track that way
+		 * unless `lean` is set.
+		 */
+		mediaSide?: "start" | "end";
 		/** Which column is wider when `layout="split"`. */
 		lean?: Split.Lean;
 		/** Grid column count when `layout="grid"`. */
@@ -123,6 +129,8 @@ export namespace FeatureBand {
  * 	<ul><li>{t("f1.claim")}</li></ul>
  * </FeatureBand>
  * @example
+ * <FeatureBand layout="split" mediaSide="start" title={t("f2.title")} media={shot}>{claims}</FeatureBand>
+ * @example
  * <FeatureBand layout="stage" id="how" title={t("how.title")}>
  * 	<TabbedStage.Item value="detect" label={t("how.detect")} defaultChecked>{shot}</TabbedStage.Item>
  * </FeatureBand>
@@ -146,6 +154,7 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 			layout,
 			lean,
 			media,
+			mediaSide,
 			mix,
 			parts,
 			ruled,
@@ -159,6 +168,8 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 		let resolvedLayout = layout ?? DEFAULT_LAYOUT;
 		let resolvedTone = tone ?? DEFAULT_TONE;
 		let resolvedSpacing = spacing ?? "normal";
+		let mediaOnStart = mediaSide === "start";
+		let resolvedLean = lean ?? (mediaOnStart ? "copy" : "media");
 
 		let body = <div mix={[vstack({ gap: 4, align: "stretch" })]}>{children}</div>;
 		let isSplit = resolvedLayout === "split" && media !== undefined;
@@ -205,6 +216,18 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 		);
 
 		if (isSplit) {
+			let copy = (
+				<Split.Copy checks={Boolean(children)}>
+					{header}
+					<HeadingScope>{children}</HeadingScope>
+				</Split.Copy>
+			);
+			let mediaColumn = (
+				<Split.Media mix={[parts?.media]}>
+					<HeadingScope>{media}</HeadingScope>
+				</Split.Media>
+			);
+
 			return (
 				<LandingSection
 					{...rest}
@@ -214,14 +237,18 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 					ruled={ruled}
 					mix={mix}
 				>
-					<Split lean={lean}>
-						<Split.Copy checks={Boolean(children)}>
-							{header}
-							<HeadingScope>{children}</HeadingScope>
-						</Split.Copy>
-						<Split.Media mix={[parts?.media]}>
-							<HeadingScope>{media}</HeadingScope>
-						</Split.Media>
+					<Split lean={resolvedLean} data-media-side={mediaOnStart ? "start" : "end"}>
+						{mediaOnStart ? (
+							<>
+								{mediaColumn}
+								{copy}
+							</>
+						) : (
+							<>
+								{copy}
+								{mediaColumn}
+							</>
+						)}
 					</Split>
 				</LandingSection>
 			);

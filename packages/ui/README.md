@@ -260,6 +260,8 @@ Landing bands, composition craft and animated visuals. Every piece imports from
 **Composition craft**
 
 - `ProductFrame` — window/device chrome (`stage`, `shadow`, `lights`, `title`, `url`, `footer`), and `designWidth` + `fit` to crop or scale a desktop composition on phones.
+- `PhoneFrame`, `screenCorners` — ink phone bezel around a capture or live screen (`bezel`, or `--app-bezel`).
+- `PhoneFan` — three phones (`start` / `front` / `end`) fanned on a pausable bobbing stage.
 - `CodeStage` / `TerminalPanel` — titled mono panel (`variant`: `code` | `terminal` | `slab`, `language`, `lineNumbers`, `tabs`).
 - `InstallTabs`, `InstallTabs.Option` — radio dialect strip (no JS).
 - `TabbedStage`, `TabbedStage.Item` — tabs or a vertical rail controlling a media panel (no JS).
