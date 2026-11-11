@@ -311,29 +311,29 @@ describe("the section nav", () => {
 	});
 
 	/**
-	 * The upgrade buttons share the title line of Usage the way every other settings action
-	 * does; a split or inline-switch row puts them on a different axis from that label.
+	 * The upgrade buttons sit on the usage row and centre on its text block, the way an
+	 * inline switch does — an action row would pin them to the title's first line instead.
 	 */
-	test("puts the plan upgrade buttons on an action row with Usage", async () => {
+	test("puts the plan upgrade buttons on an inline-switch row with Usage", async () => {
 		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		expect(body).toContain("Move to Paid");
 		expect(body).toContain("Move to Premium");
 		expect(body).toMatch(
-			/data-slot="settings-row"[^>]*data-layout="action"[^>]*>[\s\S]*?Usage[\s\S]*?Move to Paid[\s\S]*?Move to Premium/,
+			/data-slot="settings-row"[^>]*data-layout="inline-switch"[^>]*>[\s\S]*?Usage[\s\S]*?Move to Paid[\s\S]*?Move to Premium/,
 		);
-		expect(body).toContain(`action="${routes.billing.checkout.href({ plan: "paid" })}"`);
-		expect(body).toContain(`action="${routes.billing.checkout.href({ plan: "premium" })}"`);
+		expect(body).toContain(`href="${routes.billing.checkout.href({ plan: "paid" })}"`);
+		expect(body).toContain(`href="${routes.billing.checkout.href({ plan: "premium" })}"`);
 	});
 
 	/**
 	 * Checkout and the billing portal redirect off-site. A frame fetch cannot follow that
-	 * redirect, so the forms leave navigation to the browser the way sign-in and sign-out do.
+	 * redirect, so the links leave navigation to the browser the way sign-in and export do.
 	 */
 	test("leaves plan checkout and billing portal to a full document load", async () => {
 		let free = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
-		let paidCheckout = checkoutForm(free, "paid");
-		let premiumCheckout = checkoutForm(free, "premium");
+		let paidCheckout = checkoutLink(free, "paid");
+		let premiumCheckout = checkoutLink(free, "premium");
 
 		expect(paidCheckout).toContain("data-rmx-document");
 		expect(premiumCheckout).toContain("data-rmx-document");
@@ -346,19 +346,26 @@ describe("the section nav", () => {
 
 		let paid = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 		let portal = paid.match(
-			new RegExp(`<form[^>]*action="${escapeRegExp(routes.billing.portal.href())}"[^>]*>`),
+			new RegExp(`<a[^>]*href="${escapeRegExp(routes.billing.portal.href())}"[^>]*>`),
 		)?.[0];
 
 		expect(portal).toBeDefined();
 		expect(portal).toContain("data-rmx-document");
-		expect(portal).toContain(`action="${routes.billing.portal.href()}"`);
+		expect(portal).toContain(`href="${routes.billing.portal.href()}"`);
+	});
+
+	test("says when a checkout or portal could not open", async () => {
+		let path = `${routes.settings.href()}?billing=failed`;
+		let body = await (await fetchRoute(createRouter(VIEWER), path)).text();
+
+		expect(body).toContain("The payment page could not be opened just now");
 	});
 });
 
-/** The opening tag of the checkout form for one purchasable plan. */
-function checkoutForm(body: string, plan: "paid" | "premium"): string {
-	let action = routes.billing.checkout.href({ plan });
-	let match = body.match(new RegExp(`<form[^>]*action="${escapeRegExp(action)}"[^>]*>`));
+/** The opening tag of the checkout link for one purchasable plan. */
+function checkoutLink(body: string, plan: "paid" | "premium"): string {
+	let href = routes.billing.checkout.href({ plan });
+	let match = body.match(new RegExp(`<a[^>]*href="${escapeRegExp(href)}"[^>]*>`));
 	expect(match?.[0]).toBeDefined();
 	return match?.[0] ?? "";
 }

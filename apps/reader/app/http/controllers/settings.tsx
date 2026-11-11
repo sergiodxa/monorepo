@@ -27,6 +27,7 @@ import type { UserStore } from "~/app/models/user-store";
 import type { Tier } from "~/app/services/entitlement";
 
 import { APPEARANCE_PARAM, FACE_FIELD, THEME_FIELD } from "~/app/http/controllers/appearance";
+import { BILLING_PARAM } from "~/app/http/controllers/billing/outcome";
 import { chrome } from "~/app/http/controllers/chrome";
 import { FILE_FIELD, IMPORTED_PARAM } from "~/app/http/controllers/feeds/import";
 import {
@@ -259,13 +260,22 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 			)}
 
 			{/**
-			 * Each checkout is its own form, left to a full document load so the platform's
-			 * redirect is followed as navigation rather than as a same-origin frame fetch;
-			 * the forms stay flex items so the buttons share one cross-axis size on the title
-			 * line, and several wrap under the label on a phone.
+			 * The platform could not open a hosted page. Said here, beside the buttons that
+			 * asked for it, so a failure is visible rather than a silent return to this panel.
+			 */}
+			{ctx.url.searchParams.get(BILLING_PARAM) === "failed" && (
+				<SettingsNote color="danger">
+					<Alert.Description>{ctx.intl.t("settings.plan.billingFailed")}</Alert.Description>
+				</SettingsNote>
+			)}
+
+			{/**
+			 * Each upgrade is a link left to a full document load, matching every other off-site
+			 * hand-off: the platform's redirect is followed as navigation, and the row centres
+			 * the buttons on the usage text rather than pinning them to the title's first line.
 			 */}
 			<SettingsSection.Row
-				layout="action"
+				layout="inline-switch"
 				label={ctx.intl.t("settings.plan.usageLabel")}
 				description={ctx.intl.t("settings.plan.usage", {
 					feeds: entitlement.feeds,
@@ -274,19 +284,17 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 			>
 				<div mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
 					{upgradesFrom(entitlement.tier).map((offered) => (
-						<form
+						<LinkButton
 							key={offered}
-							method="post"
-							action={routes.billing.checkout.href({ plan: offered })}
+							href={routes.billing.checkout.href({ plan: offered })}
 							data-rmx-document=""
-							mix={[flex(), items("center")]}
+							color="brand"
+							size="sm"
 						>
-							<Button type="submit" color="brand" size="sm">
-								{ctx.intl.t("settings.plan.upgrade", {
-									plan: ctx.intl.t(`settings.plan.names.${offered}`),
-								})}
-							</Button>
-						</form>
+							{ctx.intl.t("settings.plan.upgrade", {
+								plan: ctx.intl.t(`settings.plan.names.${offered}`),
+							})}
+						</LinkButton>
 					))}
 
 					{/**
@@ -294,16 +302,15 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 					 * page to open for somebody who has never bought anything.
 					 */}
 					{entitlement.tier !== "free" && (
-						<form
-							method="post"
-							action={routes.billing.portal.href()}
+						<LinkButton
+							href={routes.billing.portal.href()}
 							data-rmx-document=""
-							mix={[flex(), items("center")]}
+							size="sm"
+							color="neutral"
+							variant="outline"
 						>
-							<Button type="submit" size="sm" color="neutral" variant="outline">
-								{ctx.intl.t("settings.plan.manage")}
-							</Button>
-						</form>
+							{ctx.intl.t("settings.plan.manage")}
+						</LinkButton>
 					)}
 				</div>
 			</SettingsSection.Row>
