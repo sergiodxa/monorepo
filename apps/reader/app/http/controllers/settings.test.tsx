@@ -325,4 +325,45 @@ describe("the section nav", () => {
 		expect(body).toContain(`action="${routes.billing.checkout.href({ plan: "paid" })}"`);
 		expect(body).toContain(`action="${routes.billing.checkout.href({ plan: "premium" })}"`);
 	});
+
+	/**
+	 * Checkout and the billing portal redirect off-site. A frame fetch cannot follow that
+	 * redirect, so the forms leave navigation to the browser the way sign-in and sign-out do.
+	 */
+	test("leaves plan checkout and billing portal to a full document load", async () => {
+		let free = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
+		let paidCheckout = checkoutForm(free, "paid");
+		let premiumCheckout = checkoutForm(free, "premium");
+
+		expect(paidCheckout).toContain("data-rmx-document");
+		expect(premiumCheckout).toContain("data-rmx-document");
+
+		store.entitlement.mockResolvedValue({
+			...FREE_ENTITLEMENT,
+			tier: "paid",
+			limits: { ...FREE_ENTITLEMENT.limits, feeds: 200, saved: 5_000, posts: 1_500_000 },
+		});
+
+		let paid = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
+		let portal = paid.match(
+			new RegExp(`<form[^>]*action="${escapeRegExp(routes.billing.portal.href())}"[^>]*>`),
+		)?.[0];
+
+		expect(portal).toBeDefined();
+		expect(portal).toContain("data-rmx-document");
+		expect(portal).toContain(`action="${routes.billing.portal.href()}"`);
+	});
 });
+
+/** The opening tag of the checkout form for one purchasable plan. */
+function checkoutForm(body: string, plan: "paid" | "premium"): string {
+	let action = routes.billing.checkout.href({ plan });
+	let match = body.match(new RegExp(`<form[^>]*action="${escapeRegExp(action)}"[^>]*>`));
+	expect(match?.[0]).toBeDefined();
+	return match?.[0] ?? "";
+}
+
+/** Escapes a literal for use inside a {@link RegExp}. */
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
