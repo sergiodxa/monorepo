@@ -245,7 +245,7 @@ Landing bands, composition craft and animated visuals. Every piece imports from
 
 - `LandingHero` — eyebrow, display title, lead, `CtaGroup`, `note`, `proof`, media (`mediaPlacement`: `below` | `end` | `background`).
 - `ProofStrip` — compact ruled band for `LogoCloud` and/or `StatStrip` children.
-- `FeatureBand` — header + `layout`: `split` | `grid` | `steps` | `stage` | `timeline`.
+- `FeatureBand` — header + `layout`: `split` | `grid` | `steps` | `stage` | `timeline`; split `mediaSide` (`start` | `end`) and `lean`.
 - `PricingBand`, `PricingBand.Plan` — plan cards; a `featured` plan inverts and leads on phones.
 - `TestimonialBand`, `TestimonialBand.Quote` — quote cards in masonry columns.
 - `FaqBand` — header + one or two `Accordion` columns (`columns={1|2}`).
