@@ -227,8 +227,7 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 				ctx.intl.t("settings.plan.history"),
 				ctx.intl.t("settings.plan.includes"),
 			].join(" ")}
-			save="instant"
-			labels={{ save: ctx.intl.t("settings.appearance.save") }}
+			save="none"
 		>
 			{/**
 			 * A failed card, said on the day it fails and not acted on. Nothing has changed,
@@ -260,9 +259,10 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 			)}
 
 			{/**
-			 * Each checkout is its own form, and the forms stay flex items so the buttons
-			 * share one cross-axis size on the title line; several wrap under the label on
-			 * a phone.
+			 * Each checkout is its own form, left to a full document load so the platform's
+			 * redirect is followed as navigation rather than as a same-origin frame fetch;
+			 * the forms stay flex items so the buttons share one cross-axis size on the title
+			 * line, and several wrap under the label on a phone.
 			 */}
 			<SettingsSection.Row
 				layout="action"
@@ -278,6 +278,7 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 							key={offered}
 							method="post"
 							action={routes.billing.checkout.href({ plan: offered })}
+							data-rmx-document=""
 							mix={[flex(), items("center")]}
 						>
 							<Button type="submit" color="brand" size="sm">
@@ -296,6 +297,7 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 						<form
 							method="post"
 							action={routes.billing.portal.href()}
+							data-rmx-document=""
 							mix={[flex(), items("center")]}
 						>
 							<Button type="submit" size="sm" color="neutral" variant="outline">
