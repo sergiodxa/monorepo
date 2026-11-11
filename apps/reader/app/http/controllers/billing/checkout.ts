@@ -79,8 +79,9 @@ function back(): Response {
 }
 
 /**
- * The platform customer a reader buys as, creating one the first time and recording the
- * link so a delivery naming only the platform's own id still reaches them.
+ * The platform customer a reader buys as. The catalog link is preferred; when it is missing
+ * the platform is asked by subject, and only then is a customer created — so a reader the
+ * platform already knows is adopted rather than refused as a duplicate.
  *
  * @param subject - The reader's OIDC subject, which becomes the customer's external id.
  * @param email - The address the OIDC `email` claim carried.
@@ -89,14 +90,53 @@ async function customerFor(subject: string, email: string): Promise<string | nul
 	let linked = await findBillingCustomer(subject, CONNECTION);
 	if (linked !== null) return linked.provider_customer_id;
 
-	let created = await polar.customers.create({ email, externalId: subject });
+	let existing = await polar.customers.find({ externalId: subject });
+	if (!isFailure(existing)) {
+		await linkBillingCustomer(subject, CONNECTION, existing.data.id);
+		return existing.data.id;
+	}
 
-	if (isFailure(created)) {
-		currentLog()?.fail(created.error, { billing: failureFields(created.error) });
+	if (existing.error.code !== "not_found") {
+		currentLog()?.fail(existing.error, { billing: failureFields(existing.error) });
 		return null;
 	}
 
-	await linkBillingCustomer(subject, CONNECTION, created.data.id);
+	let created = await polar.customers.create({ email, externalId: subject });
 
-	return created.data.id;
+	if (!isFailure(created)) {
+		await linkBillingCustomer(subject, CONNECTION, created.data.id);
+		return created.data.id;
+	}
+
+	/**
+	 * A conflict means the platform already holds this person under email or subject. Resolve
+	 * the same way a first sign-in does: find them, attach the subject when an address match
+	 * has none yet, and record the link so the next checkout does not ask again.
+	 */
+	if (created.error.code === "conflict") {
+		let bySubject = await polar.customers.find({ externalId: subject });
+		if (!isFailure(bySubject)) {
+			await linkBillingCustomer(subject, CONNECTION, bySubject.data.id);
+			return bySubject.data.id;
+		}
+
+		let byEmail = await polar.customers.findByEmail(email);
+		if (!isFailure(byEmail) && byEmail.data.externalId === null) {
+			let updated = await polar.customers.update({ id: byEmail.data.id }, { externalId: subject });
+			if (!isFailure(updated)) {
+				await linkBillingCustomer(subject, CONNECTION, updated.data.id);
+				return updated.data.id;
+			}
+			currentLog()?.fail(updated.error, { billing: failureFields(updated.error) });
+			return null;
+		}
+
+		if (!isFailure(byEmail) && byEmail.data.externalId === subject) {
+			await linkBillingCustomer(subject, CONNECTION, byEmail.data.id);
+			return byEmail.data.id;
+		}
+	}
+
+	currentLog()?.fail(created.error, { billing: failureFields(created.error) });
+	return null;
 }

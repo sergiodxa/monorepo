@@ -12,7 +12,7 @@ import { iife } from "@sdxc/iife";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
-import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
+import { flex, flexWrap, gap, vstack } from "@sdxc/u/layout";
 import { maxIs, mie, p, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
@@ -212,6 +212,45 @@ function noteBlock(note: Note | null) {
  * @param entitlement - What their plan allows, and where they stand against it.
  */
 function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
+	/**
+	 * Plan changes sit on the section title the way every other settings card puts its
+	 * one-shot actions: the title row already centres them, so they never fight the Usage
+	 * text for a shared baseline.
+	 */
+	let planActions = (
+		<>
+			{upgradesFrom(entitlement.tier).map((offered) => (
+				<LinkButton
+					key={offered}
+					href={routes.billing.checkout.href({ plan: offered })}
+					data-rmx-document=""
+					color="brand"
+					size="sm"
+				>
+					{ctx.intl.t("settings.plan.upgrade", {
+						plan: ctx.intl.t(`settings.plan.names.${offered}`),
+					})}
+				</LinkButton>
+			))}
+
+			{/**
+			 * Offered only to a reader the platform holds a record for, since there is no
+			 * page to open for somebody who has never bought anything.
+			 */}
+			{entitlement.tier !== "free" && (
+				<LinkButton
+					href={routes.billing.portal.href()}
+					data-rmx-document=""
+					size="sm"
+					color="neutral"
+					variant="outline"
+				>
+					{ctx.intl.t("settings.plan.manage")}
+				</LinkButton>
+			)}
+		</>
+	);
+
 	return (
 		<SettingsSection
 			id={SETTINGS_ANCHORS.plan}
@@ -228,6 +267,7 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 				ctx.intl.t("settings.plan.history"),
 				ctx.intl.t("settings.plan.includes"),
 			].join(" ")}
+			actions={planActions}
 			save="none"
 		>
 			{/**
@@ -270,50 +310,17 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 			)}
 
 			{/**
-			 * Each upgrade is a link left to a full document load, matching every other off-site
-			 * hand-off: the platform's redirect is followed as navigation, and the row centres
-			 * the buttons on the usage text rather than pinning them to the title's first line.
+			 * Where the reader stands against the plan's numbers — said on its own, because the
+			 * offer to move up already sits on the section title.
 			 */}
 			<SettingsSection.Row
-				layout="inline-switch"
+				layout="stacked"
 				label={ctx.intl.t("settings.plan.usageLabel")}
 				description={ctx.intl.t("settings.plan.usage", {
 					feeds: entitlement.feeds,
 					saved: entitlement.saved,
 				})}
-			>
-				<div mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
-					{upgradesFrom(entitlement.tier).map((offered) => (
-						<LinkButton
-							key={offered}
-							href={routes.billing.checkout.href({ plan: offered })}
-							data-rmx-document=""
-							color="brand"
-							size="sm"
-						>
-							{ctx.intl.t("settings.plan.upgrade", {
-								plan: ctx.intl.t(`settings.plan.names.${offered}`),
-							})}
-						</LinkButton>
-					))}
-
-					{/**
-					 * Offered only to a reader the platform holds a record for, since there is no
-					 * page to open for somebody who has never bought anything.
-					 */}
-					{entitlement.tier !== "free" && (
-						<LinkButton
-							href={routes.billing.portal.href()}
-							data-rmx-document=""
-							size="sm"
-							color="neutral"
-							variant="outline"
-						>
-							{ctx.intl.t("settings.plan.manage")}
-						</LinkButton>
-					)}
-				</div>
-			</SettingsSection.Row>
+			/>
 		</SettingsSection>
 	);
 }

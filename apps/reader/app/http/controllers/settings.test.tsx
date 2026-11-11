@@ -311,19 +311,18 @@ describe("the section nav", () => {
 	});
 
 	/**
-	 * The upgrade buttons sit on the usage row and centre on its text block, the way an
-	 * inline switch does — an action row would pin them to the title's first line instead.
+	 * Plan upgrades sit on the section title with the other one-shot settings actions, so
+	 * they share that row's centre line rather than fighting Usage for a baseline.
 	 */
-	test("puts the plan upgrade buttons on an inline-switch row with Usage", async () => {
+	test("puts the plan upgrade buttons on the Your plan title actions", async () => {
 		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		expect(body).toContain("Move to Paid");
 		expect(body).toContain("Move to Premium");
-		expect(body).toMatch(
-			/data-slot="settings-row"[^>]*data-layout="inline-switch"[^>]*>[\s\S]*?Usage[\s\S]*?Move to Paid[\s\S]*?Move to Premium/,
-		);
+		expect(body).toMatch(/data-slot="settings-actions"[\s\S]*?Move to Paid[\s\S]*?Move to Premium/);
 		expect(body).toContain(`href="${routes.billing.checkout.href({ plan: "paid" })}"`);
 		expect(body).toContain(`href="${routes.billing.checkout.href({ plan: "premium" })}"`);
+		expect(body).toMatch(/data-slot="settings-row"[^>]*data-layout="stacked"[^>]*>[\s\S]*?Usage/);
 	});
 
 	/**
