@@ -34,6 +34,22 @@ describe("FeatureBand", () => {
 		expect(html).toContain("Spec");
 		expect(html).toContain('data-slot="split"');
 		expect(html).toContain('data-checks="true"');
+		expect(html).toContain('data-media-side="end"');
+		expect(html).toContain('data-lean="media"');
+	});
+
+	test("puts media first and leans the wide track that way when mediaSide is start", async () => {
+		let html = await renderToString(
+			<FeatureBand layout="split" mediaSide="start" title="Reader" media={<div>Queue</div>}>
+				<ul>
+					<li>Any feed</li>
+				</ul>
+			</FeatureBand>,
+		);
+
+		expect(html).toContain('data-media-side="start"');
+		expect(html).toContain('data-lean="copy"');
+		expect(html.indexOf("Queue")).toBeLessThan(html.indexOf("Reader"));
 	});
 
 	test("renders a feature grid", async () => {

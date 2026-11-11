@@ -34,6 +34,8 @@ export * from "./logo-cloud.js";
 export * from "./logo-sentence.js";
 export * from "./marquee.js";
 export * from "./motion-loop.js";
+export * from "./phone-fan.js";
+export * from "./phone-frame.js";
 export * from "./pricing-band.js";
 export * from "./product-frame.js";
 export * from "./proof-strip.js";
