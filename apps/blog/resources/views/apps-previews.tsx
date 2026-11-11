@@ -23,13 +23,11 @@ import {
 import { keyframes } from "@sdxc/u/animation";
 import { bg, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { block, hidden, hstack, vstack } from "@sdxc/u/layout";
-import { at, motionSafe } from "@sdxc/u/responsive";
+import { block, hstack, vstack } from "@sdxc/u/layout";
+import { motionSafe } from "@sdxc/u/responsive";
 import { bs, is, p } from "@sdxc/u/size";
 import { font, text, truncate, weight } from "@sdxc/u/typography";
-import { MotionLoop, ProductFrame } from "@sdxc/ui/landing";
-
-import { PhoneFrame, screenCorners } from "~/resources/views/app-pages/phone";
+import { MotionLoop, PhoneFan, PhoneFrame, ProductFrame, screenCorners } from "@sdxc/ui/landing";
 
 /** A hairline matching the product frames on the Uptime and Reader landings. */
 const HAIRLINE = "1px solid var(--ui-landing-hairline, var(--ui-neutral-border))";
@@ -115,160 +113,53 @@ function AppPhone(handle: Handle<AppPhone.Props>) {
 	return () => {
 		let { bezel = "#161412", shot } = handle.props;
 		return (
-			<div mix={[raw({ "--app-bezel": bezel })]}>
-				<PhoneFrame>
-					<picture mix={[block(), screenCorners()]}>
-						<source
-							media="(prefers-color-scheme: dark)"
-							srcSet={`${shot.base}-dark.webp`}
-							width={560}
-							height={1218}
-						/>
-						<img
-							src={`${shot.base}-light.webp`}
-							alt={shot.alt}
-							width={560}
-							height={1218}
-							loading={shot.eager ? "eager" : "lazy"}
-							decoding="async"
-							fetchpriority={shot.eager ? "high" : undefined}
-							mix={[block(), is("full"), raw({ blockSize: "auto" })]}
-						/>
-					</picture>
-				</PhoneFrame>
-			</div>
+			<PhoneFrame bezel={bezel}>
+				<picture mix={[block(), screenCorners()]}>
+					<source
+						media="(prefers-color-scheme: dark)"
+						srcSet={`${shot.base}-dark.webp`}
+						width={560}
+						height={1218}
+					/>
+					<img
+						src={`${shot.base}-light.webp`}
+						alt={shot.alt}
+						width={560}
+						height={1218}
+						loading={shot.eager ? "eager" : "lazy"}
+						decoding="async"
+						fetchpriority={shot.eager ? "high" : undefined}
+						mix={[block(), is("full"), raw({ blockSize: "auto" })]}
+					/>
+				</picture>
+			</PhoneFrame>
 		);
 	};
-}
-
-namespace FannedPhone {
-	export interface Props {
-		side: "start" | "end";
-		children: RemixNode;
-	}
 }
 
 /**
- * A phone tilted out from behind the front screen once the stage is wide enough; on a
- * narrow column the front phone stands alone. The tilt is baked into its bob so the float
- * never erases it.
- *
- * @returns The render function producing the tilted phone.
+ * Three App Store captures on the shared {@link PhoneFan} stage.
  */
-function FannedPhone(handle: Handle<FannedPhone.Props>) {
-	return () => {
-		let start = handle.props.side === "start";
-		let rotate = start ? "-7deg" : "7deg";
-		return (
-			<div
-				mix={[
-					hidden(),
-					at(
-						"md",
-						"apps-phone-fan",
-						raw({
-							display: "block",
-							flexShrink: "0",
-							inlineSize: "var(--phone)",
-							marginBlockStart: "calc(var(--phone) * 0.18)",
-							marginInline: start ? "0 calc(var(--phone) * -0.12)" : "calc(var(--phone) * -0.12) 0",
-							scale: "0.86",
-							transformOrigin: start ? "100% 0%" : "0% 0%",
-						}),
-					),
-					at(
-						"md",
-						"apps-phone-fan",
-						bob(
-							start ? "apps-fan-start" : "apps-fan-end",
-							start ? "-1.2s" : "-3.4s",
-							"-0.4rem",
-							rotate,
-						),
-					),
-				]}
-			>
-				{handle.props.children}
-			</div>
-		);
-	};
-}
-
-namespace PhoneFan {
-	export interface Props {
+function AppsPhoneFan(
+	handle: Handle<{
 		label: string;
 		pauseLabel: string;
 		front: PhoneShot;
 		start: PhoneShot;
 		end: PhoneShot;
 		bezel?: string;
-	}
-}
-
-/**
- * Three phones on a stage: the front screen readable, two more fanned behind it, all
- * floating on staggered bobs inside a pauseable loop.
- *
- * @returns The render function producing the fan.
- */
-function PhoneFan(handle: Handle<PhoneFan.Props>) {
+	}>,
+) {
 	return () => {
 		let { bezel, end, front, label, pauseLabel, start } = handle.props;
 		return (
-			<MotionLoop pauseLabel={pauseLabel}>
-				<div
-					mix={[
-						raw({
-							"--phone": "min(14rem, 58cqi)",
-							position: "relative",
-							isolation: "isolate",
-							overflow: "visible",
-							paddingBlock: "0.75rem 1.25rem",
-						}),
-					]}
-				>
-					<span
-						mix={[
-							raw({
-								position: "absolute",
-								width: "1px",
-								height: "1px",
-								overflow: "hidden",
-								clip: "rect(0 0 0 0)",
-							}),
-						]}
-					>
-						{label}
-					</span>
-					<div
-						data-slot="apps-phone-fan"
-						mix={[
-							hstack({ gap: 0, align: "start", justify: "center" }),
-							raw({ containerType: "inline-size", containerName: "apps-phone-fan" }),
-						]}
-					>
-						<FannedPhone side="start">
-							<AppPhone shot={start} bezel={bezel} />
-						</FannedPhone>
-						<div
-							mix={[
-								raw({
-									inlineSize: "var(--phone)",
-									flexShrink: "0",
-									zIndex: "1",
-									transformOrigin: "50% 100%",
-								}),
-								bob("apps-fan-front", "-0.4s", "-0.55rem", "-1.5deg"),
-							]}
-						>
-							<AppPhone shot={{ ...front, eager: true }} bezel={bezel} />
-						</div>
-						<FannedPhone side="end">
-							<AppPhone shot={end} bezel={bezel} />
-						</FannedPhone>
-					</div>
-				</div>
-			</MotionLoop>
+			<PhoneFan
+				label={label}
+				pauseLabel={pauseLabel}
+				start={<AppPhone shot={start} bezel={bezel} />}
+				front={<AppPhone shot={{ ...front, eager: true }} bezel={bezel} />}
+				end={<AppPhone shot={end} bezel={bezel} />}
+			/>
 		);
 	};
 }
@@ -297,7 +188,7 @@ export function WakabaStage(handle: Handle<WakabaStage.Props>) {
 		let lang = captureLang(handle.props.locale);
 		let root = `/apps/wakaba/screenshots/${lang}`;
 		return (
-			<PhoneFan
+			<AppsPhoneFan
 				label={handle.props.label}
 				pauseLabel={handle.props.pauseLabel}
 				bezel="#161412"
@@ -337,7 +228,7 @@ export function EncoreStage(handle: Handle<EncoreStage.Props>) {
 		let lang = captureLang(handle.props.locale);
 		let root = `/apps/encore/screenshots/${lang}`;
 		return (
-			<PhoneFan
+			<AppsPhoneFan
 				label={handle.props.label}
 				pauseLabel={handle.props.pauseLabel}
 				bezel="#1a0830"

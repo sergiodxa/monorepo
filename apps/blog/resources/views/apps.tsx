@@ -10,9 +10,7 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
 import { minIs } from "@sdxc/u/size";
 import { LinkButton } from "@sdxc/ui";
 import { AccentText, FeatureBand, LandingHero } from "@sdxc/ui/landing";
@@ -37,14 +35,6 @@ export namespace AppsView {
 	export interface Model {
 		page: AppsPage;
 	}
-}
-
-/**
- * Puts the media column on the inline start once the split is two columns, so every other
- * band can flip sides without a second Split layout.
- */
-function mediaStart() {
-	return [at("lg", "ui-landing-split", raw({ order: -1 }))];
 }
 
 /**
@@ -127,8 +117,7 @@ namespace AppBand {
 
 /**
  * One app as a split band: platform as eyebrow, name as title, pitch and checks beside a
- * screenshot stage that flips sides every band. When media leads via `order`, lean flips
- * too so the first auto-placed track stays the wider one.
+ * screenshot stage that flips sides every band via `mediaSide`.
  *
  * @returns The render function producing the band.
  */
@@ -141,14 +130,13 @@ function AppBand(handle: Handle<AppBand.Props>) {
 			<FeatureBand
 				id={app.id}
 				layout="split"
-				lean={mediaOnStart ? "copy" : "media"}
+				mediaSide={mediaOnStart ? "start" : "end"}
 				tone={index % 2 === 0 ? "plain" : "tinted"}
 				eyebrow={app.platform}
 				eyebrowVariant="quiet"
 				title={app.name}
 				description={app.blurb}
 				media={mediaFor(app, page)}
-				parts={mediaOnStart ? { media: mediaStart() } : undefined}
 			>
 				<ul>
 					{app.highlights.map((highlight) => (
