@@ -15,6 +15,7 @@ import { bg, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { mergeMix, raw } from "@sdxc/u/general";
 import { hidden } from "@sdxc/u/layout";
+import { noScrollbar } from "@sdxc/u/overflow";
 import { media, supports } from "@sdxc/u/responsive";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { tabularNums, text, truncate, weight } from "@sdxc/u/typography";
@@ -420,6 +421,12 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 									scrollbarWidth: "thin",
 									padding: "0.5rem",
 								}),
+								/**
+								 * Classic scrollbars steal inline space from the 52px rail and shift the
+								 * current row's fill off the icon; the rail stays scrollable by wheel and
+								 * keyboard with the bar hidden, the way overlay scrollbars already behave.
+								 */
+								when(`${RAIL_SIDEBAR} &`, noScrollbar()),
 							]}
 						>
 							{nav}

@@ -1,7 +1,8 @@
 /**
  * Tests for {@link AppShell} in a real browser: the one sidebar as a column, a rail and a sheet
  * at both sides of 48rem and of a 64rem `sheetBelow`, the collapse toggle and ⌘B writing the cookie, rail tooltips and peek,
- * the inset content card, the skip link and landmarks, and no sideways scroll at 320px.
+ * a scrolling rail keeping its current fill on the icon, the inset content card, the skip link and
+ * landmarks, and no sideways scroll at 320px.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -413,6 +414,37 @@ describe("AppShell", () => {
 		await frames();
 		await userEvent.hover(link("Incidents"));
 		expect(tooltip.checkVisibility()).toBe(false);
+	});
+
+	test("a scrolling rail keeps the current fill centred on its icon", async () => {
+		await reduceMotion();
+		await page.viewport(768, 360);
+		let items = Array.from({ length: 16 }, (_, index) => (
+			<AppShell.Item
+				href={`#row-${index}`}
+				icon={<Glyph />}
+				label={`Row ${index}`}
+				current={index === 0}
+			/>
+		));
+		mountShell({
+			collapsed: true,
+			peek: false,
+			nav: <AppShell.Group>{items}</AppShell.Group>,
+		});
+		await userEvent.hover(document.querySelector("main")!);
+
+		let nav = sidebar().querySelector<HTMLElement>('[data-slot="app-shell-nav"]')!;
+		expect(nav.scrollHeight).toBeGreaterThan(nav.clientHeight);
+		expect(getComputedStyle(nav).scrollbarWidth).toBe("none");
+
+		let current = link("Row 0");
+		let icon = current.querySelector<HTMLElement>('[data-slot="app-shell-icon"]')!;
+		let row = current.getBoundingClientRect();
+		let glyph = icon.getBoundingClientRect();
+		let rail = sidebar().getBoundingClientRect();
+		expect(Math.abs(glyph.left + glyph.width / 2 - (row.left + row.width / 2))).toBeLessThan(1);
+		expect(Math.abs(glyph.left + glyph.width / 2 - (rail.left + rail.width / 2))).toBeLessThan(2);
 	});
 
 	test("the rail peeks over the content without moving it", async () => {
