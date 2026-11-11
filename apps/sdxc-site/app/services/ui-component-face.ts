@@ -40,7 +40,7 @@ export const COMPONENT_FACE_SIZE = {
  * Bumped when a silhouette or the wash changes, so cards can cache-bust without waiting
  * for a year-long `max-age` to expire.
  */
-export const COMPONENT_FACE_VERSION = "11";
+export const COMPONENT_FACE_VERSION = "12";
 
 /** Material role a miniature piece paints with. */
 type Tone = "surface" | "chrome" | "label" | "ink" | "muted" | "hairline" | "accent";
@@ -276,6 +276,8 @@ const CATALOGUE = [
 	{ slug: "page-actions", module: "docs" },
 	{ slug: "page-header", module: "app" },
 	{ slug: "pagination", module: "components" },
+	{ slug: "phone-fan", module: "landing" },
+	{ slug: "phone-frame", module: "landing" },
 	{ slug: "plan-notice", module: "docs" },
 	{ slug: "popover", module: "components" },
 	{ slug: "pricing-band", module: "landing" },
@@ -407,6 +409,48 @@ const OVERRIDES: Record<string, Shape[]> = {
 		...statusRow(34, 60, "app.beacon.dev", true),
 		...statusRow(34, 72, "eu-west · degraded", false),
 	]),
+	"phone-frame": deviceScene([
+		txt("Today", 80, 28, 8, "ink", { align: "center", font: "semibold" }),
+		...phoneRow(58, 38, "Lists", true),
+		...phoneRow(58, 54, "Bins", false),
+		...phoneRow(58, 70, "Meals", false),
+	]),
+	"phone-fan": [
+		{ kind: "rect", x: 26, y: 20, w: 38, h: 68, r: 9, tone: "ink" },
+		{
+			kind: "rect",
+			x: 29,
+			y: 23,
+			w: 32,
+			h: 62,
+			r: 7,
+			tone: "surface",
+		},
+		{ kind: "rect", x: 96, y: 20, w: 38, h: 68, r: 9, tone: "ink" },
+		{
+			kind: "rect",
+			x: 99,
+			y: 23,
+			w: 32,
+			h: 62,
+			r: 7,
+			tone: "surface",
+		},
+		{ kind: "rect", x: 52, y: 8, w: 56, h: 84, r: 11, tone: "ink" },
+		{
+			kind: "rect",
+			x: 55,
+			y: 11,
+			w: 50,
+			h: 78,
+			r: 9,
+			tone: "surface",
+		},
+		txt("Today", 80, 36, 7, "ink", { align: "center", font: "semibold" }),
+		{ kind: "line", x1: 64, y1: 50, x2: 96, y2: 50, tone: "label", weight: 1.4 },
+		{ kind: "line", x1: 64, y1: 62, x2: 90, y2: 62, tone: "label", weight: 1.3 },
+		{ kind: "line", x1: 64, y1: 74, x2: 84, y2: 74, tone: "label", weight: 1.3 },
+	],
 	chart: appShell([
 		txt("MRR", 58, 36, 6, "muted", { font: "mono", tracking: 1 }),
 		txt("$48,210", 58, 50, 12, "ink", { font: "semibold", tracking: -0.4 }),

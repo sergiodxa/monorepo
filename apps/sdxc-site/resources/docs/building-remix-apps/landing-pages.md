@@ -5,9 +5,11 @@ section:
     title: Interface
     order: 4.5
 order: 2
-lastUpdated: 2026-10-30
+lastUpdated: 2026-11-10
 outcomes:
     - "How to stack a landing from hero, proof, feature, FAQ and closing bands"
+    - "How to frame product shots with ProductFrame, PhoneFrame and PhoneFan"
+    - "How to flip a split FeatureBand with mediaSide"
     - "How to give the bands your brand through the landing tokens"
     - "How to build a band of your own from the landing primitives"
 ---
@@ -158,6 +160,60 @@ A rendered component works as well as an image, and stays sharp at every width.
 `ProductFrame variant="device"` draws a phone instead, `shadow="tinted"` lifts a frame off a
 brand band, and `CodeStage variant="slab"` frames a code sample when the product is a tool.
 
+When the hero is a phone capture rather than a desktop window, reach for `PhoneFrame`: an ink
+bezel around the screen, with the capture carrying its own status bar. Mix `screenCorners()`
+onto the image or live UI so the picture clips with the bezel. Set `bezel` for one phone, or
+`--app-bezel` once for every phone on the page.
+
+```tsx {% title="resources/components/landing/hero-phone.tsx" %}
+import { PhoneFrame, screenCorners } from "@sdxc/ui/landing";
+
+export function HeroPhone() {
+	return () => (
+		<PhoneFrame bezel="#1a0830">
+			<img
+				src="/images/app-home.png"
+				alt="Home screen with today's lists"
+				mix={[screenCorners()]}
+			/>
+		</PhoneFrame>
+	);
+}
+```
+
+Three screens that belong together go in `PhoneFan`: pass `start`, `front` and `end` as
+`PhoneFrame` children, with a `label` for the stage and an optional `pauseLabel` for the
+motion toggle. Side phones hide on a narrow column and fan out once the stage is wide enough;
+`MotionLoop` keeps the bob pausable and still under reduced motion.
+
+```tsx {% title="resources/components/landing/hero-phones.tsx" %}
+import { PhoneFan, PhoneFrame, screenCorners } from "@sdxc/ui/landing";
+
+export function HeroPhones() {
+	return () => (
+		<PhoneFan
+			label="Three screens of the app"
+			pauseLabel="Pause the phone animation"
+			start={
+				<PhoneFrame>
+					<img src="/images/lists.png" alt="" mix={[screenCorners()]} />
+				</PhoneFrame>
+			}
+			front={
+				<PhoneFrame>
+					<img src="/images/home.png" alt="Home" mix={[screenCorners()]} />
+				</PhoneFrame>
+			}
+			end={
+				<PhoneFrame>
+					<img src="/images/meals.png" alt="" mix={[screenCorners()]} />
+				</PhoneFrame>
+			}
+		/>
+	);
+}
+```
+
 ## Proof
 
 `ProofStrip` is the ruled band right after the hero. Give it a `LogoCloud`, a `StatStrip`, or
@@ -201,6 +257,10 @@ The proof band: five muted wordmarks spread across the measure over three figure
 `FeatureBand` is the band a landing repeats. Its `layout` decides the body:
 
 - `"split"` puts claims beside `media`. Children that are a `<ul>` render as checked claims.
+  `mediaSide` chooses which column leads: `"end"` (the default) is copy then media; `"start"`
+  puts media first and leans the wide track that way unless `lean` is set. Alternate
+  `mediaSide` down a stack of product bands so the page reads as a zigzag rather than one
+  repeated layout.
 - `"grid"` lays `Feature` cards in `columns`, two on a tablet and all of them on a wide band.
 - `"steps"` numbers `StepList.Item` children for a "how it works" band.
 - `"stage"` lists `TabbedStage.Item` children down a rail beside a sticky stage that shows the
@@ -419,6 +479,7 @@ The rest of the patterns cover bands most landings reach for sooner or later:
 - `AuthorBand`: a portrait beside the author's statement, with socials and an intro video.
 - `Curriculum`: course parts with expandable lessons, totals and a "Free" badge.
 - `SegmentedStage`: a pill switcher over hero media, so one stage shows several views.
+- `PhoneFrame` and `PhoneFan`: ink phone chrome, alone or as a three-phone stage.
 - `Rails` and `Crosshair`: frame the content column with hairline rails and "+" marks.
 - `LogoSentence`: customer marks set inline in one line of prose.
 - `FlowDiagram`: an animated run, a trigger and then each step passing along a rail, for a
@@ -427,12 +488,16 @@ The rest of the patterns cover bands most landings reach for sooner or later:
 So the bands on one page don't all share a shape, most of them come in more than one:
 
 - `LogoCloud` takes `layout="tiles"`, `"ruled"` or `"marquee"`.
+- `FeatureBand` takes `mediaSide="start"` on a split to lead with media, and `lean` when the
+  default track width is wrong for that shot.
 - `Feature.Grid` takes `variant="list"` for claims without cards, and a `Feature` takes
   `span={2}` to widen it.
 - `LandingHeader` takes `layout="split"`, `tone="statement"`, a `subtitle` or an `action`.
 - `TestimonialBand` takes a `featured` quote and `layout="carousel"`.
 - `AccentText` takes `variant="sheen"`, `"pill"` or `"chip"`.
 - `LandingHero` takes a `release` pin and an `entrance`.
+- `PhoneFrame` and `PhoneFan` stage phone captures the way `ProductFrame` stages a desktop
+  window; pair them with `screenCorners()` on the screen itself.
 
 ## Your brand
 

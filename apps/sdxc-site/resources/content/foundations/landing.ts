@@ -18,7 +18,7 @@ const LANDING: Foundations = {
 	importPath: "@sdxc/ui/landing",
 	source: "ui/src/styles/landing.ts",
 	intro: [
-		"Marketing pages built from bands: a hero, proof, feature bands, pricing, an FAQ and a closing call to action, plus the frames, code stages and diagrams that show a product working.",
+		"Marketing pages built from bands: a hero, proof, feature bands, pricing, an FAQ and a closing call to action, plus the frames, phone stages, code stages and diagrams that show a product working.",
 		"Copy comes in as props and the look comes from a few tokens, so one palette and a handful of variables set the art direction for every band.",
 	],
 	reachFor: [
