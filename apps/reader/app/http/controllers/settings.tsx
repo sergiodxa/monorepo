@@ -260,15 +260,12 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 			)}
 
 			{/**
-			 * One button sits at the row's end the way every other row's does; several wrap
-			 * under the label, where a phone has the width for them.
+			 * Each checkout is its own form, and the forms stay flex items so the buttons
+			 * share one cross-axis size on the title line; several wrap under the label on
+			 * a phone.
 			 */}
 			<SettingsSection.Row
-				layout={
-					upgradesFrom(entitlement.tier).length + (entitlement.tier === "free" ? 0 : 1) > 1
-						? "split"
-						: "inline-switch"
-				}
+				layout="action"
 				label={ctx.intl.t("settings.plan.usageLabel")}
 				description={ctx.intl.t("settings.plan.usage", {
 					feeds: entitlement.feeds,
@@ -281,6 +278,7 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 							key={offered}
 							method="post"
 							action={routes.billing.checkout.href({ plan: offered })}
+							mix={[flex(), items("center")]}
 						>
 							<Button type="submit" color="brand" size="sm">
 								{ctx.intl.t("settings.plan.upgrade", {
@@ -295,7 +293,11 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 					 * page to open for somebody who has never bought anything.
 					 */}
 					{entitlement.tier !== "free" && (
-						<form method="post" action={routes.billing.portal.href()}>
+						<form
+							method="post"
+							action={routes.billing.portal.href()}
+							mix={[flex(), items("center")]}
+						>
 							<Button type="submit" size="sm" color="neutral" variant="outline">
 								{ctx.intl.t("settings.plan.manage")}
 							</Button>

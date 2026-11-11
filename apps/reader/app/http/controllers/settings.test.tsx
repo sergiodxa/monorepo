@@ -309,4 +309,20 @@ describe("the section nav", () => {
 
 		expect(body).toMatch(new RegExp(`https?://[^<"]+${routes.mcp.index.href()}</code>`));
 	});
+
+	/**
+	 * The upgrade buttons share the title line of Usage the way every other settings action
+	 * does; a split or inline-switch row puts them on a different axis from that label.
+	 */
+	test("puts the plan upgrade buttons on an action row with Usage", async () => {
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
+
+		expect(body).toContain("Move to Paid");
+		expect(body).toContain("Move to Premium");
+		expect(body).toMatch(
+			/data-slot="settings-row"[^>]*data-layout="action"[^>]*>[\s\S]*?Usage[\s\S]*?Move to Paid[\s\S]*?Move to Premium/,
+		);
+		expect(body).toContain(`action="${routes.billing.checkout.href({ plan: "paid" })}"`);
+		expect(body).toContain(`action="${routes.billing.checkout.href({ plan: "premium" })}"`);
+	});
 });
