@@ -266,15 +266,15 @@ export default route({
 	},
 
 	/**
-	 * What a reader does about their plan. Both are `POST`s that end in a redirect to a page
-	 * the platform hosts: this app never draws a card field, so there is nothing here to
-	 * answer a `GET` with.
+	 * What a reader does about their plan. Both are `GET`s that end in a redirect to a page
+	 * the platform hosts: this app never draws a card field, and a link (with
+	 * `data-rmx-document`) is what hands the browser the off-site redirect intact.
 	 */
 	billing: {
 		/** Opens a hosted checkout for one of the paid tiers, named by the `:plan` segment. */
-		checkout: post("/billing/checkout/:plan"),
+		checkout: get("/billing/checkout/:plan"),
 		/** Opens the hosted page where a card, an invoice or a cancellation is dealt with. */
-		portal: post("/billing/portal"),
+		portal: get("/billing/portal"),
 	},
 
 	/**

@@ -1,5 +1,5 @@
 /**
- * `POST /billing/portal` — hands the reader to the hosted page where a card, an invoice
+ * `GET /billing/portal` — hands the reader to the hosted page where a card, an invoice
  * and a cancellation are dealt with. Updating a card is the platform's job, and this app
  * never sees one.
  *
@@ -8,9 +8,11 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
+import { BILLING_PARAM } from "~/app/http/controllers/billing/outcome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { CONNECTION, failureFields, polar } from "~/app/initializers/billing";
@@ -18,10 +20,10 @@ import { findBillingCustomer } from "~/app/models/registry";
 import routes from "~/routes/web";
 
 /**
- * POST /billing/portal — opens the platform's own billing page for this reader.
+ * GET /billing/portal — opens the platform's own billing page for this reader.
  *
  * A reader who has never bought anything has no page to open, so they are returned to the
- * settings panel where the offer is.
+ * settings panel where the offer is, with a note when the platform itself could not open.
  */
 export default createAction(routes.billing.portal, {
 	middleware: [requireUser],
@@ -40,7 +42,7 @@ export default createAction(routes.billing.portal, {
 		});
 
 		if (isFailure(portal)) {
-			ctx.log.fail(portal.error, { billing: failureFields(portal.error) });
+			currentLog()?.fail(portal.error, { billing: failureFields(portal.error) });
 			return back();
 		}
 
@@ -48,7 +50,8 @@ export default createAction(routes.billing.portal, {
 	},
 });
 
-/** Where a reader with no page to open is left, which is where they pressed from. */
+/** Where a reader with no page to open is left, with a note when the platform refused. */
 function back(): Response {
-	return redirect(routes.settings.href(), { status: redirect.Status.SeeOther });
+	let query = new URLSearchParams({ [BILLING_PARAM]: "failed" });
+	return redirect(`${routes.settings.href()}?${query}`, { status: redirect.Status.SeeOther });
 }

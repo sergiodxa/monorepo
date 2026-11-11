@@ -832,6 +832,13 @@ export default {
 			upgrade: "Move to {$plan}",
 			manage: "Manage billing",
 			/**
+			 * The platform refused or failed to open a hosted checkout or portal. Said beside
+			 * the buttons that asked for it, so the reader knows to try again rather than
+			 * wondering why the page came back unchanged.
+			 */
+			billingFailed:
+				"The payment page could not be opened just now. Nothing has been charged — try again in a moment.",
+			/**
 			 * A failed card is not a data event on the day it fails. The sentence says what is
 			 * true — nothing has changed — and points at the page where a card is replaced.
 			 */

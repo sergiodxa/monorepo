@@ -1,5 +1,5 @@
 /**
- * `POST /billing/checkout/:plan` — opens the hosted page where a reader buys a paid tier.
+ * `GET /billing/checkout/:plan` — opens the hosted page where a reader buys a paid tier.
  * The customer is created carrying their OIDC subject, so the snapshot that comes back
  * names their object directly and the tier lands without a lookup.
  *
@@ -15,6 +15,7 @@ import { createAction } from "remix/router";
 
 import type { Tier } from "~/app/services/entitlement";
 
+import { BILLING_PARAM } from "~/app/http/controllers/billing/outcome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { CONNECTION, failureFields, polar } from "~/app/initializers/billing";
@@ -31,9 +32,9 @@ function isPurchasable(tier: Tier): tier is Exclude<Tier, "free"> {
 }
 
 /**
- * POST /billing/checkout/:plan — starts a purchase and hands the reader to the platform.
- * A failure returns them to the settings page rather than to an error screen: nothing has
- * been charged, nothing has changed, and the panel they pressed from is where the offer
+ * GET /billing/checkout/:plan — starts a purchase and hands the reader to the platform.
+ * A failure returns them to the settings page with a note: nothing has been charged, and
+ * the panel they pressed from is where the offer and the explanation both live.
  */
 export default createAction(routes.billing.checkout, {
 	middleware: [requireUser],
@@ -61,7 +62,7 @@ export default createAction(routes.billing.checkout, {
 		});
 
 		if (isFailure(checkout)) {
-			ctx.log.fail(checkout.error, { billing: failureFields(checkout.error) });
+			currentLog()?.fail(checkout.error, { billing: failureFields(checkout.error) });
 			return back();
 		}
 
@@ -71,9 +72,10 @@ export default createAction(routes.billing.checkout, {
 	},
 });
 
-/** Where a reader who cannot be handed to the platform is left, which is where they were. */
+/** Where a reader who cannot be handed to the platform is left, with a note saying so. */
 function back(): Response {
-	return redirect(routes.settings.href(), { status: redirect.Status.SeeOther });
+	let query = new URLSearchParams({ [BILLING_PARAM]: "failed" });
+	return redirect(`${routes.settings.href()}?${query}`, { status: redirect.Status.SeeOther });
 }
 
 /**
