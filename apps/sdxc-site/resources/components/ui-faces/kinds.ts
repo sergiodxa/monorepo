@@ -137,6 +137,8 @@ export const FACE_KIND = {
 	"page-actions": "toolbar",
 	"page-header": "page-header",
 	pagination: "pagination",
+	"phone-fan": "phone-fan",
+	"phone-frame": "phone-frame",
 	"plan-notice": "alert",
 	popover: "popover",
 	"pricing-band": "landing-pricing",

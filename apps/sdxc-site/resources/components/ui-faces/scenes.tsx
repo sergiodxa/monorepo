@@ -3539,6 +3539,136 @@ function scene_product_frame(): RemixNode {
 	);
 }
 
+/** Ink phone bezel used by the phone-frame and phone-fan miniatures. */
+function facePhone(opts: {
+	title: string;
+	width?: string;
+	height?: string;
+	offset?: string;
+	scale?: string;
+	z?: string;
+}): RemixNode {
+	return (
+		<div
+			mix={[
+				raw({
+					position: "relative",
+					inlineSize: opts.width ?? "42%",
+					blockSize: opts.height ?? "88%",
+					borderRadius: "18% / 9%",
+					backgroundColor: "oklch(0.22 0.01 70)",
+					boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.12)",
+					padding: "0.28rem",
+					marginInlineStart: opts.offset,
+					scale: opts.scale,
+					zIndex: opts.z ?? "0",
+					flexShrink: "0",
+				}),
+			]}
+		>
+			<div
+				mix={[
+					raw({
+						inlineSize: "100%",
+						blockSize: "100%",
+						borderRadius: "14% / 7%",
+						backgroundColor: "var(--ui-surface-raised, var(--ui-bg))",
+						display: "flex",
+						flexDirection: "column",
+						gap: "0.3rem",
+						padding: "0.45rem 0.4rem",
+						overflow: "hidden",
+					}),
+				]}
+			>
+				<span
+					mix={[
+						raw({
+							fontSize: "0.5rem",
+							fontWeight: "650",
+							color: "var(--ui-neutral-fg-muted)",
+						}),
+					]}
+				>
+					{opts.title}
+				</span>
+				<span
+					mix={[
+						raw({
+							flex: "1",
+							borderRadius: "0.4rem",
+							backgroundColor: "color-mix(in oklch, CanvasText 6%, transparent)",
+						}),
+					]}
+				/>
+			</div>
+		</div>
+	);
+}
+
+/** Miniature for `phone-frame`. */
+function scene_phone_frame(): RemixNode {
+	return (
+		<div
+			mix={[
+				raw({
+					position: "absolute",
+					inset: "0",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					paddingBlock: "0.6rem",
+				}),
+			]}
+		>
+			{facePhone({ title: "Today", width: "38%", height: "92%" })}
+		</div>
+	);
+}
+
+/** Miniature for `phone-fan`. */
+function scene_phone_fan(): RemixNode {
+	return (
+		<div
+			mix={[
+				raw({
+					position: "absolute",
+					inset: "0",
+					display: "flex",
+					alignItems: "flex-end",
+					justifyContent: "center",
+					paddingBlock: "0.55rem 0.35rem",
+					overflow: "hidden",
+				}),
+			]}
+		>
+			{facePhone({
+				title: "Lists",
+				width: "30%",
+				height: "72%",
+				offset: "0",
+				scale: "0.92",
+				z: "0",
+			})}
+			{facePhone({
+				title: "Today",
+				width: "34%",
+				height: "86%",
+				offset: "-0.55rem",
+				z: "1",
+			})}
+			{facePhone({
+				title: "Meals",
+				width: "30%",
+				height: "72%",
+				offset: "-0.55rem",
+				scale: "0.92",
+				z: "0",
+			})}
+		</div>
+	);
+}
+
 /** Miniature for `property-list`. */
 function scene_property_list(): RemixNode {
 	return (
@@ -5030,6 +5160,8 @@ const SCENES: Record<FaceKind, () => RemixNode> = {
 	otp: scene_otp,
 	"page-header": scene_page_header,
 	pagination: scene_pagination,
+	"phone-fan": scene_phone_fan,
+	"phone-frame": scene_phone_frame,
 	popover: scene_popover,
 	"product-frame": scene_product_frame,
 	"property-list": scene_property_list,
