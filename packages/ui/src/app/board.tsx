@@ -130,10 +130,9 @@ export type BoardDragProps = {
 };
 
 /**
- * Renders the board: a row of columns that scrolls sideways inside its own box, each column
- * `--ui-board-column-width` (18rem) wide; a phone-narrow board shows one column and a sliver of
- * the next, snapping column by column. The row is positioned, so it clips everything inside it,
- * a touch screen's enlarged hit areas included, and the page never grows to its width.
+ * Renders the board: columns `--ui-board-column-width` (18rem) wide in one positioned box that
+ * clips and scrolls everything in it, so the page never grows to its width; given a height, it
+ * fills it under sticky column headers. A phone-narrow board snaps column by column.
  *
  * @example
  * <Board id="web" label="Web issues by status">
@@ -159,7 +158,10 @@ export function Board(handle: Handle<Board.Props, Board.Context>) {
 					[
 						raw({
 							container: `${BOARD_CONTAINER} / inline-size`,
+							display: "flex",
+							flexDirection: "column",
 							minInlineSize: 0,
+							minBlockSize: 0,
 							"&[data-board-active]": { cursor: "grabbing", userSelect: "none" },
 						}),
 					],
@@ -173,9 +175,11 @@ export function Board(handle: Handle<Board.Props, Board.Context>) {
 							position: "relative",
 							display: "flex",
 							alignItems: "stretch",
+							flex: "1 1 auto",
+							minBlockSize: 0,
 							gap: "0.75rem",
-							overflowX: "auto",
-							overscrollBehaviorX: "contain",
+							overflow: "auto",
+							overscrollBehavior: "contain",
 							paddingBlockEnd: "0.5rem",
 							scrollPaddingInline: "0.5rem",
 							[`@container ${BOARD_CONTAINER} (width < 40rem)`]: {
@@ -238,6 +242,12 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 				<header
 					mix={[
 						raw({
+							position: "sticky",
+							insetBlockStart: 0,
+							zIndex: 1,
+							backgroundColor: "inherit",
+							borderStartStartRadius: "inherit",
+							borderStartEndRadius: "inherit",
 							display: "flex",
 							alignItems: "center",
 							gap: "0.5rem",
@@ -305,6 +315,36 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 						);
 					})}
 				</header>
+				{iife(() => {
+					if (!empty) return null;
+					return (
+						<p
+							data-slot="board-empty"
+							mix={[
+								raw({
+									display: "none",
+									margin: "0 0.5rem 0.5rem",
+									blockSize: "3.5rem",
+									boxSizing: "border-box",
+									paddingBlock: "1.125rem",
+									textAlign: "center",
+									fontSize: "0.8125rem",
+									lineHeight: "1.25rem",
+									color: "var(--ui-neutral-fg-muted)",
+									border: "1px dashed var(--ui-neutral-border)",
+									borderRadius: "var(--ui-radius-md, 0.375rem)",
+									pointerEvents: "none",
+								}),
+								when(
+									"[data-slot='board-column']:has(> [data-slot='board-cards']:empty) > &",
+									raw({ display: "block" }),
+								),
+							]}
+						>
+							{empty}
+						</p>
+					);
+				})}
 				<ul
 					data-slot="board-cards"
 					aria-labelledby={headingId}
@@ -323,33 +363,6 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 				>
 					{children}
 				</ul>
-				{iife(() => {
-					if (!empty) return null;
-					return (
-						<p
-							data-slot="board-empty"
-							mix={[
-								raw({
-									display: "none",
-									margin: "-4rem 0.5rem 0.5rem",
-									blockSize: "3.5rem",
-									boxSizing: "border-box",
-									paddingBlock: "1.125rem",
-									textAlign: "center",
-									fontSize: "0.8125rem",
-									lineHeight: "1.25rem",
-									color: "var(--ui-neutral-fg-muted)",
-									border: "1px dashed var(--ui-neutral-border)",
-									borderRadius: "var(--ui-radius-md, 0.375rem)",
-									pointerEvents: "none",
-								}),
-								when("[data-slot='board-cards']:empty + &", raw({ display: "block" })),
-							]}
-						>
-							{empty}
-						</p>
-					);
-				})}
 			</section>
 		);
 	};

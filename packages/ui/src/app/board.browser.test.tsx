@@ -34,11 +34,16 @@ afterEach(() => {
 	mounted = undefined;
 });
 
-/** Mounts a three-column board, the last column empty, at `width` pixels. */
-function mount(width = 900): HTMLElement {
+/** Mounts a three-column board, the last two columns empty, `width` pixels wide and `height` tall. */
+function mount(width = 900, height?: number): HTMLElement {
 	mounted = render(
-		<div style={`inline-size:${width}px`}>
-			<Board id="test-board" label="Issues by status" labels={{ moved: "Moved to {column}" }}>
+		<div style={`inline-size:${width}px${height ? `;block-size:${height}px` : ""}`}>
+			<Board
+				id="test-board"
+				label="Issues by status"
+				labels={{ moved: "Moved to {column}" }}
+				style={height ? "block-size:100%" : undefined}
+			>
 				<Board.Column value="todo" title="Todo" count={2} empty="No issues">
 					<Board.Card
 						value="A-1"
@@ -123,6 +128,26 @@ describe("Board", () => {
 		expect(getComputedStyle(started!.querySelector('[data-slot="board-empty"]')!).display).toBe(
 			"block",
 		);
+	});
+
+	test("an empty column's line sits right under its header, however tall the board is", () => {
+		let board = mount(900, 600);
+		let started = board.querySelectorAll('[data-slot="board-column"]')[1]!;
+		let header = started.querySelector("header")!.getBoundingClientRect();
+		let empty = started.querySelector('[data-slot="board-empty"]')!.getBoundingClientRect();
+
+		expect(empty.top - header.bottom).toBeLessThanOrEqual(1);
+	});
+
+	test("given a height, fills it and scrolls its columns under headers that stay put", () => {
+		let board = mount(900, 160);
+		let scroller = board.querySelector<HTMLElement>('[data-slot="board-columns"]')!;
+		let header = board.querySelector('[data-slot="board-column"] header')!;
+
+		expect(Math.round(board.getBoundingClientRect().height)).toBe(160);
+		expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight);
+		scroller.scrollTop = 60;
+		expect(header.getBoundingClientRect().top).toBe(scroller.getBoundingClientRect().top);
 	});
 
 	test("each movable card owns a move form holding its own fields until a drop", () => {

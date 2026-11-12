@@ -129,6 +129,11 @@ export namespace AppShell {
 		 * @default "app-shell"
 		 */
 		id?: string;
+		/**
+		 * Holds the screen to the height under the top bar while the sidebar is docked, so a
+		 * screen that scrolls inside itself, such as a board, keeps its scrollbars on screen.
+		 */
+		fill?: boolean;
 		/** The collapse cookie's name, for an app with two shells. @default APP_SHELL_COOKIE */
 		cookieName?: string;
 		/**
@@ -216,6 +221,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 			id = DEFAULT_ID,
 			cookieName = APP_SHELL_COOKIE,
 			sheetBelow = DEFAULT_SHEET_BELOW,
+			fill = false,
 		} = handle.props;
 		let { docked, sheet } = appShellQueries(sheetBelow);
 		let sidebarId = `${id}-sidebar`;
@@ -478,6 +484,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 									zIndex: "1",
 								}),
 							]),
+							fill ? media(docked, raw({ display: "flex", flexDirection: "column" })) : [],
 						]}
 					>
 						<header
@@ -553,6 +560,17 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 									outline: "none",
 								}),
 								media(docked, raw({ "--ui-app-gutter": "var(--ui-app-content-padding, 1.5rem)" })),
+								fill
+									? media(
+											docked,
+											raw({
+												display: "flex",
+												flexDirection: "column",
+												flex: "1 1 0",
+												minBlockSize: "0",
+											}),
+										)
+									: [],
 							]}
 						>
 							{children}
