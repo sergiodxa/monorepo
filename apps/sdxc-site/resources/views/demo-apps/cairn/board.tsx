@@ -227,7 +227,7 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 								raw({ margin: "0", fontSize: "0.8125rem", color: "var(--ui-neutral-fg-muted)" }),
 							]}
 						>
-							Drag a card to change its status, or use its … menu.
+							Drag a card to change its status, press Shift+← or Shift+→ on it, or use its … menu.
 						</p>
 						<a
 							href={href(`team/${team.id}`)}
@@ -243,7 +243,11 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 							Show as list
 						</a>
 					</header>
-					<Board id={boardId(team)} label={`${team.name} issues by status`}>
+					<Board
+						id={boardId(team)}
+						label={`${team.name} issues by status`}
+						labels={{ moved: "Moved to {column}" }}
+					>
 						{COLUMNS.map((status) => {
 							let cards = ordered.filter((issue) => issue.status === status);
 							return (
