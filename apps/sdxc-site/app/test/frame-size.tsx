@@ -12,6 +12,15 @@ import type { RemixNode } from "remix/component";
 import { render } from "remix/component/test";
 
 /**
+ * Render options giving a test root a frame runtime whose frames never answer, so a whole
+ * screen mounts with each frame drawing its placeholder, as on first paint. Without one, a
+ * screen holding a `<Frame>` throws and mounts nothing.
+ */
+export const PENDING_FRAMES = {
+	frameInit: { resolveFrame: () => new Promise<never>(() => {}) },
+};
+
+/**
  * Mounts a node inside a box `width` pixels wide and reads the rendered block size.
  *
  * @param node - The placeholder or the content.

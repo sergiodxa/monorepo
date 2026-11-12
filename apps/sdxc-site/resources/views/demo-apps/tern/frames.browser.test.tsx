@@ -15,7 +15,7 @@ import { render } from "remix/component/test";
 import { afterAll, describe, expect, onTestFinished, test } from "vitest";
 import { page } from "vitest/browser";
 
-import { blockSize } from "~/app/test/frame-size";
+import { PENDING_FRAMES, blockSize } from "~/app/test/frame-size";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import tern from "~/resources/views/demo-apps/tern";
 import { CanvasPane } from "~/resources/views/demo-apps/tern/canvas";
@@ -89,10 +89,11 @@ describe("Tern at a phone's width", () => {
 		let [path = "", query = ""] = screen.split("?");
 		let url = new URL(`http://localhost/demo/apps/tern/${path}${query ? `?${query}` : ""}`);
 		let rendered = tern.render({ page: path, url, cookie: null });
-		let mounted = render(themed(rendered.body));
+		let mounted = render(themed(rendered.body), PENDING_FRAMES);
 		onTestFinished(() => mounted.cleanup());
 		await new Promise((resolve) => requestAnimationFrame(resolve));
 
+		expect(mounted.container.querySelector("main"), screen).not.toBeNull();
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
 	});
 });
