@@ -178,6 +178,30 @@ describe("Cairn's short list", () => {
 	});
 });
 
+describe("Cairn's long list", () => {
+	test("keeps its header in place and one group heading at the top while its rows scroll", async () => {
+		await page.viewport(1280, 600);
+		let root = await mountScreen("team/web");
+		let rows = root.querySelector<HTMLElement>("#cairn-rows")!;
+		let title = root.querySelector("h1")!;
+		let titleTop = title.getBoundingClientRect().top;
+		let content = root.querySelector<HTMLElement>('[data-slot="app-shell-content"]')!;
+
+		expect(content.scrollHeight).toBeLessThanOrEqual(content.clientHeight);
+		expect(rows.scrollHeight).toBeGreaterThan(rows.clientHeight);
+		rows.scrollTop = 60;
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+
+		expect(title.getBoundingClientRect().top).toBe(titleTop);
+		let top = rows.getBoundingClientRect().top;
+		let stuck = [...rows.querySelectorAll("h3")].filter(
+			(heading) => Math.abs(heading.getBoundingClientRect().top - top) <= 1,
+		);
+		expect(stuck).toHaveLength(1);
+		expect(stuck[0]!.closest("section")).toBe(rows.querySelector("section"));
+	});
+});
+
 describe("Cairn's board", () => {
 	test("fills the window under the top bar, so its own scrollbars stay on screen", async () => {
 		await page.viewport(1280, 600);
