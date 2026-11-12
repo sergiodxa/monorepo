@@ -25,6 +25,15 @@ export const STREAM_CURRENT_ATTRIBUTE = "data-stream-current";
  */
 export const STREAM_PAUSE_ATTRIBUTE = "data-stream-pause";
 
+/**
+ * Attribute a `<details>` carries to fold away once the replay moves past it, such as an
+ * assistant's thinking once its answer starts.
+ */
+export const STREAM_COLLAPSE_ATTRIBUTE = "data-stream-collapse";
+
+/** Attribute a folded `<details>` gains, so its summary can say it is done. */
+export const STREAM_COLLAPSED_ATTRIBUTE = "data-stream-collapsed";
+
 /** Attribute {@link revealStream} puts on a block the text has not reached yet. */
 export const STREAM_HIDDEN_ATTRIBUTE = "data-stream-hidden";
 
@@ -124,6 +133,7 @@ export function revealStream(root: HTMLElement, options: StreamRevealOptions = {
 				holdUntil = Date.now() + pause;
 				return false;
 			}
+			collapseStream(root, block);
 			block.removeAttribute(STREAM_HIDDEN_ATTRIBUTE);
 			current?.removeAttribute(STREAM_CURRENT_ATTRIBUTE);
 			block.setAttribute(STREAM_CURRENT_ATTRIBUTE, "");
@@ -139,7 +149,10 @@ export function revealStream(root: HTMLElement, options: StreamRevealOptions = {
 		ended = true;
 		clearInterval(timer);
 		current?.removeAttribute(STREAM_CURRENT_ATTRIBUTE);
-		if (how === "done") for (let block of blocks) block.removeAttribute(STREAM_HIDDEN_ATTRIBUTE);
+		if (how === "done") {
+			for (let block of blocks) block.removeAttribute(STREAM_HIDDEN_ATTRIBUTE);
+			collapseStream(root);
+		}
 		root.removeAttribute("aria-busy");
 		root.setAttribute(STREAM_END_ATTRIBUTE, how);
 		onEnd?.(how);
@@ -168,6 +181,28 @@ export function revealStream(root: HTMLElement, options: StreamRevealOptions = {
 	if (runs.length === 0) end("done");
 
 	return { stop: () => end("stopped") };
+}
+
+/**
+ * Folds every `[data-stream-collapse]` disclosure in `root` that comes before `block`, or all
+ * of them without one, marking each `data-stream-collapsed`. A reply shown without a replay
+ * calls it with no block, so it reads the same as one that streamed.
+ *
+ * @param root The reply.
+ * @param block The block the replay is about to show.
+ * @example collapseStream(document.getElementById("reply-7")!)
+ */
+export function collapseStream(root: HTMLElement, block?: Element): void {
+	for (let details of root.querySelectorAll<HTMLDetailsElement>(
+		`details[${STREAM_COLLAPSE_ATTRIBUTE}]:not([${STREAM_COLLAPSED_ATTRIBUTE}])`,
+	)) {
+		if (block !== undefined) {
+			if (details.contains(block)) continue;
+			if (!(details.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+		}
+		details.open = false;
+		details.setAttribute(STREAM_COLLAPSED_ATTRIBUTE, "");
+	}
 }
 
 /**

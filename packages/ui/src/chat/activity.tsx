@@ -22,6 +22,9 @@ import { text } from "@sdxc/u/typography";
 /** The attribute a reply carries while its text streams in, which turns the summary live. */
 const BUSY_SELECTOR = ':where([aria-busy="true"])';
 
+/** The activity once a replay folded it, whose summary says what was done again. */
+const COLLAPSED_SELECTOR = ":where([data-stream-collapsed])";
+
 /** Text a streaming replay leaves whole, so the summary never types itself out. */
 const STREAM_SKIP = { "data-stream-skip": "" };
 
@@ -84,7 +87,7 @@ export namespace Activity {
 
 /**
  * Renders the disclosure. Pass `open` while the reply streams so its steps show as they
- * arrive, and leave it closed in history so a finished answer leads with the answer.
+ * arrive; a replay folds it once the answer starts, and history leaves it closed.
  *
  * @example
  * <Activity open>
@@ -99,6 +102,7 @@ export function Activity(handle: Handle<Activity.Props>) {
 			<details
 				{...rest}
 				data-slot="activity"
+				data-stream-collapse=""
 				mix={mergeMix(
 					[
 						raw({ display: "block", marginBlockEnd: "1rem" }),
@@ -148,6 +152,8 @@ Activity.Summary = function ActivitySummary(handle: Handle<Activity.SummaryProps
 							"& [data-activity-label=busy]": { display: "none" },
 							[`${BUSY_SELECTOR} & [data-activity-label=busy]`]: { display: "inline" },
 							[`${BUSY_SELECTOR} & [data-activity-label=done]`]: { display: "none" },
+							[`${COLLAPSED_SELECTOR} & [data-activity-label=busy]`]: { display: "none" },
+							[`${COLLAPSED_SELECTOR} & [data-activity-label=done]`]: { display: "inline" },
 						}),
 						media(
 							"(prefers-reduced-motion: no-preference)",

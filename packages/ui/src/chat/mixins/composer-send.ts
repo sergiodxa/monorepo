@@ -15,7 +15,7 @@ import { createMixin } from "remix/component";
 import { prefersReducedMotion } from "../../utils/prefers-reduced-motion.js";
 import { COMPOSER_INPUT_SLOT } from "../composer.js";
 
-import { STREAM_PENDING_ATTRIBUTE, revealStream } from "./reveal-stream.js";
+import { STREAM_PENDING_ATTRIBUTE, collapseStream, revealStream } from "./reveal-stream.js";
 
 /** The slot of the button that stops a streaming reply, inside the mixin's host. */
 export const COMPOSER_STOP_SLOT = "composer-stop";
@@ -68,6 +68,7 @@ export const composerSend: MixinFactory<HTMLElement, [options: ComposerSendOptio
 		stop();
 		if (prefersReducedMotion()) {
 			target.removeAttribute(STREAM_PENDING_ATTRIBUTE);
+			collapseStream(target);
 			return;
 		}
 		let controller = new AbortController();

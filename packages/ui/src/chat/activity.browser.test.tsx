@@ -106,4 +106,34 @@ describe("Activity", () => {
 		revealStream(reply, { interval: 1000 });
 		expect(reply.querySelector("[data-activity-label=done]")?.textContent).toBe("Thought for 8s");
 	});
+
+	test("folds the thinking once the answer starts, and says it is done", async () => {
+		let reply = mount({ pause: 300 });
+		let activity = reply.querySelector<HTMLDetailsElement>("[data-slot=activity]")!;
+		let answer = reply.querySelector<HTMLElement>(":scope > p")!;
+		answer.textContent = Array.from({ length: 200 }, (_, word) => `word${word}`).join(" ");
+		revealStream(reply, { interval: 5 });
+
+		await vi.waitFor(() => expect(reply.textContent).toContain("Ran the tests"));
+		expect(activity.open).toBe(true);
+		expect(answer.hasAttribute(STREAM_HIDDEN_ATTRIBUTE)).toBe(true);
+
+		await vi.waitFor(() => expect(answer.hasAttribute(STREAM_HIDDEN_ATTRIBUTE)).toBe(false), {
+			timeout: 2000,
+		});
+		expect(reply.getAttribute("aria-busy")).toBe("true");
+		expect(activity.open).toBe(false);
+		expect(shown(reply.querySelector("[data-activity-label=done]"))).toBe(true);
+		expect(shown(reply.querySelector("[data-activity-label=busy]"))).toBe(false);
+	});
+
+	test("a stop while it is thinking leaves the thinking open", async () => {
+		let reply = mount({ pause: 2000 });
+		let activity = reply.querySelector<HTMLDetailsElement>("[data-slot=activity]")!;
+		let reveal = revealStream(reply, { interval: 5 });
+
+		await vi.waitFor(() => expect(reply.textContent).toContain("Ran the tests"));
+		reveal.stop();
+		expect(activity.open).toBe(true);
+	});
 });
