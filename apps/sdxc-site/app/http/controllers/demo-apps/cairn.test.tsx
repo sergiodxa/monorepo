@@ -305,7 +305,25 @@ describe("Cairn screens", () => {
 		expect(personal.headers.get("ETag")).toBeNull();
 
 		let reset = await post(action("reset"), [], edited);
-		expect(reset.headers.getSetCookie().join()).toMatch(/cairn\.i\.WEB-121=; .*Max-Age=0/);
+		let cleared = reset.headers.getSetCookie();
+		expect(cleared).toContainEqual(
+			expect.stringMatching(/^cairn\.i\.WEB-121=; Path=\/demo\/apps\/cairn; Max-Age=0/),
+		);
+		expect(cleared).toContainEqual(
+			expect.stringMatching(/^cairn\.i\.WEB-121=; Path=\/demo; Max-Age=0/),
+		);
+	});
+
+	test("every cookie is sent only under Cairn's own path, which its frames sit under too", async () => {
+		let response = await post(href("team/web"), [
+			["issue", "WEB-121"],
+			["status", "done"],
+		]);
+		expect(response.headers.getSetCookie()).toEqual([
+			expect.stringMatching(/^cairn\.i\.WEB-121=[^;]+; Path=\/demo\/apps\/cairn;/),
+		]);
+		expect(frame("cycles/web-24/stats")).toBe("/demo/apps/cairn/frames/cycles/web-24/stats");
+		expect((await fetchApp(frame("cycles/web-24/stats"))).status).toBe(200);
 	});
 
 	test("the roadmap draws late projects with a tail and keeps closed ones on their own tab", async () => {

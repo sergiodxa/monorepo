@@ -28,7 +28,12 @@ import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 
 import type { Author } from "~/resources/views/demo-apps/inkwell/data";
 
-import { demoAppActionHref, demoAppFrameHref, demoAppHref } from "~/resources/views/demo-apps";
+import {
+	demoAppActionHref,
+	demoAppFrameHref,
+	demoAppHref,
+	demoAppCookiePath,
+} from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
 import { AUTHORS, POSTS, PUBLICATION } from "~/resources/views/demo-apps/inkwell/data";
 
@@ -210,6 +215,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 		let editor = AUTHORS[0]!;
 		return (
 			<AppShell
+				cookiePath={demoAppCookiePath("inkwell")}
 				id="inkwell-shell"
 				labels={SHELL_LABELS}
 				collapsed={collapsed}

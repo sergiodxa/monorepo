@@ -15,6 +15,8 @@ import { Empty } from "@sdxc/ui/app/empty";
 import { SPLIT_VIEW_ITEM_ATTRIBUTE, SplitView } from "@sdxc/ui/app/split-view";
 import { TAB_BAR_BLOCK_SIZE } from "@sdxc/ui/app/tab-bar";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
+
 import type { IssueView, VisitorState } from "./state";
 
 import { LOCALE, NOTICES, NOW, findPerson, href } from "./data";
@@ -230,6 +232,7 @@ export function InboxScreen(handle: Handle<InboxScreen.Props>) {
 					]}
 				>
 					<SplitView
+						cookiePath={demoAppCookiePath("cairn")}
 						id="cairn-inbox"
 						list={<NoticeList issues={issues} open={issue?.id ?? null} />}
 						detail={

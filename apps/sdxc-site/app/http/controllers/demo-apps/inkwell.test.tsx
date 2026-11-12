@@ -110,7 +110,7 @@ describe("Inkwell frames", () => {
 	 * `data-rmx-src`, with HTML's escaped ampersands read back.
 	 */
 	function frameAddresses(body: string): string[] {
-		let found = body.match(/\/demo\/frames\/apps\/inkwell\/[^"'\s<>\\]+/g) ?? [];
+		let found = body.match(/\/demo\/apps\/inkwell\/frames\/[^"'\s<>\\]+/g) ?? [];
 		return found.map((address) => address.replaceAll("&amp;", "&"));
 	}
 
@@ -122,14 +122,14 @@ describe("Inkwell frames", () => {
 
 		expect([...addresses].map((address) => new URL(address, "https://sdxc.test").pathname)).toEqual(
 			expect.arrayContaining([
-				"/demo/frames/apps/inkwell/home/stats",
-				"/demo/frames/apps/inkwell/home/drafts",
-				"/demo/frames/apps/inkwell/home/scheduled",
-				"/demo/frames/apps/inkwell/home/activity",
-				"/demo/frames/apps/inkwell/home/comments",
-				"/demo/frames/apps/inkwell/posts/on-slow-reading/history",
-				"/demo/frames/apps/inkwell/posts/the-letterpress-year/quick",
-				"/demo/frames/apps/inkwell/media/winter-train/attachment",
+				"/demo/apps/inkwell/frames/home/stats",
+				"/demo/apps/inkwell/frames/home/drafts",
+				"/demo/apps/inkwell/frames/home/scheduled",
+				"/demo/apps/inkwell/frames/home/activity",
+				"/demo/apps/inkwell/frames/home/comments",
+				"/demo/apps/inkwell/frames/posts/on-slow-reading/history",
+				"/demo/apps/inkwell/frames/posts/the-letterpress-year/quick",
+				"/demo/apps/inkwell/frames/media/winter-train/attachment",
 			]),
 		);
 		for (let address of addresses) {
@@ -142,7 +142,7 @@ describe("Inkwell frames", () => {
 
 	test("the quick-edit form saves back to the list its frame names", async () => {
 		let body = await (
-			await fetchApp("/demo/frames/apps/inkwell/posts/how-we-edit/quick?tag=Notebook")
+			await fetchApp("/demo/apps/inkwell/frames/posts/how-we-edit/quick?tag=Notebook")
 		).text();
 
 		expect(body).toContain(`action="${action("posts/how-we-edit/quick")}"`);
@@ -151,10 +151,10 @@ describe("Inkwell frames", () => {
 	});
 
 	test("Retry reloads only the comments frame", async () => {
-		let body = await (await fetchApp("/demo/frames/apps/inkwell/home/comments")).text();
+		let body = await (await fetchApp("/demo/apps/inkwell/frames/home/comments")).text();
 
 		expect(body).toContain('data-rmx-target="inkwell-comments"');
-		expect(body).toContain('data-rmx-src="/demo/frames/apps/inkwell/home/comments"');
+		expect(body).toContain('data-rmx-src="/demo/apps/inkwell/frames/home/comments"');
 	});
 
 	test("an unknown part or record answers 404", async () => {
@@ -163,7 +163,7 @@ describe("Inkwell frames", () => {
 			"posts/no-such-post/history",
 			"media/no-such-file/attachment",
 		]) {
-			expect((await fetchApp(`/demo/frames/apps/inkwell/${part}`)).status, part).toBe(404);
+			expect((await fetchApp(`/demo/apps/inkwell/frames/${part}`)).status, part).toBe(404);
 		}
 	});
 });

@@ -27,6 +27,7 @@ import { SPLIT_VIEW_ITEM_ATTRIBUTE, SplitView } from "@sdxc/ui/app/split-view";
 import type { Conversation } from "~/resources/views/demo-apps/relay/data";
 import type { InboxView } from "~/resources/views/demo-apps/relay/views";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import { ConversationPlaceholder } from "~/resources/views/demo-apps/relay/conversation";
 import { NOW, findContact, updatedAt } from "~/resources/views/demo-apps/relay/data";
@@ -278,6 +279,7 @@ export function InboxScreen(handle: Handle<InboxScreen.Props>) {
 					]}
 				>
 					<SplitView
+						cookiePath={demoAppCookiePath("relay")}
 						id="relay-inbox"
 						list={<ConversationList view={view} selected={selected} archived={archived} />}
 						detail={

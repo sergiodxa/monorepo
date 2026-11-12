@@ -26,6 +26,7 @@ import { SplitView } from "@sdxc/ui/app/split-view";
 import type { Conversation, Project } from "~/resources/views/demo-apps/tern/data";
 import type { Thread } from "~/resources/views/demo-apps/tern/thread";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import { CanvasPane } from "~/resources/views/demo-apps/tern/canvas";
 import {
@@ -88,6 +89,7 @@ export function ChatScreen(handle: Handle<ChatScreen.Props>) {
 				<div mix={[screenHeight(), raw({ "--ui-app-list-width": "30rem" })]}>
 					{canvas && base?.canvas ? (
 						<SplitView
+							cookiePath={demoAppCookiePath("tern")}
 							id="tern-canvas"
 							list={chat}
 							detail={

@@ -26,6 +26,8 @@ import { SPLIT_VIEW_ITEM_ATTRIBUTE, SplitView } from "@sdxc/ui/app/split-view";
 import { TAB_BAR_BLOCK_SIZE } from "@sdxc/ui/app/tab-bar";
 import { ViewOptions } from "@sdxc/ui/app/view-options";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
+
 import type { PriorityId, StatusId } from "./data";
 import type { IssueView, VisitorState } from "./state";
 
@@ -874,6 +876,7 @@ export function IssueListScreen(handle: Handle<IssueListScreen.Props>) {
 						]}
 					>
 						<SplitView
+							cookiePath={demoAppCookiePath("cairn")}
 							id="cairn-split"
 							list={list}
 							detail={

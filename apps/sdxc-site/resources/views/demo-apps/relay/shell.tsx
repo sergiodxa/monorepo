@@ -37,6 +37,7 @@ import { CommandPalette } from "@sdxc/ui/app/command-palette";
 
 import type { ViewIcon } from "~/resources/views/demo-apps/relay/views";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
 import { CONTACTS, CONVERSATIONS, findContact } from "~/resources/views/demo-apps/relay/data";
 import { HELP_ID, RelayKeyboardHelp } from "~/resources/views/demo-apps/relay/keyboard-help";
@@ -326,6 +327,7 @@ export function RelayShell(handle: Handle<RelayShell.Props>) {
 
 		let shell = (
 			<AppShell
+				cookiePath={demoAppCookiePath("relay")}
 				id="relay"
 				labels={SHELL_LABELS}
 				collapsed={collapsed}

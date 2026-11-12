@@ -199,8 +199,11 @@ export default route({
 	 * after its shell: a chart, a feed, a side panel, or a docs page's interactive piece.
 	 */
 	demoFrames: {
-		/** A part of a demo app's screen, named by its path under the app. */
-		app: get("/demo/frames/apps/:app/*part"),
+		/**
+		 * A part of a demo app's screen, named by its path under the app. It sits under the app's
+		 * own path, so the cookies scoped to that app reach its frames too.
+		 */
+		app: get("/demo/apps/:app/frames/*part"),
 		/** An interactive piece of a docs demo page, such as its feedback form or a live example. */
 		docs: get("/demo/frames/docs/:site/*part"),
 	},

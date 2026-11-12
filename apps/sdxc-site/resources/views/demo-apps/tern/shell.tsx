@@ -28,6 +28,7 @@ import { AppShell } from "@sdxc/ui/app/app-shell";
 import { CommandPalette } from "@sdxc/ui/app/command-palette";
 import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
 import {
 	CONVERSATIONS,
@@ -252,6 +253,7 @@ export function TernShell(handle: Handle<TernShell.Props>) {
 
 		let shell = (
 			<AppShell
+				cookiePath={demoAppCookiePath("tern")}
 				id="tern"
 				labels={SHELL_LABELS}
 				collapsed={collapsed}

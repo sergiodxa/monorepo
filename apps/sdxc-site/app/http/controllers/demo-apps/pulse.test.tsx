@@ -79,7 +79,7 @@ describe("Pulse frames", () => {
 		let sources = new Set<string>();
 		for (let screen of pulse.screens) {
 			let body = await page(screen);
-			for (let match of body.matchAll(/\/demo\/frames\/apps\/pulse\/[^"'<\s]+/g)) {
+			for (let match of body.matchAll(/\/demo\/apps\/pulse\/frames\/[^"'<\s]+/g)) {
 				sources.add(match[0].replaceAll("&amp;", "&"));
 			}
 		}

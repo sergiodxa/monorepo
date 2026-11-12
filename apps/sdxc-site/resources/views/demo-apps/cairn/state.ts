@@ -7,12 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
+
 import type { Change, Comment, Issue, PriorityId, StatusId } from "./data";
 
 import { ISSUES, ME, PEOPLE, PRIORITIES, STATUSES, TEAMS, findProject } from "./data";
 
 /** Every Cairn cookie starts with this, which is how a request is known to be personal. */
 export const COOKIE_PREFIX = "cairn.";
+
+/** The path every Cairn cookie is sent under. */
+const COOKIE_PATH = demoAppCookiePath("cairn");
 
 /** The cookie holding the issues the visitor created. */
 export const CREATED_COOKIE = `${COOKIE_PREFIX}new`;
@@ -211,10 +216,18 @@ export function readState(header: string | null): VisitorState {
 	};
 }
 
-/** Builds a `Set-Cookie` value scoped to the demos, so the app's pages and frames both read it. */
+/** Builds a `Set-Cookie` value scoped to Cairn's own path, which its pages, posts and frames share. */
 function cookieHeader(name: string, value: string | null): string {
 	let age = value === null ? 0 : COOKIE_MAX_AGE;
-	return `${name}=${value ?? ""}; Path=/demo; Max-Age=${age}; SameSite=Lax; HttpOnly`;
+	return `${name}=${value ?? ""}; Path=${COOKIE_PATH}; Max-Age=${age}; SameSite=Lax; HttpOnly`;
+}
+
+/**
+ * Expires a cookie at `/demo`, where earlier versions of the demo wrote it, so Reset also clears
+ * what a returning visitor's browser still sends from there.
+ */
+function legacyCookieHeader(name: string): string {
+	return `${name}=; Path=/demo; Max-Age=0; SameSite=Lax; HttpOnly`;
 }
 
 /**
@@ -275,7 +288,10 @@ export function commentsCookie(state: VisitorState, comment: VisitorComment): st
  * @param header The request's `Cookie` header.
  */
 export function clearCookies(header: string | null): string[] {
-	return [...cairnCookies(header).keys()].map((name) => cookieHeader(name, null));
+	return [...cairnCookies(header).keys()].flatMap((name) => [
+		cookieHeader(name, null),
+		legacyCookieHeader(name),
+	]);
 }
 
 /** The next free number for a team's new issue, past the fixtures and the visitor's own. */

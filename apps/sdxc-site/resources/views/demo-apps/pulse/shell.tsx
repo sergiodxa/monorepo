@@ -29,6 +29,7 @@ import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 
 import type { DemoAppRequest } from "~/resources/views/demo-apps";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
 
 import { href, INCIDENTS, SERVICES } from "./data";
@@ -215,6 +216,7 @@ export default function PulseShell(handle: Handle<PulseShell.Props>) {
 		let { request, section = null, settings, children } = handle.props;
 		return (
 			<AppShell
+				cookiePath={demoAppCookiePath("pulse")}
 				id="pulse-shell"
 				labels={SHELL}
 				collapsed={readAppShellCookie(request.cookie)}

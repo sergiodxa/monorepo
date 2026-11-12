@@ -1,5 +1,5 @@
 /**
- * `GET /demo/frames/apps/:app/*part` — one secondary part of a demo app screen as an HTML
+ * `GET /demo/apps/:app/frames/*part` — one secondary part of a demo app screen as an HTML
  * fragment, which the screen streams in after its shell. Each part is cached on its own,
  * per address and per value of the cookies its app reads, unless drawn for one visitor.
  *

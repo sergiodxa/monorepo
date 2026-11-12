@@ -35,6 +35,8 @@ import { CommandPalette } from "@sdxc/ui/app/command-palette";
 import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 import { TabBar } from "@sdxc/ui/app/tab-bar";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
+
 import { UserMenu, WorkspaceMenu } from "../account-menus";
 
 import type { VisitorState } from "./state";
@@ -334,6 +336,7 @@ export function CairnShell(handle: Handle<CairnShell.Props>) {
 
 		let shell = (
 			<AppShell
+				cookiePath={demoAppCookiePath("cairn")}
 				id="cairn"
 				labels={SHELL_LABELS}
 				collapsed={collapsed}

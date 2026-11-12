@@ -9,6 +9,7 @@
 
 import type { Person, Post } from "~/resources/views/demo-apps/chorus/data";
 
+import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import {
 	ARRIVED_POSTS,
 	EVERYONE,
@@ -20,6 +21,9 @@ import {
 
 /** Every Chorus cookie starts with this, which is how a request is known to be personal. */
 export const COOKIE_PREFIX = "chorus.";
+
+/** The path every Chorus cookie is sent under. */
+const COOKIE_PATH = demoAppCookiePath("chorus");
 
 /** The cookie holding the visitor's own posts and replies. */
 export const POSTS_COOKIE = `${COOKIE_PREFIX}posts`;
@@ -170,8 +174,8 @@ function toBase64Url(bytes: Uint8Array): string {
 }
 
 /**
- * Builds a `Set-Cookie` header for a Chorus cookie, scoped to the demos so the app's pages
- * and frames both read it.
+ * Builds a `Set-Cookie` header for a Chorus cookie, scoped to Chorus's own path, which its pages,
+ * posts and frames share.
  *
  * @param name The cookie's full name.
  * @param value Its value; `null` clears it.
@@ -179,7 +183,15 @@ function toBase64Url(bytes: Uint8Array): string {
  */
 export function cookieHeader(name: string, value: string | null): string {
 	let age = value === null ? 0 : COOKIE_MAX_AGE;
-	return `${name}=${value ?? ""}; Path=/demo; Max-Age=${age}; SameSite=Lax; HttpOnly`;
+	return `${name}=${value ?? ""}; Path=${COOKIE_PATH}; Max-Age=${age}; SameSite=Lax; HttpOnly`;
+}
+
+/**
+ * Expires a cookie at `/demo`, where earlier versions of the demo wrote it, so Reset also clears
+ * what a returning visitor's browser still sends from there.
+ */
+function legacyCookieHeader(name: string): string {
+	return `${name}=; Path=/demo; Max-Age=0; SameSite=Lax; HttpOnly`;
 }
 
 /**
@@ -263,7 +275,10 @@ function encodePosts(posts: VisitorPost[]): string {
  * @returns One clearing `Set-Cookie` value per cookie.
  */
 export function clearCookies(header: string | null): string[] {
-	return [...chorusCookies(header).keys()].map((name) => cookieHeader(name, null));
+	return [...chorusCookies(header).keys()].flatMap((name) => [
+		cookieHeader(name, null),
+		legacyCookieHeader(name),
+	]);
 }
 
 /**

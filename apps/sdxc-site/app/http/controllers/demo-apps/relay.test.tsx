@@ -185,7 +185,7 @@ describe("Relay frames", () => {
 		let sources = new Set<string>();
 		for (let screen of relay.screens) {
 			let body = await html(screen);
-			for (let match of body.matchAll(/\/demo\/frames\/apps\/relay\/[^"'<\s]+/g)) {
+			for (let match of body.matchAll(/\/demo\/apps\/relay\/frames\/[^"'<\s]+/g)) {
 				sources.add(match[0].replaceAll("&amp;", "&"));
 			}
 		}

@@ -205,7 +205,7 @@ export function demoAppHref(slug: string): (page?: string) => string {
  *
  * @param slug The demo's folder name.
  * @returns A function from a part path, with its query string when it keeps one, to its address.
- * @example demoAppFrameHref("pulse")("overview/stats?range=7d") // "/demo/frames/apps/pulse/overview/stats?range=7d"
+ * @example demoAppFrameHref("pulse")("overview/stats?range=7d") // "/demo/apps/pulse/frames/overview/stats?range=7d"
  */
 export function demoAppFrameHref(slug: string): (part: string) => string {
 	return (part) => {
@@ -213,6 +213,17 @@ export function demoAppFrameHref(slug: string): (part: string) => string {
 		let href = routes.demoFrames.app.href({ app: slug, part: path });
 		return query === undefined || query === "" ? href : `${href}?${query}`;
 	};
+}
+
+/**
+ * The path one demo app's cookies are sent under: its pages, posts and frames all sit below it,
+ * so the rest of the site and every other demo never receive them.
+ *
+ * @param slug The demo's folder name.
+ * @example demoAppCookiePath("cairn") // "/demo/apps/cairn"
+ */
+export function demoAppCookiePath(slug: string): string {
+	return routes.demoApps.show.href({ app: slug });
 }
 
 /**
