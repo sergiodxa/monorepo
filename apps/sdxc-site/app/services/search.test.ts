@@ -92,6 +92,15 @@ describe("searchDocs", () => {
 
 		expect(results.at(0)?.href).toBe("/api/markdown");
 	});
+
+	test.each(["demo", "demos", "Demos", "examples", "showcase"])(
+		"answers %s with the demo gallery",
+		async (query) => {
+			let results = await searchDocs(query, 5);
+
+			expect(results.map((result) => result.href)).toContain("/demo");
+		},
+	);
 });
 
 describe("searchPackages", () => {

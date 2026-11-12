@@ -117,10 +117,33 @@ function unscoped(title: string): string {
 }
 
 /**
- * How well one entry answers one word of a query, reading the strongest field the word
- * appears in. Zero means the word is absent, which is what disqualifies the entry.
+ * The singular a plural query word most likely stands for, or `null` for a word too short
+ * to be one. Matching reads word prefixes, so "demos" reaches no "demo" without it.
+ *
+ * @example singular("examples") // "example"
+ */
+function singular(token: string): string | null {
+	if (token.length <= 3 || !token.endsWith("s") || token.endsWith("ss")) return null;
+	return token.slice(0, -1);
+}
+
+/**
+ * How well one entry answers one word of a query, as typed or, when that reaches nothing,
+ * as its singular, so a reader typing the plural of a title still finds it.
  */
 function scoreToken(document: SearchDocument, token: string): number {
+	let score = scoreWord(document, token);
+	if (score > 0) return score;
+
+	let stem = singular(token);
+	return stem === null ? 0 : scoreWord(document, stem);
+}
+
+/**
+ * How well one entry answers one word, reading the strongest field the word appears in.
+ * Zero means the word is absent, which is what disqualifies the entry.
+ */
+function scoreWord(document: SearchDocument, token: string): number {
 	let title = document.title.toLowerCase();
 	let name = unscoped(title);
 

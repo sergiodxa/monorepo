@@ -67,6 +67,10 @@ describe("rankDocuments", () => {
 		expect(results.map((document) => document.href)).toEqual(["/api/markdown"]);
 	});
 
+	test("finds a singular title from its plural", () => {
+		expect(rankDocuments(DOCUMENTS, "namings", 10).at(0)?.title).toBe("Naming");
+	});
+
 	test("ignores case on both sides", () => {
 		expect(rankDocuments(DOCUMENTS, "NAMING", 10).at(0)?.title).toBe("Naming");
 	});

@@ -84,8 +84,23 @@ let packageCorpus: Array<PackageMatch & { haystack: string }> | null = null;
 const CATALOGUE_DIRECTORIES = new Set(["u", "ui"]);
 
 /**
- * The whole corpus, guides first, packages after and the catalogue pages last, each page
- * followed by its own headings so a result for a page sits above the sections inside it.
+ * The demo gallery, listed with the components it is built from. Its summary names the
+ * words a reader reaches for instead of "demo", so "examples" or "showcase" land there too.
+ */
+const DEMOS_DOCUMENT: SearchDocument = {
+	href: routes.demos.href(),
+	title: "Demos",
+	page: "Demos",
+	section: "@sdxc/ui · Demos",
+	kind: "ui",
+	summary:
+		"Example landing pages, docs sites and apps built from @sdxc/ui, each a sample or showcase for an invented product with its own art direction.",
+};
+
+/**
+ * The whole corpus, guides first, packages after, then the catalogue pages and the demo
+ * gallery, each page followed by its own headings so a result for a page sits above the
+ * sections inside it.
  */
 export async function buildSearchIndex(): Promise<SearchDocument[]> {
 	if (corpus !== null) return corpus;
@@ -164,6 +179,8 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 			summary: page.summary,
 		});
 	}
+
+	documents.push(DEMOS_DOCUMENT);
 
 	corpus = documents;
 	return documents;
