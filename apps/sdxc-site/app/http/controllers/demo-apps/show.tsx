@@ -23,9 +23,9 @@ const PARAMS = s.object({ app: s.string(), page: s.optional(s.string()) });
  * Renders the screen the path names, or the app's own 404 screen. An unknown app answers the
  * site's 404. A `toast` parameter naming one of the app's toasts shows it once, and a reload
  * of the same address shows nothing new; any other value is ignored, so the address can never
- * put words on the page. The app reads the parameter as its bare key. Every other screen is
- * cached per address and per value of the cookies the app reads; a toast's page never is,
- * nor is a page drawn for what one visitor did.
+ * put words on the page. A request naming one of the screen's frames in `X-Remix-Target`
+ * answers only that frame's content. Pages and frames are cached per address, target and value
+ * of the cookies the app reads; a toast's page never is, nor is anything drawn for one visitor.
  */
 export default createAction(routes.demoApps.show, async (ctx) => {
 	let { app: slug, page = "" } = s.parse(PARAMS, ctx.params);
@@ -38,6 +38,16 @@ export default createAction(routes.demoApps.show, async (ctx) => {
 	if (toast !== null) url.searchParams.set(DEMO_APP_TOAST_PARAM, toast.key);
 
 	let cookie = ctx.request.headers.get("Cookie");
+	let target = ctx.request.headers.get("X-Remix-Target");
+	let fragment = target === null ? null : await app.target?.(target, { page, url, cookie });
+	if (fragment !== null && fragment !== undefined) {
+		if (app.isPersonal?.(cookie)) return varyByTarget(ctx.render(fragment));
+		let variant = `${ctx.url.search}|${target}|${cookieVariant(cookie, app.cookies)}`;
+		return varyByTarget(
+			await withStreamCache(ctx.request, variant, async () => ctx.render(fragment)),
+		);
+	}
+
 	let renderPage = async () => {
 		let screen = await app.render({ page, url, cookie });
 		return ctx.render(
@@ -45,8 +55,22 @@ export default createAction(routes.demoApps.show, async (ctx) => {
 			{ status: screen.status ?? 200 },
 		);
 	};
-	if (toast !== null || app.isPersonal?.(cookie)) return await renderPage();
+	if (toast !== null || app.isPersonal?.(cookie)) return varyByTarget(await renderPage());
 
 	let variant = `${ctx.url.search}|${cookieVariant(cookie, app.cookies)}`;
-	return await withStreamCache(ctx.request, variant, renderPage);
+	return varyByTarget(await withStreamCache(ctx.request, variant, renderPage));
 });
+
+/**
+ * Marks an answer as varying by `X-Remix-Target`, since one address answers a whole screen or
+ * one of its frames, so a browser or proxy never serves a stored fragment for a page load.
+ */
+function varyByTarget(response: Response): Response {
+	let headers = new Headers(response.headers);
+	headers.append("Vary", "X-Remix-Target");
+	return new Response(response.body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers,
+	});
+}

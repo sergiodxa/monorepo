@@ -100,6 +100,12 @@ export interface DemoApp {
 	 * as its query. `null` answers the frame route's `404`.
 	 */
 	frame?: (part: string, request: DemoAppRequest) => RemixNode | null | Promise<RemixNode | null>;
+	/**
+	 * Renders the content of the named `<Frame>` a screen mounts with the screen's own address
+	 * as its `src`, for a request carrying that name in `X-Remix-Target`: a link, a form or the
+	 * frame's first render. `null` for a name the screen does not own answers the whole screen.
+	 */
+	target?: (name: string, request: DemoAppRequest) => RemixNode | null | Promise<RemixNode | null>;
 	/** Renders a screen, or the app's own 404 screen with `status: 404` for a path it lacks. */
 	render: (request: DemoAppRequest) => DemoAppScreen | Promise<DemoAppScreen>;
 	/**

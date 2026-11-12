@@ -147,6 +147,20 @@ describe("GET /demo/apps/:app", () => {
 		},
 	);
 
+	test.each(apps)(
+		"$slug varies by X-Remix-Target, and a name it owns no frame for still answers the screen",
+		async ({ slug }) => {
+			let page = await fetchApp(demoAppHref(slug)());
+			let unknown = await fetchApp(demoAppHref(slug)(), {
+				headers: { "X-Remix-Frame": "true", "X-Remix-Target": "no-such-frame" },
+			});
+
+			expect(page.headers.get("Vary")).toContain("X-Remix-Target");
+			expect(unknown.headers.get("Vary")).toContain("X-Remix-Target");
+			expect(await unknown.text()).toMatch(/^<!DOCTYPE html>/i);
+		},
+	);
+
 	test("an unknown app answers the site's 404", async () => {
 		expect((await fetchApp("/demo/apps/no-such-app")).status).toBe(404);
 	});
