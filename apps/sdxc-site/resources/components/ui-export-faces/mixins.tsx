@@ -482,6 +482,42 @@ function CopyFace(_handle: Handle<CopyFace.Props>) {
 	);
 }
 
+namespace StreamFace {
+	export interface Props {}
+}
+
+/** A reply's lines filling in one after another, as a streamed answer arrives. */
+function StreamFace(_handle: Handle<StreamFace.Props>) {
+	return () => (
+		<div mix={[raw({ display: "grid", gap: "0.35rem", inlineSize: "5.5rem" })]}>
+			{[100, 86, 58].map((width, index) => (
+				<span
+					key={index}
+					mix={[
+						keyframes("ui-export-stream", {
+							"0%": { clipPath: "inset(0 100% 0 0)" },
+							"30%, 100%": { clipPath: "inset(0 0 0 0)" },
+						}),
+						raw({
+							display: "block",
+							blockSize: "0.4rem",
+							inlineSize: `${width}%`,
+							borderRadius: "999px",
+							backgroundColor:
+								index === 0 ? INK_STRONG : "color-mix(in oklch, var(--ui-brand-fg) 45%, Canvas)",
+							animationName: "ui-export-stream",
+							animationDuration: "2.4s",
+							animationDelay: `${index * 0.6}s`,
+							animationFillMode: "both",
+							animationIterationCount: "infinite",
+						}),
+					]}
+				/>
+			))}
+		</div>
+	);
+}
+
 namespace ToastFace {
 	export interface Props {
 		kind: "stack" | "hold" | "close" | "action";
@@ -1824,6 +1860,13 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 				break;
 			case "messageFollow":
 				body = <SyncFace kind="follow" />;
+				break;
+			case "composerSend":
+				body = <Keycaps keys={["↵", "Esc"]} />;
+				break;
+			case "revealStream":
+			case "streamTarget":
+				body = <StreamFace />;
 				break;
 			case "persist":
 			case "saveBarSync":
