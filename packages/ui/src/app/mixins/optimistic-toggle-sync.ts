@@ -35,6 +35,11 @@ export namespace OptimisticToggleSync {
 		label?: string;
 		/** The button's title and `aria-label` while on; `label` when omitted. */
 		pressedLabel?: string;
+		/**
+		 * Whether the server says the toggle is on. Each render puts the toggle back to it while
+		 * no press is waiting, so a toggle reused for another record never keeps the last press.
+		 */
+		pressed?: boolean;
 	}
 
 	/** Where a press stands, as {@link OptimisticToggleEvent} reports it. */
@@ -89,20 +94,24 @@ export const optimisticToggleSync: MixinFactory<
 > = createMixin<HTMLFormElement, [options: OptimisticToggleSync.Options]>((handle) => {
 	let options: OptimisticToggleSync.Options | undefined;
 	let controller: AbortController | undefined;
+	let sync: ((pressed: boolean) => void) | undefined;
 
 	handle.addEventListener("insert", (event) => {
 		controller?.abort();
 		controller = new AbortController();
-		connect(event.node, () => options, controller.signal);
+		sync = connect(event.node, () => options, controller.signal);
 	});
 
 	handle.addEventListener("remove", () => {
 		controller?.abort();
 		controller = undefined;
+		sync = undefined;
 	});
 
 	return (next) => {
 		options = next;
+		let pressed = next.pressed;
+		if (pressed !== undefined) handle.queueTask(() => sync?.(pressed));
 	};
 });
 
@@ -112,16 +121,18 @@ export const optimisticToggleSync: MixinFactory<
  * @param form The toggle's form.
  * @param read Reads the latest options.
  * @param signal Ends the listener once the form leaves the document.
+ * @returns Puts the form back to a state the server rendered, unless a press is waiting.
  */
 function connect(
 	form: HTMLFormElement,
 	read: () => OptimisticToggleSync.Options | undefined,
 	signal: AbortSignal,
-): void {
+): (pressed: boolean) => void {
 	let button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
 	let next = form.querySelector<HTMLInputElement>("input[data-toggle-next]");
 	let status = form.querySelector<HTMLElement>('[role="status"]');
 	let latest = 0;
+	let pending = false;
 
 	/** Draws `pressed` and the outcome onto the form and tells the page. */
 	let show = (pressed: boolean, outcome: OptimisticToggleSync.Outcome) => {
@@ -145,6 +156,7 @@ function connect(
 			let body = new FormData(form);
 			let previous = form.hasAttribute("data-pressed");
 			let token = ++latest;
+			pending = true;
 
 			show(!previous, {});
 
@@ -159,11 +171,25 @@ function connect(
 			);
 
 			if (token !== latest || signal.aborted) return;
+			pending = false;
 			if (answer.ok) show(!previous, { settled: true, status: answer.status });
 			else show(previous, { failed: true, settled: true, status: answer.status });
 		},
 		{ signal },
 	);
+
+	return (pressed) => {
+		if (pending) return;
+		form.toggleAttribute("data-pressed", pressed);
+		form.removeAttribute("data-failed");
+		if (next) next.value = pressed ? "false" : "true";
+		if (button) {
+			button.setAttribute("aria-pressed", pressed ? "true" : "false");
+			button.dataset.color = toneOf(pressed, false);
+			name(button, pressed, read());
+		}
+		if (status) status.textContent = "";
+	};
 }
 
 /**

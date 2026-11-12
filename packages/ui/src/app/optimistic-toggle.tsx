@@ -80,6 +80,7 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 							refused: labels.refused,
 							label: labels.label,
 							pressedLabel,
+							pressed,
 						}),
 						inlineFlex(),
 						items("center"),

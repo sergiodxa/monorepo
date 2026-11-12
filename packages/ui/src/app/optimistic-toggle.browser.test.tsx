@@ -300,4 +300,31 @@ describe("OptimisticToggle", () => {
 		expect(form.hasAttribute("data-failed")).toBe(false);
 		expect(button(form).getAttribute("aria-pressed")).toBe("true");
 	});
+
+	test("a toggle reused for another record takes that record's state, not the last press", async () => {
+		answer(200);
+		let toggle = (action: string) => (
+			<OptimisticToggle
+				action={action}
+				name="starred"
+				pressed={false}
+				labels={{ label: "Star", failed: "Failed" }}
+			/>
+		);
+		let mounted = render(toggle("/posts/42/star"));
+		cleanups.push(mounted.cleanup);
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+		let form = mounted.container.querySelector("form")!;
+		button(form).click();
+		await expect.poll(() => received.length).toBe(1);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(button(form).dataset.color).toBe("brand");
+
+		mounted.root.render(toggle("/posts/43/star"));
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+
+		expect(form.hasAttribute("data-pressed")).toBe(false);
+		expect(button(form).dataset.color).toBe("neutral");
+		expect(button(form).getAttribute("aria-pressed")).toBe("false");
+	});
 });
