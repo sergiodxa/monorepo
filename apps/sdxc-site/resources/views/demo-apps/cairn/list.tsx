@@ -34,6 +34,7 @@ import type { IssueView, VisitorState } from "./state";
 import {
 	LABELS,
 	LOCALE,
+	ME,
 	PEOPLE,
 	PRIORITIES,
 	PRIORITY_NAMES,
@@ -601,7 +602,7 @@ function IssueList(handle: Handle<IssueList.Props>) {
 				options: [
 					...PEOPLE.map((person) => ({
 						value: person.id,
-						label: person.name,
+						label: person.id === ME ? "My issues" : person.name,
 						count: count("assignee", (issue) => issue.assignee === person.id),
 						icon: <PersonTile person={person} size={16} decorative />,
 					})),

@@ -97,6 +97,13 @@ describe("Cairn lists", () => {
 		expect(none).toContain("No issues match");
 	});
 
+	test('the Assignee filter names the signed-in person "My issues"', async () => {
+		let body = await page("team/web");
+		let menu = body.slice(body.indexOf('id="cairn-issues-facet-assignee"'));
+		expect(menu).toMatch(/value="ilse"[\s\S]*?My issues/);
+		expect(menu.slice(0, menu.indexOf("</fieldset>"))).not.toContain(">Ilse Varga<");
+	});
+
 	test("an open issue sits beside the list, which keeps its filters in every row link", async () => {
 		let body = await page("team/web?label=bug&issue=WEB-124");
 		expect(body).toContain('data-issue-detail="WEB-124"');
