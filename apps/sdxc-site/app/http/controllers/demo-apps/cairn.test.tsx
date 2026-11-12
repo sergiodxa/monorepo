@@ -188,10 +188,10 @@ describe("Cairn edits", () => {
 
 	test("a card dropped before another keeps that place on the board, and a menu move keeps it too", async () => {
 		let column = (body: string, status: string) => {
-			let start = body.indexOf(`data-board-column="${status}"`);
-			let end = body.indexOf("data-board-column=", start + 1);
+			let start = body.indexOf(`data-sortable-list="${status}"`);
+			let end = body.indexOf("data-sortable-list=", start + 1);
 			let slice = body.slice(start, end === -1 ? undefined : end);
-			return [...slice.matchAll(/data-board-card="([A-Z]+-\d+)"/g)].map(([, id]) => id!);
+			return [...slice.matchAll(/data-sortable-item="([A-Z]+-\d+)"/g)].map(([, id]) => id!);
 		};
 		let before = column(await page("team/web/board"), "todo");
 		let [first, , third] = before;
