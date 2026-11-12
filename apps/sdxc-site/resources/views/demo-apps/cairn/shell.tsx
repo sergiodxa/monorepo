@@ -131,6 +131,8 @@ namespace CairnShell {
 		from: string;
 		/** Drops the content padding, for edge-to-edge panes. */
 		flush?: boolean;
+		/** Holds the screen to the window's height, for a board that scrolls inside itself. */
+		fill?: boolean;
 		children: RemixNode;
 	}
 }
@@ -326,7 +328,7 @@ function CairnPalette(handle: Handle<{ state: VisitorState }>) {
  */
 export function CairnShell(handle: Handle<CairnShell.Props>) {
 	return () => {
-		let { current, collapsed, crumb, flush, children, state, team, from } = handle.props;
+		let { current, collapsed, crumb, flush, fill, children, state, team, from } = handle.props;
 		let unread = NOTICES.filter((notice) => notice.unread).length;
 		let me = PEOPLE.find((person) => person.id === ME);
 
@@ -336,6 +338,7 @@ export function CairnShell(handle: Handle<CairnShell.Props>) {
 				labels={SHELL_LABELS}
 				collapsed={collapsed}
 				cookieName={SHELL_COOKIE}
+				fill={fill}
 				indicator="fill"
 				sheetBelow="64rem"
 				workspace={
@@ -368,7 +371,6 @@ export function CairnShell(handle: Handle<CairnShell.Props>) {
 						<UserMenu
 							id="cairn-user-menu"
 							label="Account"
-							profileHref={href()}
 							helpId={HELP_ID}
 							extra={
 								<Menu.Item type="submit" form="cairn-reset">

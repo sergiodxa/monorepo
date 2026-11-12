@@ -54,8 +54,8 @@ namespace UserMenu {
 		id: string;
 		/** The menu's accessible name, such as "Account". */
 		label: string;
-		/** The settings page about the person: their alerts, signature or masthead entry. */
-		profileHref: string;
+		/** The page about the person; an app without one leaves the row out. */
+		profileHref?: string;
 		/** The app's settings home; an app without settings leaves the row out. */
 		settingsHref?: string;
 		/** Rows of the app's own before Sign out, such as a form that resets the demo. */
@@ -74,7 +74,7 @@ export function UserMenu(handle: Handle<UserMenu.Props>) {
 		let { extra, helpId, id, label, profileHref, settingsHref } = handle.props;
 		return (
 			<Menu id={id} placement="top-start" aria-label={label}>
-				<Menu.Item href={profileHref}>Profile</Menu.Item>
+				{profileHref === undefined ? null : <Menu.Item href={profileHref}>Profile</Menu.Item>}
 				{settingsHref === undefined ? null : <Menu.Item href={settingsHref}>Settings</Menu.Item>}
 				<Menu.Item commandfor={helpId} command="show-modal">
 					Keyboard shortcuts

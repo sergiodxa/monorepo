@@ -201,9 +201,19 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 				state={state}
 				team={team.id}
 				from={page}
+				fill
 			>
 				<div
-					mix={[raw({ display: "flex", flexDirection: "column", gap: "1rem", minInlineSize: 0 })]}
+					mix={[
+						raw({
+							display: "flex",
+							flexDirection: "column",
+							gap: "1rem",
+							flex: "1 1 auto",
+							minInlineSize: 0,
+							minBlockSize: 0,
+						}),
+					]}
 				>
 					<header
 						mix={[
@@ -247,6 +257,7 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 						id={boardId(team)}
 						label={`${team.name} issues by status`}
 						labels={{ moved: "Moved to {column}" }}
+						mix={[raw({ flex: "1 1 auto" })]}
 					>
 						{COLUMNS.map((status) => {
 							let cards = ordered.filter((issue) => issue.status === status);

@@ -153,6 +153,18 @@ describe("Cairn's open issue", () => {
 	);
 });
 
+describe("Cairn's board", () => {
+	test("fills the window under the top bar, so its own scrollbars stay on screen", async () => {
+		await page.viewport(1280, 600);
+		let root = await mountScreen("team/plat/board");
+		let scroller = root.querySelector<HTMLElement>('[data-slot="board-columns"]')!;
+		let content = root.querySelector<HTMLElement>('[data-slot="app-shell-content"]')!;
+
+		expect(scroller.getBoundingClientRect().bottom).toBeLessThanOrEqual(600);
+		expect(content.scrollHeight).toBeLessThanOrEqual(content.clientHeight);
+	});
+});
+
 describe("Cairn on a tablet", () => {
 	test("an open issue's id stays on one line in a pane squeezed to 240px", async () => {
 		await page.viewport(768, 1024);
