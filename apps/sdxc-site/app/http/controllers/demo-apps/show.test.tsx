@@ -29,8 +29,10 @@ function countH1(body: string): number {
 }
 
 describe("GET /demo/apps/:app", () => {
-	test("the catalogue holds a dashboard, a CMS and an inbox", () => {
-		expect(listDemoAppSlugs()).toEqual(expect.arrayContaining(["inkwell", "pulse", "relay"]));
+	test("the catalogue holds a dashboard, a CMS, an inbox and a chat assistant", () => {
+		expect(listDemoAppSlugs()).toEqual(
+			expect.arrayContaining(["inkwell", "pulse", "relay", "tern"]),
+		);
 	});
 
 	test.each(apps)(

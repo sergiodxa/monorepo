@@ -72,5 +72,5 @@ fixed height with scroll inside.
 - The primary content, or anything above it that would shift it.
 - A part that renders as fast as the document and is never reloaded alone.
 
-Worked example: the Pulse, Inkwell and Relay demos on sdxc.dev (`/demo/apps/*`), with the size
+Worked example: the Pulse, Inkwell, Relay and Tern demos on sdxc.dev (`/demo/apps/*`), with the size
 tests beside each app in `apps/sdxc-site/resources/views/demo-apps/<app>/frames.browser.test.tsx`.

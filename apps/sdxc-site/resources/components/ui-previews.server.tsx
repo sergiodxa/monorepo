@@ -24,6 +24,7 @@ import {
 	ThumbsUpIcon,
 	VolumeXIcon,
 } from "@sdxc/icons";
+import { grow } from "@sdxc/u/layout";
 import { bs, is } from "@sdxc/u/size";
 import {
 	Accordion,
@@ -117,7 +118,15 @@ import {
 	Toolbar,
 	Tree,
 } from "@sdxc/ui/app";
-import { Attachment, Bubble, Marker, Message, MessageScroller } from "@sdxc/ui/chat";
+import {
+	Attachment,
+	Bubble,
+	Composer,
+	ComposerSubmit,
+	Marker,
+	Message,
+	MessageScroller,
+} from "@sdxc/ui/chat";
 import {
 	ColorArea,
 	ColorField,
@@ -583,6 +592,47 @@ export const COMPONENT_PREVIEWS: Record<string, ComponentPreview> = {
 				</Command.List>
 				<Command.Empty>Nothing matches.</Command.Empty>
 			</Command>
+		),
+	},
+
+	composer: {
+		code: `<Composer method="post" action="/chat">
+	<Composer.Input name="prompt" aria-label="Message" placeholder="Ask anything" required />
+	<Composer.Toolbar>
+		<Composer.Hint>
+			<Keyboard>Enter</Keyboard> to send
+		</Composer.Hint>
+		<ComposerSubmit labels={{ send: "Send message", stop: "Stop response" }} />
+	</Composer.Toolbar>
+</Composer>`,
+		render: () => (
+			<Composer method="post" action="/examples/composer" mix={[is("26rem")]}>
+				<Composer.Input name="prompt" aria-label="Message" placeholder="Ask anything" required />
+				<Composer.Toolbar>
+					<Composer.Hint>
+						<Keyboard>Enter</Keyboard> to send
+					</Composer.Hint>
+					<ComposerSubmit labels={{ send: "Send message", stop: "Stop response" }} />
+				</Composer.Toolbar>
+			</Composer>
+		),
+	},
+
+	"composer-submit": {
+		code: `<Composer method="post" action="/chat">
+	<Composer.Input name="prompt" aria-label="Message" required />
+	<Composer.Toolbar>
+		<ComposerSubmit labels={{ send: "Send message", stop: "Stop response" }} stream="reply-7" />
+	</Composer.Toolbar>
+</Composer>`,
+		render: () => (
+			<Composer method="post" action="/examples/composer-submit" mix={[is("22rem")]}>
+				<Composer.Input name="prompt" aria-label="Message" required />
+				<Composer.Toolbar>
+					<span mix={[grow()]} />
+					<ComposerSubmit labels={{ send: "Send message", stop: "Stop response" }} />
+				</Composer.Toolbar>
+			</Composer>
 		),
 	},
 

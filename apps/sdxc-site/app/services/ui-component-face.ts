@@ -191,6 +191,8 @@ const CATALOGUE = [
 	{ slug: "combobox", module: "components" },
 	{ slug: "command", module: "components" },
 	{ slug: "command-palette", module: "app" },
+	{ slug: "composer", module: "chat" },
+	{ slug: "composer-submit", module: "chat" },
 	{ slug: "confirm", module: "components" },
 	{ slug: "context-menu", module: "app" },
 	{ slug: "copy-button", module: "docs" },
@@ -517,6 +519,23 @@ const OVERRIDES: Record<string, Shape[]> = {
 		{ kind: "line", x1: 36, y1: 74, x2: 120, y2: 74, tone: "label", weight: 1.4 },
 	]),
 	message: chatScene(),
+	composer: windowScene([
+		{ kind: "rect", x: 28, y: 40, w: 104, h: 34, r: 14, tone: "surface", ring: true },
+		txt("Ask anything", 40, 54, 7, "muted"),
+		{ kind: "circle", cx: 118, cy: 64, r: 6, tone: "accent" },
+		{
+			kind: "stroke",
+			d: "M118 67 L118 61 M115 63.5 L118 60.5 L121 63.5",
+			weight: 1.4,
+			tone: "surface",
+		},
+	]),
+	"composer-submit": windowScene([
+		{ kind: "circle", cx: 64, cy: 56, r: 12, tone: "accent" },
+		{ kind: "stroke", d: "M64 62 L64 50 M58 55 L64 49 L70 55", weight: 1.8, tone: "surface" },
+		{ kind: "circle", cx: 98, cy: 56, r: 12, tone: "ink" },
+		{ kind: "rect", x: 94, y: 52, w: 8, h: 8, r: 1.5, tone: "surface" },
+	]),
 	"color-picker": windowScene([
 		{ kind: "rect", x: 36, y: 32, w: 56, h: 48, r: 8, tone: "accent" },
 		{ kind: "rect", x: 100, y: 32, w: 10, h: 14, r: 3, tone: "surface", ring: true },

@@ -112,7 +112,7 @@ export default createAction(routes.demos, async (ctx) => {
 					</SectionBlock>
 
 					<SectionBlock id="apps" title="Apps" tone="tinted">
-						<Feature.Grid columns={3}>
+						<Feature.Grid columns={2}>
 							{apps.map(({ app, slug }) =>
 								app === null ? null : (
 									<DemoCard

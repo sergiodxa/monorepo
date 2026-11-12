@@ -67,7 +67,7 @@ describe("GET /demo", () => {
 		let apps = await listDemoApps();
 
 		expect(apps.map((app) => app.slug)).toEqual(
-			expect.arrayContaining(["inkwell", "pulse", "relay"]),
+			expect.arrayContaining(["inkwell", "pulse", "relay", "tern"]),
 		);
 		expect(body).toContain('id="apps"');
 		for (let app of apps) {

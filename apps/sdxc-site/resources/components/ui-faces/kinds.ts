@@ -52,6 +52,8 @@ export const FACE_KIND = {
 	combobox: "select",
 	command: "command",
 	"command-palette": "command",
+	composer: "textarea",
+	"composer-submit": "button",
 	confirm: "dialog",
 	"context-menu": "menu",
 	"copy-button": "button-ghost",
