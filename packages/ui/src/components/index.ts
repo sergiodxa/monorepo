@@ -19,6 +19,7 @@ export * from "./button.js";
 export * from "./calendar.js";
 export * from "./card.js";
 export * from "./carousel.js";
+export * from "./character-count.js";
 export * from "./checkbox-group.js";
 export * from "./checkbox.js";
 export * from "./combobox.js";

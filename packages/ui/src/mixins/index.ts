@@ -11,6 +11,7 @@ export * from "./active-descendant-keys.js";
 export * from "./aria-checked.js";
 export * from "./calendar-keys.js";
 export * from "./carousel-controls.js";
+export * from "./character-count.js";
 export * from "./clear-field.js";
 export * from "./combobox-filter.js";
 export * from "./command-filter.js";
