@@ -12,12 +12,12 @@ import { describe, expect, onTestFinished, test, vi } from "vitest";
 
 import { ComposerSubmit } from "./composer-submit.js";
 import { Composer } from "./composer.js";
-import { streamTarget } from "./mixins/stream-target.js";
 import {
 	STREAM_END_ATTRIBUTE,
 	STREAM_HIDDEN_ATTRIBUTE,
 	revealStream,
-} from "./utils/stream-reveal.js";
+} from "./mixins/reveal-stream.js";
+import { streamTarget } from "./mixins/stream-target.js";
 
 import "../reset.css";
 import "../theme.css";

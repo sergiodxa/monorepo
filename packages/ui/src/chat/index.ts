@@ -9,7 +9,7 @@
 
 export * from "./attachment.js";
 export * from "./behaviors/scroll-follow-model.js";
-export * from "./utils/stream-reveal.js";
+export * from "./mixins/reveal-stream.js";
 export * from "./bubble.js";
 export * from "./composer-submit.js";
 export * from "./composer.js";

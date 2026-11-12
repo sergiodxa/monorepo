@@ -12,7 +12,7 @@ import { raw } from "@sdxc/u/general";
 import { media } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 
-import { STREAM_HIDDEN_ATTRIBUTE, STREAM_PENDING_ATTRIBUTE } from "../utils/stream-reveal.js";
+import { STREAM_HIDDEN_ATTRIBUTE, STREAM_PENDING_ATTRIBUTE } from "./reveal-stream.js";
 
 /** The keyframes that paint a pending reply after all when its script never arrives. */
 const FALLBACK_KEYFRAMES = "ui-stream-target-fallback";
