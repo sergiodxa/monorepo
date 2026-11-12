@@ -77,6 +77,7 @@ export * from "./styles/chart-palette.js";
 export * from "./styles/graphic-host.js";
 export * from "./styles/legend-toggle.js";
 export * from "./styles/toast-stack.js";
+export * from "./tab-bar.js";
 export * from "./table.js";
 export * from "./toast.js";
 export * from "./toasts.js";

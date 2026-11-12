@@ -174,6 +174,8 @@ Every export carries JSDoc, so the editor shows each full signature.
   and `<progress>` (indeterminate when `value` is unset).
 - `Select`, `ComboBox`, `SearchField` — a native `<select>` with customizable-select styling, a
   text input with a `<datalist>`, and a `<search>` landmark.
+- `CharacterCount` — island: a ring and the characters left for a limited field; load
+  `@sdxc/ui/character-count`, and check `countCharacters()` on the server.
 
 ### Components: overlays and menus
 
@@ -357,7 +359,9 @@ Dashboard and workspace components.
 - `GridList`, `Tree` — an interactive row list, and nested `<details>`.
 - `DropIndicator` — the bar marking where a dragged row will land.
 - `Toast` — a notification stacked by `Toast.Region`, queued by a `Toaster`.
-- `Skeleton`, `Empty` — a loading block, and an empty-state panel.
+- `Skeleton`, `Empty` — a loading block, and an empty-state panel; `Skeleton.Text` bars real
+  content laid out unseen, so a placeholder wraps like its text.
+- `TabBar` — a phone's bottom tab bar that reserves its height and hides where the sidebar shows.
 - `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
   pointer-positioned menu.
 - `Resizable` — split panes.
