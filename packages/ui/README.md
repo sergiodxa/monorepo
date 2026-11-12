@@ -362,6 +362,10 @@ Dashboard and workspace components.
 - `Skeleton`, `Empty` — a loading block, and an empty-state panel; `Skeleton.Text` bars real
   content laid out unseen, so a placeholder wraps like its text.
 - `TabBar` — a phone's bottom tab bar that reserves its height and hides where the sidebar shows.
+- `Board` — kanban columns of cards; a mouse drag moves a card and posts the card's own move form,
+  which its menu also submits without script.
+- `Roadmap` — grouped projects as bars on a month and week axis, with progress, today's line and a
+  hatched tail for a late projection.
 - `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
   pointer-positioned menu.
 - `Resizable` — split panes.
