@@ -16,28 +16,30 @@
  */
 export const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
+/** Options for {@link writeCookie}. */
+export interface WriteCookieOptions {
+	/** Seconds the cookie stays valid. @default ONE_YEAR_SECONDS */
+	maxAgeSeconds?: number;
+	/** The path the browser sends the cookie under, such as one app's own prefix. @default "/" */
+	path?: string;
+}
+
 /**
- * Writes `value` under `name` into a `path=/`, `samesite=lax` cookie, so the
- * next full navigation's server render can read it back and start already in
- * the same state, ahead of hydration ever running.
+ * Writes `value` under `name` into a `samesite=lax` cookie, so the next full navigation's server
+ * render can read it back and start already in the same state, ahead of hydration ever running.
  *
  * @param name Cookie name to write the value under.
- * @param value Value to persist — interpolated directly into the cookie
- * string, so a boolean persists as `"true"`/`"false"` and a string persists
- * as-is.
- * @param maxAgeSeconds Seconds the cookie stays valid before a browser drops
- * it. Defaults to {@link ONE_YEAR_SECONDS}.
- * @example
- * writeCookie("app-sidebar:collapsed", true);
- * @example
- * writeCookie("ui:theme", "dark");
- * @example
- * writeCookie("ui:announcement-dismissed", true, 60 * 60 * 24 * 7);
+ * @param value Value to persist, interpolated as is, so a boolean persists as `"true"`/`"false"`.
+ * @param options How long the cookie lasts and which path it is sent under.
+ * @example writeCookie("app-sidebar:collapsed", true);
+ * @example writeCookie("ui:announcement-dismissed", true, { maxAgeSeconds: 60 * 60 * 24 * 7 });
+ * @example writeCookie("crm-sidebar", false, { path: "/apps/crm" });
  */
 export function writeCookie(
 	name: string,
 	value: string | boolean,
-	maxAgeSeconds: number = ONE_YEAR_SECONDS,
+	options: WriteCookieOptions = {},
 ): void {
-	document.cookie = `${name}=${value}; path=/; max-age=${maxAgeSeconds}; samesite=lax`;
+	let { maxAgeSeconds = ONE_YEAR_SECONDS, path = "/" } = options;
+	document.cookie = `${name}=${value}; path=${path}; max-age=${maxAgeSeconds}; samesite=lax`;
 }

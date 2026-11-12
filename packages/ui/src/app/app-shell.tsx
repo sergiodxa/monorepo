@@ -136,6 +136,8 @@ export namespace AppShell {
 		fill?: boolean;
 		/** The collapse cookie's name, for an app with two shells. @default APP_SHELL_COOKIE */
 		cookieName?: string;
+		/** The path the collapse cookie is sent under, such as one app's own prefix. @default "/" */
+		cookiePath?: string;
 		/**
 		 * The width under which the sidebar is a sheet, for a screen whose own panes need the
 		 * room, such as a three-pane split view at 1024px. @default "48rem"
@@ -220,6 +222,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 			indicator = DEFAULT_INDICATOR,
 			id = DEFAULT_ID,
 			cookieName = APP_SHELL_COOKIE,
+			cookiePath,
 			sheetBelow = DEFAULT_SHEET_BELOW,
 			fill = false,
 		} = handle.props;
@@ -528,6 +531,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 								collapsed={collapsed}
 								label={labels.collapse}
 								cookieName={cookieName}
+								cookiePath={cookiePath}
 								sidebarId={sidebarId}
 								sheetBelow={sheetBelow}
 							/>

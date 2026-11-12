@@ -47,6 +47,8 @@ export function appShellQueries(sheetBelow: AppShellSheetBelow): {
 export interface AppShellControlsOptions {
 	/** The cookie the collapsed state is written to, as `"true"` or `"false"`. */
 	cookieName: string;
+	/** The path the cookie is sent under. @default "/" */
+	cookiePath?: string;
 	/** The sidebar element's id, which is also the sheet's popover. */
 	sidebarId: string;
 	/** @default "48rem" */
@@ -100,8 +102,10 @@ function enhance(
 	host.addEventListener(
 		"change",
 		() => {
-			let name = readOptions()?.cookieName;
-			if (name) writeCookie(name, host.checked);
+			let options = readOptions();
+			if (options?.cookieName) {
+				writeCookie(options.cookieName, host.checked, { path: options.cookiePath });
+			}
 		},
 		{ signal },
 	);

@@ -107,6 +107,8 @@ export namespace SplitView {
 		 * @default "ui-split-view"
 		 */
 		cookie?: string;
+		/** The path the layout cookie is sent under, such as one app's own prefix. @default "/" */
+		cookiePath?: string;
 		/**
 		 * Where j/k answer: `"page"` anywhere, `"view"` only while focus is inside the view.
 		 *
@@ -325,6 +327,7 @@ export function SplitView(handle: Handle<SplitView.Props>) {
 			backHref,
 			layout,
 			cookie,
+			cookiePath,
 			keys,
 			labels,
 			mix,
@@ -339,6 +342,7 @@ export function SplitView(handle: Handle<SplitView.Props>) {
 				data-split-view
 				data-slot="split-view"
 				data-cookie={cookie ?? SPLIT_VIEW_COOKIE}
+				data-cookie-path={cookiePath}
 				data-collapsed={(layout?.collapsed ?? []).join(" ")}
 				data-active={active ?? (hasDetail ? "detail" : "list")}
 				{...rest}

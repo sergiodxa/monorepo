@@ -39,6 +39,8 @@ export namespace AppShellToggle {
 		label: string;
 		/** The cookie the state is written to. */
 		cookieName: string;
+		/** The path the cookie is sent under. @default "/" */
+		cookiePath?: string;
 		/** The sidebar's id, which the sheet opens and closes by. */
 		sidebarId: string;
 		/** The width under which the sidebar is a sheet and the toggle hides. @default "48rem" */
@@ -58,6 +60,7 @@ export const AppShellToggle: EntryComponent<AppShellToggle.Props> = clientEntry(
 				collapsed,
 				label,
 				cookieName,
+				cookiePath,
 				sidebarId,
 				sheetBelow = DEFAULT_SHEET_BELOW,
 			} = handle.props;
@@ -91,7 +94,10 @@ export const AppShellToggle: EntryComponent<AppShellToggle.Props> = clientEntry(
 						defaultChecked={collapsed}
 						aria-label={label}
 						aria-keyshortcuts="Meta+B Control+B"
-						mix={[visuallyHidden(), appShellControls({ cookieName, sidebarId, sheetBelow })]}
+						mix={[
+							visuallyHidden(),
+							appShellControls({ cookieName, cookiePath, sidebarId, sheetBelow }),
+						]}
 					/>
 				</label>
 			);

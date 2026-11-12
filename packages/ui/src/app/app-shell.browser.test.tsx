@@ -277,6 +277,19 @@ describe("AppShell", () => {
 		expect(document.cookie).toContain(`${APP_SHELL_COOKIE}=false`);
 	});
 
+	test("writes the collapse cookie under the path it names, so pages outside it never see it", async () => {
+		mountShell({ cookiePath: "/another-app" });
+		await userEvent.keyboard("{Meta>}b{/Meta}");
+		expect(toggle().checked).toBe(true);
+		expect(readAppShellCookie(document.cookie)).toBe(false);
+
+		mounted?.cleanup();
+		mountShell({ cookiePath: location.pathname });
+		await userEvent.keyboard("{Meta>}b{/Meta}");
+		expect(readAppShellCookie(document.cookie)).toBe(true);
+		document.cookie = `${APP_SHELL_COOKIE}=; path=${location.pathname}; max-age=0`;
+	});
+
 	test("clicking the toggle writes the cookie, and ⌘B in a text area stays bold", async () => {
 		mountShell({ children: <textarea aria-label="Notes" /> });
 		toggle().click();

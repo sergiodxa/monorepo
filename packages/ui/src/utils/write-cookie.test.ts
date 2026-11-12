@@ -65,10 +65,20 @@ describe(writeCookie.name, () => {
 	test("honors a maxAgeSeconds override in place of the default", () => {
 		let readCookie = stubDocumentCookie();
 
-		writeCookie("ui:announcement-dismissed", true, 60 * 60 * 24 * 7);
+		writeCookie("ui:announcement-dismissed", true, { maxAgeSeconds: 60 * 60 * 24 * 7 });
 
 		expect(readCookie()).toBe(
 			`ui:announcement-dismissed=true; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax`,
+		);
+	});
+
+	test("sends the cookie only under the path it names", () => {
+		let readCookie = stubDocumentCookie();
+
+		writeCookie("crm-sidebar", false, { path: "/apps/crm" });
+
+		expect(readCookie()).toBe(
+			`crm-sidebar=false; path=/apps/crm; max-age=${ONE_YEAR_SECONDS}; samesite=lax`,
 		);
 	});
 });

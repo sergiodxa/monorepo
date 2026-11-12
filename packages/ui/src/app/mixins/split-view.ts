@@ -72,7 +72,7 @@ function persist(root: HTMLElement): void {
 		list: storedSize(root, "list"),
 		collapsed: collapsedPanes(root),
 	});
-	writeCookie(cookie, encodeURIComponent(value));
+	writeCookie(cookie, encodeURIComponent(value), { path: root.dataset.cookiePath });
 }
 
 /**

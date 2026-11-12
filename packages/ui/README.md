@@ -508,7 +508,7 @@ handled there — no separate landing animation system.
   `"?"`); `mod` is Command on Apple keyboards and Control elsewhere.
 - **Fields** — `resolveFieldWiring(id, options)`, `findPairedRangeInputs`.
 - **DOM** — `asCommandEvent`, `dispatchChange`, `isNewPrimaryPress`, `isPrintableKey`, `focusItem`,
-  `queryItems`, `setRovingTabindex`, `labelFor`, `hasAccessibleText`, `glyphEdges`, `mergeStyle`, `prefersReducedMotion`, `writeCookie(name, value, maxAgeSeconds?)`,
+  `queryItems`, `setRovingTabindex`, `labelFor`, `hasAccessibleText`, `glyphEdges`, `mergeStyle`, `prefersReducedMotion`, `writeCookie(name, value, { maxAgeSeconds?, path? })`,
   `DISABLED_SELECTOR`, `DEFAULT_ICON_ARIA_HIDDEN`, `ONE_YEAR_SECONDS`.
 - **Accessibility checks** — `warnIfNoAccessibleName(props, children, message)` and
   `warnIfNoAccessibleLabel(props, message)`, development-only warnings.
