@@ -38,7 +38,7 @@ afterEach(() => {
 function mount(width = 900): HTMLElement {
 	mounted = render(
 		<div style={`inline-size:${width}px`}>
-			<Board id="test-board" label="Issues by status">
+			<Board id="test-board" label="Issues by status" labels={{ moved: "Moved to {column}" }}>
 				<Board.Column value="todo" title="Todo" count={2} empty="No issues">
 					<Board.Card
 						value="A-1"
@@ -176,6 +176,37 @@ describe("Board", () => {
 		drag(card, started);
 
 		expect(await read).toEqual([["status", "started"]]);
+	});
+
+	test("Shift+Arrow moves the focused card one column over, keeps focus and says where", async () => {
+		let board = mount();
+		await settle();
+		let [todo, started] = board.querySelectorAll<HTMLElement>('[data-slot="board-column"]');
+		let card = board.querySelector<HTMLElement>('[data-board-card="A-1"]')!;
+		let link = card.querySelector("a")!;
+		let form = board.querySelector<HTMLFormElement>('form[data-board-move="A-1"]')!;
+		let posted: Array<[string, FormDataEntryValue]> = [];
+		form.addEventListener("submit", (event) => {
+			event.preventDefault();
+			posted = [...new FormData(form).entries()];
+		});
+		let press = (key: string) =>
+			link.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey: true, bubbles: true }));
+
+		link.focus();
+		press("ArrowLeft");
+		expect(todo!.contains(card)).toBe(true);
+
+		press("ArrowRight");
+		expect(started!.contains(card)).toBe(true);
+		expect(document.activeElement).toBe(link);
+		expect(posted).toEqual([
+			["next", "board"],
+			["status", "started"],
+		]);
+		expect(board.querySelector('[data-slot="board-status"]')!.textContent).toBe(
+			"Moved to In progress",
+		);
 	});
 
 	test("rings the column under the pointer while dragging, and Escape puts everything back", async () => {

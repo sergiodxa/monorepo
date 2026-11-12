@@ -10,6 +10,7 @@
 import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { iife } from "@sdxc/iife";
+import { visuallyHidden } from "@sdxc/u/a11y";
 import { mergeMix, raw } from "@sdxc/u/general";
 import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -49,8 +50,16 @@ export namespace Board {
 		id: string;
 		/** The board's accessible name, such as "Web issues by status". */
 		label: string;
+		/** What a keyboard move announces, such as "Moved to {column}". */
+		labels?: Labels;
 		/** {@link Board.Column}s, in order. */
 		children: RemixNode;
+	}
+
+	/** Strings the board announces. */
+	export interface Labels {
+		/** Read after a keyboard move, with `{column}` where the column's title goes. */
+		moved: string;
 	}
 
 	/** Context a board hands its cards. */
@@ -99,15 +108,26 @@ export namespace Board {
 }
 
 /**
- * Client island: an invisible marker carrying the board's pointer drag, so the board's columns
+ * Client island: an invisible marker carrying the board's pointer drag and keyboard moves, so its columns
  * and cards stay server HTML. Loads from `@sdxc/ui/app/board#BoardDrag`.
  */
-export const BoardDrag: EntryComponent<Record<never, never>> = clientEntry(
+export const BoardDrag: EntryComponent<BoardDragProps> = clientEntry(
 	"@sdxc/ui/app/board#BoardDrag",
-	function BoardDrag() {
-		return () => <span hidden data-slot="board-drag" mix={[boardDrag()]} />;
+	function BoardDrag(handle) {
+		return () => (
+			<span hidden data-slot="board-drag" mix={[boardDrag({ moved: handle.props.moved })]} />
+		);
 	},
 );
+
+/**
+ * Props {@link BoardDrag} serializes into the page, which is why they are a `type`:
+ * `SerializableProps` rejects an interface.
+ */
+export type BoardDragProps = {
+	/** What a keyboard move announces, with `{column}` where the column's title goes. */
+	moved?: string;
+};
 
 /**
  * Renders the board: a row of columns that scrolls sideways inside its own box, each column
@@ -126,7 +146,7 @@ export const BoardDrag: EntryComponent<Record<never, never>> = clientEntry(
  */
 export function Board(handle: Handle<Board.Props, Board.Context>) {
 	return () => {
-		let { id, label, children, mix, ...rest } = handle.props;
+		let { id, label, labels, children, mix, ...rest } = handle.props;
 		handle.context.set({ id });
 		return (
 			<div
@@ -166,7 +186,8 @@ export function Board(handle: Handle<Board.Props, Board.Context>) {
 				>
 					{children}
 				</div>
-				<BoardDrag />
+				<span data-slot="board-status" role="status" aria-live="polite" mix={[visuallyHidden()]} />
+				<BoardDrag moved={labels?.moved} />
 			</div>
 		);
 	};

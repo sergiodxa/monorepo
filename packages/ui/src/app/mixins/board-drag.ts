@@ -88,23 +88,37 @@ interface Press {
 	target?: HTMLElement | null;
 }
 
+/** Options for {@link boardDrag}. */
+export interface BoardDragOptions {
+	/**
+	 * What a keyboard move announces, with `{column}` where the column's title goes, such as
+	 * "Moved to {column}". Without it a keyboard move is silent.
+	 */
+	moved?: string;
+}
+
 /**
- * Adds pointer drag to the board around the host: a mouse or pen press on a card that moves
- * past {@link DRAG_THRESHOLD_PX} starts a drag, Escape cancels it, and a drop on another
- * column moves the card, bumps both columns' counts and posts the card's move form with the
- * column's value. A touch press scrolls the board as usual; the card's own menu moves it there.
+ * Adds pointer and keyboard moves to the board around the host. A mouse or pen press on a
+ * card that moves past {@link DRAG_THRESHOLD_PX} starts a drag, Escape cancels it, and a drop
+ * on another column moves the card. Shift+ArrowLeft and Shift+ArrowRight move the card that
+ * holds focus one column over, keeping its focus. Either way both columns' counts update and
+ * the card's move form posts the column's value. A touch press scrolls the board as usual.
  *
- * @example <span hidden mix={[boardDrag()]} />
+ * @example <span hidden mix={[boardDrag({ moved: "Moved to {column}" })]} />
  */
-export const boardDrag: MixinFactory<HTMLElement> = createMixin<HTMLElement>((handle) => {
+export const boardDrag: MixinFactory<HTMLElement, [options?: BoardDragOptions]> = createMixin<
+	HTMLElement,
+	[options?: BoardDragOptions]
+>((handle) => {
 	let controller: AbortController | undefined;
+	let options: BoardDragOptions = {};
 
 	/** Starts listening once the marker is in the page, replacing any earlier listeners. */
 	function attach(event: { node: HTMLElement }): void {
 		controller?.abort();
 		controller = new AbortController();
 		let marker = event.node;
-		connect(findBoard, controller.signal);
+		connect(findBoard, readOptions, controller.signal);
 
 		/** The board around the marker, or `null` while the marker is detached. */
 		function findBoard(): HTMLElement | null {
@@ -118,8 +132,17 @@ export const boardDrag: MixinFactory<HTMLElement> = createMixin<HTMLElement>((ha
 		controller = undefined;
 	}
 
+	/** The latest options, read at each keyboard move. */
+	function readOptions(): BoardDragOptions {
+		return options;
+	}
+
 	handle.addEventListener("insert", attach);
 	handle.addEventListener("remove", detach);
+
+	return (next) => {
+		options = next ?? {};
+	};
 });
 
 /**
@@ -127,9 +150,14 @@ export const boardDrag: MixinFactory<HTMLElement> = createMixin<HTMLElement>((ha
  * marker on each press, so a marker inserted before its board is attached still finds it.
  *
  * @param findBoard Returns the board's root, or `null` while the marker is detached.
+ * @param readOptions Returns the mixin's latest options.
  * @param signal Ends every listener, a drag in progress included.
  */
-function connect(findBoard: () => HTMLElement | null, signal: AbortSignal): void {
+function connect(
+	findBoard: () => HTMLElement | null,
+	readOptions: () => BoardDragOptions,
+	signal: AbortSignal,
+): void {
 	let press: (Press & { board: HTMLElement }) | undefined;
 
 	/** Ends the press: clears every drag mark, and moves the card when it was dropped elsewhere. */
@@ -213,11 +241,31 @@ function connect(findBoard: () => HTMLElement | null, signal: AbortSignal): void
 		end(false);
 	}
 
+	/** Moves the focused card one column over on Shift+ArrowLeft or Shift+ArrowRight. */
+	function onMoveKey(event: KeyboardEvent): void {
+		if (!event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return;
+		if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+		let board = findBoard();
+		let focused = document.activeElement;
+		let card = focused?.closest<HTMLElement>(`[${BOARD_CARD_ATTRIBUTE}]`);
+		let from = card?.closest<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`);
+		if (!board || !card || !from || !board.contains(card)) return;
+		if (focused?.matches("input, textarea, select, [contenteditable]")) return;
+		let columns = [...board.querySelectorAll<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`)];
+		let to = columns[columns.indexOf(from) + (event.key === "ArrowLeft" ? -1 : 1)];
+		if (!to) return;
+		event.preventDefault();
+		move(card, from, to);
+		if (focused instanceof HTMLElement) focused.focus({ preventScroll: false });
+		announce(board, to, readOptions().moved);
+	}
+
 	document.addEventListener("pointerdown", onPointerDown, { signal });
 	document.addEventListener("pointermove", onPointerMove, { signal });
 	document.addEventListener("pointerup", onPointerUp, { signal });
 	document.addEventListener("pointercancel", cancel, { signal });
 	document.addEventListener("keydown", onKeyDown, { signal, capture: true });
+	document.addEventListener("keydown", onMoveKey, { signal });
 	signal.addEventListener("abort", cancel);
 }
 
@@ -305,6 +353,14 @@ function move(card: HTMLElement, from: HTMLElement, to: HTMLElement): void {
 	input.value = event.to;
 	form.appendChild(input);
 	form.requestSubmit();
+}
+
+/** Says where a keyboard move put the card, through the board's own live region. */
+function announce(board: HTMLElement, column: HTMLElement, template: string | undefined): void {
+	let region = board.querySelector('[data-slot="board-status"]');
+	if (!region || template === undefined) return;
+	let title = column.querySelector("h3")?.textContent ?? "";
+	region.textContent = template.replace("{column}", title);
 }
 
 /** Adds `delta` to a column's count, when the column shows one. */
