@@ -15,6 +15,7 @@ import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { CodeBlock, DocsPageHeader } from "@sdxc/ui/docs";
+import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -36,6 +37,7 @@ import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
 import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
+import { findPreview } from "~/resources/components/preview-registry.server";
 import PropsReference from "~/resources/components/props-reference";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -85,6 +87,8 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 	].filter((anchor): anchor is Anchor => anchor !== null);
 
 	let activePath = routes.api.uiExport.href({ subpath: reference.subpath, slug });
+	let previewSlug = uiExportPreviewSlug(reference.subpath, slug);
+	let preview = findPreview(previewSlug);
 	let canonical = seo.canonical(ctx.url);
 	let title = `${reference.name} — ${module}`;
 
@@ -149,6 +153,10 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 					</header>
 
 					<div mix={[mf("e-content")]}>
+						{preview ? (
+							<Frame src={routes.frames.preview.href({ component: previewSlug })} />
+						) : null}
+
 						{usage ? (
 							<ReferenceSection id="usage" title="Usage">
 								<p mix={[m(0), text("base"), fg("neutral")]}>
@@ -362,4 +370,13 @@ function Companion(handle: Handle<Companion.Props>) {
 			</section>
 		);
 	};
+}
+
+/**
+ * The preview slug an export's live demo answers to: its subpath and page slug joined, so a
+ * demo module named `previews/mixins-sortable.tsx` leads the `sortable()` page and never shares a
+ * slug with a component.
+ */
+export function uiExportPreviewSlug(subpath: string, slug: string): string {
+	return `${subpath}-${slug}`;
 }

@@ -87,6 +87,13 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 - **Rewrite a README's links, never its text.** A package README is read on npm and on
   GitHub too, so what makes it read correctly here is the link handler in
   `app/services/article.ts`.
+- **Every new `@sdxc/ui` component and mixin ships with a live demo and a face.** A component's
+  page opens with `resources/components/previews/<slug>.tsx`, and a mixin's with
+  `previews/mixins-<slug>.tsx` (a module exporting `{ code, render }`, with its own island when
+  the mixin needs script). Its grid tile draws a face of its own: a case in
+  `resources/components/ui-export-faces/mixins.tsx` for a mixin, an entry in
+  `app/services/ui-component-face.ts` for a component. `app/services/catalogue-coverage.test.tsx`
+  fails for a new export missing either; its lists name only the exports that predate the rule.
 - **A `@sdxc/u` example is one file.** Write it as
   `resources/components/utility-examples/<utility>/<NN>-<slug>.tsx`, default-exporting a
   `UtilityExampleModule`; the page and its twin read the `title` and `description` string

@@ -400,6 +400,208 @@ function DragFace(handle: Handle<DragFace.Props>) {
 	};
 }
 
+namespace SortableFace {
+	export interface Props {}
+}
+
+/** Two lists, with a card lifting out of the first and settling at the top of the second. */
+function SortableFace(_handle: Handle<SortableFace.Props>) {
+	return () => (
+		<div mix={[hstack({ gap: 2, align: "start" }), is("100%"), maxIs("10rem")]}>
+			{[0, 1].map((column) => (
+				<div
+					key={column}
+					mix={[
+						vstack({ gap: 1, align: "stretch" }),
+						raw({
+							flex: "1",
+							padding: "0.3rem",
+							borderRadius: "0.45rem",
+							backgroundColor: "color-mix(in oklch, CanvasText 6%, transparent)",
+							position: "relative",
+							minBlockSize: "3.2rem",
+						}),
+					]}
+				>
+					{(column === 0 ? [0, 1] : [0]).map((card) => (
+						<span
+							key={card}
+							mix={[
+								raw({
+									blockSize: "0.7rem",
+									borderRadius: "0.3rem",
+									border: `1px solid ${INK_STRONG}`,
+									backgroundColor: "Canvas",
+								}),
+							]}
+						/>
+					))}
+					{column === 0 ? (
+						<span
+							mix={[
+								keyframes("ui-export-sortable", {
+									"0%, 15%": { translate: "0 0", rotate: "0deg" },
+									"45%, 55%": { translate: "60% -0.5rem", rotate: "3deg" },
+									"85%, 100%": { translate: "calc(100% + 0.5rem) -1.4rem", rotate: "0deg" },
+								}),
+								raw({
+									position: "absolute",
+									insetInline: "0.3rem",
+									insetBlockEnd: "0.3rem",
+									blockSize: "0.7rem",
+									borderRadius: "0.3rem",
+									border: `1px solid ${BRAND}`,
+									backgroundColor: "Canvas",
+									boxShadow: "0 6px 12px -8px rgb(0 0 0 / 0.45)",
+									animationName: "ui-export-sortable",
+									animationDuration: "2.6s",
+									animationIterationCount: "infinite",
+									animationDirection: "alternate",
+								}),
+							]}
+						/>
+					) : null}
+				</div>
+			))}
+		</div>
+	);
+}
+
+namespace InvokerFieldsFace {
+	export interface Props {}
+}
+
+/** A button whose value lands in the field of the dialog it opens. */
+function InvokerFieldsFace(_handle: Handle<InvokerFieldsFace.Props>) {
+	return () => (
+		<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("10rem")]}>
+			<span
+				mix={[
+					font("mono"),
+					text("xs"),
+					raw({
+						alignSelf: "start",
+						paddingInline: "0.45rem",
+						paddingBlock: "0.15rem",
+						borderRadius: "0.35rem",
+						border: `1px solid ${BRAND}`,
+						color: BRAND,
+					}),
+				]}
+			>
+				+ Done
+			</span>
+			<div
+				mix={[
+					hstack({ gap: 2, align: "center" }),
+					raw({
+						paddingInline: "0.5rem",
+						paddingBlock: "0.35rem",
+						borderRadius: "0.45rem",
+						border: `1px solid ${INK_STRONG}`,
+					}),
+				]}
+			>
+				<span
+					mix={[
+						font("mono"),
+						text("xs"),
+						keyframes("ui-export-invoker-value", {
+							"0%, 35%": { opacity: "0.35", translate: "0 -0.3rem" },
+							"55%, 100%": { opacity: "1", translate: "0 0", color: BRAND },
+						}),
+						raw({
+							animationName: "ui-export-invoker-value",
+							animationDuration: "2.4s",
+							animationIterationCount: "infinite",
+						}),
+					]}
+				>
+					Done
+				</span>
+				<span mix={[font("mono"), text("xs"), raw({ marginInlineStart: "auto", opacity: "0.55" })]}>
+					⌄
+				</span>
+			</div>
+		</div>
+	);
+}
+
+namespace RoadmapTodayFace {
+	export interface Props {}
+}
+
+/** A timeline sliding sideways until today's line settles a third of the way across. */
+function RoadmapTodayFace(_handle: Handle<RoadmapTodayFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				is("100%"),
+				maxIs("10rem"),
+				raw({
+					position: "relative",
+					blockSize: "3.2rem",
+					overflow: "hidden",
+					borderRadius: "0.45rem",
+					border: `1px solid ${INK}`,
+				}),
+			]}
+		>
+			<div
+				mix={[
+					keyframes("ui-export-roadmap-today", {
+						"0%, 20%": { translate: "0 0" },
+						"70%, 100%": { translate: "-55% 0" },
+					}),
+					raw({
+						position: "absolute",
+						insetBlock: "0",
+						insetInlineStart: "0",
+						inlineSize: "220%",
+						animationName: "ui-export-roadmap-today",
+						animationDuration: "3s",
+						animationIterationCount: "infinite",
+						animationDirection: "alternate",
+						animationTimingFunction: "ease-in-out",
+					}),
+				]}
+			>
+				{[
+					{ start: "6%", width: "28%", top: "0.55rem" },
+					{ start: "40%", width: "34%", top: "1.45rem" },
+					{ start: "78%", width: "18%", top: "2.3rem" },
+				].map((bar) => (
+					<span
+						key={bar.start}
+						mix={[
+							raw({
+								position: "absolute",
+								insetInlineStart: bar.start,
+								inlineSize: bar.width,
+								insetBlockStart: bar.top,
+								blockSize: "0.45rem",
+								borderRadius: "9999px",
+								backgroundColor: INK_STRONG,
+							}),
+						]}
+					/>
+				))}
+				<span
+					mix={[
+						raw({
+							position: "absolute",
+							insetBlock: "0",
+							insetInlineStart: "62%",
+							inlineSize: "1.5px",
+							backgroundColor: BRAND,
+						}),
+					]}
+				/>
+			</div>
+		</div>
+	);
+}
+
 namespace ResizeFace {
 	export interface Props {}
 }
@@ -1697,7 +1899,7 @@ namespace GenericFace {
 /** Last-resort pulse when nothing more specific fits. */
 function GenericFace(handle: Handle<GenericFace.Props>) {
 	return () => (
-		<div mix={[vstack({ gap: 2, align: "center" })]}>
+		<div data-face="generic" mix={[vstack({ gap: 2, align: "center" })]}>
 			<span
 				mix={[
 					keyframes("ui-export-generic", {
@@ -1789,6 +1991,15 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 			case "splitViewKeys":
 			case "statusStripKeys":
 				body = <Keycaps keys={["↑", "↓", "↵"]} />;
+				break;
+			case "roadmapToday":
+				body = <RoadmapTodayFace />;
+				break;
+			case "sortable":
+				body = <SortableFace />;
+				break;
+			case "invokerFields":
+				body = <InvokerFieldsFace />;
 				break;
 			case "dragReorder":
 				body = <DragFace kind="reorder" />;
