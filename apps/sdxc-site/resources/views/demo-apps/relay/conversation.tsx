@@ -57,7 +57,6 @@ import {
 	findContact,
 	findTeammate,
 } from "~/resources/views/demo-apps/relay/data";
-import { Ghost } from "~/resources/views/demo-apps/relay/ghost";
 import { TOGGLE_LABELS } from "~/resources/views/demo-apps/relay/labels";
 import { actionHref, conversationPage, href } from "~/resources/views/demo-apps/relay/views";
 
@@ -337,8 +336,8 @@ export function ConversationHeader(
 		let contact = findContact(conversation.contactId);
 		let company = contact ? findCompany(contact.companyId) : undefined;
 		let assignee = conversation.assigneeId ? findTeammate(conversation.assigneeId) : undefined;
-		let shown = (node: RemixNode) => (ghost ? <Ghost>{node}</Ghost> : node);
-		let badge = (node: RemixNode) => (ghost ? <Ghost box>{node}</Ghost> : node);
+		let shown = (node: RemixNode) => (ghost ? <Skeleton.Text>{node}</Skeleton.Text> : node);
+		let badge = (node: RemixNode) => (ghost ? <Skeleton.Text block>{node}</Skeleton.Text> : node);
 		let subjectMix = [
 			m(0),
 			text("xl"),

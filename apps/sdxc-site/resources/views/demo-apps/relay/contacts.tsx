@@ -44,7 +44,6 @@ import {
 	findTeammate,
 	planOf,
 } from "~/resources/views/demo-apps/relay/data";
-import { Ghost } from "~/resources/views/demo-apps/relay/ghost";
 import {
 	FILTER_LABELS,
 	SHEET_LABELS,
@@ -177,7 +176,7 @@ export function ContactProperties(handle: Handle<{ contact: Contact; ghost?: boo
 		let { contact, ghost = false } = handle.props;
 		let company = findCompany(contact.companyId);
 		let plan = planOf(contact);
-		let shown = (node: RemixNode) => (ghost ? <Ghost>{node}</Ghost> : node);
+		let shown = (node: RemixNode) => (ghost ? <Skeleton.Text>{node}</Skeleton.Text> : node);
 		let badge = (
 			<Badge variant="secondary" color={plan === "Enterprise" ? "brand" : "neutral"}>
 				{plan}
@@ -189,7 +188,7 @@ export function ContactProperties(handle: Handle<{ contact: Contact; ghost?: boo
 				<PropertyList.Item label="Email">{shown(contact.email)}</PropertyList.Item>
 				<PropertyList.Item label="Company">{shown(company?.name)}</PropertyList.Item>
 				<PropertyList.Item label="Plan">
-					{ghost ? <Ghost box>{badge}</Ghost> : badge}
+					{ghost ? <Skeleton.Text block>{badge}</Skeleton.Text> : badge}
 				</PropertyList.Item>
 				<PropertyList.Item label="Role">{shown(contact.title)}</PropertyList.Item>
 				<PropertyList.Item label="Location">{shown(contact.location)}</PropertyList.Item>
@@ -300,7 +299,7 @@ export function ContactActivity(handle: Handle<{ contact: Contact; ghost?: boole
 	return () => {
 		let { contact, ghost = false } = handle.props;
 		let events = activityOf(contact);
-		let shown = (node: RemixNode) => (ghost ? <Ghost>{node}</Ghost> : node);
+		let shown = (node: RemixNode) => (ghost ? <Skeleton.Text>{node}</Skeleton.Text> : node);
 		let event = (item: ActivityEvent) => (
 			<Timeline.Event
 				icon={ghost ? <span /> : activityIcon(item.kind)}
@@ -339,7 +338,7 @@ export function ContactSheetBody(handle: Handle<{ contact: Contact; ghost?: bool
 				<ContactProperties contact={contact} ghost={ghost} />
 				{ghost ? (
 					<div mix={headingMix}>
-						<Ghost>Activity</Ghost>
+						<Skeleton.Text>Activity</Skeleton.Text>
 					</div>
 				) : (
 					<h3 mix={headingMix}>Activity</h3>

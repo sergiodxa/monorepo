@@ -16,12 +16,13 @@ import { grow, hstack, vstack } from "@sdxc/u/layout";
 import { m, p, pb, pi } from "@sdxc/u/size";
 import { text, truncate, weight } from "@sdxc/u/typography";
 import { Badge, LinkButton, Typeset } from "@sdxc/ui";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 import { CodeBlock } from "@sdxc/ui/docs/code-block";
 
 import type { Conversation } from "~/resources/views/demo-apps/tern/data";
 
 import { href } from "~/resources/views/demo-apps/tern/data";
-import { Ghost, GhostBlock } from "~/resources/views/demo-apps/tern/ghost";
+import { GhostBlock } from "~/resources/views/demo-apps/tern/ghost";
 
 /** The code block's copy strings. */
 const CODE_LABELS = { copy: "Copy code", copied: "Copied" };
@@ -53,7 +54,7 @@ function CanvasHeader(handle: Handle<CanvasPane.Props>) {
 			>
 				{ghost ? (
 					<div mix={titleMix}>
-						<Ghost>{canvas.title}</Ghost>
+						<Skeleton.Text>{canvas.title}</Skeleton.Text>
 					</div>
 				) : (
 					<h2 id="tern-canvas-title" mix={titleMix}>
@@ -61,7 +62,7 @@ function CanvasHeader(handle: Handle<CanvasPane.Props>) {
 					</h2>
 				)}
 				<Badge variant="secondary" color="neutral">
-					{ghost ? <Ghost>{`v${canvas.version}`}</Ghost> : `v${canvas.version}`}
+					{ghost ? <Skeleton.Text>{`v${canvas.version}`}</Skeleton.Text> : `v${canvas.version}`}
 				</Badge>
 				<span mix={[grow()]} />
 				{ghost ? (
@@ -121,7 +122,7 @@ function CanvasNote(handle: Handle<{ ghost?: boolean }>) {
 		let note = "Edited by Tern from the conversation. Copy it out to keep your changes.";
 		return (
 			<p mix={[m(0), pi(4), pb(3), text("xs"), fg("neutral.muted")]}>
-				{handle.props.ghost ? <Ghost>{note}</Ghost> : note}
+				{handle.props.ghost ? <Skeleton.Text>{note}</Skeleton.Text> : note}
 			</p>
 		);
 	};

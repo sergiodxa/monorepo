@@ -20,6 +20,7 @@ import { leading, text, truncate, weight } from "@sdxc/u/typography";
 import { Button, HeadingScope, Input, LinkButton, RelativeTime } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 import { PageHeader } from "@sdxc/ui/app/page-header";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 import { SplitView } from "@sdxc/ui/app/split-view";
 
 import type { Conversation, Project } from "~/resources/views/demo-apps/tern/data";
@@ -41,7 +42,6 @@ import {
 	href,
 	searchConversations,
 } from "~/resources/views/demo-apps/tern/data";
-import { Ghost } from "~/resources/views/demo-apps/tern/ghost";
 import { SPLIT_LABELS } from "~/resources/views/demo-apps/tern/labels";
 import { TernMark, TernShell } from "~/resources/views/demo-apps/tern/shell";
 import { isSaved, threadTitle } from "~/resources/views/demo-apps/tern/thread";
@@ -334,7 +334,7 @@ export function SearchScreen(handle: Handle<{ query: string; collapsed: boolean 
 export function ProjectFiles(handle: Handle<{ project: Project; ghost?: boolean }>) {
 	return () => {
 		let { project, ghost = false } = handle.props;
-		let shown = (value: string) => (ghost ? <Ghost>{value}</Ghost> : value);
+		let shown = (value: string) => (ghost ? <Skeleton.Text>{value}</Skeleton.Text> : value);
 		return (
 			<ul
 				aria-label={ghost ? undefined : "Project files"}

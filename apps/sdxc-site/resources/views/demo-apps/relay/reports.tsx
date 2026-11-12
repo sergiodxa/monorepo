@@ -18,6 +18,7 @@ import { HeadingScope, LinkButton } from "@sdxc/ui";
 import { Chart } from "@sdxc/ui/app/chart";
 import { Empty } from "@sdxc/ui/app/empty";
 import { PageHeader } from "@sdxc/ui/app/page-header";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 import { StatCard } from "@sdxc/ui/app/stat-card";
 import { Table } from "@sdxc/ui/app/table";
 
@@ -26,7 +27,6 @@ import {
 	DAILY_CONVERSATIONS,
 	PREVIOUS_DAILY_CONVERSATIONS,
 } from "~/resources/views/demo-apps/relay/data";
-import { Ghost } from "~/resources/views/demo-apps/relay/ghost";
 import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
 import { conversationsIn, findView, href } from "~/resources/views/demo-apps/relay/views";
 
@@ -196,7 +196,7 @@ function figures(): Figure[] {
 export function ReportStats(handle: Handle<{ ghost?: boolean }>) {
 	return () => {
 		let ghost = handle.props.ghost ?? false;
-		let shown = (node: string) => (ghost ? <Ghost>{node}</Ghost> : node);
+		let shown = (node: string) => (ghost ? <Skeleton.Text>{node}</Skeleton.Text> : node);
 
 		return (
 			<StatCard.Group
@@ -254,10 +254,10 @@ export function ChartPlaceholder() {
 			/>
 			<div mix={[text("xs"), raw({ visibility: "hidden" })]}>&nbsp;</div>
 			<div mix={[text("sm")]}>
-				<Ghost>
+				<Skeleton.Text>
 					<span mix={[weight("medium")]}>{CHART_CAPTION[0]}</span>
 					{CHART_CAPTION[1]}
-				</Ghost>
+				</Skeleton.Text>
 			</div>
 		</div>
 	);

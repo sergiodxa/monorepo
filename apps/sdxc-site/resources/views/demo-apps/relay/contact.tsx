@@ -19,6 +19,7 @@ import { hover } from "@sdxc/u/state";
 import { text, truncate, weight } from "@sdxc/u/typography";
 import { Badge, LinkButton, RelativeTime } from "@sdxc/ui";
 import { PageHeader } from "@sdxc/ui/app/page-header";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 
 import type { Contact, Conversation } from "~/resources/views/demo-apps/relay/data";
 
@@ -31,7 +32,6 @@ import {
 	planOf,
 	updatedAt,
 } from "~/resources/views/demo-apps/relay/data";
-import { Ghost } from "~/resources/views/demo-apps/relay/ghost";
 import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
 import { href } from "~/resources/views/demo-apps/relay/views";
 
@@ -77,7 +77,7 @@ export function ContactConversations(handle: Handle<{ contact: Contact; ghost?: 
 	return () => {
 		let { contact, ghost = false } = handle.props;
 		let conversations = conversationsOf(contact.id);
-		let shown = (node: RemixNode) => (ghost ? <Ghost>{node}</Ghost> : node);
+		let shown = (node: RemixNode) => (ghost ? <Skeleton.Text>{node}</Skeleton.Text> : node);
 		let rowMix = [
 			hstack({ gap: 3, align: "center" }),
 			pi(4),
@@ -110,7 +110,7 @@ export function ContactConversations(handle: Handle<{ contact: Contact; ghost?: 
 							<span mix={[truncate(), text("sm"), weight("medium"), raw({ flex: "1 1 auto" })]}>
 								{shown(conversation.subject)}
 							</span>
-							{ghost ? <Ghost box>{badge}</Ghost> : badge}
+							{ghost ? <Skeleton.Text block>{badge}</Skeleton.Text> : badge}
 							<span mix={[text("xs"), fg("neutral.muted")]}>
 								{shown(<RelativeTime date={updatedAt(conversation)} now={NOW} locale="en" />)}
 							</span>

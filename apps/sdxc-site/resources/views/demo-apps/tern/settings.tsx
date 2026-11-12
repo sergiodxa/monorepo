@@ -21,10 +21,10 @@ import { DangerZone } from "@sdxc/ui/app/danger-zone";
 import { PageHeader } from "@sdxc/ui/app/page-header";
 import { SettingsLayout } from "@sdxc/ui/app/settings-layout";
 import { SettingsSection } from "@sdxc/ui/app/settings-section";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import { MODELS, PERSON, actionHref, href } from "~/resources/views/demo-apps/tern/data";
-import { Ghost } from "~/resources/views/demo-apps/tern/ghost";
 import { SETTINGS_LABELS } from "~/resources/views/demo-apps/tern/labels";
 import { TernShell } from "~/resources/views/demo-apps/tern/shell";
 
@@ -45,7 +45,7 @@ const USAGE = [
 export function UsagePanel(handle: Handle<{ ghost?: boolean }>) {
 	return () => {
 		let ghost = handle.props.ghost ?? false;
-		let shown = (value: string) => (ghost ? <Ghost>{value}</Ghost> : value);
+		let shown = (value: string) => (ghost ? <Skeleton.Text>{value}</Skeleton.Text> : value);
 		return (
 			<ul
 				aria-label={ghost ? undefined : "Messages this month"}
