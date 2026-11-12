@@ -23,6 +23,7 @@ import {
 	BOARD_DROP_TARGET_ATTRIBUTE,
 	BOARD_MOVE_FIELD_ATTRIBUTE,
 	BOARD_MOVE_FORM_ATTRIBUTE,
+	BOARD_MOVE_POSITION_ATTRIBUTE,
 	boardDrag,
 } from "./mixins/board-drag.js";
 
@@ -92,6 +93,13 @@ export namespace Board {
 		 * `fields`, so a reader of the post takes the field's last value.
 		 */
 		name: string;
+		/**
+		 * The field a move sends the value of the card it lands before in, empty when it lands
+		 * last, such as `"before"`. With it, a drag places the card where the pointer is, a card
+		 * moves within its column, and Shift+ArrowUp/Down reorder; without it, a moved card lands
+		 * at the top of its new column.
+		 */
+		position?: string;
 		/** Hidden fields posted with every move, such as the page to return to. */
 		fields?: Record<string, string>;
 	}
@@ -417,6 +425,7 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 								attrs({
 									[BOARD_MOVE_FORM_ATTRIBUTE]: value,
 									[BOARD_MOVE_FIELD_ATTRIBUTE]: move.name,
+									[BOARD_MOVE_POSITION_ATTRIBUTE]: move.position,
 								}),
 							]}
 						>

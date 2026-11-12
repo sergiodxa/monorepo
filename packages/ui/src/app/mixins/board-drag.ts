@@ -1,7 +1,8 @@
 /**
  * Pointer drag between a Board's columns: a press that travels past a few pixels lifts the
  * card under a ghost that follows the pointer, the column under it lights up, and the drop
- * moves the card there at once and posts the card's own move form.
+ * moves the card there at once and posts the card's own move form. A form that names a position
+ * field also places the card between the cards under the pointer, and sends the card it precedes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,6 +28,12 @@ export const BOARD_MOVE_FORM_ATTRIBUTE = "data-board-move";
  * form, after the form's own fields, and the next render of the form drops it again.
  */
 export const BOARD_MOVE_FIELD_ATTRIBUTE = "data-board-move-field";
+
+/**
+ * Attribute a card's move form names its position field with. A move sends the value of the
+ * card it lands before in that field, or an empty value when it lands last.
+ */
+export const BOARD_MOVE_POSITION_ATTRIBUTE = "data-board-move-position";
 
 /** Attribute set on the card being dragged, for as long as the drag lasts. */
 export const BOARD_DRAGGING_ATTRIBUTE = "data-board-dragging";
@@ -63,15 +70,18 @@ export class BoardMoveEvent extends Event {
 	readonly from: string;
 	/** The column it landed in. */
 	readonly to: string;
+	/** The card it landed before, `null` when it landed last or the board places no positions. */
+	readonly before: string | null;
 
 	/**
-	 * @param init The card and the two columns.
+	 * @param init The card, the two columns, and the card it landed before.
 	 */
-	constructor(init: { card: string; from: string; to: string }) {
+	constructor(init: { card: string; from: string; to: string; before?: string | null }) {
 		super(MOVE_EVENT, { bubbles: true, cancelable: true });
 		this.card = init.card;
 		this.from = init.from;
 		this.to = init.to;
+		this.before = init.before ?? null;
 	}
 }
 
@@ -86,6 +96,10 @@ interface Press {
 	offsetY: number;
 	ghost?: HTMLElement;
 	target?: HTMLElement | null;
+	/** Where the card sat before the press, to put it back on a cancel. */
+	origin: { parent: Node | null; next: Node | null };
+	/** Whether the card's form takes a position, so the drag places the card as it goes. */
+	positioned: boolean;
 }
 
 /** Options for {@link boardDrag}. */
@@ -160,10 +174,13 @@ function connect(
 ): void {
 	let press: (Press & { board: HTMLElement }) | undefined;
 
-	/** Ends the press: clears every drag mark, and moves the card when it was dropped elsewhere. */
+	/**
+	 * Ends the press: clears every drag mark, then saves the move when the card was dropped
+	 * somewhere new, or puts a placed card back where it started.
+	 */
 	function end(drop: boolean): void {
 		if (!press) return;
-		let { board, card, from, ghost, target } = press;
+		let { board, card, from, ghost, target, origin, positioned } = press;
 		press = undefined;
 		ghost?.remove();
 		card.removeAttribute(BOARD_DRAGGING_ATTRIBUTE);
@@ -173,7 +190,17 @@ function connect(
 		}
 		if (!ghost) return;
 		suppressNextClick(card);
-		if (drop && target && target !== from) move(card, from, target);
+		if (!positioned) {
+			if (drop && target && target !== from) move(card, from, target, firstCard(target, card));
+			return;
+		}
+		let to = card.closest<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`);
+		let moved = card.parentNode !== origin.parent || card.nextSibling !== origin.next;
+		if (drop && to && moved) {
+			move(card, from, to, nextCard(card));
+			return;
+		}
+		origin.parent?.insertBefore(card, origin.next);
 	}
 
 	/** Records a mouse or pen press on a card, outside the card's own controls. */
@@ -191,6 +218,8 @@ function connect(
 			board,
 			card,
 			from,
+			origin: { parent: card.parentNode, next: card.nextSibling },
+			positioned: moveForm(card)?.hasAttribute(BOARD_MOVE_POSITION_ATTRIBUTE) ?? false,
 			pointerId: event.pointerId,
 			x: event.clientX,
 			y: event.clientY,
@@ -220,6 +249,7 @@ function connect(
 			if (target && target !== press.from) target.setAttribute(BOARD_DROP_TARGET_ATTRIBUTE, "");
 			press.target = target;
 		}
+		if (press.positioned && target) place(press.card, target, event.clientY);
 		scrollNearEdge(press.board, event.clientX);
 	}
 
@@ -241,23 +271,25 @@ function connect(
 		end(false);
 	}
 
-	/** Moves the focused card one column over on Shift+ArrowLeft or Shift+ArrowRight. */
+	/**
+	 * Moves the focused card on Shift+Arrow: left and right to the top of the next column over,
+	 * and, on a board that places positions, up and down past its neighbour in the column.
+	 */
 	function onMoveKey(event: KeyboardEvent): void {
 		if (!event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return;
-		if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+		if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
 		let board = findBoard();
 		let focused = document.activeElement;
 		let card = focused?.closest<HTMLElement>(`[${BOARD_CARD_ATTRIBUTE}]`);
 		let from = card?.closest<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`);
 		if (!board || !card || !from || !board.contains(card)) return;
 		if (focused?.matches("input, textarea, select, [contenteditable]")) return;
-		let columns = [...board.querySelectorAll<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`)];
-		let to = columns[columns.indexOf(from) + (event.key === "ArrowLeft" ? -1 : 1)];
-		if (!to) return;
+		let target = keyTarget(board, card, from, event.key);
+		if (!target) return;
 		event.preventDefault();
-		move(card, from, to);
+		move(card, from, target.column, target.before);
 		if (focused instanceof HTMLElement) focused.focus({ preventScroll: false });
-		announce(board, to, readOptions().moved);
+		announce(board, target.column, readOptions().moved);
 	}
 
 	document.addEventListener("pointerdown", onPointerDown, { signal });
@@ -322,37 +354,117 @@ function suppressNextClick(card: HTMLElement): void {
 }
 
 /**
- * Moves the card into the target column at once, bumps both counts, then posts the card's move
- * form with the target's value unless a listener prevented the move event.
+ * Puts the card in the target column before `before` (last when `null`) at once, bumps both
+ * counts when it changed column, then posts the card's move form with the column's value and,
+ * when the form takes one, the position, unless a listener prevented the move event.
  */
-function move(card: HTMLElement, from: HTMLElement, to: HTMLElement): void {
-	let value = card.getAttribute(BOARD_CARD_ATTRIBUTE) ?? "";
+function move(
+	card: HTMLElement,
+	from: HTMLElement,
+	to: HTMLElement,
+	before: HTMLElement | null,
+): void {
+	let form = moveForm(card);
+	let positioned = form?.hasAttribute(BOARD_MOVE_POSITION_ATTRIBUTE) ?? false;
 	let event = new BoardMoveEvent({
-		card: value,
+		card: card.getAttribute(BOARD_CARD_ATTRIBUTE) ?? "",
 		from: from.getAttribute(BOARD_COLUMN_ATTRIBUTE) ?? "",
 		to: to.getAttribute(BOARD_COLUMN_ATTRIBUTE) ?? "",
+		before: positioned ? (before?.getAttribute(BOARD_CARD_ATTRIBUTE) ?? null) : null,
 	});
 	if (!card.dispatchEvent(event)) return;
 
-	let cards = to.querySelector('[data-slot="board-cards"]');
-	cards?.insertBefore(card, cards.firstChild);
-	bumpCount(from, -1);
-	bumpCount(to, 1);
+	to.querySelector('[data-slot="board-cards"]')?.insertBefore(card, before);
+	if (from !== to) {
+		bumpCount(from, -1);
+		bumpCount(to, 1);
+	}
 	if (!prefersReducedMotion()) {
 		card.animate?.([{ opacity: 0.4 }, { opacity: 1 }], { duration: 180, easing: "ease-out" });
 	}
 
-	let form = document.querySelector<HTMLFormElement>(
-		`form[${BOARD_MOVE_FORM_ATTRIBUTE}="${CSS.escape(value)}"]`,
-	);
 	let name = form?.getAttribute(BOARD_MOVE_FIELD_ATTRIBUTE);
 	if (!form || !name) return;
+	form.appendChild(hiddenInput(name, event.to));
+	let position = form.getAttribute(BOARD_MOVE_POSITION_ATTRIBUTE);
+	if (position) form.appendChild(hiddenInput(position, event.before ?? ""));
+	form.requestSubmit();
+}
+
+/** A hidden field, appended after the form's own so a reader of the post takes its value last. */
+function hiddenInput(name: string, value: string): HTMLInputElement {
 	let input = document.createElement("input");
 	input.type = "hidden";
 	input.name = name;
-	input.value = event.to;
-	form.appendChild(input);
-	form.requestSubmit();
+	input.value = value;
+	return input;
+}
+
+/** The card's own move form, when it has one. */
+function moveForm(card: HTMLElement): HTMLFormElement | null {
+	let value = card.getAttribute(BOARD_CARD_ATTRIBUTE) ?? "";
+	return document.querySelector<HTMLFormElement>(
+		`form[${BOARD_MOVE_FORM_ATTRIBUTE}="${CSS.escape(value)}"]`,
+	);
+}
+
+/** The cards of a column, in order, leaving `except` out. */
+function cardsOf(column: HTMLElement, except?: HTMLElement): HTMLElement[] {
+	return [
+		...column.querySelectorAll<HTMLElement>(
+			`[data-slot="board-cards"] > [${BOARD_CARD_ATTRIBUTE}]`,
+		),
+	].filter((card) => card !== except);
+}
+
+/** The column's first card other than `except`, before which a card lands at the top. */
+function firstCard(column: HTMLElement, except: HTMLElement): HTMLElement | null {
+	return cardsOf(column, except)[0] ?? null;
+}
+
+/** The card right after `card` in its column, or `null` when it is last. */
+function nextCard(card: HTMLElement): HTMLElement | null {
+	let next = card.nextElementSibling;
+	while (next && !next.hasAttribute(BOARD_CARD_ATTRIBUTE)) next = next.nextElementSibling;
+	return next instanceof HTMLElement ? next : null;
+}
+
+/** Moves the dragged card into `column` before the first card whose middle is below `y`. */
+function place(card: HTMLElement, column: HTMLElement, y: number): void {
+	let list = column.querySelector('[data-slot="board-cards"]');
+	if (!list) return;
+	let before =
+		cardsOf(column, card).find((other) => {
+			let rect = other.getBoundingClientRect();
+			return y < rect.top + rect.height / 2;
+		}) ?? null;
+	if (card.parentNode === list && nextCard(card) === before) return;
+	list.insertBefore(card, before);
+}
+
+/**
+ * Where a Shift+Arrow key sends a card: the top of the column to either side, or past its
+ * neighbour above or below when its form takes a position.
+ */
+function keyTarget(
+	board: HTMLElement,
+	card: HTMLElement,
+	from: HTMLElement,
+	key: string,
+): { column: HTMLElement; before: HTMLElement | null } | null {
+	if (key === "ArrowLeft" || key === "ArrowRight") {
+		let columns = [...board.querySelectorAll<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`)];
+		let column = columns[columns.indexOf(from) + (key === "ArrowLeft" ? -1 : 1)];
+		return column ? { column, before: firstCard(column, card) } : null;
+	}
+	if (!moveForm(card)?.hasAttribute(BOARD_MOVE_POSITION_ATTRIBUTE)) return null;
+	let cards = cardsOf(from);
+	let index = cards.indexOf(card);
+	if (key === "ArrowUp") {
+		return index > 0 ? { column: from, before: cards[index - 1]! } : null;
+	}
+	if (index === cards.length - 1) return null;
+	return { column: from, before: cards[index + 2] ?? null };
 }
 
 /** Says where a keyboard move put the card, through the board's own live region. */

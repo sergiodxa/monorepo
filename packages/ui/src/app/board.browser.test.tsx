@@ -99,6 +99,58 @@ function drag(card: Element, column: Element, release = true) {
 	if (release) pointer(document, "pointerup", to);
 }
 
+/** Mounts a board whose cards' forms take a position: three cards in Todo, one in progress. */
+function mountPositioned(): HTMLElement {
+	let move = (id: string) => ({ action: `/move/${id}`, name: "status", position: "before" });
+	mounted = render(
+		<div style="inline-size:900px">
+			<Board id="test-board" label="Issues by status" labels={{ moved: "Moved to {column}" }}>
+				<Board.Column value="todo" title="Todo" count={3} empty="No issues">
+					{["A-1", "A-2", "A-3"].map((id) => (
+						<Board.Card value={id} move={move(id)}>
+							<a href={`#${id}`}>{id}</a>
+						</Board.Card>
+					))}
+				</Board.Column>
+				<Board.Column value="started" title="In progress" count={1} empty="No issues">
+					<Board.Card value="B-1" move={move("B-1")}>
+						<a href="#b-1">B-1</a>
+					</Board.Card>
+				</Board.Column>
+			</Board>
+		</div>,
+	);
+	return mounted.container.querySelector<HTMLElement>('[data-slot="board"]')!;
+}
+
+/** The card values of a column, in order. */
+function order(column: Element): string[] {
+	return [...column.querySelectorAll("[data-board-card]")].map((card) =>
+		card.getAttribute("data-board-card")!,
+	);
+}
+
+/** Collects what each card's move form posts, keeping the page where it is. */
+function capturePosts(board: HTMLElement): Map<string, Array<[string, FormDataEntryValue]>> {
+	let posts = new Map<string, Array<[string, FormDataEntryValue]>>();
+	for (let form of board.querySelectorAll<HTMLFormElement>("form[data-board-move]")) {
+		form.addEventListener("submit", (event) => {
+			event.preventDefault();
+			posts.set(form.getAttribute("data-board-move")!, [...new FormData(form).entries()]);
+		});
+	}
+	return posts;
+}
+
+/** Drags a card to a point, stepping the pointer so the drag passes its threshold. */
+function dragTo(card: Element, to: { x: number; y: number }, release = true) {
+	let from = centre(card);
+	pointer(card, "pointerdown", from);
+	pointer(document, "pointermove", { x: from.x + 10, y: from.y + 10 });
+	pointer(document, "pointermove", to);
+	if (release) pointer(document, "pointerup", to);
+}
+
 describe("Board", () => {
 	test("lays its columns side by side at their set width, scrolling inside the board", () => {
 		let board = mount(800);
@@ -278,5 +330,91 @@ describe("Board", () => {
 		);
 		pointer(document, "pointermove", { x: 400, y: 400 });
 		expect(document.querySelector("[data-board-ghost]")).toBeNull();
+	});
+});
+
+describe("Board with positions", () => {
+	test("a drag places the card between the cards under the pointer, and the drop sends its neighbour", async () => {
+		let board = mountPositioned();
+		await settle();
+		let todo = board.querySelector('[data-board-column="todo"]')!;
+		let posts = capturePosts(board);
+		let first = board.querySelector('[data-board-card="A-1"]')!.getBoundingClientRect();
+
+		dragTo(board.querySelector('[data-board-card="A-3"]')!, {
+			x: first.left + 20,
+			y: first.top + 4,
+		});
+
+		expect(order(todo)).toEqual(["A-3", "A-1", "A-2"]);
+		expect(posts.get("A-3")).toEqual([
+			["status", "todo"],
+			["before", "A-1"],
+		]);
+		expect(todo.querySelector('[data-slot="board-count"]')!.textContent).toBe("3");
+	});
+
+	test("a card dropped under a column's last card lands last and sends no neighbour", async () => {
+		let board = mountPositioned();
+		await settle();
+		let started = board.querySelector('[data-board-column="started"]')!;
+		let posts = capturePosts(board);
+		let last = board.querySelector('[data-board-card="B-1"]')!.getBoundingClientRect();
+
+		dragTo(board.querySelector('[data-board-card="A-1"]')!, {
+			x: last.left + 20,
+			y: last.bottom + 20,
+		});
+
+		expect(order(started)).toEqual(["B-1", "A-1"]);
+		expect(posts.get("A-1")).toEqual([
+			["status", "started"],
+			["before", ""],
+		]);
+		expect(started.querySelector('[data-slot="board-count"]')!.textContent).toBe("2");
+	});
+
+	test("Escape puts a placed card back where it started, posting nothing", async () => {
+		let board = mountPositioned();
+		await settle();
+		let todo = board.querySelector('[data-board-column="todo"]')!;
+		let posts = capturePosts(board);
+		let first = board.querySelector('[data-board-card="A-1"]')!.getBoundingClientRect();
+
+		dragTo(
+			board.querySelector('[data-board-card="A-3"]')!,
+			{ x: first.left + 20, y: first.top + 4 },
+			false,
+		);
+		expect(order(todo)).toEqual(["A-3", "A-1", "A-2"]);
+		document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+		expect(order(todo)).toEqual(["A-1", "A-2", "A-3"]);
+		expect(posts.size).toBe(0);
+	});
+
+	test("Shift+ArrowUp and Down reorder a card, and Shift+ArrowRight lands it on top", async () => {
+		let board = mountPositioned();
+		await settle();
+		let todo = board.querySelector('[data-board-column="todo"]')!;
+		let started = board.querySelector('[data-board-column="started"]')!;
+		let posts = capturePosts(board);
+		let link = board.querySelector<HTMLElement>('[data-board-card="A-2"] a')!;
+		let press = (key: string) =>
+			link.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey: true, bubbles: true }));
+		link.focus();
+
+		press("ArrowUp");
+		expect(order(todo)).toEqual(["A-2", "A-1", "A-3"]);
+		expect(posts.get("A-2")?.at(-1)).toEqual(["before", "A-1"]);
+
+		press("ArrowDown");
+		expect(order(todo)).toEqual(["A-1", "A-2", "A-3"]);
+		expect(posts.get("A-2")?.at(-1)).toEqual(["before", "A-3"]);
+
+		press("ArrowRight");
+		expect(order(started)).toEqual(["A-2", "B-1"]);
+		expect(posts.get("A-2")?.at(-1)).toEqual(["before", "B-1"]);
+		expect(document.activeElement).toBe(link);
 	});
 });
