@@ -328,3 +328,35 @@ describe("OptimisticToggle", () => {
 		expect(button(form).getAttribute("aria-pressed")).toBe("false");
 	});
 });
+
+describe("OptimisticToggle variant", () => {
+	test("draws a solid button that stays neutral while off and takes the brand once on", async () => {
+		WORKER.use(http.post("/people/hana/follow", () => new HttpResponse(null, { status: 204 })));
+		let mounted = render(
+			<OptimisticToggle
+				action="/people/hana/follow"
+				name="following"
+				pressed={false}
+				variant="solid"
+				labels={{ label: "Follow Hana", pressed: "Unfollow Hana", failed: "Failed" }}
+				pressedContent="Following"
+				unpressedContent="Follow"
+			/>,
+		);
+		cleanups.push(mounted.cleanup);
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+		let form = mounted.container.querySelector("form")!;
+
+		expect(button(form).dataset.variant).toBe("solid");
+		expect(button(form).dataset.color).toBe("neutral");
+		button(form).click();
+		await expect.poll(() => button(form).dataset.color).toBe("brand");
+		expect(button(form).dataset.variant).toBe("solid");
+	});
+
+	test("stays a ghost button when no variant is given", async () => {
+		let form = await mount();
+
+		expect(button(form).dataset.variant).toBe("ghost");
+	});
+});

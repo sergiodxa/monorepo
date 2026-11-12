@@ -16,6 +16,8 @@ import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 import { clientEntry } from "remix/component";
 
+import type { Button as ButtonTypes } from "../components/button.js";
+
 import { Button } from "../components/button.js";
 
 import { optimisticToggleSync, toneOf } from "./mixins/optimistic-toggle-sync.js";
@@ -47,6 +49,13 @@ export type OptimisticToggleProps = {
 	pressedContent?: RemixNode;
 	/** What the button shows while off, such as an outlined star; the label text when omitted. */
 	unpressedContent?: RemixNode;
+	/**
+	 * The button's look in both states, its tone still neutral while off and brand while on:
+	 * `solid` for a Follow that should read as the row's one action. @default "ghost"
+	 */
+	variant?: ButtonTypes.Variant;
+	/** @default "sm" */
+	size?: ButtonTypes.Size;
 };
 
 /**
@@ -62,8 +71,17 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 	"@sdxc/ui/app/optimistic-toggle#OptimisticToggle",
 	function OptimisticToggle(handle) {
 		return () => {
-			let { action, name, pressed, fields, labels, pressedContent, unpressedContent } =
-				handle.props;
+			let {
+				action,
+				name,
+				pressed,
+				fields,
+				labels,
+				pressedContent,
+				unpressedContent,
+				variant = "ghost",
+				size = "sm",
+			} = handle.props;
 			let hasContent = pressedContent !== undefined || unpressedContent !== undefined;
 			let pressedLabel = labels.pressed ?? labels.label;
 			let currentLabel = pressed ? pressedLabel : labels.label;
@@ -95,8 +113,8 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 					<input type="hidden" name={name} value={pressed ? "false" : "true"} data-toggle-next="" />
 					<Button
 						type="submit"
-						size="sm"
-						variant="ghost"
+						size={size}
+						variant={variant}
 						color={toneOf(pressed, false)}
 						aria-pressed={pressed ? "true" : "false"}
 						aria-label={hasContent ? currentLabel : undefined}
