@@ -68,10 +68,32 @@ export interface UserTurn {
 	files?: FileRef[];
 }
 
+/** One thing Tern did before answering. */
+export interface ActivityStep {
+	/** Picks the glyph; `think` draws none, for a step that only marks progress. */
+	kind: "search" | "read" | "run" | "think";
+	label: string;
+	/** A command's output, which the step opens onto. */
+	output?: string;
+	/** The commands a grouped step ran, each opening onto nothing more. */
+	runs?: string[];
+	/** How long a replay dwells on it, in milliseconds. */
+	ms?: number;
+}
+
+/** What Tern did before answering, which the reply's "Thought for" disclosure lists. */
+export interface TurnActivity {
+	seconds: number;
+	/** Tern's own words on its plan, first person. */
+	note?: string;
+	steps: ActivityStep[];
+}
+
 /** What Tern answered. */
 export interface AssistantTurn {
 	role: "assistant";
 	blocks: Block[];
+	activity?: TurnActivity;
 	model: ModelId;
 	rating?: "up" | "down";
 	/** Whether the reply produced the conversation's canvas document. */
@@ -249,6 +271,25 @@ input.addEventListener("input", () => search(input.value));`,
 				role: "assistant",
 				model: "soar",
 				canvas: true,
+				activity: {
+					seconds: 14,
+					note: "I'll check how the case-study search calls the API, then write a hook that cancels the request it no longer needs.",
+					steps: [
+						{ kind: "read", label: "Read case-studies/search.tsx" },
+						{
+							kind: "run",
+							label: "Ran the search tests",
+							output:
+								"✓ debounces typing (3 ms)\n✗ ignores a stale response (12 ms)\n\n1 failed, 1 passed",
+						},
+						{ kind: "think", label: "Planned the abort" },
+						{
+							kind: "run",
+							label: "Ran 2 commands",
+							runs: ["bun test search", "bun test search --watch=false"],
+						},
+					],
+				},
 				blocks: [
 					{ type: "h", text: "Cancel the stale request" },
 					{
@@ -304,6 +345,13 @@ input.addEventListener("input", () => search(input.value));`,
 				role: "assistant",
 				model: "soar",
 				canvas: true,
+				activity: {
+					seconds: 9,
+					steps: [
+						{ kind: "read", label: "Read launch-email-draft.docx" },
+						{ kind: "think", label: "Cut it to what is new" },
+					],
+				},
 				blocks: [
 					{
 						type: "p",
@@ -357,6 +405,21 @@ input.addEventListener("input", () => search(input.value));`,
 			{
 				role: "assistant",
 				model: "dive",
+				activity: {
+					seconds: 38,
+					note: "I'll find the days everyone is free, check what Lisbon has on in March, and price the trip for four.",
+					steps: [
+						{ kind: "read", label: "Read team-availability.csv" },
+						{ kind: "search", label: "Searched the web for Lisbon events in March" },
+						{ kind: "search", label: "Searched the web for meeting rooms in Alfama" },
+						{ kind: "think", label: "Drafted the three days" },
+						{
+							kind: "run",
+							label: "Added up the budget",
+							output: "flights 720 + flat 560 + room 180 + food 480 = 1940",
+						},
+					],
+				},
 				blocks: [
 					{
 						type: "p",
@@ -657,6 +720,54 @@ const TOPIC_WORDS: Array<[ReplyTopic, RegExp]> = [
 export function replyTopic(prompt: string): ReplyTopic {
 	return TOPIC_WORDS.find(([, words]) => words.test(prompt))?.[0] ?? "general";
 }
+
+/** What Tern shows itself doing before each topic's canned reply, as a replay dwells on it. */
+export const CANNED_ACTIVITY: Record<ReplyTopic, TurnActivity> = {
+	code: {
+		seconds: 11,
+		note: "I'll look at how the input is parsed, try a few values, then write a version that never returns NaN.",
+		steps: [
+			{ kind: "think", label: "Read the question", ms: 500 },
+			{
+				kind: "run",
+				label: "Ran a quick check",
+				output: 'parseDuration("5 s") → NaN\nparseDuration("5s") → 5000',
+				ms: 1400,
+			},
+			{ kind: "think", label: "Wrote the fix", ms: 700 },
+		],
+	},
+	writing: {
+		seconds: 7,
+		note: "I'll find what the reader needs first and cut everything else.",
+		steps: [
+			{ kind: "read", label: "Read the draft", ms: 900 },
+			{ kind: "think", label: "Tightened the wording", ms: 800 },
+		],
+	},
+	plan: {
+		seconds: 24,
+		note: "I'll compare the options on cost, time and risk, then put them side by side.",
+		steps: [
+			{ kind: "search", label: "Searched the web for typical rates", ms: 1500 },
+			{ kind: "search", label: "Searched the web for agency timelines", ms: 1300 },
+			{
+				kind: "run",
+				label: "Ran 2 commands",
+				runs: ["compare --by cost", "compare --by time"],
+				ms: 1100,
+			},
+			{ kind: "think", label: "Built the table", ms: 600 },
+		],
+	},
+	general: {
+		seconds: 5,
+		steps: [
+			{ kind: "think", label: "Thought it through", ms: 900 },
+			{ kind: "think", label: "Picked a first step", ms: 600 },
+		],
+	},
+};
 
 /** Two replies per topic: the first answer, and the one Regenerate offers. */
 export const CANNED_REPLIES: Record<ReplyTopic, [Block[], Block[]]> = {

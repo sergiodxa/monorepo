@@ -11,6 +11,7 @@
 export const FACE_KIND = {
 	"accent-text": "landing-accent-text",
 	accordion: "accordion",
+	activity: "chat",
 	alert: "alert",
 	"alert-dialog": "dialog",
 	"anchor-heading": "heading",

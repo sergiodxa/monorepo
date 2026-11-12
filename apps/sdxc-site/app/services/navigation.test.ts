@@ -126,7 +126,13 @@ describe("namespace groups", () => {
 			expect.arrayContaining(["DocsLayout", "DocsNav", "TableOfContents", "CodeBlock", "Callout"]),
 		);
 		expect(titles("Chat")).toEqual(
-			expect.arrayContaining(["Composer", "ComposerSubmit", "Message", "MessageScroller"]),
+			expect.arrayContaining([
+				"Activity",
+				"Composer",
+				"ComposerSubmit",
+				"Message",
+				"MessageScroller",
+			]),
 		);
 		expect(titles("Color")).toEqual(expect.arrayContaining(["ColorPicker", "ColorWheel"]));
 		expect(titles("App")).toEqual(expect.arrayContaining(["Chart", "Table", "Toast"]));
@@ -134,7 +140,7 @@ describe("namespace groups", () => {
 			["Landing", "Docs", "Chat", "Color", "App"].map(
 				(section) => titles(section).filter((title) => title !== "Foundations").length,
 			),
-		).toEqual([44, 24, 7, 7, 38]);
+		).toEqual([44, 24, 8, 7, 38]);
 		expect(titles("Components")).toEqual(
 			expect.arrayContaining(["Accordion", "CtaGroup", "DialogDismiss", "Sidebar"]),
 		);

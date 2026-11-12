@@ -150,6 +150,7 @@ const PHONE = { x: 52, y: 6, w: 56, h: 88, r: 12, pad: 3 } as const;
 const CATALOGUE = [
 	{ slug: "accent-text", module: "landing" },
 	{ slug: "accordion", module: "components" },
+	{ slug: "activity", module: "chat" },
 	{ slug: "alert", module: "components" },
 	{ slug: "alert-dialog", module: "components" },
 	{ slug: "anchor-heading", module: "docs" },
@@ -519,6 +520,15 @@ const OVERRIDES: Record<string, Shape[]> = {
 		{ kind: "line", x1: 36, y1: 74, x2: 120, y2: 74, tone: "label", weight: 1.4 },
 	]),
 	message: chatScene(),
+	activity: windowScene([
+		txt("Thinking", 32, 38, 7, "muted", { font: "semibold" }),
+		{ kind: "circle", cx: 36, cy: 52, r: 3, tone: "label" },
+		{ kind: "line", x1: 44, y1: 52, x2: 104, y2: 52, tone: "label", weight: 1.4 },
+		{ kind: "circle", cx: 36, cy: 64, r: 3, tone: "label" },
+		{ kind: "line", x1: 44, y1: 64, x2: 92, y2: 64, tone: "label", weight: 1.4 },
+		{ kind: "circle", cx: 36, cy: 76, r: 3, tone: "accent" },
+		{ kind: "line", x1: 44, y1: 76, x2: 112, y2: 76, tone: "accent", weight: 1.4 },
+	]),
 	composer: windowScene([
 		{ kind: "rect", x: 28, y: 40, w: 104, h: 34, r: 14, tone: "surface", ring: true },
 		txt("Ask anything", 40, 54, 7, "muted"),

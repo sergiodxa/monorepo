@@ -61,6 +61,22 @@ describe("Tern without JavaScript", () => {
 		expect(body).toContain('"moduleUrl":"@sdxc/ui/chat/composer-submit"');
 	});
 
+	test("the streamed reply opens its thinking, and saved replies keep theirs closed", async () => {
+		let sent = await (
+			await post("c/flaky-test", { intent: "send", prompt: "Compare two options as a table" })
+		).text();
+		let saved = await (await fetchApp(href("c/debounce-search"))).text();
+
+		expect(sent).toMatch(
+			/<details[^>]*\bopen\b[^>]*data-slot="activity"|<details[^>]*data-slot="activity"[^>]*\bopen\b/,
+		);
+		expect(sent).toContain("Thinking");
+		expect(sent).toContain("Searched the web for typical rates");
+		expect(sent).toMatch(/data-stream-pause="1500"/);
+		expect(saved).toContain("Thought for 14s");
+		expect(saved).not.toMatch(/<details[^>]*\bopen\b[^>]*data-slot="activity"/);
+	});
+
 	test("a new chat starts from the home screen's composer and suggestions", async () => {
 		let body = await (
 			await post("chat", { intent: "send", prompt: "Write a shorter email" })

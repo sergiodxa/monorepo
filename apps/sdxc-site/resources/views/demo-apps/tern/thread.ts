@@ -12,6 +12,7 @@ import * as s from "remix/data-schema";
 import type { Conversation, ModelId, Turn } from "~/resources/views/demo-apps/tern/data";
 
 import {
+	CANNED_ACTIVITY,
 	CANNED_REPLIES,
 	DEFAULT_MODEL,
 	findModel,
@@ -222,6 +223,7 @@ export function turnsOf(thread: Thread): Turn[] {
 			role: "assistant",
 			model: ask.model,
 			blocks: CANNED_REPLIES[replyTopic(ask.prompt)][ask.variant],
+			activity: CANNED_ACTIVITY[replyTopic(ask.prompt)],
 		},
 	]);
 	return [...saved, ...sent];

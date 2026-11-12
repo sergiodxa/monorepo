@@ -23,6 +23,8 @@ import {
 	ScissorsIcon,
 	ThumbsUpIcon,
 	VolumeXIcon,
+	FileSearchIcon,
+	TerminalIcon,
 } from "@sdxc/icons";
 import { grow } from "@sdxc/u/layout";
 import { bs, is } from "@sdxc/u/size";
@@ -119,6 +121,7 @@ import {
 	Tree,
 } from "@sdxc/ui/app";
 import {
+	Activity,
 	Attachment,
 	Bubble,
 	Composer,
@@ -199,6 +202,37 @@ export const COMPONENT_PREVIEWS: Record<string, ComponentPreview> = {
 					</Accordion.Content>
 				</Accordion.Item>
 			</Accordion>
+		),
+	},
+
+	activity: {
+		code: `<Activity open>
+	<Activity.Summary busy="Thinking">Thought for 14s</Activity.Summary>
+	<Activity.Note>I'll check how the search calls the API, then cancel stale requests.</Activity.Note>
+	<Activity.Steps>
+		<Activity.Step icon={<FileSearchIcon />}>Read search.tsx</Activity.Step>
+		<Activity.Step icon={<TerminalIcon />} detail={<pre>1 failed, 1 passed</pre>}>
+			Ran the tests
+		</Activity.Step>
+		<Activity.Step running icon={<TerminalIcon />}>Running a command 0:12</Activity.Step>
+	</Activity.Steps>
+</Activity>`,
+		render: () => (
+			<Activity open mix={[is("26rem")]}>
+				<Activity.Summary busy="Thinking">Thought for 14s</Activity.Summary>
+				<Activity.Note>
+					I'll check how the search calls the API, then cancel stale requests.
+				</Activity.Note>
+				<Activity.Steps>
+					<Activity.Step icon={<FileSearchIcon size={16} />}>Read search.tsx</Activity.Step>
+					<Activity.Step icon={<TerminalIcon size={16} />} detail={<pre>1 failed, 1 passed</pre>}>
+						Ran the tests
+					</Activity.Step>
+					<Activity.Step running icon={<TerminalIcon size={16} />}>
+						Running a command 0:12
+					</Activity.Step>
+				</Activity.Steps>
+			</Activity>
 		),
 	},
 

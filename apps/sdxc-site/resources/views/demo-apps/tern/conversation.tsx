@@ -62,6 +62,7 @@ import { CopyButton } from "@sdxc/ui/docs/copy-button";
 import type { AssistantTurn, FileRef, UserTurn } from "~/resources/views/demo-apps/tern/data";
 import type { Thread } from "~/resources/views/demo-apps/tern/thread";
 
+import { TurnActivityView } from "~/resources/views/demo-apps/tern/activity";
 import { ReplyBlocks } from "~/resources/views/demo-apps/tern/blocks";
 import { MODELS, actionHref, findModel, href } from "~/resources/views/demo-apps/tern/data";
 import { COMPOSER_LABELS, MESSAGE_LABELS } from "~/resources/views/demo-apps/tern/labels";
@@ -358,6 +359,7 @@ function AssistantMessage(
 						}),
 					]}
 				>
+					{turn.activity ? <TurnActivityView activity={turn.activity} open={streaming} /> : null}
 					<div id={`${replyId}-body`}>
 						<ReplyBlocks blocks={turn.blocks} id={replyId} />
 					</div>
