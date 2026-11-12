@@ -100,6 +100,22 @@ afterEach(() => {
 	document.body.replaceChildren();
 });
 
+describe("Chart edges", () => {
+	test("paints a marker on the bottom edge in full rather than clipping its lower half", () => {
+		let host = mount(
+			<Chart width={300} height={100} xDomain={[0, 2]} yDomain={[0, 10]} aria-label="Points">
+				<Chart.Line points={[0, 1, 2].map((x) => ({ x, y: 0, label: `Day ${x}: 0` }))} />
+			</Chart>,
+		);
+		let svg = host.querySelector("svg")!.getBoundingClientRect();
+		let marker = host.querySelector("circle")!.getBoundingClientRect();
+		let below = { x: marker.left + marker.width / 2, y: (marker.bottom + svg.bottom) / 2 + 0.5 };
+
+		expect(marker.bottom).toBeGreaterThan(svg.bottom);
+		expect(document.elementFromPoint(below.x, below.y)?.closest("circle")).not.toBeNull();
+	});
+});
+
 describe("Chart annotations", () => {
 	test("draws the comparison series dashed in the muted colour", () => {
 		let host = mount(

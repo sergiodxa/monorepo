@@ -692,8 +692,8 @@ export namespace Chart {
 
 /**
  * Renders a chart's coordinate space: a responsive `<svg>` whose `viewBox`
- * comes from `width`/`height`, shared via context so nested series share one
- * scale. A paired {@link Chart.Legend} must render as this root's later sibling.
+ * comes from `width`/`height`, shared via context so nested series share one scale. Markers
+ * and strokes on its edges paint in full. A paired {@link Chart.Legend} renders as its later sibling.
  *
  * @param handle Runtime handle carrying the host `<svg>`'s props and providing {@link Chart.Context}.
  * @returns The render function producing the chart's coordinate space.
@@ -728,7 +728,11 @@ export function Chart(handle: Handle<Chart.Props, Chart.Context>) {
 						block(),
 						is("full"),
 						bs("auto"),
-						raw({ container: "ui-chart / inline-size", aspectRatio: `${width} / ${height}` }),
+						raw({
+							container: "ui-chart / inline-size",
+							aspectRatio: `${width} / ${height}`,
+							overflow: "visible",
+						}),
 					],
 					mix,
 				)}
