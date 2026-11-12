@@ -605,6 +605,43 @@ describe("AppShell", () => {
 		expect(location.hash).toBe("#overview");
 	});
 
+	test("a navigation that leaves the sidebar in place moves its current row to the address", () => {
+		mountShell({
+			nav: (
+				<AppShell.Group>
+					<AppShell.Item href="/elsewhere" label="Elsewhere" current />
+					<AppShell.Item href={location.pathname} label="Here" />
+				</AppShell.Group>
+			),
+		});
+		let [elsewhere, here] = document.querySelectorAll<HTMLAnchorElement>(
+			'[data-slot="app-shell-item"] > a',
+		);
+
+		navigation.dispatchEvent(new Event("navigatesuccess"));
+
+		expect(here!.getAttribute("aria-current")).toBe("page");
+		expect(here!.hasAttribute("data-current")).toBe(true);
+		expect(elsewhere!.hasAttribute("aria-current")).toBe(false);
+		expect(elsewhere!.hasAttribute("data-current")).toBe(false);
+	});
+
+	test("a pane passed in stands in for the top bar and main", () => {
+		mountShell({
+			pane: (
+				<AppShell.Pane labels={LABELS} id="framed" topbar={<span>Crumb</span>}>
+					<p>Screen</p>
+				</AppShell.Pane>
+			),
+		});
+
+		expect(document.querySelector('[data-slot="app-shell-topbar"]')!.textContent).toContain(
+			"Crumb",
+		);
+		expect(document.querySelector("main#framed-main")!.textContent).toBe("Screen");
+		expect(document.querySelectorAll("main")).toHaveLength(1);
+	});
+
 	test("nothing scrolls sideways at 320px, open or closed", async () => {
 		await page.viewport(320, 640);
 		mountShell({

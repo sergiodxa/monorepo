@@ -119,7 +119,12 @@ export namespace AppShell {
 		/** A notice above the whole frame, such as a sandbox banner; it pushes the frame down. */
 		banner?: RemixNode;
 		/** The screen, rendered inside `<main>`. */
-		children: RemixNode;
+		children?: RemixNode;
+		/**
+		 * Stands in for the top bar and `<main>`, such as a named frame whose content is an
+		 * {@link AppShell.Pane}, so a link aimed at it reloads the screen and its top bar alone.
+		 */
+		pane?: RemixNode;
 		/** Opens the rail over the content while the pointer rests on it. @default true */
 		peek?: boolean;
 		/** @default "fill" */
@@ -143,6 +148,16 @@ export namespace AppShell {
 		 * room, such as a three-pane split view at 1024px. @default "48rem"
 		 */
 		sheetBelow?: SheetBelow;
+	}
+
+	/** Props accepted by {@link AppShell.Pane}: the shell props its top bar and `<main>` read. */
+	export interface PaneProps extends Pick<
+		Props,
+		"collapsed" | "topbar" | "id" | "fill" | "cookieName" | "cookiePath" | "sheetBelow"
+	> {
+		labels: Pick<Labels, "menu" | "collapse">;
+		/** The screen, rendered inside `<main>`. */
+		children: RemixNode;
 	}
 
 	/** Props accepted by {@link AppShell.Group}. */
@@ -218,6 +233,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 			topbar,
 			banner,
 			children,
+			pane,
 			peek = DEFAULT_PEEK,
 			indicator = DEFAULT_INDICATOR,
 			id = DEFAULT_ID,
@@ -490,101 +506,149 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 							fill ? media(docked, raw({ display: "flex", flexDirection: "column" })) : [],
 						]}
 					>
-						<header
-							data-slot="app-shell-topbar"
-							mix={[
-								raw({
-									position: "sticky",
-									insetBlockStart: "0",
-									zIndex: "3",
-									display: "flex",
-									alignItems: "center",
-									gap: "0.5rem",
-									blockSize: "var(--ui-app-header-height, 3.5rem)",
-									boxSizing: "border-box",
-									paddingInline: "0.75rem",
-									borderBlockEnd: "1px solid var(--ui-neutral-border)",
-								}),
-								bg(),
-								media(docked, raw({ paddingInline: "1rem" })),
-							]}
-						>
-							<span
-								data-slot="app-shell-menu"
-								mix={[
-									media(sheet, raw({ display: "inline-flex" })),
-									media(docked, raw({ display: "none" })),
-								]}
-							>
-								<Button
-									type="button"
-									variant="ghost"
-									color="neutral"
-									size="sm"
-									popovertarget={sidebarId}
-									aria-label={labels.menu}
-								>
-									<MenuIcon size={16} aria-hidden="true" />
-								</Button>
-							</span>
-							<AppShellToggle
+						{pane ?? (
+							<AppShell.Pane
+								labels={labels}
 								collapsed={collapsed}
-								label={labels.collapse}
+								topbar={topbar}
+								id={id}
 								cookieName={cookieName}
 								cookiePath={cookiePath}
-								sidebarId={sidebarId}
 								sheetBelow={sheetBelow}
-							/>
-							<div
-								data-slot="app-shell-topbar-content"
-								mix={[
-									raw({
-										display: "flex",
-										alignItems: "center",
-										gap: "0.5rem",
-										flex: "1 1 auto",
-										minInlineSize: "0",
-									}),
-								]}
+								fill={fill}
 							>
-								{topbar}
-							</div>
-						</header>
-
-						<main
-							id={mainId}
-							tabIndex={-1}
-							data-slot="app-shell-main"
-							mix={[
-								raw({
-									"--ui-app-gutter": "var(--ui-app-content-padding, 1rem)",
-									display: "block",
-									minInlineSize: "0",
-									padding: "var(--ui-app-gutter)",
-									outline: "none",
-								}),
-								media(docked, raw({ "--ui-app-gutter": "var(--ui-app-content-padding, 1.5rem)" })),
-								fill
-									? media(
-											docked,
-											raw({
-												display: "flex",
-												flexDirection: "column",
-												flex: "1 1 0",
-												minBlockSize: "0",
-											}),
-										)
-									: [],
-							]}
-						>
-							{children}
-						</main>
+								{children}
+							</AppShell.Pane>
+						)}
 					</div>
 				</div>
 			</div>
 		);
 	};
 }
+
+/**
+ * Renders the shell's top bar and `<main>`, the part of the shell a screen changes. `AppShell`
+ * draws one itself; render it on its own as the content of a frame passed as `pane`, so a
+ * navigation reloads the top bar and the screen together while the sidebar stays put.
+ *
+ * @param handle Runtime handle carrying the pane's props.
+ * @returns The render function producing the top bar and the screen.
+ * @example
+ * <AppShell.Pane labels={labels} id="tern" topbar={<ModelPicker />}><Chat /></AppShell.Pane>
+ */
+AppShell.Pane = function AppShellPane(handle: Handle<AppShell.PaneProps>) {
+	return () => {
+		let {
+			labels,
+			collapsed = false,
+			topbar,
+			children,
+			id = DEFAULT_ID,
+			cookieName = APP_SHELL_COOKIE,
+			cookiePath,
+			sheetBelow = DEFAULT_SHEET_BELOW,
+			fill = false,
+		} = handle.props;
+		let { docked, sheet } = appShellQueries(sheetBelow);
+		let sidebarId = `${id}-sidebar`;
+		let mainId = `${id}-main`;
+
+		return (
+			<>
+				<header
+					data-slot="app-shell-topbar"
+					mix={[
+						raw({
+							position: "sticky",
+							insetBlockStart: "0",
+							zIndex: "3",
+							display: "flex",
+							alignItems: "center",
+							gap: "0.5rem",
+							blockSize: "var(--ui-app-header-height, 3.5rem)",
+							boxSizing: "border-box",
+							paddingInline: "0.75rem",
+							borderBlockEnd: "1px solid var(--ui-neutral-border)",
+						}),
+						bg(),
+						media(docked, raw({ paddingInline: "1rem" })),
+					]}
+				>
+					<span
+						data-slot="app-shell-menu"
+						mix={[
+							media(sheet, raw({ display: "inline-flex" })),
+							media(docked, raw({ display: "none" })),
+						]}
+					>
+						<Button
+							type="button"
+							variant="ghost"
+							color="neutral"
+							size="sm"
+							popovertarget={sidebarId}
+							aria-label={labels.menu}
+						>
+							<MenuIcon size={16} aria-hidden="true" />
+						</Button>
+					</span>
+					<AppShellToggle
+						collapsed={collapsed}
+						label={labels.collapse}
+						cookieName={cookieName}
+						cookiePath={cookiePath}
+						sidebarId={sidebarId}
+						sheetBelow={sheetBelow}
+					/>
+					<div
+						data-slot="app-shell-topbar-content"
+						mix={[
+							raw({
+								display: "flex",
+								alignItems: "center",
+								gap: "0.5rem",
+								flex: "1 1 auto",
+								minInlineSize: "0",
+							}),
+						]}
+					>
+						{topbar}
+					</div>
+				</header>
+
+				<main
+					id={mainId}
+					tabIndex={-1}
+					data-slot="app-shell-main"
+					mix={[
+						raw({
+							"--ui-app-gutter": "var(--ui-app-content-padding, 1rem)",
+							display: "block",
+							minInlineSize: "0",
+							padding: "var(--ui-app-gutter)",
+							outline: "none",
+						}),
+						media(docked, raw({ "--ui-app-gutter": "var(--ui-app-content-padding, 1.5rem)" })),
+						fill
+							? media(
+									docked,
+									raw({
+										display: "flex",
+										flexDirection: "column",
+										flex: "1 1 0",
+										minBlockSize: "0",
+									}),
+								)
+							: [],
+					]}
+				>
+					{children}
+				</main>
+			</>
+		);
+	};
+};
 
 /**
  * Renders a titled group of rows. The title is a plain label, and in the rail it becomes a

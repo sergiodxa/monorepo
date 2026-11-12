@@ -1,6 +1,7 @@
 /**
  * Why JS: writing the collapse cookie, a ⌘B shortcut, closing the phone sheet when a link is
- * followed in place and following a back row on Esc have no HTML or CSS equivalent.
+ * followed in place, re-marking the current row after a frame navigation and following a back
+ * row on Esc have no HTML or CSS equivalent.
  * No-JS baseline: the checkbox still collapses the sidebar through CSS and the sheet opens and
  * closes through the Popover API; the collapse lasts until the next page load.
  *
@@ -137,6 +138,15 @@ function enhance(
 		{ signal },
 	);
 
+	doc.defaultView?.navigation?.addEventListener(
+		"navigatesuccess",
+		() => {
+			let element = sidebar();
+			if (element) markCurrentRow(element, doc.location.pathname);
+		},
+		{ signal },
+	);
+
 	let sheetBelow = readOptions()?.sheetBelow ?? DEFAULT_SHEET_BELOW;
 	let docked = doc.defaultView?.matchMedia(appShellQueries(sheetBelow).docked);
 	docked?.addEventListener(
@@ -147,6 +157,28 @@ function enhance(
 		},
 		{ signal },
 	);
+}
+
+/**
+ * Marks the row whose link names `pathname` as the page shown and unmarks the one before it,
+ * so a navigation that reloads only a frame beside the sidebar keeps its current row true.
+ * With no row naming the address, the rows stay as the server drew them.
+ */
+function markCurrentRow(sidebar: HTMLElement, pathname: string) {
+	let links = Array.from(
+		sidebar.querySelectorAll<HTMLAnchorElement>('[data-slot="app-shell-item"] > a[href]'),
+	);
+	let match = links.find((link) => new URL(link.href).pathname === pathname);
+	if (match === undefined) return;
+	for (let link of links) {
+		if (link === match) {
+			link.setAttribute("aria-current", "page");
+			link.setAttribute("data-current", "");
+		} else if (link.getAttribute("aria-current") === "page") {
+			link.removeAttribute("aria-current");
+			link.removeAttribute("data-current");
+		}
+	}
 }
 
 /**
