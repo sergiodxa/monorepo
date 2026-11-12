@@ -56,6 +56,13 @@ export const SPLIT_COOKIE = "cairn-split";
 /** The id the bulk form, the row checkboxes and the bulk bar share. */
 const BULK_FORM = "cairn-bulk";
 
+/**
+ * The width of the column a row's checkbox is centered in. A group heading centers its glyph in
+ * the same width, so glyphs and checkboxes share one axis and the heading's text starts where a
+ * row's first glyph does.
+ */
+const CHECK_COLUMN = "2.25rem";
+
 /** How rows can be grouped. */
 const GROUPINGS = ["status", "priority", "assignee", "project", "none"] as const;
 
@@ -303,7 +310,7 @@ function IssueRow(
 						raw({
 							display: "grid",
 							placeItems: "center",
-							flex: "0 0 2.25rem",
+							flex: `0 0 ${CHECK_COLUMN}`,
 							alignSelf: "stretch",
 							cursor: "pointer",
 						}),
@@ -485,10 +492,9 @@ function GroupedRows(
 									zIndex: "1",
 									display: "flex",
 									alignItems: "center",
-									gap: "0.5rem",
 									margin: "0",
 									blockSize: "2.25rem",
-									paddingInline: "0.875rem",
+									paddingInlineEnd: "0.875rem",
 									fontSize: "0.8125rem",
 									fontWeight: "600",
 									color: "var(--ui-neutral-fg-emphasis)",
@@ -497,11 +503,29 @@ function GroupedRows(
 								}),
 							]}
 						>
-							<span aria-hidden="true" mix={[raw({ display: "inline-flex" })]}>
+							<span
+								aria-hidden="true"
+								data-slot="group-glyph"
+								mix={[
+									raw({
+										display: "inline-flex",
+										justifyContent: "center",
+										flex: `0 0 ${CHECK_COLUMN}`,
+									}),
+								]}
+							>
 								{group.icon}
 							</span>
 							{group.title}
-							<span mix={[raw({ fontWeight: "400", color: "var(--ui-neutral-fg-muted)" })]}>
+							<span
+								mix={[
+									raw({
+										marginInlineStart: "0.5rem",
+										fontWeight: "400",
+										color: "var(--ui-neutral-fg-muted)",
+									}),
+								]}
+							>
 								{group.issues.length}
 							</span>
 						</h3>

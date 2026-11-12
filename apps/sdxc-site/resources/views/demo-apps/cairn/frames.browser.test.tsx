@@ -114,6 +114,45 @@ describe("Cairn on a phone", () => {
 	});
 });
 
+describe("Cairn's list", () => {
+	test.each([375, 1280])(
+		"at %ipx a group's glyph shares the checkboxes' axis and its title starts at the rows' first glyph",
+		async (width) => {
+			await page.viewport(width, 900);
+			let root = await mountScreen("team/web");
+			let section = root.querySelector<HTMLElement>('[data-group="started"]')!;
+			let glyph = section.querySelector('[data-slot="group-glyph"] svg')!.getBoundingClientRect();
+			let title = document.createRange();
+			title.selectNodeContents(section.querySelector("h3")!);
+			title.setStartAfter(section.querySelector('[data-slot="group-glyph"]')!);
+			let row = section.querySelector("li")!;
+			let check = row.querySelector('input[type="checkbox"]')!.getBoundingClientRect();
+			let link = row.querySelector<HTMLElement>("[data-issue-link]")!.getBoundingClientRect();
+
+			expect(
+				Math.abs(glyph.left + glyph.width / 2 - (check.left + check.width / 2)),
+			).toBeLessThanOrEqual(1);
+			expect(Math.abs(title.getBoundingClientRect().left - link.left)).toBeLessThanOrEqual(1);
+		},
+	);
+});
+
+describe("Cairn's open issue", () => {
+	test.each([1280, 1440])(
+		"at %ipx keeps its properties in a sidebar beside the title, not under the description",
+		async (width) => {
+			await page.viewport(width, 900);
+			let root = await mountScreen("team/web?issue=WEB-135");
+			let article = root.querySelector<HTMLElement>('[data-issue-detail="WEB-135"]')!;
+			let title = article.querySelector("h1, h2")!.getBoundingClientRect();
+			let aside = article.querySelector('aside[aria-label="Properties"]')!.getBoundingClientRect();
+
+			expect(aside.left).toBeGreaterThanOrEqual(title.right);
+			expect(aside.top).toBeLessThanOrEqual(title.bottom);
+		},
+	);
+});
+
 describe("Cairn on a tablet", () => {
 	test("an open issue's id stays on one line in a pane squeezed to 240px", async () => {
 		await page.viewport(768, 1024);

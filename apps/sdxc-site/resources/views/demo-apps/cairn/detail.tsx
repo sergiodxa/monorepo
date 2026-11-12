@@ -657,12 +657,12 @@ export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 							gridTemplateAreas: '"main" "props" "rest"',
 							gap: "1.5rem",
 							padding: sheet ? "0" : "1.25rem 1rem 2rem",
-							"@container cairn-issue (width >= 52rem)": {
-								gridTemplateColumns: "minmax(0, 1fr) 16rem",
+							"@container cairn-issue (width >= 36rem)": {
+								gridTemplateColumns: "minmax(0, 1fr) 13.5rem",
 								gridTemplateAreas: '"main props" "rest props"',
 								alignItems: "start",
-								columnGap: "2.5rem",
-								paddingInline: "2rem",
+								columnGap: "1.5rem",
+								paddingInline: "1.5rem",
 							},
 						}),
 					]}
@@ -782,6 +782,10 @@ export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 						mix={[
 							raw({
 								gridArea: "props",
+								"@container cairn-issue (width >= 36rem)": {
+									position: "sticky",
+									insetBlockStart: "1.25rem",
+								},
 								padding: "0.75rem 1rem",
 								border: "1px solid var(--ui-neutral-border)",
 								borderRadius: "var(--ui-radius-lg, 0.375rem)",
