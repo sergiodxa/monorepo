@@ -640,6 +640,7 @@ function IssueList(handle: Handle<IssueList.Props>) {
 						container: "cairn-list / inline-size",
 						display: "flex",
 						flexDirection: "column",
+						flex: "1 1 auto",
 						minBlockSize: "100%",
 						"--cairn-row-height": query.density === "comfortable" ? "2.875rem" : "2.375rem",
 					}),
@@ -858,7 +859,15 @@ export function IssueListScreen(handle: Handle<IssueListScreen.Props>) {
 				{open === undefined ? (
 					<div
 						mix={[
-							raw({ minBlockSize: "calc(100dvh - var(--ui-app-header-height, 3.5rem) - 2rem)" }),
+							raw({
+								display: "flex",
+								flexDirection: "column",
+								minBlockSize: `calc(100dvh - var(--ui-app-header-height, 3.5rem) - ${TAB_BAR_BLOCK_SIZE})`,
+								"@media (min-width: 48rem)": {
+									minBlockSize:
+										"calc(100dvh - var(--ui-app-header-height, 3.5rem) - 2 * var(--ui-app-inset-gap, 0.5rem) - 2px)",
+								},
+							}),
 						]}
 					>
 						{list}

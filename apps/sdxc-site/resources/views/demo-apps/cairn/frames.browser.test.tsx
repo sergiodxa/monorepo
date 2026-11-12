@@ -153,6 +153,21 @@ describe("Cairn's open issue", () => {
 	);
 });
 
+describe("Cairn's short list", () => {
+	test("rests its selection bar at the foot of the window, not under the last row", async () => {
+		await page.viewport(1280, 900);
+		let root = await mountScreen("my");
+		let bar = root.querySelector<HTMLElement>('[data-slot="selection-bar"]')!;
+		let rows = root.querySelector<HTMLElement>("#cairn-rows")!;
+		let last = [...rows.querySelectorAll("li")].at(-1)!;
+
+		expect(900 - bar.getBoundingClientRect().bottom).toBeLessThanOrEqual(16);
+		expect(bar.getBoundingClientRect().top - last.getBoundingClientRect().bottom).toBeGreaterThan(
+			100,
+		);
+	});
+});
+
 describe("Cairn's board", () => {
 	test("fills the window under the top bar, so its own scrollbars stay on screen", async () => {
 		await page.viewport(1280, 600);
