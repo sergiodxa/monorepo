@@ -77,10 +77,7 @@ const UNREAD = NOTIFICATIONS.filter((notification) => notification.unread).lengt
 const HELP_GROUPS: KeyboardHelp.Group[] = [
 	{
 		title: "Posts",
-		shortcuts: [
-			{ keys: "n", label: "New post" },
-			{ keys: "mod+enter", label: "Send post" },
-		],
+		shortcuts: [{ keys: "n", label: "New post" }],
 	},
 ];
 

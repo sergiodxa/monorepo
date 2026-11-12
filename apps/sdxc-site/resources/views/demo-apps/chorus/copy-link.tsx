@@ -1,7 +1,7 @@
 /**
- * Client island: the share menu's "Copy link" row, which puts a post's full address on the
- * clipboard and says so in place, then closes its menu. The clipboard is script's alone; the
- * menu's other rows are links and work without it.
+ * Client island: the share menu's "Copy link" row. It is a link to the post, so without
+ * script it opens the post, whose address is then in the address bar to copy; with script it
+ * puts the full address on the clipboard instead, says so in place, and closes its menu.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,7 +22,10 @@ export type CopyLinkProps = {
 	labels: { copy: string; copied: string };
 };
 
-/** Renders the row; after a copy it reads "Link copied" until the menu next opens. */
+/**
+ * Renders the row as a link to the post; after a copy it reads "Link copied" until the menu
+ * closes. A browser without the clipboard API follows the link instead.
+ */
 export const CopyLink: EntryComponent<CopyLinkProps> = clientEntry(
 	import.meta.url,
 	function CopyLink(handle) {
@@ -31,12 +34,14 @@ export const CopyLink: EntryComponent<CopyLinkProps> = clientEntry(
 			let { labels, menu, path } = handle.props;
 			return (
 				<Menu.Item
-					type="button"
+					href={path}
 					mix={[
 						on<HTMLAnchorElement | HTMLButtonElement, "click">("click", async (event) => {
+							if (!navigator.clipboard) return;
+							event.preventDefault();
 							let button = event.currentTarget;
 							let written = await navigator.clipboard
-								?.writeText(new URL(path, location.href).href)
+								.writeText(new URL(path, location.href).href)
 								.then(
 									() => true,
 									() => false,

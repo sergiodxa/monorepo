@@ -18,6 +18,7 @@ import type { Person } from "~/resources/views/demo-apps/chorus/data";
 import type { PostView, VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
 import { POSTS, findPerson } from "~/resources/views/demo-apps/chorus/data";
+import { FeedKeys } from "~/resources/views/demo-apps/chorus/feed-keys";
 import { PostCard } from "~/resources/views/demo-apps/chorus/post";
 import { lookupPost, viewPost } from "~/resources/views/demo-apps/chorus/state";
 
@@ -80,12 +81,16 @@ namespace Feed {
 	}
 }
 
-/** Draws a list of posts, each with its quote looked up and its forms returning to its row. */
+/**
+ * Draws a list of posts, each with its quote looked up and its forms returning to its row;
+ * with script, `j`/`k` walk the posts and Enter opens one.
+ */
 export function Feed(handle: Handle<Feed.Props>) {
 	return () => {
 		let { items, label, now, returnTo, state } = handle.props;
 		return (
 			<section aria-label={label} data-slot="chorus-feed">
+				<FeedKeys />
 				{items.map((item) => (
 					<PostCard
 						post={item.post}

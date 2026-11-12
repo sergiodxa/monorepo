@@ -780,6 +780,10 @@ export function PostCard(handle: Handle<PostCard.Props>) {
 						),
 					),
 					when(
+						"&:focus-visible",
+						raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "-2px" }),
+					),
+					when(
 						"&:has(> div > div > a[data-post-link]:focus-visible)",
 						raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "-2px" }),
 					),

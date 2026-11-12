@@ -15,7 +15,7 @@ import { render } from "remix/component/test";
 import { afterAll, describe, expect, onTestFinished, test } from "vitest";
 import { page } from "vitest/browser";
 
-import { blockSize } from "~/app/test/frame-size";
+import { PENDING_FRAMES, blockSize } from "~/app/test/frame-size";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import chorus from "~/resources/views/demo-apps/chorus";
 import { FollowCard, TrendsCard } from "~/resources/views/demo-apps/chorus/rail";
@@ -26,9 +26,6 @@ import "@sdxc/ui/theme.css";
 
 /** The rail's widths: a 1024px screen's and a 1280px screen's. */
 const RAIL_WIDTHS = [296, 344];
-
-/** A frame that never answers, so each frame draws its placeholder as on first paint. */
-const PENDING = new Promise<never>(() => {});
 
 /** Wraps a node in Chorus's theme tokens, so type and spacing match the page. */
 function themed(node: RemixNode): RemixNode {
@@ -58,7 +55,7 @@ async function mountScreen(screen: string): Promise<HTMLElement> {
 	let [path = "", query = ""] = screen.split("?");
 	let url = new URL(`http://localhost/demo/apps/chorus/${path}${query ? `?${query}` : ""}`);
 	let rendered = chorus.render({ page: path, url, cookie: null });
-	let mounted = render(themed(rendered.body), { frameInit: { resolveFrame: () => PENDING } });
+	let mounted = render(themed(rendered.body), PENDING_FRAMES);
 	onTestFinished(() => mounted.cleanup());
 	await new Promise((resolve) => requestAnimationFrame(resolve));
 	expect(mounted.container.querySelector('[data-slot="chorus"]'), screen).not.toBeNull();
@@ -153,5 +150,48 @@ describe("Chorus from a tablet up", () => {
 		for (let label of header.querySelectorAll<HTMLElement>("[data-nav-label]")) {
 			expect(label.getBoundingClientRect().width, label.textContent ?? "").toBeGreaterThan(0);
 		}
+	});
+});
+
+describe("Chorus from the keyboard", () => {
+	test("j and k walk the timeline's posts, k stopping at the first", async () => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("");
+		let press = (key: string) =>
+			document.body.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+		let posts = [...root.querySelectorAll<HTMLElement>("article[data-post]")];
+		window.scrollTo(0, 0);
+
+		press("j");
+		let first = document.activeElement;
+		press("j");
+		let second = document.activeElement;
+		press("k");
+
+		expect(posts).toContain(first);
+		expect(posts.indexOf(second as HTMLElement)).toBe(posts.indexOf(first as HTMLElement) + 1);
+		expect(document.activeElement).toBe(first);
+	});
+});
+
+describe("Chorus's Copy link", () => {
+	test("is a link to the post that copies instead of leaving when script runs", async () => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("");
+		let link = root.querySelector<HTMLAnchorElement>(
+			"#share-p-leonids a[href$='/post/p-leonids']",
+		)!;
+		let followed = true;
+		let watch = (event: Event) => {
+			followed = !event.defaultPrevented;
+			event.preventDefault();
+		};
+		document.addEventListener("click", watch);
+		onTestFinished(() => document.removeEventListener("click", watch));
+
+		link.click();
+
+		expect(link.getAttribute("href")).toBe("/demo/apps/chorus/post/p-leonids");
+		expect(followed).toBe(false);
 	});
 });
