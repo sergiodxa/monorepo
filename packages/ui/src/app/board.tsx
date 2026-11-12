@@ -20,6 +20,7 @@ import {
 	BOARD_COLUMN_ATTRIBUTE,
 	BOARD_DRAGGING_ATTRIBUTE,
 	BOARD_DROP_TARGET_ATTRIBUTE,
+	BOARD_MOVE_FIELD_ATTRIBUTE,
 	BOARD_MOVE_FORM_ATTRIBUTE,
 	boardDrag,
 } from "./mixins/board-drag.js";
@@ -77,7 +78,10 @@ export namespace Board {
 	/** Where a card's move posts: the form's address, the field the column fills, and extras. */
 	export interface Move {
 		action: string;
-		/** The field a drop fills with the column's value, such as `"status"`. */
+		/**
+		 * The field a drop sends the column's value in, such as `"status"`. It comes after
+		 * `fields`, so a reader of the post takes the field's last value.
+		 */
 		name: string;
 		/** Hidden fields posted with every move, such as the page to return to. */
 		fields?: Record<string, string>;
@@ -108,7 +112,8 @@ export const BoardDrag: EntryComponent<Record<never, never>> = clientEntry(
 /**
  * Renders the board: a row of columns that scrolls sideways inside its own box, each column
  * `--ui-board-column-width` (18rem) wide; a phone-narrow board shows one column and a sliver of
- * the next, snapping column by column.
+ * the next, snapping column by column. The row is positioned, so it clips everything inside it,
+ * a touch screen's enlarged hit areas included, and the page never grows to its width.
  *
  * @example
  * <Board id="web" label="Web issues by status">
@@ -145,6 +150,7 @@ export function Board(handle: Handle<Board.Props, Board.Context>) {
 					data-slot="board-columns"
 					mix={[
 						raw({
+							position: "relative",
 							display: "flex",
 							alignItems: "stretch",
 							gap: "0.75rem",
@@ -330,8 +336,8 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 
 /**
  * One card: a raised surface holding the consumer's content, grabbable by a mouse or pen, and
- * a hidden move form whose column field stays disabled until a drop fills it, so a menu row
- * submitting the same form sends its own value alone.
+ * a hidden move form. A drop appends the column's field after the form's own; a menu row
+ * submitting the form sends its value as the submitter, also last, so a reader takes the last.
  */
 Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 	return () => {
@@ -373,9 +379,13 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 							method="post"
 							action={move.action}
 							hidden
-							mix={[attrs({ [BOARD_MOVE_FORM_ATTRIBUTE]: value })]}
+							mix={[
+								attrs({
+									[BOARD_MOVE_FORM_ATTRIBUTE]: value,
+									[BOARD_MOVE_FIELD_ATTRIBUTE]: move.name,
+								}),
+							]}
 						>
-							<input type="hidden" name={move.name} value="" disabled data-board-move-input />
 							{Object.entries(move.fields ?? {}).map(([name, field]) => (
 								<input type="hidden" name={name} value={field} />
 							))}

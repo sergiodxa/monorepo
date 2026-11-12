@@ -125,7 +125,7 @@ describe("Board", () => {
 		);
 	});
 
-	test("each movable card owns a move form whose column field stays disabled", () => {
+	test("each movable card owns a move form holding its own fields until a drop", () => {
 		let board = mount();
 		let form = board.querySelector<HTMLFormElement>(`#${boardMoveFormId("test-board", "A-1")}`)!;
 		expect(form.getAttribute("action")).toBe("/move/A-1");
@@ -151,13 +151,31 @@ describe("Board", () => {
 		expect(moved).toEqual(["todo>started"]);
 		expect(started!.contains(card)).toBe(true);
 		expect(posted).toEqual([
-			["status", "started"],
 			["next", "board"],
+			["status", "started"],
 		]);
 		expect(todo!.querySelector('[data-slot="board-count"]')!.textContent).toBe("1");
 		expect(started!.querySelector('[data-slot="board-count"]')!.textContent).toBe("1");
 		expect(document.querySelector("[data-board-ghost]")).toBeNull();
 		expect(card.hasAttribute("data-board-dragging")).toBe(false);
+	});
+
+	test("a form read after the drop's own task still carries the column's value", async () => {
+		let board = mount();
+		await settle();
+		let started = board.querySelectorAll<HTMLElement>('[data-slot="board-column"]')[1]!;
+		let card = board.querySelector<HTMLElement>('[data-board-card="A-2"]')!;
+		let form = board.querySelector<HTMLFormElement>('form[data-board-move="A-2"]')!;
+		let read = new Promise<Array<[string, FormDataEntryValue]>>((resolve) => {
+			form.addEventListener("submit", (event) => {
+				event.preventDefault();
+				setTimeout(() => resolve([...new FormData(form).entries()]), 0);
+			});
+		});
+
+		drag(card, started);
+
+		expect(await read).toEqual([["status", "started"]]);
 	});
 
 	test("rings the column under the pointer while dragging, and Escape puts everything back", async () => {

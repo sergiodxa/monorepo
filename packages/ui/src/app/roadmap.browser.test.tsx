@@ -139,6 +139,23 @@ describe("Roadmap", () => {
 		expect(search!.textContent).toContain("projected to finish Nov 20, 2026");
 	});
 
+	test("a phone-narrow roadmap narrows its list column and drops each row's meta", () => {
+		mounted = render(
+			<div style="inline-size: 360px; block-size: 400px; display: flex">
+				<Roadmap label="Roadmap" start={START} end="2027-02-28" labels={LABELS} style="flex: 1">
+					<Roadmap.Group title="Q4 2026">
+						<Roadmap.Item name="Checkout" meta={<span data-testid="meta">Lead</span>} />
+					</Roadmap.Group>
+				</Roadmap>
+			</div>,
+		);
+		let name = mounted.container.querySelector('[data-slot="roadmap-item-name"]')!;
+		let meta = mounted.container.querySelector('[data-testid="meta"]')!;
+
+		expect(Math.round(name.getBoundingClientRect().width)).toBe(160);
+		expect(meta.getBoundingClientRect().width).toBe(0);
+	});
+
 	test("labels the months across the top", () => {
 		let roadmap = mount();
 		let months = [...roadmap.querySelectorAll('[data-slot="roadmap-month"]')].map(

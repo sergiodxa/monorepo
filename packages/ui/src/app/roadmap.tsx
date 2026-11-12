@@ -182,12 +182,12 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 					[
 						raw({
 							container: `${ROADMAP_CONTAINER} / inline-size`,
+							position: "relative",
 							overflow: "auto",
 							overscrollBehavior: "contain",
 							minInlineSize: 0,
 							backgroundColor: "var(--ui-bg, Canvas)",
 							"--ui-roadmap-track": along(span),
-							[NARROW]: { "--ui-roadmap-list-width": "10rem" },
 						}),
 					],
 					mix,
@@ -200,6 +200,9 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 							position: "relative",
 							display: "grid",
 							gridTemplateColumns: `${LIST} var(--ui-roadmap-track)`,
+							alignContent: "start",
+							minBlockSize: "100%",
+							[NARROW]: { "--ui-roadmap-list-width": "10rem" },
 							inlineSize: "max-content",
 							minInlineSize: "100%",
 						}),
@@ -270,7 +273,7 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 										insetInlineStart: along(week - first),
 										translate: "-50% 0",
 										color: "var(--ui-neutral-fg-muted)",
-										opacity: todayDay !== undefined && Math.abs(week - todayDay) < 3 ? "0" : "1",
+										opacity: todayDay !== undefined && Math.abs(week - todayDay) < 4 ? "0" : "1",
 									}),
 								]}
 							>

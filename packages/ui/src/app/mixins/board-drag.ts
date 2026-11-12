@@ -22,6 +22,12 @@ export const BOARD_CARD_ATTRIBUTE = "data-board-card";
 /** Attribute a card's move form names its card with, so a drop finds the form to post. */
 export const BOARD_MOVE_FORM_ATTRIBUTE = "data-board-move";
 
+/**
+ * Attribute a card's move form names its column field with. A drop appends that field to the
+ * form, after the form's own fields, and the next render of the form drops it again.
+ */
+export const BOARD_MOVE_FIELD_ATTRIBUTE = "data-board-move-field";
+
 /** Attribute set on the card being dragged, for as long as the drag lasts. */
 export const BOARD_DRAGGING_ATTRIBUTE = "data-board-dragging";
 
@@ -291,12 +297,14 @@ function move(card: HTMLElement, from: HTMLElement, to: HTMLElement): void {
 	let form = document.querySelector<HTMLFormElement>(
 		`form[${BOARD_MOVE_FORM_ATTRIBUTE}="${CSS.escape(value)}"]`,
 	);
-	let input = form?.querySelector<HTMLInputElement>("input[data-board-move-input]");
-	if (!form || !input) return;
-	input.disabled = false;
+	let name = form?.getAttribute(BOARD_MOVE_FIELD_ATTRIBUTE);
+	if (!form || !name) return;
+	let input = document.createElement("input");
+	input.type = "hidden";
+	input.name = name;
 	input.value = event.to;
+	form.appendChild(input);
 	form.requestSubmit();
-	input.disabled = true;
 }
 
 /** Adds `delta` to a column's count, when the column shows one. */
