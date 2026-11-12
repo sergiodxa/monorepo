@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { Menu } from "@sdxc/ui";
 
@@ -56,8 +56,10 @@ namespace UserMenu {
 		label: string;
 		/** The settings page about the person: their alerts, signature or masthead entry. */
 		profileHref: string;
-		/** The app's settings home. */
-		settingsHref: string;
+		/** The app's settings home; an app without settings leaves the row out. */
+		settingsHref?: string;
+		/** Rows of the app's own before Sign out, such as a form that resets the demo. */
+		extra?: RemixNode;
 		/** The id of the page's keyboard help sheet, which the shortcuts item opens. */
 		helpId: string;
 	}
@@ -69,14 +71,15 @@ namespace UserMenu {
  */
 export function UserMenu(handle: Handle<UserMenu.Props>) {
 	return () => {
-		let { helpId, id, label, profileHref, settingsHref } = handle.props;
+		let { extra, helpId, id, label, profileHref, settingsHref } = handle.props;
 		return (
 			<Menu id={id} placement="top-start" aria-label={label}>
 				<Menu.Item href={profileHref}>Profile</Menu.Item>
-				<Menu.Item href={settingsHref}>Settings</Menu.Item>
+				{settingsHref === undefined ? null : <Menu.Item href={settingsHref}>Settings</Menu.Item>}
 				<Menu.Item commandfor={helpId} command="show-modal">
 					Keyboard shortcuts
 				</Menu.Item>
+				{extra}
 				<Menu.Separator />
 				<Menu.Item href={routes.demos.href()}>Sign out</Menu.Item>
 			</Menu>

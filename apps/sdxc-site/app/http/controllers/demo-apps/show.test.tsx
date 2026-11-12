@@ -29,9 +29,9 @@ function countH1(body: string): number {
 }
 
 describe("GET /demo/apps/:app", () => {
-	test("the catalogue holds a dashboard, a CMS, an inbox, a chat assistant and a social network", () => {
+	test("the catalogue holds a dashboard, a CMS, an inbox, a chat assistant, a social network and an issue tracker", () => {
 		expect(listDemoAppSlugs()).toEqual(
-			expect.arrayContaining(["chorus", "inkwell", "pulse", "relay", "tern"]),
+			expect.arrayContaining(["cairn", "chorus", "inkwell", "pulse", "relay", "tern"]),
 		);
 	});
 

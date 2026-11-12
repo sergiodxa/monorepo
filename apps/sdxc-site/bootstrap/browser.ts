@@ -33,6 +33,7 @@ globalThis.navigation?.addEventListener("navigate", stayOnExampleNavigation);
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/app/app-shell-toggle": () => import("@sdxc/ui/app/app-shell-toggle"),
 	"@sdxc/ui/app/auto-refresh": () => import("@sdxc/ui/app/auto-refresh"),
+	"@sdxc/ui/app/board": () => import("@sdxc/ui/app/board"),
 	"@sdxc/ui/app/command-palette": () => import("@sdxc/ui/app/command-palette"),
 	"@sdxc/ui/app/detail-sheet": () => import("@sdxc/ui/app/detail-sheet"),
 	"@sdxc/ui/app/filter-bar": () => import("@sdxc/ui/app/filter-bar"),

@@ -101,7 +101,7 @@ verb, errors end with what to do next.
 
 ## Worked examples
 
-Five demo apps on sdxc.dev assemble the kit into whole products, each with its own art direction
+Six demo apps on sdxc.dev assemble the kit into whole products, each with its own art direction
 set through theme tokens alone. Open the one closest to the screen you are building, then read its
 source in `apps/sdxc-site/resources/views/demo-apps/<slug>/`:
 
@@ -117,8 +117,12 @@ source in `apps/sdxc-site/resources/views/demo-apps/<slug>/`:
 - **Chorus** (`/demo/apps/chorus`): a social network — a timeline whose likes and reposts flip
   at once and post in the background, a "Show N new posts" pill, a composer with a character
   ring, threads, profiles, grouped notifications, and a phone layout with a bottom tab bar.
+- **Cairn** (`/demo/apps/cairn`): an issue tracker — lists grouped by status with filters in the
+  address and a bulk bar, the issue beside its list with property menus that save as a model,
+  a board whose cards drag between columns (and move by menu without script), projects on a
+  roadmap, cycles with burn-up charts, an inbox, and a create dialog on `c`.
 
-All five are listed on the gallery at `/demo`.
+All six are listed on the gallery at `/demo`.
 
 ## The bar
 
