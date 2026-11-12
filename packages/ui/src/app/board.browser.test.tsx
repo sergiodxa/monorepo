@@ -164,6 +164,21 @@ describe("Board", () => {
 		expect(board.getBoundingClientRect().width).toBe(800);
 	});
 
+	test("a sideways scroll settles on a column's start, and a drag lifts the snap", async () => {
+		let board = mount(800);
+		board.style.setProperty("--ui-board-column-width", "30rem");
+		let scroller = board.querySelector<HTMLElement>('[data-slot="board-columns"]')!;
+		let second = board.querySelectorAll<HTMLElement>('[data-slot="board-column"]')[1]!;
+		let padding = parseFloat(getComputedStyle(scroller).scrollPaddingInlineStart);
+
+		scroller.scrollTo({ left: second.offsetLeft - 120, behavior: "instant" });
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+
+		expect(scroller.scrollLeft).toBe(second.offsetLeft - padding);
+		board.setAttribute("data-board-active", "");
+		expect(getComputedStyle(scroller).scrollSnapType).toBe("none");
+	});
+
 	test("a phone-narrow board shows one column and a sliver of the next", () => {
 		let board = mount(360);
 		let column = board.querySelector<HTMLElement>('[data-slot="board-column"]')!;

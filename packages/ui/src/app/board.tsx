@@ -140,7 +140,8 @@ export type BoardDragProps = {
 /**
  * Renders the board: columns `--ui-board-column-width` (18rem) wide in one positioned box that
  * clips and scrolls everything in it, so the page never grows to its width; given a height, it
- * fills it under sticky column headers. A phone-narrow board snaps column by column.
+ * fills it under sticky column headers. Sideways scrolling snaps column by column, and a
+ * phone-narrow board shows one column and a sliver of the next.
  *
  * @example
  * <Board id="web" label="Web issues by status">
@@ -190,9 +191,8 @@ export function Board(handle: Handle<Board.Props, Board.Context>) {
 							overscrollBehavior: "contain",
 							paddingBlockEnd: "0.5rem",
 							scrollPaddingInline: "0.5rem",
-							[`@container ${BOARD_CONTAINER} (width < 40rem)`]: {
-								scrollSnapType: "x mandatory",
-							},
+							scrollSnapType: "x mandatory",
+							"[data-board-active] > &": { scrollSnapType: "none" },
 						}),
 					]}
 				>
