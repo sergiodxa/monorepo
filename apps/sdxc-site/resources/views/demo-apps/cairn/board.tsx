@@ -19,19 +19,12 @@ import { DetailSheet } from "@sdxc/ui/app/detail-sheet";
 import type { StatusId, Team } from "./data";
 import type { IssueView, VisitorState } from "./state";
 
-import {
-	STATUSES,
-	STATUS_NAMES,
-	editHref,
-	findLabel,
-	findPerson,
-	href,
-	priorityRank,
-} from "./data";
+import { STATUSES, STATUS_NAMES, editHref, findLabel, findPerson, href } from "./data";
 import { IssueDetail } from "./detail";
 import { LabelChip, PersonTile, PriorityIcon, StatusIcon } from "./glyphs";
 import { SHEET_LABELS } from "./labels";
 import { CREATE_ID, CairnShell } from "./shell";
+import { compareBoardRank } from "./state";
 
 /** The states a board lays out; canceled issues leave the board. */
 const COLUMNS: StatusId[] = STATUSES.filter((status) => status !== "canceled");
@@ -50,7 +43,12 @@ function IssueCard(handle: Handle<{ issue: IssueView; team: Team; url: URL; page
 		return (
 			<Board.Card
 				value={issue.id}
-				move={{ action: editHref(page), name: "status", fields: { issue: issue.id } }}
+				move={{
+					action: editHref(page),
+					name: "status",
+					position: "before",
+					fields: { issue: issue.id },
+				}}
 			>
 				<div mix={[raw({ display: "flex", flexDirection: "column", gap: "0.5rem" })]}>
 					<div
@@ -182,11 +180,7 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 		let search = url.searchParams.toString();
 		let page = `team/${team.id}/board${search === "" ? "" : `?${search}`}`;
 		let ordered = COLUMNS.flatMap((status) =>
-			issues
-				.filter((issue) => issue.status === status)
-				.sort(
-					(a, b) => priorityRank(a.priority) - priorityRank(b.priority) || a.id.localeCompare(b.id),
-				),
+			issues.filter((issue) => issue.status === status).sort(compareBoardRank),
 		);
 		let openId = url.searchParams.get("issue");
 		let index = ordered.findIndex((issue) => issue.id === openId);
@@ -237,7 +231,7 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 								raw({ margin: "0", fontSize: "0.8125rem", color: "var(--ui-neutral-fg-muted)" }),
 							]}
 						>
-							Drag a card to change its status, press Shift+← or Shift+→ on it, or use its … menu.
+							Drag a card where you want it, press Shift and an arrow on it, or use its … menu.
 						</p>
 						<a
 							href={href(`team/${team.id}`)}

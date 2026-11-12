@@ -11,7 +11,7 @@ import { demoAppCookiePath } from "~/resources/views/demo-apps";
 
 import type { Change, Comment, Issue, PriorityId, StatusId } from "./data";
 
-import { ISSUES, ME, PEOPLE, PRIORITIES, STATUSES, TEAMS, findProject } from "./data";
+import { ISSUES, ME, PEOPLE, PRIORITIES, STATUSES, TEAMS, findProject, priorityRank } from "./data";
 
 /** Every Cairn cookie starts with this, which is how a request is known to be personal. */
 export const COOKIE_PREFIX = "cairn.";
@@ -43,6 +43,8 @@ export interface Edit {
 	priority: PriorityId;
 	assignee?: string;
 	at: number;
+	/** Where the visitor put the card in its board column, once they moved it there. */
+	rank?: number;
 }
 
 /** An issue the visitor created. */
@@ -75,6 +77,8 @@ export interface VisitorState {
 
 /** An issue as one visitor sees it, with their edits, comments and history applied. */
 export interface IssueView extends Issue {
+	/** Where the visitor put the card in its board column, once they moved it there. */
+	rank?: number;
 	/** When the visitor last edited it, in epoch milliseconds. */
 	editedAt?: number;
 	/** Created by the visitor in this browser. */
@@ -118,11 +122,11 @@ export function asAssignee(value: string): string | null | undefined {
 }
 
 /**
- * Reads an edit cookie's value, `status.priority.assignee.seconds`, refusing anything else
- * so a tampered cookie reads as no edit.
+ * Reads an edit cookie's value, `status.priority.assignee.seconds` with an optional `.rank`,
+ * refusing anything else so a tampered cookie reads as no edit.
  */
 function decodeEdit(value: string): Edit | undefined {
-	let [status = "", priority = "", assignee = "", seconds = ""] = value.split(".");
+	let [status = "", priority = "", assignee = "", seconds = "", rank] = value.split(".");
 	let parsedStatus = asStatus(status);
 	let parsedPriority = asPriority(priority);
 	let parsedAssignee = asAssignee(assignee === "-" ? "" : assignee);
@@ -130,11 +134,14 @@ function decodeEdit(value: string): Edit | undefined {
 	if (!parsedStatus || parsedPriority === undefined || parsedAssignee === undefined)
 		return undefined;
 	if (!Number.isFinite(at)) return undefined;
+	let parsedRank = rank === undefined ? undefined : Number(rank);
+	if (parsedRank !== undefined && !Number.isSafeInteger(parsedRank)) return undefined;
 	return {
 		status: parsedStatus,
 		priority: parsedPriority,
 		assignee: parsedAssignee ?? undefined,
 		at,
+		rank: parsedRank,
 	};
 }
 
@@ -237,9 +244,8 @@ function legacyCookieHeader(name: string): string {
  * @param edit Its status, priority and assignee now, and when.
  */
 export function editCookie(id: string, edit: Edit): string {
-	let value = [edit.status, edit.priority, edit.assignee ?? "-", Math.floor(edit.at / 1000)].join(
-		".",
-	);
+	let fields = [edit.status, edit.priority, edit.assignee ?? "-", Math.floor(edit.at / 1000)];
+	let value = [...fields, ...(edit.rank === undefined ? [] : [edit.rank])].join(".");
 	return cookieHeader(`${COOKIE_PREFIX}i.${id}`, value);
 }
 
@@ -360,6 +366,7 @@ function view(issue: Issue, state: VisitorState, fresh: boolean): IssueView {
 		changes,
 		comments,
 		editedAt: edit.at,
+		rank: edit.rank,
 		fresh,
 	};
 }
@@ -389,5 +396,44 @@ export function findIssue(id: string, state: VisitorState): IssueView | undefine
 
 /** The fields an edit starts from: the visitor's last edit, else the issue as it is. */
 export function currentFields(issue: IssueView): Omit<Edit, "at"> {
-	return { status: issue.status, priority: issue.priority, assignee: issue.assignee };
+	return {
+		status: issue.status,
+		priority: issue.priority,
+		assignee: issue.assignee,
+		rank: issue.rank,
+	};
+}
+
+/** The gap between two neighbouring cards' ranks before anyone moves one. */
+const RANK_STEP = 1024;
+
+/**
+ * Where a card sorts in its board column: where the visitor put it, or else by priority, then
+ * by the number in its id, so an unmoved column reads urgent first, oldest first.
+ */
+export function boardRank(issue: IssueView): number {
+	if (issue.rank !== undefined) return issue.rank;
+	let number = Number(issue.id.split("-").at(-1)) || 0;
+	return priorityRank(issue.priority) * 1_000_000 + number * RANK_STEP;
+}
+
+/** Orders cards as a board column shows them. */
+export function compareBoardRank(a: IssueView, b: IssueView): number {
+	return boardRank(a) - boardRank(b) || a.id.localeCompare(b.id);
+}
+
+/**
+ * The rank that puts a card just before `before` in `column`, or after its last card when
+ * `before` is missing from it. The column excludes the card being placed.
+ */
+export function rankBefore(column: IssueView[], before: string | null): number {
+	let ordered = [...column].sort(compareBoardRank);
+	let index = before === null ? -1 : ordered.findIndex((issue) => issue.id === before);
+	if (index === -1) {
+		let last = ordered.at(-1);
+		return last ? boardRank(last) + RANK_STEP : 0;
+	}
+	let next = boardRank(ordered[index]!);
+	let previous = index === 0 ? next - 2 * RANK_STEP : boardRank(ordered[index - 1]!);
+	return Math.floor((previous + next) / 2);
 }

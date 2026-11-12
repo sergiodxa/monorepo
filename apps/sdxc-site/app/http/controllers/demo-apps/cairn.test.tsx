@@ -179,6 +179,56 @@ describe("Cairn edits", () => {
 		expect(cookiesFrom(response)).toMatch(/cairn\.i\.WEB-130=review\./);
 	});
 
+	test("a card dropped before another keeps that place on the board, and a menu move keeps it too", async () => {
+		let column = (body: string, status: string) => {
+			let start = body.indexOf(`data-board-column="${status}"`);
+			let end = body.indexOf("data-board-column=", start + 1);
+			let slice = body.slice(start, end === -1 ? undefined : end);
+			return [...slice.matchAll(/data-board-card="([A-Z]+-\d+)"/g)].map(([, id]) => id!);
+		};
+		let before = column(await page("team/web/board"), "todo");
+		let [first, , third] = before;
+
+		let cookie = cookiesFrom(
+			await post(href("team/web/board"), [
+				["issue", third!],
+				["status", "todo"],
+				["before", first!],
+			]),
+		);
+		expect(column(await page("team/web/board", cookie), "todo").slice(0, 2)).toEqual([
+			third,
+			first,
+		]);
+
+		let moved = cookiesFrom(
+			await post(
+				href("team/web/board"),
+				[
+					["issue", third!],
+					["priority", "4"],
+				],
+				cookie,
+			),
+			cookie,
+		);
+		expect(column(await page("team/web/board", moved), "todo")[0]).toBe(third);
+
+		let last = cookiesFrom(
+			await post(
+				href("team/web/board"),
+				[
+					["issue", first!],
+					["status", "started"],
+					["before", ""],
+				],
+				moved,
+			),
+			moved,
+		);
+		expect(column(await page("team/web/board", last), "started").at(-1)).toBe(first);
+	});
+
 	test("My issues posts under its other address, which answers the same list", async () => {
 		let response = await post(href("my?issue=WEB-118"), [
 			["issue", "WEB-118"],

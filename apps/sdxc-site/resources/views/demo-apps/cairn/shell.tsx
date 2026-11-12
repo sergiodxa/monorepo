@@ -97,6 +97,8 @@ const HELP_GROUPS: KeyboardHelp.Group[] = [
 			{ keys: "a", label: "Assign issue" },
 			{ keys: "shift+arrowleft", label: "Move card to the previous column" },
 			{ keys: "shift+arrowright", label: "Move card to the next column" },
+			{ keys: "shift+arrowup", label: "Move card up its column" },
+			{ keys: "shift+arrowdown", label: "Move card down its column" },
 		],
 	},
 	{

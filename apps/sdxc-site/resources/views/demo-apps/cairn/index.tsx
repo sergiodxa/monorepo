@@ -64,6 +64,7 @@ import {
 	findIssue,
 	isPersonal,
 	nextIssueId,
+	rankBefore,
 	readState,
 } from "./state";
 import { CairnThumbnail } from "./thumbnail";
@@ -494,6 +495,14 @@ function submitIssue(
 		let assignee = asAssignee(field(form, "assignee"));
 		if (assignee === undefined) return null;
 		edit.assignee = assignee ?? undefined;
+		changed = true;
+	}
+	if (form.has("before")) {
+		let before = field(form, "before");
+		let column = allIssues(state).filter(
+			(other) => other.team === issue.team && other.status === edit.status && other.id !== issue.id,
+		);
+		edit.rank = rankBefore(column, before === "" ? null : before);
 		changed = true;
 	}
 	if (!changed) return null;
