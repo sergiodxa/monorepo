@@ -75,6 +75,15 @@ export namespace Skeleton {
 		chart?: boolean;
 	}
 
+	/** Props accepted by {@link Skeleton.Text}. */
+	export interface TextProps extends TagProps<"span"> {
+		/**
+		 * Draws one bar over the whole box instead of one per wrapped line, for an inline-flex
+		 * box such as a badge or a button. @default false
+		 */
+		block?: boolean;
+	}
+
 	/** Props accepted by {@link Skeleton.List}. */
 	export interface ListProps extends TagProps<"div">, Labelled {
 		/** Placeholder rows. Default: `5`. */
@@ -350,6 +359,49 @@ Skeleton.List = function SkeletonList(handle: Handle<Skeleton.ListProps>) {
 					</div>
 				))}
 			</div>
+		);
+	};
+};
+
+/**
+ * Lays out real content unseen and paints a bar over each line it wraps to, so a placeholder
+ * takes exactly the content's size at every width: a name that wraps on a phone wraps in its
+ * placeholder too. Hidden from assistive technology.
+ *
+ * @param handle Runtime handle carrying the host `<span>`'s props.
+ * @returns The render function producing the placeholder's markup.
+ * @example
+ * <p><Skeleton.Text>{person.name}</Skeleton.Text></p>
+ * @example
+ * <Skeleton.Text block><Badge>Follows you</Badge></Skeleton.Text>
+ */
+Skeleton.Text = function SkeletonText(handle: Handle<Skeleton.TextProps>) {
+	return () => {
+		let { block = false, children, mix, ...rest } = handle.props;
+
+		return (
+			<span
+				{...rest}
+				data-slot="skeleton-text"
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
+						raw({
+							borderRadius: block ? "9999px" : "var(--ui-radius-sm, 0.25rem)",
+							boxDecorationBreak: "clone",
+							WebkitBoxDecorationBreak: "clone",
+							userSelect: "none",
+						}),
+						block ? raw({ display: "inline-flex" }) : raw({}),
+						bg("neutral.border"),
+					],
+					mix,
+				)}
+			>
+				<span mix={[raw({ visibility: "hidden", display: block ? "contents" : "inline" })]}>
+					{children}
+				</span>
+			</span>
 		);
 	};
 };

@@ -211,3 +211,60 @@ describe("Skeleton shimmer", () => {
 		expect(getComputedStyle(bar).animationName).toBe("none");
 	});
 });
+
+describe("Skeleton.Text", () => {
+	/** A bio long enough to wrap in a phone's column and stay on fewer lines in a desktop's. */
+	const BIO =
+		"Browser engineer. Layout, text and the CSS you didn't know shipped. Threads about the platform, most weeks.";
+
+	for (let width of [240, 600]) {
+		test(`wraps like the text it stands in for at ${width}px`, () => {
+			let host = mount(
+				<div>
+					<p data-testid="real" style="margin:0;line-height:1.45">
+						{BIO}
+					</p>
+					<p data-testid="ghost" style="margin:0;line-height:1.45">
+						<Skeleton.Text>{BIO}</Skeleton.Text>
+					</p>
+				</div>,
+				width,
+			);
+
+			expect(heightOf(host, '[data-testid="ghost"]')).toBe(heightOf(host, '[data-testid="real"]'));
+			expect(heightOf(host, '[data-testid="real"]')).toBeGreaterThan(20);
+		});
+	}
+
+	test("paints a bar per line and keeps the text out of reach", () => {
+		let host = mount(
+			<p style="--ui-neutral-border: rgb(220, 220, 220)">
+				<Skeleton.Text>Priya Raman</Skeleton.Text>
+			</p>,
+		);
+		let bar = host.querySelector<HTMLElement>('[data-slot="skeleton-text"]')!;
+		let text = bar.firstElementChild!;
+
+		expect(bar.getAttribute("aria-hidden")).toBe("true");
+		expect(getComputedStyle(bar).backgroundColor).toBe("rgb(220, 220, 220)");
+		expect(getComputedStyle(text).visibility).toBe("hidden");
+	});
+
+	test("block wraps one pill around a box the size of its content", () => {
+		let host = mount(
+			<div>
+				<span data-testid="real" style="display:inline-flex;padding:4px 12px">
+					Follow
+				</span>
+				<Skeleton.Text block data-testid="ghost">
+					<span style="display:inline-flex;padding:4px 12px">Follow</span>
+				</Skeleton.Text>
+			</div>,
+		);
+		let real = host.querySelector('[data-testid="real"]')!.getBoundingClientRect();
+		let ghost = host.querySelector('[data-testid="ghost"]')!.getBoundingClientRect();
+
+		expect(Math.round(ghost.width)).toBe(Math.round(real.width));
+		expect(Math.round(ghost.height)).toBe(Math.round(real.height));
+	});
+});
