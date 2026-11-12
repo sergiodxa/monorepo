@@ -202,6 +202,23 @@ describe("Cairn's long list", () => {
 	});
 });
 
+describe("Cairn's board columns", () => {
+	test("a column's + opens the create dialog in that column's status, and the next opener starts at Todo", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("team/web/board");
+		let dialog = root.querySelector<HTMLDialogElement>("dialog#cairn-create")!;
+		let status = dialog.querySelector<HTMLSelectElement>('select[name="status"]')!;
+
+		root.querySelector<HTMLButtonElement>('button[aria-label="Create issue in Done"]')!.click();
+		expect(dialog.open).toBe(true);
+		expect(status.value).toBe("done");
+
+		dialog.close();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(status.value).toBe("todo");
+	});
+});
+
 describe("Cairn's board", () => {
 	test("fills the window under the top bar, so its own scrollbars stay on screen", async () => {
 		await page.viewport(1280, 600);

@@ -18,6 +18,7 @@ import { Button, Dialog, HeadingScope, Label, Select, TextArea, TextField } from
 
 import type { PriorityId, StatusId } from "./data";
 
+import { CreatePresets } from "./create-presets";
 import {
 	ME,
 	PEOPLE,
@@ -206,6 +207,7 @@ export function CreateIssueDialog(handle: Handle<{ id: string; team: string; fro
 					aria-labelledby={`${id}-title`}
 					mix={[raw({ inlineSize: "min(36rem, calc(100vw - 2rem))" })]}
 				>
+					<CreatePresets />
 					<form
 						method="post"
 						action={actionHref("new")}

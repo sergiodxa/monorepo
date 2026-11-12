@@ -270,6 +270,8 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 											size="sm"
 											commandfor={CREATE_ID}
 											command="show-modal"
+											name="status"
+											value={status}
 											aria-label={`Create issue in ${STATUS_NAMES[status]}`}
 											title="Create issue"
 											mix={[raw({ blockSize: "1.5rem", minInlineSize: "1.5rem", padding: "0" })]}
