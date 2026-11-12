@@ -1,7 +1,7 @@
 /**
  * Why JS: writing the collapse cookie, a ⌘B shortcut, closing the phone sheet when a link is
- * followed in place, re-marking the current row after a frame navigation and following a back
- * row on Esc have no HTML or CSS equivalent.
+ * followed in place, re-marking the current row and retitling the page after a frame
+ * navigation and following a back row on Esc have no HTML or CSS equivalent.
  * No-JS baseline: the checkbox still collapses the sidebar through CSS and the sheet opens and
  * closes through the Popover API; the collapse lasts until the next page load.
  *
@@ -143,6 +143,9 @@ function enhance(
 		() => {
 			let element = sidebar();
 			if (element) markCurrentRow(element, doc.location.pathname);
+			let title = doc.querySelector<HTMLElement>('[data-slot="app-shell-main"][data-title]')
+				?.dataset.title;
+			if (title) doc.title = title;
 		},
 		{ signal },
 	);

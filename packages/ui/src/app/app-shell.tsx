@@ -156,6 +156,11 @@ export namespace AppShell {
 		"collapsed" | "topbar" | "id" | "fill" | "cookieName" | "cookiePath" | "sheetBelow"
 	> {
 		labels: Pick<Labels, "menu" | "collapse">;
+		/**
+		 * The document title for the screen. A navigation that reloads only the pane leaves the
+		 * page's `<title>` behind, so the shell's controls apply this one once it lands.
+		 */
+		title?: string;
 		/** The screen, rendered inside `<main>`. */
 		children: RemixNode;
 	}
@@ -543,6 +548,7 @@ AppShell.Pane = function AppShellPane(handle: Handle<AppShell.PaneProps>) {
 			labels,
 			collapsed = false,
 			topbar,
+			title,
 			children,
 			id = DEFAULT_ID,
 			cookieName = APP_SHELL_COOKIE,
@@ -619,6 +625,7 @@ AppShell.Pane = function AppShellPane(handle: Handle<AppShell.PaneProps>) {
 
 				<main
 					id={mainId}
+					data-title={title}
 					tabIndex={-1}
 					data-slot="app-shell-main"
 					mix={[

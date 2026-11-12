@@ -626,6 +626,22 @@ describe("AppShell", () => {
 		expect(elsewhere!.hasAttribute("data-current")).toBe(false);
 	});
 
+	test("a navigation retitles the page from the pane it landed", () => {
+		let before = document.title;
+		mountShell({
+			pane: (
+				<AppShell.Pane labels={LABELS} title="Invoices — Acme">
+					<p>Screen</p>
+				</AppShell.Pane>
+			),
+		});
+
+		navigation.dispatchEvent(new Event("navigatesuccess"));
+
+		expect(document.title).toBe("Invoices — Acme");
+		document.title = before;
+	});
+
 	test("a pane passed in stands in for the top bar and main", () => {
 		mountShell({
 			pane: (
