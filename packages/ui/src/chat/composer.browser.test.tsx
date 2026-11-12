@@ -102,6 +102,26 @@ describe("revealStream and skipped elements", () => {
 });
 
 describe("ComposerSubmit", () => {
+	test("the send button is a circle", () => {
+		let mounted = render(
+			<Composer>
+				<Composer.Input aria-label="Message" />
+				<Composer.Toolbar>
+					<ComposerSubmit labels={{ send: "Send", stop: "Stop" }} />
+				</Composer.Toolbar>
+			</Composer>,
+		);
+		onTestFinished(mounted.cleanup);
+		let send = mounted.container.querySelector<HTMLElement>('[aria-label="Send"]')!;
+		let box = send.getBoundingClientRect();
+
+		expect(box.width).toBeGreaterThan(0);
+		expect(box.height).toBe(box.width);
+		expect(Number.parseFloat(getComputedStyle(send).borderTopLeftRadius)).toBeGreaterThanOrEqual(
+			box.width / 2,
+		);
+	});
+
 	test("Enter sends a message, Shift+Enter and an empty field do not", () => {
 		let mounted = render(
 			<Composer>

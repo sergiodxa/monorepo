@@ -10,7 +10,10 @@
 import type { EntryComponent, Handle } from "remix/component";
 
 import { ArrowUpIcon, SquareIcon } from "@sdxc/icons";
+import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
+import { shrink } from "@sdxc/u/layout";
+import { bs, is, minBs, minIs, pb, pi } from "@sdxc/u/size";
 import { clientEntry } from "remix/component";
 
 import { Button } from "../components/button.js";
@@ -37,14 +40,19 @@ export namespace ComposerSubmit {
 	};
 }
 
-/** The square, round-cornered look both buttons share, so swapping them never moves the row. */
-const BUTTON_SHAPE = raw({
-	inlineSize: "2.25rem",
-	blockSize: "2.25rem",
-	paddingInline: "0",
-	borderRadius: "var(--ui-composer-button-radius, 999px)",
-	flexShrink: "0",
-});
+/** The round shape both buttons share, so swapping Send for Stop never moves the row. */
+function buttonShape() {
+	return [
+		is("2.25rem"),
+		bs("2.25rem"),
+		minIs("2.25rem"),
+		minBs("2.25rem"),
+		pi(0),
+		pb(0),
+		rounded("full"),
+		shrink(0),
+	];
+}
 
 /**
  * Renders Send, or Stop while a reply streams. Enter sends a non-empty message unless an
@@ -81,7 +89,7 @@ export const ComposerSubmit: EntryComponent<ComposerSubmit.Props> = clientEntry(
 							title={labels.stop}
 							aria-keyshortcuts="Escape"
 							data-slot={COMPOSER_STOP_SLOT}
-							mix={[BUTTON_SHAPE]}
+							mix={buttonShape()}
 						>
 							<SquareIcon size={14} fill="currentColor" aria-hidden="true" />
 						</Button>
@@ -93,7 +101,7 @@ export const ComposerSubmit: EntryComponent<ComposerSubmit.Props> = clientEntry(
 							title={labels.send}
 							aria-keyshortcuts="Enter"
 							data-slot="composer-send"
-							mix={[BUTTON_SHAPE]}
+							mix={buttonShape()}
 						>
 							<ArrowUpIcon size={18} aria-hidden="true" />
 						</Button>
