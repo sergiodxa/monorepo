@@ -212,11 +212,11 @@ describe("Skeleton shimmer", () => {
 	});
 });
 
-describe("Skeleton.Text", () => {
-	/** A bio long enough to wrap in a phone's column and stay on fewer lines in a desktop's. */
-	const BIO =
-		"Browser engineer. Layout, text and the CSS you didn't know shipped. Threads about the platform, most weeks.";
+/** A bio long enough to wrap in a phone's column and stay on fewer lines in a desktop's. */
+const BIO =
+	"Browser engineer. Layout, text and the CSS you didn't know shipped. Threads about the platform, most weeks.";
 
+describe("Skeleton.Text", () => {
 	for (let width of [240, 600]) {
 		test(`wraps like the text it stands in for at ${width}px`, () => {
 			let host = mount(
