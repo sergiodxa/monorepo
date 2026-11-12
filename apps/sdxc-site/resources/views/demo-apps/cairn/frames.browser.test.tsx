@@ -166,6 +166,16 @@ describe("Cairn's short list", () => {
 			100,
 		);
 	});
+
+	test("starts its footer's count where the page's title starts", async () => {
+		await page.viewport(1280, 900);
+		let root = await mountScreen("team/web");
+		let title = root.querySelector("h1")!.getBoundingClientRect();
+		let text = document.createRange();
+		text.selectNodeContents(root.querySelector('[data-slot="selection-bar-pagination"]')!);
+
+		expect(Math.abs(text.getBoundingClientRect().left - title.left)).toBeLessThanOrEqual(1);
+	});
 });
 
 describe("Cairn's board", () => {

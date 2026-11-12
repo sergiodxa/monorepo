@@ -777,6 +777,7 @@ function IssueList(handle: Handle<IssueList.Props>) {
 					form={BULK_FORM}
 					locale={LOCALE}
 					pagination={{ summary: `${rows.length} issues` }}
+					mix={[raw({ paddingInline: "1rem" })]}
 					actions={[
 						{
 							label: "Start",
