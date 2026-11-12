@@ -11,9 +11,12 @@ import { describe, expect, test } from "vitest";
 
 import { commitFiles, correctionFiles, hasCommit } from "./git.js";
 
+/** Git's null object id, which no commit can carry, so it is absent from every clone. */
+const MISSING_SHA = "0".repeat(40);
+
 describe("correctionFiles", () => {
 	test("answers an empty list when the named sha is not in this clone", async () => {
-		let sha = "00d9511d3cddbc459e24496167a39c9ab08f24b8";
+		let sha = MISSING_SHA;
 		expect(await hasCommit(sha)).toBe(false);
 
 		let files = await correctionFiles(sha);
