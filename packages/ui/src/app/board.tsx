@@ -17,15 +17,22 @@ import { when } from "@sdxc/u/state";
 import { attrs, clientEntry } from "remix/component";
 
 import {
-	BOARD_CARD_ATTRIBUTE,
-	BOARD_COLUMN_ATTRIBUTE,
-	BOARD_DRAGGING_ATTRIBUTE,
-	BOARD_DROP_TARGET_ATTRIBUTE,
-	BOARD_MOVE_FIELD_ATTRIBUTE,
-	BOARD_MOVE_FORM_ATTRIBUTE,
-	BOARD_MOVE_POSITION_ATTRIBUTE,
-	boardDrag,
-} from "./mixins/board-drag.js";
+	SORTABLE_ACTIVE_ATTRIBUTE,
+	SORTABLE_ATTRIBUTE,
+	SORTABLE_COUNT_ATTRIBUTE,
+	SORTABLE_DRAGGING_ATTRIBUTE,
+	SORTABLE_FIELD_ATTRIBUTE,
+	SORTABLE_FORM_ATTRIBUTE,
+	SORTABLE_ITEM_ATTRIBUTE,
+	SORTABLE_ITEMS_ATTRIBUTE,
+	SORTABLE_LIST_ATTRIBUTE,
+	SORTABLE_POSITION_ATTRIBUTE,
+	SORTABLE_SCROLLER_ATTRIBUTE,
+	SORTABLE_STATUS_ATTRIBUTE,
+	SORTABLE_TARGET_ATTRIBUTE,
+	SORTABLE_TITLE_ATTRIBUTE,
+	sortable,
+} from "../mixins/sortable.js";
 
 /** Container the board names, so its columns answer the board's width rather than the page's. */
 const BOARD_CONTAINER = "ui-board";
@@ -123,7 +130,11 @@ export const BoardDrag: EntryComponent<BoardDragProps> = clientEntry(
 	"@sdxc/ui/app/board#BoardDrag",
 	function BoardDrag(handle) {
 		return () => (
-			<span hidden data-slot="board-drag" mix={[boardDrag({ moved: handle.props.moved })]} />
+			<span
+				hidden
+				data-slot="board-drag"
+				mix={[sortable({ moved: handle.props.moved?.replaceAll("{column}", "{list}") })]}
+			/>
 		);
 	},
 );
@@ -165,13 +176,14 @@ export function Board(handle: Handle<Board.Props, Board.Context>) {
 				data-slot="board"
 				mix={mergeMix(
 					[
+						attrs({ [SORTABLE_ATTRIBUTE]: "" }),
 						raw({
 							container: `${BOARD_CONTAINER} / inline-size`,
 							display: "flex",
 							flexDirection: "column",
 							minInlineSize: 0,
 							minBlockSize: 0,
-							"&[data-board-active]": { cursor: "grabbing", userSelect: "none" },
+							[`&[${SORTABLE_ACTIVE_ATTRIBUTE}]`]: { cursor: "grabbing", userSelect: "none" },
 						}),
 					],
 					mix,
@@ -180,6 +192,7 @@ export function Board(handle: Handle<Board.Props, Board.Context>) {
 				<div
 					data-slot="board-columns"
 					mix={[
+						attrs({ [SORTABLE_SCROLLER_ATTRIBUTE]: "" }),
 						raw({
 							position: "relative",
 							display: "flex",
@@ -192,13 +205,18 @@ export function Board(handle: Handle<Board.Props, Board.Context>) {
 							paddingBlockEnd: "0.5rem",
 							scrollPaddingInline: "0.5rem",
 							scrollSnapType: "x mandatory",
-							"[data-board-active] > &": { scrollSnapType: "none" },
+							[`[${SORTABLE_ACTIVE_ATTRIBUTE}] > &`]: { scrollSnapType: "none" },
 						}),
 					]}
 				>
 					{children}
 				</div>
-				<span data-slot="board-status" role="status" aria-live="polite" mix={[visuallyHidden()]} />
+				<span
+					data-slot="board-status"
+					role="status"
+					aria-live="polite"
+					mix={[attrs({ [SORTABLE_STATUS_ATTRIBUTE]: "" }), visuallyHidden()]}
+				/>
 				<BoardDrag moved={labels?.moved} />
 			</div>
 		);
@@ -220,7 +238,7 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 				data-slot="board-column"
 				mix={mergeMix(
 					[
-						attrs({ [BOARD_COLUMN_ATTRIBUTE]: value }),
+						attrs({ [SORTABLE_LIST_ATTRIBUTE]: value }),
 						raw({
 							display: "flex",
 							flexDirection: "column",
@@ -235,7 +253,7 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 							[`@container ${BOARD_CONTAINER} (width < 40rem)`]: { flexBasis: "85%" },
 						}),
 						when(
-							`&[${BOARD_DROP_TARGET_ATTRIBUTE}]`,
+							`&[${SORTABLE_TARGET_ATTRIBUTE}]`,
 							raw({
 								outlineColor: "var(--ui-brand-ring)",
 								backgroundColor:
@@ -286,6 +304,7 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 					<h3
 						id={headingId}
 						mix={[
+							attrs({ [SORTABLE_TITLE_ATTRIBUTE]: "" }),
 							raw({
 								margin: "0",
 								fontSize: "inherit",
@@ -305,6 +324,7 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 							<span
 								data-slot="board-count"
 								mix={[
+									attrs({ [SORTABLE_COUNT_ATTRIBUTE]: "" }),
 									raw({ color: "var(--ui-neutral-fg-muted)", fontVariantNumeric: "tabular-nums" }),
 								]}
 							>
@@ -357,6 +377,7 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 					data-slot="board-cards"
 					aria-labelledby={headingId}
 					mix={[
+						attrs({ [SORTABLE_ITEMS_ATTRIBUTE]: "" }),
 						raw({
 							display: "flex",
 							flexDirection: "column",
@@ -391,7 +412,7 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 				data-slot="board-card"
 				mix={mergeMix(
 					[
-						attrs({ [BOARD_CARD_ATTRIBUTE]: value }),
+						attrs({ [SORTABLE_ITEM_ATTRIBUTE]: value }),
 						raw({
 							position: "relative",
 							padding: "0.625rem 0.75rem",
@@ -406,7 +427,7 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 							"&:hover",
 							raw({ borderColor: "var(--ui-neutral-border-emphasis, var(--ui-neutral-fg-muted))" }),
 						),
-						when(`&[${BOARD_DRAGGING_ATTRIBUTE}]`, raw({ opacity: "0.35" })),
+						when(`&[${SORTABLE_DRAGGING_ATTRIBUTE}]`, raw({ opacity: "0.35" })),
 						motionReduce(raw({ transition: "none" })),
 					],
 					mix,
@@ -423,9 +444,9 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 							hidden
 							mix={[
 								attrs({
-									[BOARD_MOVE_FORM_ATTRIBUTE]: value,
-									[BOARD_MOVE_FIELD_ATTRIBUTE]: move.name,
-									[BOARD_MOVE_POSITION_ATTRIBUTE]: move.position,
+									[SORTABLE_FORM_ATTRIBUTE]: value,
+									[SORTABLE_FIELD_ATTRIBUTE]: move.name,
+									[SORTABLE_POSITION_ATTRIBUTE]: move.position,
 								}),
 							]}
 						>

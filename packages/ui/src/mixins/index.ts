@@ -37,6 +37,7 @@ export * from "./otp-slots.js";
 export * from "./persist.js";
 export * from "./press-toggle.js";
 export * from "./range-preview.js";
+export * from "./sortable.js";
 export * from "./stepper.js";
 export * from "./tab-keys.js";
 export * from "./theme-toggle.js";

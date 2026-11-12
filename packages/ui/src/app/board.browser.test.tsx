@@ -125,18 +125,18 @@ function mountPositioned(): HTMLElement {
 
 /** The card values of a column, in order. */
 function order(column: Element): string[] {
-	return [...column.querySelectorAll("[data-board-card]")].map((card) =>
-		card.getAttribute("data-board-card")!,
+	return [...column.querySelectorAll("[data-sortable-item]")].map((card) =>
+		card.getAttribute("data-sortable-item")!,
 	);
 }
 
 /** Collects what each card's move form posts, keeping the page where it is. */
 function capturePosts(board: HTMLElement): Map<string, Array<[string, FormDataEntryValue]>> {
 	let posts = new Map<string, Array<[string, FormDataEntryValue]>>();
-	for (let form of board.querySelectorAll<HTMLFormElement>("form[data-board-move]")) {
+	for (let form of board.querySelectorAll<HTMLFormElement>("form[data-sortable-form]")) {
 		form.addEventListener("submit", (event) => {
 			event.preventDefault();
-			posts.set(form.getAttribute("data-board-move")!, [...new FormData(form).entries()]);
+			posts.set(form.getAttribute("data-sortable-form")!, [...new FormData(form).entries()]);
 		});
 	}
 	return posts;
@@ -175,7 +175,7 @@ describe("Board", () => {
 		await new Promise((resolve) => requestAnimationFrame(resolve));
 
 		expect(scroller.scrollLeft).toBe(second.offsetLeft - padding);
-		board.setAttribute("data-board-active", "");
+		board.setAttribute("data-sortable-active", "");
 		expect(getComputedStyle(scroller).scrollSnapType).toBe("none");
 	});
 
@@ -228,15 +228,15 @@ describe("Board", () => {
 		let board = mount();
 		await settle();
 		let [todo, started] = board.querySelectorAll<HTMLElement>('[data-slot="board-column"]');
-		let card = board.querySelector<HTMLElement>('[data-board-card="A-1"]')!;
-		let form = board.querySelector<HTMLFormElement>('form[data-board-move="A-1"]')!;
+		let card = board.querySelector<HTMLElement>('[data-sortable-item="A-1"]')!;
+		let form = board.querySelector<HTMLFormElement>('form[data-sortable-form="A-1"]')!;
 		let posted: Array<[string, FormDataEntryValue]> = [];
 		let moved: string[] = [];
 		form.addEventListener("submit", (event) => {
 			event.preventDefault();
 			posted = [...new FormData(form).entries()];
 		});
-		board.addEventListener("ui:board-move", (event) => moved.push(`${event.from}>${event.to}`));
+		board.addEventListener("ui:sortable-move", (event) => moved.push(`${event.from}>${event.to}`));
 
 		drag(card, started!);
 
@@ -248,16 +248,16 @@ describe("Board", () => {
 		]);
 		expect(todo!.querySelector('[data-slot="board-count"]')!.textContent).toBe("1");
 		expect(started!.querySelector('[data-slot="board-count"]')!.textContent).toBe("1");
-		expect(document.querySelector("[data-board-ghost]")).toBeNull();
-		expect(card.hasAttribute("data-board-dragging")).toBe(false);
+		expect(document.querySelector("[data-sortable-ghost]")).toBeNull();
+		expect(card.hasAttribute("data-sortable-dragging")).toBe(false);
 	});
 
 	test("a form read after the drop's own task still carries the column's value", async () => {
 		let board = mount();
 		await settle();
 		let started = board.querySelectorAll<HTMLElement>('[data-slot="board-column"]')[1]!;
-		let card = board.querySelector<HTMLElement>('[data-board-card="A-2"]')!;
-		let form = board.querySelector<HTMLFormElement>('form[data-board-move="A-2"]')!;
+		let card = board.querySelector<HTMLElement>('[data-sortable-item="A-2"]')!;
+		let form = board.querySelector<HTMLFormElement>('form[data-sortable-form="A-2"]')!;
 		let read = new Promise<Array<[string, FormDataEntryValue]>>((resolve) => {
 			form.addEventListener("submit", (event) => {
 				event.preventDefault();
@@ -274,9 +274,9 @@ describe("Board", () => {
 		let board = mount();
 		await settle();
 		let [todo, started] = board.querySelectorAll<HTMLElement>('[data-slot="board-column"]');
-		let card = board.querySelector<HTMLElement>('[data-board-card="A-1"]')!;
+		let card = board.querySelector<HTMLElement>('[data-sortable-item="A-1"]')!;
 		let link = card.querySelector("a")!;
-		let form = board.querySelector<HTMLFormElement>('form[data-board-move="A-1"]')!;
+		let form = board.querySelector<HTMLFormElement>('form[data-sortable-form="A-1"]')!;
 		let posted: Array<[string, FormDataEntryValue]> = [];
 		form.addEventListener("submit", (event) => {
 			event.preventDefault();
@@ -305,7 +305,7 @@ describe("Board", () => {
 		let board = mount();
 		await settle();
 		let [todo, , done] = board.querySelectorAll<HTMLElement>('[data-slot="board-column"]');
-		let card = board.querySelector<HTMLElement>('[data-board-card="A-2"]')!;
+		let card = board.querySelector<HTMLElement>('[data-sortable-item="A-2"]')!;
 		let submitted = false;
 		board.addEventListener("submit", (event) => {
 			event.preventDefault();
@@ -313,21 +313,21 @@ describe("Board", () => {
 		});
 
 		drag(card, done!, false);
-		expect(done!.hasAttribute("data-board-drop-target")).toBe(true);
-		expect(document.querySelector("[data-board-ghost]")).not.toBeNull();
+		expect(done!.hasAttribute("data-sortable-target")).toBe(true);
+		expect(document.querySelector("[data-sortable-ghost]")).not.toBeNull();
 		document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 		pointer(document, "pointerup", centre(done!));
 
 		expect(todo!.contains(card)).toBe(true);
-		expect(done!.hasAttribute("data-board-drop-target")).toBe(false);
-		expect(document.querySelector("[data-board-ghost]")).toBeNull();
+		expect(done!.hasAttribute("data-sortable-target")).toBe(false);
+		expect(document.querySelector("[data-sortable-ghost]")).toBeNull();
 		expect(submitted).toBe(false);
 	});
 
 	test("a press that never travels stays a click, and a touch press starts no drag", async () => {
 		let board = mount();
 		await settle();
-		let card = board.querySelector<HTMLElement>('[data-board-card="A-1"]')!;
+		let card = board.querySelector<HTMLElement>('[data-sortable-item="A-1"]')!;
 		let link = card.querySelector("a")!;
 		let clicks = 0;
 		link.addEventListener("click", (event) => {
@@ -344,7 +344,7 @@ describe("Board", () => {
 			new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch", pointerId: 2 }),
 		);
 		pointer(document, "pointermove", { x: 400, y: 400 });
-		expect(document.querySelector("[data-board-ghost]")).toBeNull();
+		expect(document.querySelector("[data-sortable-ghost]")).toBeNull();
 	});
 });
 
@@ -352,11 +352,11 @@ describe("Board with positions", () => {
 	test("a drag places the card between the cards under the pointer, and the drop sends its neighbour", async () => {
 		let board = mountPositioned();
 		await settle();
-		let todo = board.querySelector('[data-board-column="todo"]')!;
+		let todo = board.querySelector('[data-sortable-list="todo"]')!;
 		let posts = capturePosts(board);
-		let first = board.querySelector('[data-board-card="A-1"]')!.getBoundingClientRect();
+		let first = board.querySelector('[data-sortable-item="A-1"]')!.getBoundingClientRect();
 
-		dragTo(board.querySelector('[data-board-card="A-3"]')!, {
+		dragTo(board.querySelector('[data-sortable-item="A-3"]')!, {
 			x: first.left + 20,
 			y: first.top + 4,
 		});
@@ -372,11 +372,11 @@ describe("Board with positions", () => {
 	test("a card dropped under a column's last card lands last and sends no neighbour", async () => {
 		let board = mountPositioned();
 		await settle();
-		let started = board.querySelector('[data-board-column="started"]')!;
+		let started = board.querySelector('[data-sortable-list="started"]')!;
 		let posts = capturePosts(board);
-		let last = board.querySelector('[data-board-card="B-1"]')!.getBoundingClientRect();
+		let last = board.querySelector('[data-sortable-item="B-1"]')!.getBoundingClientRect();
 
-		dragTo(board.querySelector('[data-board-card="A-1"]')!, {
+		dragTo(board.querySelector('[data-sortable-item="A-1"]')!, {
 			x: last.left + 20,
 			y: last.bottom + 20,
 		});
@@ -392,12 +392,12 @@ describe("Board with positions", () => {
 	test("Escape puts a placed card back where it started, posting nothing", async () => {
 		let board = mountPositioned();
 		await settle();
-		let todo = board.querySelector('[data-board-column="todo"]')!;
+		let todo = board.querySelector('[data-sortable-list="todo"]')!;
 		let posts = capturePosts(board);
-		let first = board.querySelector('[data-board-card="A-1"]')!.getBoundingClientRect();
+		let first = board.querySelector('[data-sortable-item="A-1"]')!.getBoundingClientRect();
 
 		dragTo(
-			board.querySelector('[data-board-card="A-3"]')!,
+			board.querySelector('[data-sortable-item="A-3"]')!,
 			{ x: first.left + 20, y: first.top + 4 },
 			false,
 		);
@@ -411,10 +411,10 @@ describe("Board with positions", () => {
 	test("Shift+ArrowUp and Down reorder a card, and Shift+ArrowRight lands it on top", async () => {
 		let board = mountPositioned();
 		await settle();
-		let todo = board.querySelector('[data-board-column="todo"]')!;
-		let started = board.querySelector('[data-board-column="started"]')!;
+		let todo = board.querySelector('[data-sortable-list="todo"]')!;
+		let started = board.querySelector('[data-sortable-list="started"]')!;
 		let posts = capturePosts(board);
-		let link = board.querySelector<HTMLElement>('[data-board-card="A-2"] a')!;
+		let link = board.querySelector<HTMLElement>('[data-sortable-item="A-2"] a')!;
 		let press = (key: string) =>
 			link.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey: true, bubbles: true }));
 		link.focus();

@@ -33,7 +33,6 @@ export * from "./keyboard-help.js";
 export * from "./menubar.js";
 export * from "./mixins/app-shell-controls.js";
 export * from "./mixins/auto-refresh.js";
-export * from "./mixins/board-drag.js";
 export * from "./mixins/chart-tooltip.js";
 export * from "./mixins/command-palette.js";
 export * from "./mixins/context-menu.js";

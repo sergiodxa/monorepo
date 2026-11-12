@@ -362,8 +362,8 @@ Dashboard and workspace components.
 - `Skeleton`, `Empty` — a loading block, and an empty-state panel; `Skeleton.Text` bars real
   content laid out unseen, so a placeholder wraps like its text.
 - `TabBar` — a phone's bottom tab bar that reserves its height and hides where the sidebar shows.
-- `Board` — kanban columns of cards; a mouse drag moves a card and posts the card's own move form,
-  which its menu also submits without script.
+- `Board` — kanban columns of cards, built on the `sortable()` mixin: a drag or Shift+Arrow moves a
+  card and posts the card's own move form, which its menu also submits without script.
 - `Roadmap` — grouped projects as bars on a month and week axis, with progress, today's line and a
   hatched tail for a late projection.
 - `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
@@ -405,41 +405,43 @@ Dashboard and workspace components.
 
 Each mixin module documents why it needs JavaScript and what still works without it.
 
-| Mixin                           | Host                       | Adds                                                                    |
-| ------------------------------- | -------------------------- | ----------------------------------------------------------------------- |
-| `activeDescendantKeys()`        | a combobox input           | Arrows over its `aria-controls` options; Enter follows the chosen link. |
-| `ariaChecked()`                 | checkbox, switch or radio  | `aria-checked` kept in step with the live control.                      |
-| `calendarKeys(model)`           | `Calendar.Grid`            | Arrow/Page/Home/End navigation over a `CalendarModel`.                  |
-| `carouselControls()`            | `Carousel.Viewport`        | `--ui-prev`, `--ui-next` and `--ui-goto` commands.                      |
-| `channelSync()`                 | a `ColorSlider` group      | Sibling channel gradients that follow each other.                       |
-| `clearField()`                  | `SearchField` clear button | Empties its `commandfor` input.                                         |
-| `comboboxFilter()`              | `ComboBox.Input`           | As-you-type narrowing.                                                  |
-| `commandFilter(model)`          | `Command`                  | Items hidden by a `FilterModel` query.                                  |
-| `commandKeys(model)`            | `Command`                  | Arrow keys over matches; Enter activates the active item's link/button. |
-| `copyToClipboard()`             | a button                   | Copies the text of its `commandfor` target, minus `data-copy-exclude`.  |
-| `dialogDismiss()`               | an element in a `<dialog>` | Closes the dialog on a backdrop press or a followed link.               |
-| `dismiss(options?)`             | an alert or toast          | Auto-dismiss countdown paused on hover, plus a `--ui-dismiss` command.  |
-| `dualRange()`                   | a two-thumb `Slider`       | Thumbs that cannot cross.                                               |
-| `frameRefresh(options)`         | any host in a frame        | Its frame reloaded on a schedule or an event, resting while hidden.     |
-| `frameSubmit(options?)`         | a `<form>` in a frame      | The form posted through its frame, answered in place in one request.    |
-| `headingLevelFallback(options)` | an island's `HeadingScope` | Reports the page's heading depth to `onLevel` once on attach.           |
-| `hotkey(combo)`                 | a `<dialog>`/`[popover]`   | A document-wide shortcut toggling its host.                             |
-| `imageFallback()`               | an `Avatar`/`Logo` image   | Shows the fallback when the image fails, cached images included.        |
-| `keymap(bindings)`              | any host                   | Page-wide shortcuts that stand down in fields and foreign dialogs.      |
-| `liveFrame(options)`            | a text input in a frame    | The frame reloaded from `src(value)` once typing pauses.                |
-| `listboxKeys()`                 | `ListBox`                  | Arrow, Home/End and typeahead navigation.                               |
-| `longPress(options?)`           | any element                | Fires after a pointer holds still for `duration`.                       |
-| `menuKeys(options?)`            | `Menu`                     | The ARIA menu pattern: roving focus, arrows, typeahead.                 |
-| `mirrorSelectedOption()`        | a `<selectedcontent>`      | Keeps the customizable select's trigger showing the chosen option.      |
-| `otpSlots()`                    | an `OtpField` group        | Focus moving across slots, and pasted codes split.                      |
-| `persist(key)`                  | `Sidebar`                  | The collapsed state saved to a cookie, plus a `--ui-toggle` command.    |
-| `pressToggle()`                 | `ToggleButton`             | Flips `aria-pressed` on click.                                          |
-| `rangePreview(model)`           | `RangeCalendar.Grid`       | Hover and focus preview of the pending range.                           |
-| `stepper(options?)`             | `NumberField.Group`        | Press-and-hold repeat on the step buttons.                              |
-| `tabKeys(options?)`             | `Tabs.List`                | Arrow, Home/End tab activation.                                         |
-| `themeToggle(options?)`         | any host                   | `--ui-theme-light`/`-dark`/`-system` commands saved to a cookie.        |
-| `validate(schema)`              | a form control             | A `remix/data-schema` check through `setCustomValidity()`.              |
-| `viewTransition()`              | a `SharedElement` island   | A View Transition across a same-document reload.                        |
+| Mixin                           | Host                            | Adds                                                                                |
+| ------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------- |
+| `activeDescendantKeys()`        | a combobox input                | Arrows over its `aria-controls` options; Enter follows the chosen link.             |
+| `ariaChecked()`                 | checkbox, switch or radio       | `aria-checked` kept in step with the live control.                                  |
+| `calendarKeys(model)`           | `Calendar.Grid`                 | Arrow/Page/Home/End navigation over a `CalendarModel`.                              |
+| `carouselControls()`            | `Carousel.Viewport`             | `--ui-prev`, `--ui-next` and `--ui-goto` commands.                                  |
+| `channelSync()`                 | a `ColorSlider` group           | Sibling channel gradients that follow each other.                                   |
+| `clearField()`                  | `SearchField` clear button      | Empties its `commandfor` input.                                                     |
+| `comboboxFilter()`              | `ComboBox.Input`                | As-you-type narrowing.                                                              |
+| `commandFilter(model)`          | `Command`                       | Items hidden by a `FilterModel` query.                                              |
+| `commandKeys(model)`            | `Command`                       | Arrow keys over matches; Enter activates the active item's link/button.             |
+| `copyToClipboard()`             | a button                        | Copies the text of its `commandfor` target, minus `data-copy-exclude`.              |
+| `dialogDismiss()`               | an element in a `<dialog>`      | Closes the dialog on a backdrop press or a followed link.                           |
+| `dismiss(options?)`             | an alert or toast               | Auto-dismiss countdown paused on hover, plus a `--ui-dismiss` command.              |
+| `dualRange()`                   | a two-thumb `Slider`            | Thumbs that cannot cross.                                                           |
+| `frameRefresh(options)`         | any host in a frame             | Its frame reloaded on a schedule or an event, resting while hidden.                 |
+| `frameSubmit(options?)`         | a `<form>` in a frame           | The form posted through its frame, answered in place in one request.                |
+| `headingLevelFallback(options)` | an island's `HeadingScope`      | Reports the page's heading depth to `onLevel` once on attach.                       |
+| `hotkey(combo)`                 | a `<dialog>`/`[popover]`        | A document-wide shortcut toggling its host.                                         |
+| `imageFallback()`               | an `Avatar`/`Logo` image        | Shows the fallback when the image fails, cached images included.                    |
+| `invokerFields()`               | an element in a target          | Presets the target's fields from the opening button's `name`/`value`.               |
+| `keymap(bindings)`              | any host                        | Page-wide shortcuts that stand down in fields and foreign dialogs.                  |
+| `liveFrame(options)`            | a text input in a frame         | The frame reloaded from `src(value)` once typing pauses.                            |
+| `listboxKeys()`                 | `ListBox`                       | Arrow, Home/End and typeahead navigation.                                           |
+| `longPress(options?)`           | any element                     | Fires after a pointer holds still for `duration`.                                   |
+| `menuKeys(options?)`            | `Menu`                          | The ARIA menu pattern: roving focus, arrows, typeahead.                             |
+| `mirrorSelectedOption()`        | a `<selectedcontent>`           | Keeps the customizable select's trigger showing the chosen option.                  |
+| `otpSlots()`                    | an `OtpField` group             | Focus moving across slots, and pasted codes split.                                  |
+| `persist(key)`                  | `Sidebar`                       | The collapsed state saved to a cookie, plus a `--ui-toggle` command.                |
+| `pressToggle()`                 | `ToggleButton`                  | Flips `aria-pressed` on click.                                                      |
+| `rangePreview(model)`           | `RangeCalendar.Grid`            | Hover and focus preview of the pending range.                                       |
+| `sortable(options?)`            | an element in `[data-sortable]` | Drag and Shift+Arrow moves within and between lists, posting each item's move form. |
+| `stepper(options?)`             | `NumberField.Group`             | Press-and-hold repeat on the step buttons.                                          |
+| `tabKeys(options?)`             | `Tabs.List`                     | Arrow, Home/End tab activation.                                                     |
+| `themeToggle(options?)`         | any host                        | `--ui-theme-light`/`-dark`/`-system` commands saved to a cookie.                    |
+| `validate(schema)`              | a form control                  | A `remix/data-schema` check through `setCustomValidity()`.                          |
+| `viewTransition()`              | a `SharedElement` island        | A View Transition across a same-document reload.                                    |
 
 Helpers for writing your own:
 
