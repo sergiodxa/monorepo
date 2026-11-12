@@ -72,6 +72,11 @@ export namespace SettingsLayout {
 		page?: "index" | "section";
 		/** Where the narrow back link returns to: the settings index route. */
 		backHref?: string;
+		/**
+		 * The named frame the section links and the back link load into (`data-rmx-target`), for
+		 * a layout drawn inside that frame, so switching sections reloads it alone.
+		 */
+		frame?: string;
 		labels: Labels;
 	}
 }
@@ -96,7 +101,16 @@ export namespace SettingsLayout {
  */
 export function SettingsLayout(handle: Handle<SettingsLayout.Props>) {
 	return () => {
-		let { sections, page: pageProp, backHref, labels, children, mix, ...rest } = handle.props;
+		let {
+			sections,
+			page: pageProp,
+			backHref,
+			frame,
+			labels,
+			children,
+			mix,
+			...rest
+		} = handle.props;
 		let page = pageProp ?? DEFAULT_PAGE;
 		let hasNav = sections !== undefined;
 		let isIndex = page === "index";
@@ -144,7 +158,7 @@ export function SettingsLayout(handle: Handle<SettingsLayout.Props>) {
 							]}
 						>
 							{sections.map((group) => (
-								<SettingsNavGroup group={group} />
+								<SettingsNavGroup group={group} frame={frame} />
 							))}
 						</nav>
 					) : null}
@@ -160,6 +174,7 @@ export function SettingsLayout(handle: Handle<SettingsLayout.Props>) {
 						{!isIndex && backHref ? (
 							<a
 								href={backHref}
+								data-rmx-target={frame}
 								data-slot="settings-back"
 								mix={[
 									hstack({ gap: 1, align: "center" }),
@@ -187,6 +202,8 @@ export function SettingsLayout(handle: Handle<SettingsLayout.Props>) {
 namespace SettingsNavGroup {
 	export interface Props {
 		group: SettingsLayout.Group;
+		/** The named frame the links load into. */
+		frame?: string;
 	}
 }
 
@@ -196,7 +213,7 @@ namespace SettingsNavGroup {
  */
 function SettingsNavGroup(handle: Handle<SettingsNavGroup.Props>) {
 	return () => {
-		let { group } = handle.props;
+		let { group, frame } = handle.props;
 		let headingId = group.label ? `${handle.id}-label` : undefined;
 
 		return (
@@ -214,6 +231,7 @@ function SettingsNavGroup(handle: Handle<SettingsNavGroup.Props>) {
 						<li>
 							<a
 								href={item.href}
+								data-rmx-target={frame}
 								aria-current={item.current ? "page" : undefined}
 								data-slot="settings-nav-item"
 								mix={[

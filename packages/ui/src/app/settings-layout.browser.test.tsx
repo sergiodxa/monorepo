@@ -153,4 +153,22 @@ describe("SettingsLayout", () => {
 
 		expect(shown(content)).toBe(true);
 	});
+
+	test("aims the section links and the back link at the frame it is given", () => {
+		let host = document.createElement("div");
+		document.body.appendChild(host);
+		render(
+			<SettingsLayout sections={NAV} backHref="/settings" frame="main" labels={LABELS}>
+				<h1>Monitor defaults</h1>
+			</SettingsLayout>,
+			{ container: host },
+		);
+
+		let links = host.querySelectorAll<HTMLAnchorElement>(
+			'[data-slot="settings-nav-item"], [data-slot="settings-back"]',
+		);
+		expect(links.length).toBeGreaterThan(1);
+		for (let link of links) expect(link.dataset.rmxTarget).toBe("main");
+		expect(mount(640).querySelector("[data-rmx-target]")).toBeNull();
+	});
 });

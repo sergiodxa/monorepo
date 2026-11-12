@@ -40,12 +40,13 @@ interface InboxProps {
 	layout?: SplitView.Layout;
 	sidebar?: boolean;
 	keys?: "page" | "view";
+	frame?: string;
 }
 
 /** An inbox: folders | conversations | conversation. */
 function Inbox(handle: { props: InboxProps }) {
 	return () => {
-		let { selected, active, layout, sidebar = true, keys } = handle.props;
+		let { selected, active, layout, sidebar = true, keys, frame } = handle.props;
 
 		return (
 			<SplitView
@@ -79,6 +80,7 @@ function Inbox(handle: { props: InboxProps }) {
 				empty={<p>No conversation selected</p>}
 				active={active}
 				backHref="#inbox"
+				frame={frame}
 				layout={layout}
 				keys={keys}
 				labels={LABELS}
@@ -345,5 +347,11 @@ describe("SplitView", () => {
 		pane("list").querySelector<HTMLAnchorElement>('[aria-current="page"]')!.focus();
 		await userEvent.keyboard("j");
 		expect(location.hash).toBe("#sel-4");
+	});
+
+	test("aims the back link at the frame it is given", () => {
+		let host = mount({ selected: 2, active: "detail", frame: "main" }, 375);
+		let back = host.querySelector<HTMLAnchorElement>('[data-slot="split-view-back"]');
+		expect(back?.dataset.rmxTarget).toBe("main");
 	});
 });

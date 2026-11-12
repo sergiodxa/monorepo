@@ -99,6 +99,8 @@ export namespace SplitView {
 		active?: Pane;
 		/** The list's URL; below 48rem the detail links back to it. */
 		backHref?: string;
+		/** The named frame the back link loads into (`data-rmx-target`), for a view inside one. */
+		frame?: string;
 		/** The remembered split, from {@link readSplitViewLayout}. */
 		layout?: Layout;
 		/**
@@ -325,6 +327,7 @@ export function SplitView(handle: Handle<SplitView.Props>) {
 			empty,
 			active,
 			backHref,
+			frame,
 			layout,
 			cookie,
 			cookiePath,
@@ -424,6 +427,7 @@ export function SplitView(handle: Handle<SplitView.Props>) {
 						{backHref ? (
 							<a
 								href={backHref}
+								data-rmx-target={frame}
 								data-slot="split-view-back"
 								mix={[
 									inlineFlex(),
