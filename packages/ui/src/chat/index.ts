@@ -9,9 +9,14 @@
 
 export * from "./attachment.js";
 export * from "./behaviors/scroll-follow-model.js";
+export * from "./utils/stream-reveal.js";
 export * from "./bubble.js";
+export * from "./composer-submit.js";
+export * from "./composer.js";
 export * from "./marker.js";
 export * from "./message-scroller.js";
 export * from "./message.js";
 export * from "./mixins/attachment-trigger.js";
+export * from "./mixins/composer-send.js";
 export * from "./mixins/message-follow.js";
+export * from "./mixins/stream-target.js";

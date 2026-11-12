@@ -316,11 +316,15 @@ one the page uses in the browser entry.
   turns, and an attached-file card.
 - `ScrollFollowModel({ pinned? })` — whether the log follows the live edge, visible messages, and
   pending scroll requests.
+- `Composer` — the message form, with `.Input` (grows to twelve lines), `.Toolbar` and `.Hint`;
+  `ComposerSubmit` is its send button, Enter to send, and Stop while a reply streams.
+- `revealStream(root)` — replays a server-rendered reply word by word; `streamTarget()` styles it.
 
-| Helper                 | Host                       | Adds                                             |
-| ---------------------- | -------------------------- | ------------------------------------------------ |
-| `messageFollow(model)` | `MessageScroller.Viewport` | Follows new turns through a `ScrollFollowModel`. |
-| `attachmentTrigger()`  | `Attachment.Trigger`       | The whole card as one activation target.         |
+| Helper                  | Host                                       | Adds                                                  |
+| ----------------------- | ------------------------------------------ | ----------------------------------------------------- |
+| `messageFollow(model)`  | `MessageScroller.Viewport`                 | Follows new turns through a `ScrollFollowModel`.      |
+| `attachmentTrigger()`   | `Attachment.Trigger`                       | The whole card as one activation target.              |
+| `composerSend(options)` | an element around a composer's send button | Enter to send, clearing, the reply's replay and Stop. |
 
 ### Color (`@sdxc/ui/color`)
 
