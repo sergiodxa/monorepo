@@ -9,6 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { mergeMix, raw } from "@sdxc/u/general";
 
@@ -276,31 +277,34 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 								{format(week, locale, { day: "numeric" })}
 							</span>
 						))}
-						{showsToday && todayDay !== undefined ? (
-							<span
-								data-slot="roadmap-today-label"
-								mix={[
-									raw({
-										position: "absolute",
-										insetBlockStart: "1.625rem",
-										insetInlineStart: along(todayDay - first + 0.5),
-										translate: "-50% 0",
-										minInlineSize: "1.5rem",
-										blockSize: "1.5rem",
-										paddingInline: "0.25rem",
-										boxSizing: "border-box",
-										borderRadius: "999px",
-										display: "grid",
-										placeItems: "center",
-										fontWeight: "700",
-										color: "var(--ui-brand-fg-on-solid, white)",
-										backgroundColor: "var(--ui-brand-bg-solid)",
-									}),
-								]}
-							>
-								{format(todayDay, locale, { day: "numeric" })}
-							</span>
-						) : null}
+						{iife(() => {
+							if (!showsToday || todayDay === undefined) return null;
+							return (
+								<span
+									data-slot="roadmap-today-label"
+									mix={[
+										raw({
+											position: "absolute",
+											insetBlockStart: "1.625rem",
+											insetInlineStart: along(todayDay - first + 0.5),
+											translate: "-50% 0",
+											minInlineSize: "1.5rem",
+											blockSize: "1.5rem",
+											paddingInline: "0.25rem",
+											boxSizing: "border-box",
+											borderRadius: "999px",
+											display: "grid",
+											placeItems: "center",
+											fontWeight: "700",
+											color: "var(--ui-brand-fg-on-solid, white)",
+											backgroundColor: "var(--ui-brand-bg-solid)",
+										}),
+									]}
+								>
+									{format(todayDay, locale, { day: "numeric" })}
+								</span>
+							);
+						})}
 					</div>
 					{children}
 					<div
@@ -322,27 +326,30 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 							}),
 						]}
 					/>
-					{showsToday && todayDay !== undefined ? (
-						<div
-							data-slot="roadmap-today"
-							mix={[
-								raw({
-									position: "absolute",
-									insetBlock: "0",
-									insetInlineStart: `calc(${LIST} + ${along(todayDay - first + 0.5)})`,
-									inlineSize: "2px",
-									translate: "-50% 0",
-									zIndex: "2",
-									pointerEvents: "none",
-									backgroundColor: "var(--ui-brand-bg-solid)",
-								}),
-							]}
-						>
-							<span mix={[visuallyHidden()]}>
-								{`${labels.today}: ${format(todayDay, locale, { dateStyle: "long" })}`}
-							</span>
-						</div>
-					) : null}
+					{iife(() => {
+						if (!showsToday || todayDay === undefined) return null;
+						return (
+							<div
+								data-slot="roadmap-today"
+								mix={[
+									raw({
+										position: "absolute",
+										insetBlock: "0",
+										insetInlineStart: `calc(${LIST} + ${along(todayDay - first + 0.5)})`,
+										inlineSize: "2px",
+										translate: "-50% 0",
+										zIndex: "2",
+										pointerEvents: "none",
+										backgroundColor: "var(--ui-brand-bg-solid)",
+									}),
+								]}
+							>
+								<span mix={[visuallyHidden()]}>
+									{`${labels.today}: ${format(todayDay, locale, { dateStyle: "long" })}`}
+								</span>
+							</div>
+						);
+					})}
 				</div>
 			</div>
 		);
@@ -441,57 +448,60 @@ Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
 		let late = scheduled && projected !== undefined && to !== undefined && projected > to;
 		let percent = Math.round(Math.min(Math.max(progress ?? 0, 0), 1) * 100);
 
-		let glyph = icon ? (
-			<span
-				aria-hidden="true"
-				mix={[
-					raw({
-						display: "inline-flex",
-						flexShrink: "0",
-						"& > svg": { inlineSize: "1rem", blockSize: "1rem" },
-					}),
-				]}
-			>
-				{icon}
-			</span>
-		) : null;
-		let title = href ? (
-			<a
-				href={href}
-				mix={[
-					raw({
-						color: "inherit",
-						textDecoration: "none",
-						outline: "none",
-						"&:hover": { textDecoration: "underline" },
-						"&:focus-visible": {
-							borderRadius: "0.25rem",
-							boxShadow: "0 0 0 2px var(--ui-brand-ring)",
-						},
-					}),
-				]}
-			>
-				{name}
-			</a>
-		) : (
-			name
-		);
-		let description = scheduled
-			? [
-					labels.schedule
-						.replace("{start}", format(from!, locale, { dateStyle: "medium" }))
-						.replace("{end}", format(to!, locale, { dateStyle: "medium" })),
-					progress === undefined ? null : labels.progress.replace("{percent}", `${percent}%`),
-					late
-						? labels.projected.replace(
-								"{date}",
-								format(projected!, locale, { dateStyle: "medium" }),
-							)
-						: null,
-				]
-					.filter(Boolean)
-					.join(", ")
-			: labels.unscheduled;
+		let glyph = iife(() => {
+			if (!icon) return null;
+			return (
+				<span
+					aria-hidden="true"
+					mix={[
+						raw({
+							display: "inline-flex",
+							flexShrink: "0",
+							"& > svg": { inlineSize: "1rem", blockSize: "1rem" },
+						}),
+					]}
+				>
+					{icon}
+				</span>
+			);
+		});
+		let title = iife(() => {
+			if (!href) return name;
+			return (
+				<a
+					href={href}
+					mix={[
+						raw({
+							color: "inherit",
+							textDecoration: "none",
+							outline: "none",
+							"&:hover": { textDecoration: "underline" },
+							"&:focus-visible": {
+								borderRadius: "0.25rem",
+								boxShadow: "0 0 0 2px var(--ui-brand-ring)",
+							},
+						}),
+					]}
+				>
+					{name}
+				</a>
+			);
+		});
+		let description = iife(() => {
+			if (!scheduled) return labels.unscheduled;
+			let parts = [
+				labels.schedule
+					.replace("{start}", format(from!, locale, { dateStyle: "medium" }))
+					.replace("{end}", format(to!, locale, { dateStyle: "medium" })),
+			];
+			if (progress !== undefined) parts.push(labels.progress.replace("{percent}", `${percent}%`));
+			if (late) {
+				parts.push(
+					labels.projected.replace("{date}", format(projected!, locale, { dateStyle: "medium" })),
+				);
+			}
+			return parts.join(", ");
+		});
 		let left = scheduled ? from! - roadmap.start : 0;
 		let length = scheduled ? to! - from! + 1 : 0;
 
@@ -551,112 +561,126 @@ Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
 						{title}
 						<span mix={[visuallyHidden()]}>{`, ${description}`}</span>
 					</span>
-					{meta ? (
-						<span
-							mix={[
-								raw({
-									display: "inline-flex",
-									alignItems: "center",
-									gap: "0.5rem",
-									flexShrink: "0",
-									[NARROW]: { display: "none" },
-								}),
-							]}
-						>
-							{meta}
-						</span>
-					) : null}
+					{iife(() => {
+						if (!meta) return null;
+						return (
+							<span
+								mix={[
+									raw({
+										display: "inline-flex",
+										alignItems: "center",
+										gap: "0.5rem",
+										flexShrink: "0",
+										[NARROW]: { display: "none" },
+									}),
+								]}
+							>
+								{meta}
+							</span>
+						);
+					})}
 				</div>
 				<div
 					aria-hidden="true"
 					data-slot="roadmap-item-track"
 					mix={[raw({ position: "relative", zIndex: "1", minInlineSize: 0 })]}
 				>
-					{scheduled ? (
-						<>
-							{late ? (
+					{iife(() => {
+						if (!scheduled) {
+							return (
 								<span
-									data-slot="roadmap-late"
+									mix={[
+										raw({
+											position: "absolute",
+											insetBlock: "0",
+											insetInlineStart: "0.75rem",
+											display: "flex",
+											alignItems: "center",
+											fontSize: "0.75rem",
+											color: "var(--ui-neutral-fg-muted)",
+											whiteSpace: "nowrap",
+										}),
+									]}
+								>
+									{labels.unscheduled}
+								</span>
+							);
+						}
+						return (
+							<>
+								{iife(() => {
+									if (!late) return null;
+									return (
+										<span
+											data-slot="roadmap-late"
+											mix={[
+												raw({
+													position: "absolute",
+													insetBlock: "0.4375rem",
+													insetInlineStart: along(left + length - 0.5),
+													inlineSize: along(projected! - to! + 0.5),
+													borderRadius: "0 0.375rem 0.375rem 0",
+													border:
+														"1px dashed color-mix(in oklch, var(--ui-danger-fg) 60%, transparent)",
+													borderInlineStart: "0",
+													backgroundImage:
+														"repeating-linear-gradient(-45deg, color-mix(in oklch, var(--ui-danger-fg) 22%, transparent) 0 2px, transparent 2px 7px)",
+												}),
+											]}
+										/>
+									);
+								})}
+								<span
+									data-slot="roadmap-bar"
+									style={`--ui-roadmap-progress:${percent}%`}
 									mix={[
 										raw({
 											position: "absolute",
 											insetBlock: "0.4375rem",
-											insetInlineStart: along(left + length - 0.5),
-											inlineSize: along(projected! - to! + 0.5),
-											borderRadius: "0 0.375rem 0.375rem 0",
-											border:
-												"1px dashed color-mix(in oklch, var(--ui-danger-fg) 60%, transparent)",
-											borderInlineStart: "0",
+											insetInlineStart: along(left),
+											inlineSize: along(length),
+											boxSizing: "border-box",
+											borderRadius: "0.375rem",
+											border: "1px solid var(--ui-neutral-border)",
+											backgroundColor: "var(--ui-neutral-bg-tint)",
 											backgroundImage:
-												"repeating-linear-gradient(-45deg, color-mix(in oklch, var(--ui-danger-fg) 22%, transparent) 0 2px, transparent 2px 7px)",
+												"linear-gradient(to right, color-mix(in oklch, var(--ui-brand-bg-solid) 22%, var(--ui-neutral-bg-tint)) var(--ui-roadmap-progress), transparent var(--ui-roadmap-progress))",
 										}),
 									]}
 								/>
-							) : null}
-							<span
-								data-slot="roadmap-bar"
-								style={`--ui-roadmap-progress:${percent}%`}
-								mix={[
-									raw({
-										position: "absolute",
-										insetBlock: "0.4375rem",
-										insetInlineStart: along(left),
-										inlineSize: along(length),
-										boxSizing: "border-box",
-										borderRadius: "0.375rem",
-										border: "1px solid var(--ui-neutral-border)",
-										backgroundColor: "var(--ui-neutral-bg-tint)",
-										backgroundImage:
-											"linear-gradient(to right, color-mix(in oklch, var(--ui-brand-bg-solid) 22%, var(--ui-neutral-bg-tint)) var(--ui-roadmap-progress), transparent var(--ui-roadmap-progress))",
-									}),
-								]}
-							/>
-							<span
-								data-slot="roadmap-bar-label"
-								mix={[
-									raw({
-										position: "absolute",
-										insetBlock: "0",
-										insetInlineStart: `calc(${along(left)} + 0.625rem)`,
-										display: "flex",
-										alignItems: "center",
-										gap: "0.5rem",
-										fontSize: "0.8125rem",
-										lineHeight: "1.25rem",
-										fontWeight: "500",
-										color: "var(--ui-neutral-fg-emphasis)",
-										whiteSpace: "nowrap",
-										pointerEvents: "none",
-									}),
-								]}
-							>
-								{glyph}
-								{name}
-								{trailing ? (
-									<span mix={[raw({ display: "inline-flex", color: "var(--ui-brand-fg)" })]}>
-										{trailing}
-									</span>
-								) : null}
-							</span>
-						</>
-					) : (
-						<span
-							mix={[
-								raw({
-									position: "absolute",
-									insetBlock: "0",
-									insetInlineStart: "0.75rem",
-									display: "flex",
-									alignItems: "center",
-									fontSize: "0.75rem",
-									color: "var(--ui-neutral-fg-muted)",
-									whiteSpace: "nowrap",
-								}),
-							]}
-						>
-							{labels.unscheduled}
-						</span>
-					)}
+								<span
+									data-slot="roadmap-bar-label"
+									mix={[
+										raw({
+											position: "absolute",
+											insetBlock: "0",
+											insetInlineStart: `calc(${along(left)} + 0.625rem)`,
+											display: "flex",
+											alignItems: "center",
+											gap: "0.5rem",
+											fontSize: "0.8125rem",
+											lineHeight: "1.25rem",
+											fontWeight: "500",
+											color: "var(--ui-neutral-fg-emphasis)",
+											whiteSpace: "nowrap",
+											pointerEvents: "none",
+										}),
+									]}
+								>
+									{glyph}
+									{name}
+									{iife(() => {
+										if (!trailing) return null;
+										return (
+											<span mix={[raw({ display: "inline-flex", color: "var(--ui-brand-fg)" })]}>
+												{trailing}
+											</span>
+										);
+									})}
+								</span>
+							</>
+						);
+					})}
 				</div>
 			</li>
 		);

@@ -93,17 +93,27 @@ interface Press {
 export const boardDrag: MixinFactory<HTMLElement> = createMixin<HTMLElement>((handle) => {
 	let controller: AbortController | undefined;
 
-	handle.addEventListener("insert", (event) => {
+	/** Starts listening once the marker is in the page, replacing any earlier listeners. */
+	function attach(event: { node: HTMLElement }): void {
 		controller?.abort();
 		controller = new AbortController();
 		let marker = event.node;
-		connect(() => marker.closest<HTMLElement>('[data-slot="board"]'), controller.signal);
-	});
+		connect(findBoard, controller.signal);
 
-	handle.addEventListener("remove", () => {
+		/** The board around the marker, or `null` while the marker is detached. */
+		function findBoard(): HTMLElement | null {
+			return marker.closest<HTMLElement>('[data-slot="board"]');
+		}
+	}
+
+	/** Stops listening, ending a drag in progress. */
+	function detach(): void {
 		controller?.abort();
 		controller = undefined;
-	});
+	}
+
+	handle.addEventListener("insert", attach);
+	handle.addEventListener("remove", detach);
 });
 
 /**
@@ -116,7 +126,8 @@ export const boardDrag: MixinFactory<HTMLElement> = createMixin<HTMLElement>((ha
 function connect(findBoard: () => HTMLElement | null, signal: AbortSignal): void {
 	let press: (Press & { board: HTMLElement }) | undefined;
 
-	let end = (drop: boolean) => {
+	/** Ends the press: clears every drag mark, and moves the card when it was dropped elsewhere. */
+	function end(drop: boolean): void {
 		if (!press) return;
 		let { board, card, from, ghost, target } = press;
 		press = undefined;
@@ -129,74 +140,79 @@ function connect(findBoard: () => HTMLElement | null, signal: AbortSignal): void
 		if (!ghost) return;
 		suppressNextClick(card);
 		if (drop && target && target !== from) move(card, from, target);
-	};
+	}
 
-	document.addEventListener(
-		"pointerdown",
-		(event) => {
-			if (event.button !== 0 || event.pointerType === "touch") return;
-			let board = findBoard();
-			if (!board) return;
-			let origin = event.target instanceof Element ? event.target : null;
-			if (!origin || origin.closest(INTERACTIVE)) return;
-			let card = origin.closest<HTMLElement>(`[${BOARD_CARD_ATTRIBUTE}]`);
-			let from = card?.closest<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`);
-			if (!card || !from || !board.contains(card)) return;
-			let rect = card.getBoundingClientRect();
-			press = {
-				board,
-				card,
-				from,
-				pointerId: event.pointerId,
-				x: event.clientX,
-				y: event.clientY,
-				offsetX: event.clientX - rect.left,
-				offsetY: event.clientY - rect.top,
-			};
-		},
-		{ signal },
-	);
+	/** Records a mouse or pen press on a card, outside the card's own controls. */
+	function onPointerDown(event: PointerEvent): void {
+		if (event.button !== 0 || event.pointerType === "touch") return;
+		let board = findBoard();
+		if (!board) return;
+		let origin = event.target instanceof Element ? event.target : null;
+		if (!origin || origin.closest(INTERACTIVE)) return;
+		let card = origin.closest<HTMLElement>(`[${BOARD_CARD_ATTRIBUTE}]`);
+		let from = card?.closest<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`);
+		if (!card || !from || !board.contains(card)) return;
+		let rect = card.getBoundingClientRect();
+		press = {
+			board,
+			card,
+			from,
+			pointerId: event.pointerId,
+			x: event.clientX,
+			y: event.clientY,
+			offsetX: event.clientX - rect.left,
+			offsetY: event.clientY - rect.top,
+		};
+	}
 
-	document.addEventListener(
-		"pointermove",
-		(event) => {
-			if (!press || event.pointerId !== press.pointerId) return;
-			if (!press.ghost) {
-				let distance = Math.hypot(event.clientX - press.x, event.clientY - press.y);
-				if (distance < DRAG_THRESHOLD_PX) return;
-				press.ghost = lift(press.card);
-				press.card.setAttribute(BOARD_DRAGGING_ATTRIBUTE, "");
-				press.board.setAttribute("data-board-active", "");
-			}
-			event.preventDefault();
-			press.ghost.style.transform = `translate(${event.clientX - press.offsetX}px, ${event.clientY - press.offsetY}px)${prefersReducedMotion() ? "" : " rotate(1.5deg)"}`;
-			let under = document.elementFromPoint(event.clientX, event.clientY);
-			let target = under?.closest<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`) ?? null;
-			if (target && !press.board.contains(target)) target = null;
-			if (target !== press.target) {
-				press.target?.removeAttribute(BOARD_DROP_TARGET_ATTRIBUTE);
-				if (target && target !== press.from) target.setAttribute(BOARD_DROP_TARGET_ATTRIBUTE, "");
-				press.target = target;
-			}
-			scrollNearEdge(press.board, event.clientX);
-		},
-		{ signal },
-	);
+	/** Lifts the card past the threshold, then carries the ghost and rings the column under it. */
+	function onPointerMove(event: PointerEvent): void {
+		if (!press || event.pointerId !== press.pointerId) return;
+		if (!press.ghost) {
+			let distance = Math.hypot(event.clientX - press.x, event.clientY - press.y);
+			if (distance < DRAG_THRESHOLD_PX) return;
+			press.ghost = lift(press.card);
+			press.card.setAttribute(BOARD_DRAGGING_ATTRIBUTE, "");
+			press.board.setAttribute("data-board-active", "");
+		}
+		event.preventDefault();
+		let tilt = prefersReducedMotion() ? "" : " rotate(1.5deg)";
+		press.ghost.style.transform = `translate(${event.clientX - press.offsetX}px, ${event.clientY - press.offsetY}px)${tilt}`;
+		let under = document.elementFromPoint(event.clientX, event.clientY);
+		let target = under?.closest<HTMLElement>(`[${BOARD_COLUMN_ATTRIBUTE}]`) ?? null;
+		if (target && !press.board.contains(target)) target = null;
+		if (target !== press.target) {
+			press.target?.removeAttribute(BOARD_DROP_TARGET_ATTRIBUTE);
+			if (target && target !== press.from) target.setAttribute(BOARD_DROP_TARGET_ATTRIBUTE, "");
+			press.target = target;
+		}
+		scrollNearEdge(press.board, event.clientX);
+	}
 
-	document.addEventListener("pointerup", () => end(true), { signal });
-	document.addEventListener("pointercancel", () => end(false), { signal });
-	document.addEventListener(
-		"keydown",
-		(event) => {
-			if (event.key === "Escape" && press?.ghost) {
-				event.preventDefault();
-				event.stopPropagation();
-				end(false);
-			}
-		},
-		{ signal, capture: true },
-	);
-	signal.addEventListener("abort", () => end(false));
+	/** Drops the card where the pointer let go. */
+	function onPointerUp(): void {
+		end(true);
+	}
+
+	/** Puts everything back when the pointer is taken away or the listeners end. */
+	function cancel(): void {
+		end(false);
+	}
+
+	/** Cancels a drag on Escape, before anything else on the page reads the key. */
+	function onKeyDown(event: KeyboardEvent): void {
+		if (event.key !== "Escape" || !press?.ghost) return;
+		event.preventDefault();
+		event.stopPropagation();
+		end(false);
+	}
+
+	document.addEventListener("pointerdown", onPointerDown, { signal });
+	document.addEventListener("pointermove", onPointerMove, { signal });
+	document.addEventListener("pointerup", onPointerUp, { signal });
+	document.addEventListener("pointercancel", cancel, { signal });
+	document.addEventListener("keydown", onKeyDown, { signal, capture: true });
+	signal.addEventListener("abort", cancel);
 }
 
 /**
@@ -236,12 +252,19 @@ function scrollNearEdge(board: HTMLElement, x: number): void {
 
 /** Swallows the click a drag's release fires on a card that is a link. */
 function suppressNextClick(card: HTMLElement): void {
-	let swallow = (event: Event) => {
+	card.addEventListener("click", swallow, { capture: true, once: true });
+	setTimeout(release, 0);
+
+	/** Keeps the click from following the card's link. */
+	function swallow(event: Event): void {
 		event.preventDefault();
 		event.stopPropagation();
-	};
-	card.addEventListener("click", swallow, { capture: true, once: true });
-	setTimeout(() => card.removeEventListener("click", swallow, { capture: true }), 0);
+	}
+
+	/** Lets later clicks through once the release's own click has passed. */
+	function release(): void {
+		card.removeEventListener("click", swallow, { capture: true });
+	}
 }
 
 /**

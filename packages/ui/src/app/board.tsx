@@ -9,10 +9,11 @@
 
 import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { mergeMix, raw } from "@sdxc/u/general";
 import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
-import { clientEntry } from "remix/component";
+import { attrs, clientEntry } from "remix/component";
 
 import {
 	BOARD_CARD_ATTRIBUTE,
@@ -177,10 +178,10 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 			<section
 				{...rest}
 				aria-labelledby={headingId}
-				{...{ [BOARD_COLUMN_ATTRIBUTE]: value }}
 				data-slot="board-column"
 				mix={mergeMix(
 					[
+						attrs({ [BOARD_COLUMN_ATTRIBUTE]: value }),
 						raw({
 							display: "flex",
 							flexDirection: "column",
@@ -225,11 +226,18 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 						}),
 					]}
 				>
-					{icon ? (
-						<span data-slot="board-icon" aria-hidden="true" mix={[raw({ display: "inline-flex" })]}>
-							{icon}
-						</span>
-					) : null}
+					{iife(() => {
+						if (!icon) return null;
+						return (
+							<span
+								data-slot="board-icon"
+								aria-hidden="true"
+								mix={[raw({ display: "inline-flex" })]}
+							>
+								{icon}
+							</span>
+						);
+					})}
 					<h3
 						id={headingId}
 						mix={[
@@ -246,23 +254,29 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 					>
 						{title}
 					</h3>
-					{count === undefined ? null : (
-						<span
-							data-slot="board-count"
-							mix={[
-								raw({ color: "var(--ui-neutral-fg-muted)", fontVariantNumeric: "tabular-nums" }),
-							]}
-						>
-							{count}
-						</span>
-					)}
-					{actions ? (
-						<span
-							mix={[raw({ marginInlineStart: "auto", display: "inline-flex", gap: "0.25rem" })]}
-						>
-							{actions}
-						</span>
-					) : null}
+					{iife(() => {
+						if (count === undefined) return null;
+						return (
+							<span
+								data-slot="board-count"
+								mix={[
+									raw({ color: "var(--ui-neutral-fg-muted)", fontVariantNumeric: "tabular-nums" }),
+								]}
+							>
+								{count}
+							</span>
+						);
+					})}
+					{iife(() => {
+						if (!actions) return null;
+						return (
+							<span
+								mix={[raw({ marginInlineStart: "auto", display: "inline-flex", gap: "0.25rem" })]}
+							>
+								{actions}
+							</span>
+						);
+					})}
 				</header>
 				<ul
 					data-slot="board-cards"
@@ -282,30 +296,33 @@ Board.Column = function BoardColumn(handle: Handle<Board.ColumnProps>) {
 				>
 					{children}
 				</ul>
-				{empty ? (
-					<p
-						data-slot="board-empty"
-						mix={[
-							raw({
-								display: "none",
-								margin: "-4rem 0.5rem 0.5rem",
-								blockSize: "3.5rem",
-								boxSizing: "border-box",
-								paddingBlock: "1.125rem",
-								textAlign: "center",
-								fontSize: "0.8125rem",
-								lineHeight: "1.25rem",
-								color: "var(--ui-neutral-fg-muted)",
-								border: "1px dashed var(--ui-neutral-border)",
-								borderRadius: "var(--ui-radius-md, 0.375rem)",
-								pointerEvents: "none",
-							}),
-							when("[data-slot='board-cards']:empty + &", raw({ display: "block" })),
-						]}
-					>
-						{empty}
-					</p>
-				) : null}
+				{iife(() => {
+					if (!empty) return null;
+					return (
+						<p
+							data-slot="board-empty"
+							mix={[
+								raw({
+									display: "none",
+									margin: "-4rem 0.5rem 0.5rem",
+									blockSize: "3.5rem",
+									boxSizing: "border-box",
+									paddingBlock: "1.125rem",
+									textAlign: "center",
+									fontSize: "0.8125rem",
+									lineHeight: "1.25rem",
+									color: "var(--ui-neutral-fg-muted)",
+									border: "1px dashed var(--ui-neutral-border)",
+									borderRadius: "var(--ui-radius-md, 0.375rem)",
+									pointerEvents: "none",
+								}),
+								when("[data-slot='board-cards']:empty + &", raw({ display: "block" })),
+							]}
+						>
+							{empty}
+						</p>
+					);
+				})}
 			</section>
 		);
 	};
@@ -323,10 +340,10 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 		return (
 			<li
 				{...rest}
-				{...{ [BOARD_CARD_ATTRIBUTE]: value }}
 				data-slot="board-card"
 				mix={mergeMix(
 					[
+						attrs({ [BOARD_CARD_ATTRIBUTE]: value }),
 						raw({
 							position: "relative",
 							padding: "0.625rem 0.75rem",
@@ -348,20 +365,23 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 				)}
 			>
 				{children}
-				{move ? (
-					<form
-						id={boardMoveFormId(board.id, value)}
-						method="post"
-						action={move.action}
-						hidden
-						{...{ [BOARD_MOVE_FORM_ATTRIBUTE]: value }}
-					>
-						<input type="hidden" name={move.name} value="" disabled data-board-move-input />
-						{Object.entries(move.fields ?? {}).map(([name, field]) => (
-							<input type="hidden" name={name} value={field} />
-						))}
-					</form>
-				) : null}
+				{iife(() => {
+					if (!move) return null;
+					return (
+						<form
+							id={boardMoveFormId(board.id, value)}
+							method="post"
+							action={move.action}
+							hidden
+							mix={[attrs({ [BOARD_MOVE_FORM_ATTRIBUTE]: value })]}
+						>
+							<input type="hidden" name={move.name} value="" disabled data-board-move-input />
+							{Object.entries(move.fields ?? {}).map(([name, field]) => (
+								<input type="hidden" name={name} value={field} />
+							))}
+						</form>
+					);
+				})}
 			</li>
 		);
 	};
