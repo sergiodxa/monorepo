@@ -209,7 +209,13 @@ export function Button(handle: Handle<Button.Props>) {
 							fontWeight: "var(--ui-button-weight, 500)",
 						}),
 						cursor("default"),
-						/** A small control reaches `--ui-target-size` however a consumer positions it. */
+						/**
+						 * A small control reaches `--ui-target-size` however a consumer positions it. The
+						 * control is its target's containing block, so a scrolling row of buttons clips
+						 * every target and the page never grows to fit one; a consumer's own position
+						 * utility in `mix` replaces it.
+						 */
+						relative(),
 						hitArea({ anchor: "flex-center" }),
 						userSelect(),
 
