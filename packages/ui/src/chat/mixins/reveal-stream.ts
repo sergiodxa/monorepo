@@ -16,6 +16,15 @@ export const STREAM_PENDING_ATTRIBUTE = "data-stream-pending";
 /** Attribute {@link revealStream} sets on the reply when it ends: `"done"` or `"stopped"`. */
 export const STREAM_END_ATTRIBUTE = "data-stream-end";
 
+/** Attribute {@link revealStream} keeps on the block it showed last, while it runs. */
+export const STREAM_CURRENT_ATTRIBUTE = "data-stream-current";
+
+/**
+ * Attribute a block carries to hold the replay that many milliseconds once it shows, for a
+ * step that should read as taking time.
+ */
+export const STREAM_PAUSE_ATTRIBUTE = "data-stream-pause";
+
 /** Attribute {@link revealStream} puts on a block the text has not reached yet. */
 export const STREAM_HIDDEN_ATTRIBUTE = "data-stream-hidden";
 
@@ -23,8 +32,11 @@ export const STREAM_HIDDEN_ATTRIBUTE = "data-stream-hidden";
 const BLOCK_SELECTOR =
 	"p, li, tr, h1, h2, h3, h4, h5, h6, pre, figure, blockquote, table, ul, ol, dl, dt, dd, hr, img, [data-stream-block]";
 
-/** Controls and notes that belong to the reply's frame, which stay whole and shown throughout. */
-const SKIP_SELECTOR = "button, [data-stream-skip]";
+/**
+ * Controls, notes that belong to the reply's frame, and the folded content of a closed
+ * disclosure, which stay whole and shown throughout.
+ */
+const SKIP_SELECTOR = "button, [data-stream-skip], details:not([open]) > :not(summary)";
 
 /** Words per tick, cycled, so the pace reads as a model's uneven chunks. */
 const CHUNKS = [2, 1, 3, 2, 1, 2] as const;
@@ -83,19 +95,42 @@ export function revealStream(root: HTMLElement, options: StreamRevealOptions = {
 	let blockIndex = 0;
 	let tick = 0;
 	let ended = false;
+	let current: HTMLElement | undefined;
+	let holdUntil = 0;
+	let waited = new Set<HTMLElement>();
 
-	/** Shows every hidden block that comes before `node` in the document or holds it. */
-	function showBlocksUpTo(node: Node) {
+	/**
+	 * Shows every hidden block that comes before `node` in the document or holds it. When the
+	 * block shown last asks for a pause, it waits that long first and answers `false`.
+	 */
+	function showBlocksUpTo(node: Node): boolean {
 		while (blockIndex < blocks.length) {
 			let block = blocks[blockIndex]!;
 			let position = block.compareDocumentPosition(node);
 			let reached =
 				position & Node.DOCUMENT_POSITION_FOLLOWING ||
 				position & Node.DOCUMENT_POSITION_CONTAINED_BY;
-			if (!reached) return;
+			if (!reached) return true;
+			let owner = current?.closest<HTMLElement>(`[${STREAM_PAUSE_ATTRIBUTE}]`);
+			let pause = Number(owner?.getAttribute(STREAM_PAUSE_ATTRIBUTE));
+			if (
+				owner &&
+				root.contains(owner) &&
+				pause > 0 &&
+				!waited.has(owner) &&
+				!owner.contains(block)
+			) {
+				waited.add(owner);
+				holdUntil = Date.now() + pause;
+				return false;
+			}
 			block.removeAttribute(STREAM_HIDDEN_ATTRIBUTE);
+			current?.removeAttribute(STREAM_CURRENT_ATTRIBUTE);
+			block.setAttribute(STREAM_CURRENT_ATTRIBUTE, "");
+			current = block;
 			blockIndex++;
 		}
+		return true;
 	}
 
 	/** Ends the reveal once, showing the rest when it ran to completion. */
@@ -103,6 +138,7 @@ export function revealStream(root: HTMLElement, options: StreamRevealOptions = {
 		if (ended) return;
 		ended = true;
 		clearInterval(timer);
+		current?.removeAttribute(STREAM_CURRENT_ATTRIBUTE);
 		if (how === "done") for (let block of blocks) block.removeAttribute(STREAM_HIDDEN_ATTRIBUTE);
 		root.removeAttribute("aria-busy");
 		root.setAttribute(STREAM_END_ATTRIBUTE, how);
@@ -111,11 +147,12 @@ export function revealStream(root: HTMLElement, options: StreamRevealOptions = {
 
 	/** Adds the next chunk of words to the reply. */
 	function step() {
+		if (Date.now() < holdUntil) return;
 		let budget = CHUNKS[tick++ % CHUNKS.length]!;
 		while (budget > 0) {
 			let run = runs[runIndex];
 			if (run === undefined) return end("done");
-			if (tokenIndex === 0) showBlocksUpTo(run.node);
+			if (tokenIndex === 0 && !showBlocksUpTo(run.node)) return;
 			let token = run.tokens[tokenIndex++];
 			if (token !== undefined) run.node.data += token;
 			if (tokenIndex >= run.tokens.length) {

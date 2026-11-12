@@ -316,6 +316,8 @@ one the page uses in the browser entry.
   turns, and an attached-file card.
 - `ScrollFollowModel({ pinned? })` — whether the log follows the live edge, visible messages, and
   pending scroll requests.
+- `Activity` — what an assistant did before replying: a "Thinking" disclosure with `.Summary`,
+  `.Note`, `.Steps` and `.Step` (an icon, a running state, output it opens onto).
 - `Composer` — the message form, with `.Input` (grows to twelve lines), `.Toolbar` and `.Hint`;
   `ComposerSubmit` is its send button, Enter to send, and Stop while a reply streams.
 - `revealStream(root)` — replays a server-rendered reply word by word; `streamTarget()` styles it.

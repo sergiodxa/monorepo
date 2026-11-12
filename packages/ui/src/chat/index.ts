@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export * from "./activity.js";
 export * from "./attachment.js";
 export * from "./behaviors/scroll-follow-model.js";
 export * from "./mixins/reveal-stream.js";
