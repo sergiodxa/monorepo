@@ -270,6 +270,34 @@ describe("FilterBar", () => {
 		expect(sent).toHaveLength(0);
 	});
 
+	test("closes a facet once Apply submits, so a page patched in place shows nothing open", async () => {
+		let host = mount("/monitors");
+		let sent = captureSubmits(host);
+		let popover = document.getElementById("monitors-facet-status")!;
+		host.querySelector<HTMLButtonElement>('[data-slot="filter-bar-facet"]')!.click();
+		popover.querySelector<HTMLInputElement>('input[value="up"]')!.click();
+
+		await userEvent.click(page.getByRole("button", { name: "Apply" }).first());
+
+		expect(sent[0]?.getAll("status")).toEqual(["up"]);
+		expect(popover.matches(":popover-open")).toBe(false);
+	});
+
+	test("turns a facet's chevron over while its popover is open, and its icon matches the View icon", async () => {
+		let host = mount("/monitors", 1024, {
+			facets: [{ ...FACETS[0]!, icon: <svg viewBox="0 0 24 24" width="24" height="24" /> }],
+		});
+		let trigger = host.querySelector<HTMLButtonElement>('[data-slot="filter-bar-facet"]')!;
+		let chevron = trigger.querySelector<SVGElement>('[data-slot="filter-bar-chevron"]')!;
+		let icon = trigger.querySelector("svg")!;
+		expect(getComputedStyle(chevron).rotate).toBe("none");
+		expect(icon.getBoundingClientRect().width).toBe(16);
+
+		trigger.click();
+
+		await expect.poll(() => getComputedStyle(chevron).rotate).toBe("180deg");
+	});
+
 	test("names the search input after the bar, so a list's / key can focus it", () => {
 		let host = mount("/monitors");
 

@@ -51,6 +51,7 @@ import { SearchField } from "../components/search-field.js";
 import { floatingSurface, surfaceInset } from "../styles/floating-surface.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 
+import { closePopoverOnSubmit } from "./mixins/close-popover-on-submit.js";
 import { escapeLink } from "./mixins/escape-link.js";
 import {
 	carriedParams,
@@ -211,6 +212,13 @@ export namespace FilterBar {
 		locale?: string;
 		labels: Labels;
 	}
+
+	/** Props {@link FilterBarApply} serializes for hydration, which is why they are a `type`. */
+	export type ApplyProps = {
+		/** The bar's form, which the button submits. */
+		formId: string;
+		label: string;
+	};
 
 	/** Props {@link FilterBarClear} serializes for hydration, which is why they are a `type`. */
 	export type ClearProps = {
@@ -584,6 +592,19 @@ function FacetTrigger(handle: Handle<FacetTriggerProps>) {
 					nowrap(),
 					cursor("pointer"),
 					when("& > svg", [fg("neutral.muted"), shrink(0)]),
+					raw({
+						"& > svg:not([data-slot='filter-bar-chevron'])": {
+							inlineSize: "1rem",
+							blockSize: "1rem",
+						},
+						"@media (prefers-reduced-motion: no-preference)": {
+							"& > [data-slot='filter-bar-chevron']": { transition: "rotate 150ms ease" },
+						},
+					}),
+					when(
+						`[data-slot='filter-bar']:has([id='${popoverId}']:popover-open) & > [data-slot='filter-bar-chevron']`,
+						raw({ rotate: "180deg" }),
+					),
 					hover([bg("neutral.bg-tint-hover"), border("neutral.border"), fg("neutral.emphasis")]),
 					when("&[data-applied]", [
 						border({ width: 1, style: "solid", color: "neutral.border" }),
@@ -611,7 +632,7 @@ function FacetTrigger(handle: Handle<FacetTriggerProps>) {
 						{applied}
 					</span>
 				) : null}
-				<ChevronDownIcon size={14} />
+				<ChevronDownIcon size={14} data-slot="filter-bar-chevron" />
 			</button>
 		);
 	};
@@ -687,9 +708,7 @@ function FacetPopover(handle: Handle<FacetPopoverProps>) {
 					</div>
 				</fieldset>
 				<div mix={[flex(), justify("end"), pi(1), raw({ paddingBlockStart: "0.5rem" })]}>
-					<Button type="submit" form={formId} size="sm" color="brand">
-						{apply}
-					</Button>
+					<FilterBarApply formId={formId} label={apply} />
 				</div>
 			</Popover>
 		);
@@ -964,5 +983,28 @@ export const FilterBarClear: EntryComponent<FilterBar.ClearProps> = clientEntry(
 				</a>
 			);
 		};
+	},
+);
+
+/**
+ * Renders a facet's Apply button, submitting the bar's form. Once hydrated, the submit also
+ * closes the popover holding it, so the visitor lands on the filtered page with nothing open.
+ *
+ * @example <FilterBarApply formId="monitors-filters" label="Apply" />
+ */
+export const FilterBarApply: EntryComponent<FilterBar.ApplyProps> = clientEntry(
+	"@sdxc/ui/app/filter-bar#FilterBarApply",
+	function FilterBarApply(handle: Handle<FilterBar.ApplyProps>) {
+		return () => (
+			<Button
+				type="submit"
+				form={handle.props.formId}
+				size="sm"
+				color="brand"
+				mix={[closePopoverOnSubmit()]}
+			>
+				{handle.props.label}
+			</Button>
+		);
 	},
 );
