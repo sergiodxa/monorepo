@@ -32,6 +32,12 @@ Ghost and Notion.
 Content in an inset card on a tinted frame. One sidebar that is a column, a rail and a phone sheet,
 collapsed by a cookie the server reads, so the first paint is right. Quiet 32px nav rows.
 
+### It works like a SPA, renders on the server and works without script (CRITICAL) — @rules/spa-navigation.md
+
+Once script loads, the shell stays mounted: links and filters swap only the screen's `main` frame
+(URL and history follow), and actions reload a frame in place without moving history. Every
+address still renders whole on the server, and every link and form works with script off.
+
 ### Navigation scales by swapping, searching and pinning (CRITICAL) — @rules/shell-and-navigation.md
 
 Name destinations by task, swap the whole panel for a scope ("‹ Settings"), keep three levels at most,
