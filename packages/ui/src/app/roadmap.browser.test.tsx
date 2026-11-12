@@ -156,6 +156,24 @@ describe("Roadmap", () => {
 		expect(meta.getBoundingClientRect().width).toBe(0);
 	});
 
+	test("opens scrolled so today sits a third of the way across the visible axis", async () => {
+		let roadmap = mount(600);
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		let box = roadmap.getBoundingClientRect();
+		let line = roadmap.querySelector('[data-slot="roadmap-today"]')!.getBoundingClientRect();
+		let list = roadmap.querySelector('[data-slot="roadmap-corner"]')!.getBoundingClientRect().width;
+		let axis = box.width - list;
+
+		expect(roadmap.scrollLeft).toBeGreaterThan(0);
+		expect(Math.abs(line.left - (box.left + list + axis / 3))).toBeLessThanOrEqual(2);
+	});
+
+	test("stays at its first day when today is already in view", async () => {
+		let roadmap = mount(1400);
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(roadmap.scrollLeft).toBe(0);
+	});
+
 	test("labels the months across the top", () => {
 		let roadmap = mount();
 		let months = [...roadmap.querySelectorAll('[data-slot="roadmap-month"]')].map(

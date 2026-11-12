@@ -7,11 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/component";
+import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { iife } from "@sdxc/iife";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { mergeMix, raw } from "@sdxc/u/general";
+import { clientEntry } from "remix/component";
+
+import { roadmapToday } from "./mixins/roadmap-today.js";
 
 /** Milliseconds in a day, the axis's unit. */
 const DAY_MS = 86_400_000;
@@ -107,6 +110,17 @@ export namespace Roadmap {
 }
 
 /**
+ * Client island: an invisible marker that scrolls the roadmap to today once it is laid out,
+ * so a narrow screen opens on the present. Loads from `@sdxc/ui/app/roadmap#RoadmapToday`.
+ */
+export const RoadmapToday: EntryComponent<Record<never, never>> = clientEntry(
+	"@sdxc/ui/app/roadmap#RoadmapToday",
+	function RoadmapToday() {
+		return () => <span hidden data-slot="roadmap-scroll" mix={[roadmapToday()]} />;
+	},
+);
+
+/**
  * Days from the epoch to a `YYYY-MM-DD` date, read as UTC so a time zone never shifts a bar.
  *
  * @param date The date.
@@ -114,6 +128,15 @@ export namespace Roadmap {
  */
 export function roadmapDay(date: string): number {
 	return Math.round(Date.parse(`${date.slice(0, 10)}T00:00:00Z`) / DAY_MS);
+}
+
+/**
+ * Days from the epoch to a date, or `fallback` when the date cannot be read, so a roadmap
+ * whose range is missing or mistyped draws a one-day axis rather than failing to render.
+ */
+function readableDay(date: string | undefined, fallback: number): number {
+	let day = typeof date === "string" ? roadmapDay(date) : Number.NaN;
+	return Number.isFinite(day) ? day : fallback;
 }
 
 /** A calc() length `days` days along the axis. */
@@ -154,8 +177,8 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 			mix,
 			...rest
 		} = handle.props;
-		let first = roadmapDay(start);
-		let last = roadmapDay(end);
+		let first = readableDay(start, 0);
+		let last = Math.max(first, readableDay(end, first));
 		let span = last - first + 1;
 		handle.context.set({ start: first, end: last, locale, labels });
 
@@ -350,6 +373,7 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 								<span mix={[visuallyHidden()]}>
 									{`${labels.today}: ${format(todayDay, locale, { dateStyle: "long" })}`}
 								</span>
+								<RoadmapToday />
 							</div>
 						);
 					})}

@@ -48,6 +48,7 @@ export * from "./mixins/menubar-keys.js";
 export * from "./mixins/optimistic-toggle-sync.js";
 export * from "./mixins/range-picker-keys.js";
 export * from "./mixins/resize-handle.js";
+export * from "./mixins/roadmap-today.js";
 export * from "./mixins/row-navigation.js";
 export * from "./mixins/save-bar-sync.js";
 export * from "./mixins/save-shortcut.js";
