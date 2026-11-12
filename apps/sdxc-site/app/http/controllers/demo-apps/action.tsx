@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { OPTIMISTIC_TOGGLE_HEADER } from "@sdxc/ui/app";
 import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -23,7 +24,8 @@ const PARAMS = s.object({ app: s.string(), page: s.string() });
  * the query, or renders
  * the screen the app answered with (`400` unless it says otherwise). An unknown app answers
  * `404` and a post the app cannot read `400`; a redirect outside the app's own address is
- * refused, so a post can only ever send the visitor back into it.
+ * refused, so a post can only ever send the visitor back into it. A toggle's background post
+ * answers `204` with the redirect's cookies, as its page already shows the change.
  */
 export default createAction(routes.demoApps.action, async (ctx) => {
 	let { app: slug, page } = s.parse(PARAMS, ctx.params);
@@ -49,11 +51,15 @@ export default createAction(routes.demoApps.action, async (ctx) => {
 	if (target.pathname !== root && !target.pathname.startsWith(`${root}/`)) {
 		return new Response("That form could not be read.", { status: 400 });
 	}
+	let headers = new Headers();
+	for (let cookie of next.cookies ?? []) headers.append("Set-Cookie", cookie);
+	if (ctx.request.headers.has(OPTIMISTIC_TOGGLE_HEADER)) {
+		return new Response(null, { status: 204, headers });
+	}
 	if (next.toast !== undefined) {
 		target.searchParams.set(DEMO_APP_TOAST_PARAM, `${next.toast}.${generateUUID().slice(0, 8)}`);
 	}
-	return new Response(null, {
-		status: 303,
-		headers: { Location: `${target.pathname}${target.search}` },
-	});
+	let hash = next.hash === undefined ? "" : `#${encodeURIComponent(next.hash)}`;
+	headers.set("Location", `${target.pathname}${target.search}${hash}`);
+	return new Response(null, { status: 303, headers });
 });

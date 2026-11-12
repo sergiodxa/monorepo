@@ -1,7 +1,7 @@
 /**
  * `GET /demo/frames/apps/:app/*part` — one secondary part of a demo app screen as an HTML
  * fragment, which the screen streams in after its shell. Each part is cached on its own,
- * per address and per value of the cookies its app reads.
+ * per address and per value of the cookies its app reads, unless drawn for one visitor.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,6 +31,7 @@ export default createAction(routes.demoFrames.app, async (ctx) => {
 	let node = await app.frame(part, { page: part, url: ctx.url, cookie });
 	if (node === null) return notFound();
 
+	if (app.isPersonal?.(cookie)) return ctx.render(node);
 	let variant = `${ctx.url.search}|${cookieVariant(cookie, app.cookies)}`;
 	return await withStreamCache(ctx.request, variant, async () => ctx.render(node));
 });

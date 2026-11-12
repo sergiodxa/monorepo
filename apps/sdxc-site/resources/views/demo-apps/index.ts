@@ -53,8 +53,12 @@ export interface DemoAppScreen {
 export interface DemoAppRedirect {
 	/** A page path under the app, with its query string when it keeps one. */
 	page: string;
+	/** An element id on that page, so the visitor lands back on the row they acted on. */
+	hash?: string;
 	/** A key of the app's {@link DemoApp.toasts}. */
 	toast?: string;
+	/** `Set-Cookie` values the answer carries, for an app that remembers what a visitor did. */
+	cookies?: string[];
 }
 
 /** One demo app: its invented product, its art direction and every screen it answers. */
@@ -83,6 +87,11 @@ export interface DemoApp {
 	 * kept per combination of their values and never serves one visitor's layout to another.
 	 */
 	cookies: readonly string[];
+	/**
+	 * Whether a request carries what this visitor did, read from its `Cookie` header; such a
+	 * request renders fresh and is never cached, so one visitor's activity never reaches another.
+	 */
+	isPersonal?: (cookie: string | null) => boolean;
 	/** The toasts a redirect may name, keyed by what {@link DemoAppRedirect.toast} carries. */
 	toasts: Record<string, Omit<Toast.Flash, "id">>;
 	/**

@@ -29,9 +29,9 @@ function countH1(body: string): number {
 }
 
 describe("GET /demo/apps/:app", () => {
-	test("the catalogue holds a dashboard, a CMS, an inbox and a chat assistant", () => {
+	test("the catalogue holds a dashboard, a CMS, an inbox, a chat assistant and a social network", () => {
 		expect(listDemoAppSlugs()).toEqual(
-			expect.arrayContaining(["inkwell", "pulse", "relay", "tern"]),
+			expect.arrayContaining(["chorus", "inkwell", "pulse", "relay", "tern"]),
 		);
 	});
 
@@ -76,7 +76,7 @@ describe("GET /demo/apps/:app", () => {
 		expect(body).toMatch(/<meta name="robots" content="noindex, nofollow"/);
 	});
 
-	test.each(apps)(
+	test.each(apps.filter(({ slug }) => slug !== "chorus"))(
 		"$slug's workspace and user rows open real menus, with Sign out back to the gallery",
 		async ({ slug }) => {
 			let body = await (await fetchApp(demoAppHref(slug)())).text();
