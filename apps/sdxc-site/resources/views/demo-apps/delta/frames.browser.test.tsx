@@ -253,8 +253,9 @@ describe("Delta works like an app once its script runs", () => {
 		let field = root.querySelector<HTMLInputElement>(
 			'[data-slot="tree-filter"] input[type="search"]',
 		)!;
-		let note = root.querySelector<HTMLElement>("#delta-tree [data-tree-no-matches]")!;
+		let note = root.querySelector<HTMLElement>('[data-tree-no-matches="delta-tree"]')!;
 
+		expect(note.closest('[role="tree"]')).toBeNull();
 		expect(note.checkVisibility()).toBe(false);
 		await userEvent.type(field, "zzzz");
 		expect(note.checkVisibility()).toBe(true);

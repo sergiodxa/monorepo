@@ -102,8 +102,8 @@ export function FilesPane(handle: Handle<FilesPane.Props>) {
 				<Tree id={TREE_ID} aria-label={COPY.files.tree}>
 					<Tree.Navigation labels={TREE_LABELS} />
 					<TreeNodes nodes={nodes} current={current} />
-					<Tree.NoMatches>{COPY.find.none}</Tree.NoMatches>
 				</Tree>
+				<Tree.NoMatches tree={TREE_ID}>{COPY.find.none}</Tree.NoMatches>
 				<DeltaTreeSync tree={TREE_ID} pane={PANE_ID} />
 			</>
 		);
