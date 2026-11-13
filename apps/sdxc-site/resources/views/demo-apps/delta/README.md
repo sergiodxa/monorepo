@@ -27,3 +27,8 @@ in [`scripts/extract-delta.ts`](https://github.com/sergiodxa/monorepo/blob/main/
 - Open a file, click a line number, then shift-click another to cite a range.
 - Press `y` on a file to pin its address to the commit it was built from.
 - Switch a file to **Blame** to see which commit last changed each line.
+- Open **Actions**, then the run that is still going, and watch its job's log stream in.
+- Open a failed run and follow a finding to the exact lines of this folder it cites.
+- Press `g n` for the inbox, then `j` and `e` to mark notifications done without the mouse.
+- Visit a member's profile and switch years under their contributions.
+- Delete the repository in **Settings**. Nothing is lost: the toast's Undo brings it back.
