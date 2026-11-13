@@ -435,13 +435,13 @@ holds.
 
 | Input                       | `@sdxc/highlight` | Prism 1.30 | Faster by |
 | --------------------------- | ----------------: | ---------: | --------: |
-| 10,000-line TypeScript file |             42 ms |     431 ms |       10× |
-| 2 MB JSON document          |             40 ms |     166 ms |        4× |
-| 10,000-line Markdown file   |            6.7 ms |      26 ms |        4× |
-| 500 KB minified JS line     |           0.12 ms |      87 ms |      700× |
+| 10,000-line TypeScript file |            9.1 ms |     278 ms |       30× |
+| 2 MB JSON document          |             52 ms |     188 ms |      3.7× |
+| 10,000-line Markdown file   |             11 ms |      50 ms |      4.5× |
+| 500 KB minified JS line     |           0.11 ms |     132 ms |    1,200× |
 
 The minified line is fast because highlighting stops after `maxLineLength` (2,000 characters
-by default). With `{ maxLineLength: Infinity }` the same line takes 16 ms, still 5× faster
+by default). With `{ maxLineLength: Infinity }` the same line takes 25 ms, still 5× faster
 than Prism.
 
 Run the benchmarks from a checkout of the repository:
