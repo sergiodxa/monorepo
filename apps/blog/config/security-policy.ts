@@ -17,7 +17,7 @@ export const CONTENT_SECURITY_POLICY: CSP.Directives = {
 	defaultSrc: ["self"],
 	scriptSrc: ["self"],
 	styleSrc: ["self", "unsafe-inline"],
-	imgSrc: ["self", "data:"],
+	imgSrc: ["self", "data:", "https://avatars.githubusercontent.com"],
 	fontSrc: ["self"],
 	connectSrc: ["self"],
 	frameSrc: ["https://www.youtube-nocookie.com"],
