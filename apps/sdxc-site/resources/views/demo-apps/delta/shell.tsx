@@ -463,17 +463,26 @@ namespace RepoCounts {
 	export interface Props {
 		/** Open records by the tab that counts them, such as `{ issues: 9, pulls: 3 }`. */
 		counts: Record<string, number>;
+		/** Tabs whose feature the visitor switched off in Settings, such as `["issues"]`. */
+		hidden?: readonly RepoTab[];
 		children: RemixNode;
+	}
+
+	/** What a repository header reads from the nearest provider. */
+	export interface Context {
+		counts: Record<string, number>;
+		hidden: readonly RepoTab[];
 	}
 }
 
 /**
- * Hands every repository header under it the counts its tabs show, which the visitor's own
- * work changes, so a merge redrawing `main` also redraws "Pull requests 3" as 2.
+ * Hands every repository header under it the counts its tabs show and the tabs it leaves
+ * out, which the visitor's own work changes: a merge redrawing `main` also redraws "Pull
+ * requests 3" as 2, and switching Issues off in Settings drops the Issues tab.
  */
-export function RepoCounts(handle: Handle<RepoCounts.Props, Record<string, number>>) {
+export function RepoCounts(handle: Handle<RepoCounts.Props, RepoCounts.Context>) {
 	return () => {
-		handle.context.set(handle.props.counts);
+		handle.context.set({ counts: handle.props.counts, hidden: handle.props.hidden ?? [] });
 		return handle.props.children;
 	};
 }
@@ -519,15 +528,19 @@ export function RepoHeader(handle: Handle<RepoHeader.Props>) {
 			title,
 			trail = [],
 		} = handle.props;
-		let counts: Record<string, number> = { ...handle.context.get(RepoCounts), commits };
+		let provided = handle.context.get(RepoCounts);
+		let counts: Record<string, number> = { ...provided?.counts, commits };
+		let hidden = provided?.hidden ?? [];
 		let tabs: PageHeader.Tab[] =
 			handle.props.tabs ??
-			REPO_TABS.map((entry) => ({
-				href: repoHref(entry.page),
-				label: entry.label,
-				count: counts[entry.tab] || undefined,
-				current: entry.tab === tab,
-			}));
+			REPO_TABS.filter((entry) => entry.tab === tab || !hidden.includes(entry.tab)).map(
+				(entry) => ({
+					href: repoHref(entry.page),
+					label: entry.label,
+					count: counts[entry.tab] || undefined,
+					current: entry.tab === tab,
+				}),
+			);
 		return (
 			<PageHeader
 				title={title}

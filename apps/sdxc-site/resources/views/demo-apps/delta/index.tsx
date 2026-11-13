@@ -38,6 +38,7 @@ import { INBOX_TOASTS, inboxScreen, submitInbox } from "./inbox";
 import { COPY } from "./labels";
 import { dashboardScreen } from "./overview";
 import { peopleScreen } from "./people";
+import { readPrefs } from "./prefs";
 import { BlobScreen, NotInBuild } from "./screens/blob";
 import { CommitScreen, CommitsScreen } from "./screens/commits";
 import { NotFoundScreen } from "./screens/dashboard";
@@ -413,7 +414,12 @@ export default {
 				url={request.url}
 				toast={key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined}
 			>
-				<RepoCounts counts={counts}>{screen.body}</RepoCounts>
+				<RepoCounts
+					counts={counts}
+					hidden={readPrefs(request.cookie).settings.issues ? [] : ["issues"]}
+				>
+					{screen.body}
+				</RepoCounts>
 			</MainScreen>
 		);
 	},

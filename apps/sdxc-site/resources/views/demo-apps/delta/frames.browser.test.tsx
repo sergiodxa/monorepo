@@ -578,6 +578,24 @@ describe("Delta's settings", () => {
 		expect(navigation.entries().length).toBe(entries);
 	});
 
+	test("switching Issues off drops the Issues tab from the repository header in place", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/settings");
+		let tabs = () =>
+			[...root.querySelectorAll<HTMLAnchorElement>("[data-main-screen] header a[href]")].map(
+				(link) => link.getAttribute("href"),
+			);
+		expect(tabs()).toContain(`${ROOT}/delta/issues`);
+
+		let issues = root.querySelector<HTMLInputElement>('input[name="issues"]')!;
+		issues.click();
+		await settle(() => root.querySelector('input[name="issues"]') !== issues);
+
+		expect(savedSettings()["issues"]).toBe(false);
+		expect(tabs()).not.toContain(`${ROOT}/delta/issues`);
+		expect(tabs()).toContain(`${ROOT}/delta/pulls`);
+	});
+
 	test("a refused save keeps every character typed and says why, in place", async () => {
 		await page.viewport(1280, 800);
 		let root = await mountScreen("delta/settings");
