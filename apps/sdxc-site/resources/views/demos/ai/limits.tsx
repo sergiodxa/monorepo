@@ -74,7 +74,7 @@ const LIMITS: readonly Limit[] = [
  */
 export default function MarginLimits() {
 	return () => (
-		<LandingSection id="limits" mix={[renderNearView(820, 2050)]}>
+		<LandingSection id="limits" mix={[renderNearView(762, 1674)]}>
 			<LandingHeader
 				eyebrow="Limits"
 				description={

@@ -48,7 +48,7 @@ export default function MarginPricing(handle: Handle<MarginPricing.Props>) {
 		let input = readEstimateInput(handle.props.url.searchParams);
 
 		return (
-			<LandingSection id="pricing" mix={[renderNearView(640, 1180)]}>
+			<LandingSection id="pricing" mix={[renderNearView(530, 925)]}>
 				<LandingHeader
 					eyebrow="Pricing"
 					layout="split"

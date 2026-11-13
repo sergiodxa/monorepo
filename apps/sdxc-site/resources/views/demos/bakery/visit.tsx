@@ -71,7 +71,7 @@ const DIRECTIONS = [
  */
 export function Visit() {
 	return () => (
-		<LandingSection id="visit" mix={[renderNearView(820, 1500)]}>
+		<LandingSection id="visit" mix={[renderNearView(625, 1056)]}>
 			<LandingHeader
 				eyebrow="Find us"
 				description={
@@ -492,7 +492,7 @@ const PARKING = [
  */
 export function GettingIn() {
 	return () => (
-		<LandingSection id="getting-in" tone="tinted" mix={[renderNearView(640, 1250)]}>
+		<LandingSection id="getting-in" tone="tinted" mix={[renderNearView(591, 1142)]}>
 			<LandingHeader
 				eyebrow="Access and parking"
 				description="Everything we could think of. If there's something we've missed, call us and we'll sort it before you arrive."

@@ -158,7 +158,7 @@ export function CourseFaq() {
 			columns={2}
 			eyebrow="Questions"
 			title="Before your first lump of clay"
-			mix={[renderNearView(485)]}
+			mix={[renderNearView(317, 474)]}
 		>
 			{[QUESTIONS.slice(0, 3), QUESTIONS.slice(3)].map((column) => (
 				<Accordion key={column[0]?.[0]}>

@@ -65,7 +65,7 @@ const TARGETS: readonly FanOutDiagram.Target[] = [
  */
 export default function MarginIntegrations() {
 	return () => (
-		<LandingSection id="integrations" mix={[renderNearView(560, 1100)]}>
+		<LandingSection id="integrations" mix={[renderNearView(425, 993)]}>
 			<Split>
 				<Split.Copy>
 					<LandingHeader

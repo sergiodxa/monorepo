@@ -141,7 +141,7 @@ export function Specials(handle: Handle<{ now: Date }>) {
 			<LandingSection
 				id="today"
 				tone="tinted"
-				mix={[gingham("var(--ui-color-brand-400)", "2.5rem", 7), renderNearView(760, 1500)]}
+				mix={[gingham("var(--ui-color-brand-400)", "2.5rem", 7), renderNearView(564, 1150)]}
 			>
 				<LandingHeader
 					eyebrow={isToday ? `Today, ${dayName}` : `We're closed today · Next up, ${dayName}`}

@@ -73,7 +73,7 @@ const PROMISES = [
  */
 export default function MarginPrivacy() {
 	return () => (
-		<LandingSection id="privacy" tone="tinted" mix={[renderNearView(760, 1500)]}>
+		<LandingSection id="privacy" tone="tinted" mix={[renderNearView(662, 1505)]}>
 			<LandingHeader
 				eyebrow="Privacy"
 				layout="split"

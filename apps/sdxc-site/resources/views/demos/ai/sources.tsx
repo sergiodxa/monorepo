@@ -36,7 +36,7 @@ const CITED_COUNT = Object.values(MARGIN_NOTES).filter((note) => note.pen === "i
  */
 export default function MarginSources() {
 	return () => (
-		<LandingSection id="sources" mix={[renderNearView(980, 1500)]}>
+		<LandingSection id="sources" mix={[renderNearView(605, 1600)]}>
 			<LandingHeader
 				eyebrow="How it works"
 				layout="split"

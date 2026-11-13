@@ -54,7 +54,7 @@ export default function MarginFaq() {
 			eyebrow="Questions"
 			title="Before you invite it to a call"
 			columns={2}
-			mix={[renderNearView(560, 900)]}
+			mix={[renderNearView(317, 546)]}
 		>
 			{[QUESTIONS.slice(0, 3), QUESTIONS.slice(3)].map((column) => (
 				<Accordion>

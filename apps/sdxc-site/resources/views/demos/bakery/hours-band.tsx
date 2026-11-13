@@ -55,7 +55,7 @@ export function Hours(handle: Handle<{ now: Date }>) {
 		let status = openingStatus(now);
 
 		return (
-			<LandingSection id="hours" tone="tinted" mix={[renderNearView(720, 1300)]}>
+			<LandingSection id="hours" tone="tinted" mix={[renderNearView(663, 1200)]}>
 				<LandingHeader
 					eyebrow="Opening hours"
 					description={

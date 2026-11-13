@@ -50,7 +50,7 @@ const LINES: readonly TypedTerminal.Line[] = [
  */
 export default function MarginWriting() {
 	return () => (
-		<LandingSection id="drafting" tone="tinted" mix={[renderNearView(560, 980)]}>
+		<LandingSection id="drafting" tone="tinted" mix={[renderNearView(416, 762)]}>
 			<Split lean="media">
 				<Split.Copy>
 					<LandingHeader

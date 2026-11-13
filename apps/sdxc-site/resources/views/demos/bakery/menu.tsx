@@ -130,7 +130,7 @@ function DietMarks(handle: Handle<{ diet: Diet[] }>) {
  */
 export function Menu() {
 	return () => (
-		<LandingSection id="menu" mix={[renderNearView(980, 2300)]}>
+		<LandingSection id="menu" mix={[renderNearView(1129, 2020)]}>
 			<LandingHeader
 				eyebrow="Menu and prices"
 				description={

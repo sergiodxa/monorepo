@@ -73,7 +73,7 @@ export function Order(handle: Handle<{ now: Date }>) {
 		let days = pickupDays(handle.props.now);
 
 		return (
-			<LandingSection id="order" mix={[renderNearView(1000, 1900)]}>
+			<LandingSection id="order" mix={[renderNearView(969, 1611)]}>
 				<LandingHeader
 					eyebrow="Order for pickup"
 					description={

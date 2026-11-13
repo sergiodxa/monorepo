@@ -149,7 +149,7 @@ export function Neighbours() {
 	return () => (
 		<TestimonialBand
 			id="neighbours"
-			mix={[renderNearView(680)]}
+			mix={[renderNearView(674, 785)]}
 			layout="carousel"
 			carouselLabel="More notes from neighbours"
 			eyebrow="From the neighbourhood"
@@ -191,7 +191,7 @@ export function Questions() {
 	return () => (
 		<FaqBand
 			id="questions"
-			mix={[raw({ "--ui-landing-faq-gap": "0.75rem" }), renderNearView(560, 900)]}
+			mix={[raw({ "--ui-landing-faq-gap": "0.75rem" }), renderNearView(341, 503)]}
 			tone="tinted"
 			columns={2}
 			eyebrow="Questions"
