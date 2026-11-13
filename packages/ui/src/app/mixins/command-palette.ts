@@ -1,7 +1,7 @@
 /**
  * The browser half of the command palette: filters the server-rendered commands by title and
- * keywords, moves the active row, opens nested pages, fills Recent, and binds the palette's
- * toggle key and every command's own key. Why JS: filtering, active-descendant movement and
+ * keywords, ranks a finder page's paths, moves the active row, opens nested pages, fills
+ * Recent, and binds the palette's toggle key, every page's key and every command's own key. Why JS: filtering, active-descendant movement and
  * page stacks need script. No-JS baseline: a trigger opens the dialog and every command works.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -13,6 +13,7 @@ import type { MixinFactory } from "remix/component";
 import { createMixin } from "remix/component";
 
 import { isApplePlatform, shortcutGlyphs, shortcutRegistry } from "../behaviors/shortcuts.js";
+import { fuzzyFilter, fuzzySegments } from "../utils/fuzzy-path.js";
 
 /** How many recent commands the palette offers before anything is typed. */
 export const PALETTE_RECENT_LIMIT = 5;
@@ -28,6 +29,21 @@ export const PALETTE_GOTO_ATTRIBUTE = "data-palette-goto";
 
 /** Marks a page of commands with its id. */
 export const PALETTE_PAGE_ATTRIBUTE = "data-palette-page";
+
+/** Marks a page's shortcut, the combo that opens the palette straight on that page. */
+export const PALETTE_PAGE_SHORTCUT_ATTRIBUTE = "data-palette-page-shortcut";
+
+/** Marks a finder and carries its paths, one per line. */
+export const PALETTE_FINDER_ATTRIBUTE = "data-palette-finder";
+
+/** Marks the `<template>` holding the row a finder clones per result. */
+export const PALETTE_FINDER_ROW_ATTRIBUTE = "data-palette-finder-row";
+
+/** Marks the container a finder lists its results in. */
+export const PALETTE_FINDER_RESULTS_ATTRIBUTE = "data-palette-finder-results";
+
+/** Marks the span in a finder row that holds the path and its bolded matches. */
+export const PALETTE_FINDER_PATH_ATTRIBUTE = "data-palette-finder-path";
 
 /** Marks a row the island copied into the Recent group. */
 export const PALETTE_CLONE_ATTRIBUTE = "data-palette-clone";
@@ -73,6 +89,72 @@ function pageOf(element: Element): string | null {
 	return (
 		element.closest(`[${PALETTE_PAGE_ATTRIBUTE}]`)?.getAttribute(PALETTE_PAGE_ATTRIBUTE) ?? null
 	);
+}
+
+/** One finder page, read once from its markup. */
+interface Finder {
+	page: string;
+	paths: string[];
+	href: string;
+	limit: number;
+	row: Element;
+	results: HTMLElement;
+}
+
+/** Reads every finder in `list`; one missing its row template or results container is skipped. */
+function readFinders(list: HTMLElement): Map<string, Finder> {
+	let finders = new Map<string, Finder>();
+	for (let element of list.querySelectorAll<HTMLElement>(`[${PALETTE_FINDER_ATTRIBUTE}]`)) {
+		let page = pageOf(element);
+		let template = element.querySelector<HTMLTemplateElement>(
+			`template[${PALETTE_FINDER_ROW_ATTRIBUTE}]`,
+		);
+		let row = template?.content.firstElementChild ?? template?.firstElementChild ?? null;
+		let results = element.querySelector<HTMLElement>(`[${PALETTE_FINDER_RESULTS_ATTRIBUTE}]`);
+		if (page === null || row === null || results === null) continue;
+		finders.set(page, {
+			page,
+			paths: (element.getAttribute(PALETTE_FINDER_ATTRIBUTE) ?? "").split("\n").filter(Boolean),
+			href: element.getAttribute("data-palette-finder-href") ?? "{path}",
+			limit: Number(element.getAttribute("data-palette-finder-limit") ?? "50"),
+			row,
+			results,
+		});
+	}
+	return finders;
+}
+
+/** The finder's link for `path`: its `{path}` placeholder filled with the URI-encoded segments. */
+function finderHref(template: string, path: string): string {
+	return template.replace("{path}", path.split("/").map(encodeURIComponent).join("/"));
+}
+
+/**
+ * Lists the finder's best matches for `query`, cloning its row per result and marking the
+ * matched characters, so each keystroke builds at most `limit` rows whatever the path count.
+ */
+function renderFinder(finder: Finder, query: string): void {
+	let document = finder.results.ownerDocument;
+	let rows = fuzzyFilter(query, finder.paths, finder.limit).map((match, index) => {
+		let row = finder.row.cloneNode(true) as HTMLElement;
+		let id = `${finder.page}-result-${index}`;
+		row.id = id;
+		row.hidden = false;
+		row.setAttribute(PALETTE_ITEM_ATTRIBUTE, id);
+		row.setAttribute("data-value", match.path);
+		row.setAttribute("aria-selected", "false");
+		row.querySelector("a")?.setAttribute("href", finderHref(finder.href, match.path));
+		row.querySelector(`[${PALETTE_FINDER_PATH_ATTRIBUTE}]`)?.replaceChildren(
+			...fuzzySegments(match.path, match.positions).map((segment) => {
+				if (!segment.match) return document.createTextNode(segment.text);
+				let mark = document.createElement("mark");
+				mark.textContent = segment.text;
+				return mark;
+			}),
+		);
+		return row;
+	});
+	finder.results.replaceChildren(...rows);
 }
 
 /** Reads the remembered command ids, newest first, empty when storage is unavailable. */
@@ -138,8 +220,12 @@ function attach(dialog: HTMLDialogElement, props: PaletteController.Options, sig
 	let current: string | null = null;
 	let active: HTMLElement | null = null;
 	let registry = shortcutRegistry(dialog.ownerDocument);
+	let finders = readFinders(list);
 
-	let items = () => [...list.querySelectorAll<HTMLElement>(`[${PALETTE_ITEM_ATTRIBUTE}]`)];
+	let items = () =>
+		[...list.querySelectorAll<HTMLElement>(`[${PALETTE_ITEM_ATTRIBUTE}]`)].filter(
+			(item) => item.closest("template") === null,
+		);
 	let visible = () => items().filter((item) => item.closest("[hidden]") === null);
 
 	let setActive = (item: HTMLElement | null) => {
@@ -151,6 +237,8 @@ function attach(dialog: HTMLDialogElement, props: PaletteController.Options, sig
 
 	let apply = () => {
 		let tokens = foldSearchText(input.value).split(/\s+/).filter(Boolean);
+		let finder = current === null ? undefined : finders.get(current);
+		if (finder !== undefined) renderFinder(finder, input.value);
 
 		for (let child of list.children) {
 			if (!(child instanceof HTMLElement) || child === recentGroup) continue;
@@ -160,6 +248,7 @@ function attach(dialog: HTMLDialogElement, props: PaletteController.Options, sig
 
 		for (let item of items()) {
 			if (item.hasAttribute(PALETTE_CLONE_ATTRIBUTE) || pageOf(item) !== current) continue;
+			if (item.closest(`[${PALETTE_FINDER_ATTRIBUTE}]`) !== null) continue;
 			let haystack = foldSearchText(
 				`${item.getAttribute("data-value") ?? ""} ${item.getAttribute("data-keywords") ?? ""}`,
 			);
@@ -260,7 +349,8 @@ function attach(dialog: HTMLDialogElement, props: PaletteController.Options, sig
 				return push(page);
 			}
 			let id = control.closest(`[${PALETTE_ITEM_ATTRIBUTE}]`)?.getAttribute(PALETTE_ITEM_ATTRIBUTE);
-			if (id != null) remember(props.remember, id);
+			let isFinderRow = control.closest(`[${PALETTE_FINDER_ATTRIBUTE}]`) !== null;
+			if (id != null && !isFinderRow) remember(props.remember, id);
 			dialog.close();
 		},
 		{ signal },
@@ -314,6 +404,23 @@ function attach(dialog: HTMLDialogElement, props: PaletteController.Options, sig
 		},
 		signal,
 	});
+
+	for (let page of list.querySelectorAll<HTMLElement>(`[${PALETTE_PAGE_SHORTCUT_ATTRIBUTE}]`)) {
+		let id = page.getAttribute(PALETTE_PAGE_ATTRIBUTE);
+		let keys = page.getAttribute(PALETTE_PAGE_SHORTCUT_ATTRIBUTE);
+		if (id === null || keys === null || keys === "") continue;
+		registry.register({
+			keys,
+			label: page.getAttribute("data-palette-title") ?? undefined,
+			run: () => {
+				if (!dialog.open) dialog.showModal();
+				stack = [{ page: null, query: "" }];
+				showPage(id, "");
+				return true;
+			},
+			signal,
+		});
+	}
 
 	for (let item of items()) {
 		let keys = item.getAttribute("data-palette-shortcut");

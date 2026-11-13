@@ -1,7 +1,8 @@
 /**
  * Drives the command palette in a real browser: ⌘K opens it with focus in the search field,
  * recent commands show before typing, the filter folds case and accents, arrows and Enter run
- * a command, Backspace pops a page, Esc closes and returns focus, and it sizes per viewport.
+ * a command, Backspace pops a page, Esc closes and returns focus, it sizes per viewport, and
+ * the file finder opens on `t` and ranks 5,000 paths per keystroke with the matches in bold.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -280,5 +281,128 @@ describe("CommandPalette", () => {
 
 	test("folds case and accents for matching", () => {
 		expect(foldSearchText("  Équipe Café ")).toBe("equipe cafe");
+	});
+});
+
+/** A repository of 5,000 paths with one file whose name holds a space, so links must encode it. */
+function repository(): string[] {
+	let names = ["log-viewer", "command-palette", "page-header", "timeline", "index"];
+	let paths = Array.from(
+		{ length: 4_999 },
+		(_, index) =>
+			`packages/pkg-${index % 89}/src/module-${index % 11}/${names[index % names.length]}-${index}.tsx`,
+	);
+	return ["docs/Read Me.md", ...paths];
+}
+
+/** Mounts a palette whose only page is the file finder, opened on `t`. */
+function mountFinder(paths: string[] = repository()): HTMLDialogElement {
+	mounted = render(
+		<CommandPalette id="palette" labels={LABELS}>
+			<CommandPalette.Group heading="Navigation">
+				<CommandPalette.Item id="find" title="Go to File…" page="files" />
+			</CommandPalette.Group>
+			<CommandPalette.Finder
+				id="files"
+				title="Go to File"
+				placeholder="Search files…"
+				shortcut="t"
+				paths={paths}
+				href="/blob/main/{path}"
+			/>
+		</CommandPalette>,
+	);
+	document.getElementById("palette")!.addEventListener("click", (event) => {
+		let link = event.target instanceof Element ? event.target.closest("a") : null;
+		if (link === null) return;
+		event.preventDefault();
+		ran.push(link.getAttribute("href") ?? "");
+	});
+	return document.getElementById("palette") as HTMLDialogElement;
+}
+
+/** The paths the finder lists right now, in order. */
+function listedPaths(dialog: HTMLDialogElement): string[] {
+	return [...dialog.querySelectorAll<HTMLElement>("[data-palette-finder-results] [data-value]")]
+		.filter((row) => row.checkVisibility())
+		.map((row) => row.getAttribute("data-value") ?? "");
+}
+
+describe("CommandPalette.Finder", () => {
+	test("opens on t straight onto the finder, listing the first paths, and Backspace returns to the root", async () => {
+		let dialog = mountFinder();
+		await userEvent.keyboard("t");
+
+		expect(dialog.open).toBe(true);
+		let input = dialog.querySelector<HTMLInputElement>("[data-command-input]")!;
+		expect(input.placeholder).toBe("Search files…");
+		expect(dialog.querySelector("[data-palette-crumb]")?.textContent).toBe("Go to File");
+		let listed = listedPaths(dialog);
+		expect(listed).toHaveLength(50);
+		expect(listed[0]).toBe("docs/Read Me.md");
+
+		await userEvent.keyboard("{Backspace}");
+		expect(visibleIds(dialog)).toEqual(["find"]);
+	});
+
+	test("ranks matches, bolds the matched characters, and opens the active one with Enter", async () => {
+		let dialog = mountFinder();
+		await userEvent.keyboard("t");
+		await userEvent.keyboard("readme");
+
+		expect(listedPaths(dialog)[0]).toBe("docs/Read Me.md");
+		let row = dialog.querySelector<HTMLElement>("[data-palette-finder-results] [data-value]")!;
+		let marks = [...row.querySelectorAll("mark")];
+		expect(marks.map((mark) => mark.textContent).join("")).toBe("ReadMe");
+		expect(Number(getComputedStyle(marks[0]!).fontWeight)).toBeGreaterThanOrEqual(600);
+		expect(getComputedStyle(marks[0]!).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+		expect(row.getAttribute("aria-selected")).toBe("true");
+
+		await userEvent.fill(
+			dialog.querySelector<HTMLInputElement>("[data-command-input]")!,
+			"pkg-7/module-7/timeline",
+		);
+		let second = listedPaths(dialog)[1]!;
+		expect(second).toMatch(/^packages\/pkg-7\d*\/src\/module-7\/timeline-\d+\.tsx$/);
+		await userEvent.keyboard("{ArrowDown}{Enter}");
+		expect(ran).toEqual([`/blob/main/${second}`]);
+		expect(dialog.open).toBe(false);
+	});
+
+	test("encodes each path segment in the link", async () => {
+		let dialog = mountFinder();
+		await userEvent.keyboard("t");
+		await userEvent.keyboard("readme{Enter}");
+
+		expect(ran).toEqual(["/blob/main/docs/Read%20Me.md"]);
+		expect(dialog.open).toBe(false);
+	});
+
+	test("ranks 5,000 paths within a keystroke, building at most 50 rows", async () => {
+		let dialog = mountFinder();
+		await userEvent.keyboard("t");
+		let input = dialog.querySelector<HTMLInputElement>("[data-command-input]")!;
+		let slowest = 0;
+		for (let query of ["p", "pk", "pkg", "pkgsrc", "pkgsrcmodlog", "pkgsrcmodlogview"]) {
+			input.value = query;
+			let started = performance.now();
+			input.dispatchEvent(new Event("input", { bubbles: true }));
+			slowest = Math.max(slowest, performance.now() - started);
+			expect(listedPaths(dialog).length).toBeLessThanOrEqual(50);
+		}
+		expect(listedPaths(dialog).length).toBeGreaterThan(0);
+		expect(dialog.querySelectorAll("[data-palette-finder-results] [data-value]").length).toBe(
+			listedPaths(dialog).length,
+		);
+		expect(slowest).toBeLessThan(50);
+	});
+
+	test("says nothing matched when no path holds the characters in order", async () => {
+		let dialog = mountFinder(["src/a.ts", "src/b.ts"]);
+		await userEvent.keyboard("t");
+		await userEvent.keyboard("zzz");
+
+		expect(listedPaths(dialog)).toEqual([]);
+		expect(dialog.querySelector<HTMLElement>("[data-command-empty]")!.checkVisibility()).toBe(true);
 	});
 });

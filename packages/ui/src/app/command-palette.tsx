@@ -1,7 +1,7 @@
 /**
  * The app's ⌘K command palette: a modal dialog the server fills with commands that act (links,
- * buttons that submit a form or invoke a command, pages of further commands) and a small island
- * that filters them by title and keywords, moves the active row, and remembers recent picks.
+ * buttons that submit a form or invoke a command, pages of further commands, a fuzzy file finder)
+ * and a small island that filters them, moves the active row, and remembers recent picks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,7 @@
 
 import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "@sdxc/icons";
+import { ChevronLeftIcon, ChevronRightIcon, FileIcon, SearchIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, borderEdge, fg, outlineStyle } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -32,15 +32,26 @@ import type { PaletteController } from "./mixins/command-palette.js";
 import { shortcutGlyphs } from "./behaviors/shortcuts.js";
 import {
 	PALETTE_CONTROL_ATTRIBUTE,
+	PALETTE_FINDER_ATTRIBUTE,
+	PALETTE_FINDER_PATH_ATTRIBUTE,
+	PALETTE_FINDER_RESULTS_ATTRIBUTE,
+	PALETTE_FINDER_ROW_ATTRIBUTE,
 	PALETTE_GOTO_ATTRIBUTE,
 	PALETTE_HINT_ATTRIBUTE,
 	PALETTE_ITEM_ATTRIBUTE,
 	PALETTE_PAGE_ATTRIBUTE,
+	PALETTE_PAGE_SHORTCUT_ATTRIBUTE,
 	paletteController,
 } from "./mixins/command-palette.js";
 
+export type { FuzzyMatch, FuzzySegment } from "./utils/fuzzy-path.js";
+export { fuzzyFilter, fuzzyScore, fuzzySegments } from "./utils/fuzzy-path.js";
+
 /** The combo that opens the palette when none is given. */
 const DEFAULT_SHORTCUT = "mod+k";
+
+/** How many paths the finder lists at once when `limit` is omitted. */
+const DEFAULT_FINDER_LIMIT = 50;
 
 /**
  * Types for {@link CommandPalette} and its parts.
@@ -128,7 +139,29 @@ export namespace CommandPalette {
 		title: string;
 		/** Replaces the root placeholder while the page is open. */
 		placeholder?: string;
+		/** A combo or sequence that opens the palette straight on this page, e.g. `"t"`. */
+		shortcut?: string;
 		children: RemixNode;
+	}
+
+	/** Props for {@link CommandPalette.Finder}. */
+	export interface FinderProps {
+		/** The page id, which an item's `page` opens it by. */
+		id: string;
+		/** Shown beside the search field while the finder is open, e.g. "Go to File". */
+		title: string;
+		/** Replaces the root placeholder while the finder is open. */
+		placeholder?: string;
+		/** A combo or sequence that opens the palette straight on the finder, e.g. `"t"`. */
+		shortcut?: string;
+		/** Every path to search, in the order shown before anything is typed. */
+		paths: readonly string[];
+		/** Where a path leads, with `{path}` replaced by its URI-encoded segments, e.g. `"/blob/main/{path}"`. */
+		href: string;
+		/** How many matches to list at once. @default 50 */
+		limit?: number;
+		/** The glyph before each path. @default a file icon */
+		icon?: RemixNode;
 	}
 
 	/** Props for {@link CommandPalette.Trigger}. */
@@ -462,7 +495,7 @@ function ItemControl(
  */
 CommandPalette.Page = function CommandPalettePage(handle: Handle<CommandPalette.PageProps>) {
 	return () => {
-		let { id, title, placeholder, children } = handle.props;
+		let { id, title, placeholder, shortcut, children } = handle.props;
 		return (
 			<div
 				role="group"
@@ -470,13 +503,91 @@ CommandPalette.Page = function CommandPalettePage(handle: Handle<CommandPalette.
 				hidden
 				data-palette-title={title}
 				data-palette-placeholder={placeholder}
-				{...{ [PALETTE_PAGE_ATTRIBUTE]: id }}
+				{...{ [PALETTE_PAGE_ATTRIBUTE]: id, [PALETTE_PAGE_SHORTCUT_ATTRIBUTE]: shortcut }}
 			>
 				{children}
 			</div>
 		);
 	};
 };
+
+/**
+ * Renders a fuzzy file finder as a page of the palette: the island ranks `paths` against the
+ * query with {@link fuzzyFilter} on every keystroke and lists the best `limit`, each a link
+ * with its matched characters in bold. A server's `/find?q=` page lists the same results.
+ *
+ * @param handle Runtime handle carrying the finder's props.
+ * @returns The render function producing the finder's page.
+ * @example
+ * <CommandPalette.Finder id="files" title="Go to File" shortcut="t" paths={tree.paths} href="/blob/main/{path}" />
+ */
+CommandPalette.Finder = function CommandPaletteFinder(handle: Handle<CommandPalette.FinderProps>) {
+	return () => {
+		let { id, title, placeholder, shortcut, paths, href, limit, icon } = handle.props;
+		return (
+			<CommandPalette.Page id={id} title={title} placeholder={placeholder} shortcut={shortcut}>
+				<div
+					{...{
+						[PALETTE_FINDER_ATTRIBUTE]: paths.join("\n"),
+						"data-palette-finder-href": href,
+						"data-palette-finder-limit": String(limit ?? DEFAULT_FINDER_LIMIT),
+					}}
+					mix={[when("& mark", [bg("transparent"), fg("neutral.emphasis"), weight("semibold")])]}
+				>
+					<template {...{ [PALETTE_FINDER_ROW_ATTRIBUTE]: "" }}>
+						<FinderRow id={`${id}-row`} path="{path}" href="#" icon={icon} />
+					</template>
+					<div {...{ [PALETTE_FINDER_RESULTS_ATTRIBUTE]: "" }} />
+				</div>
+			</CommandPalette.Page>
+		);
+	};
+};
+
+/**
+ * Renders one finder result: a 36px row whose link leads to the path, with the matched
+ * characters as `<mark>`s the finder sets in bold. The island clones it per result.
+ */
+function FinderRow(handle: Handle<{ id: string; path: string; href: string; icon?: RemixNode }>) {
+	return () => {
+		let { id, path, href, icon } = handle.props;
+		return (
+			<Command.Item
+				id={id}
+				value={path}
+				{...{ [PALETTE_ITEM_ATTRIBUTE]: id }}
+				mix={[bs("2.25rem"), p(0), pi(0)]}
+			>
+				<a
+					{...{ [PALETTE_CONTROL_ATTRIBUTE]: "" }}
+					href={href}
+					tabindex={-1}
+					mix={[
+						hstack({ gap: 2, align: "center" }),
+						is("full"),
+						bs("full"),
+						pi(2),
+						fg("inherit"),
+						textDecoration("none"),
+						text("sm"),
+						cursor("default"),
+						outlineStyle("none"),
+					]}
+				>
+					<span aria-hidden="true" mix={[hstack({ align: "center" }), fg("neutral.muted")]}>
+						{icon ?? <FileIcon size={14} />}
+					</span>
+					<span
+						{...{ [PALETTE_FINDER_PATH_ATTRIBUTE]: "" }}
+						mix={[truncate(), fg("neutral.muted")]}
+					>
+						{path}
+					</span>
+				</a>
+			</Command.Item>
+		);
+	};
+}
 
 /**
  * Renders the button that opens the palette, styled as a quiet search field with the key that
