@@ -1,7 +1,7 @@
 /**
- * The pricing band: usage pricing set as a calculator that works without script. The GET
- * form sends hours and retention back to this page, which prints the month's bill for
- * them, so every estimate is a URL a buyer can forward to whoever approves the spend.
+ * The pricing band: usage pricing as a calculator. With script the bill re-prices as the
+ * reader types; without it the GET form reloads the page with the bill for the new query.
+ * Either way every estimate is a URL a buyer can forward to whoever approves the spend.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,8 +37,8 @@ namespace MarginPricing {
 }
 
 /**
- * Renders the rates in the lead and the calculator under it, filled with the submitted
- * values (or the defaults) and the bill computed on the server.
+ * Renders the rates in the lead and the calculator under it, its fields filled with the
+ * submitted values (or the defaults) and its bill a live frame of {@link MarginBill}.
  *
  * @param handle Runtime handle carrying the requested URL.
  * @returns The render function producing the band.
@@ -46,7 +46,6 @@ namespace MarginPricing {
 export default function MarginPricing(handle: Handle<MarginPricing.Props>) {
 	return () => {
 		let input = readEstimateInput(handle.props.url.searchParams);
-		let bill = estimate(input);
 
 		return (
 			<LandingSection id="pricing" mix={[renderNearView(640, 1180)]}>
@@ -67,7 +66,6 @@ export default function MarginPricing(handle: Handle<MarginPricing.Props>) {
 				<UsageEstimate
 					action="#pricing"
 					submitLabel="Update the estimate"
-					billLabel="Estimated monthly bill"
 					fields={
 						<>
 							<NumberField>
@@ -125,23 +123,53 @@ export default function MarginPricing(handle: Handle<MarginPricing.Props>) {
 							</fieldset>
 						</>
 					}
-					rows={bill.rows.map((row) => ({
-						label: row.label,
-						detail: row.detail,
-						amount: formatCents(row.cents),
-					}))}
-					total={{
-						label: `For ${input.hours} hours a month`,
-						amount: formatCents(bill.totalCents),
+					live={{
+						frame: BILL_FRAME,
+						src: `${handle.props.url.pathname}${handle.props.url.search}`,
 					}}
-					footnote="Billed monthly on hours actually recorded. Audio is deleted within 24 hours whatever you pick."
-					cta={
-						<LinkButton href="/examples/margin/sign-up" color="brand" mix={[landingCtaChrome()]}>
-							Start with {FREE_HOURS} free hours
-						</LinkButton>
-					}
 				/>
 			</LandingSection>
+		);
+	};
+}
+
+/** The bill frame's name, which `/demo/ai` answers with {@link MarginBill} alone. */
+export const BILL_FRAME = "margin-bill";
+
+namespace MarginBill {
+	/** The address whose query names the hours and retention to price. */
+	export interface Props {
+		url: URL;
+	}
+}
+
+/**
+ * The month's bill for the query, computed on the server: the page inlines it, and a reader
+ * typing in the calculator re-requests it alone through the bill frame.
+ *
+ * @param handle Runtime handle carrying the requested URL.
+ * @returns The render function producing the bill.
+ */
+export function MarginBill(handle: Handle<MarginBill.Props>) {
+	return () => {
+		let input = readEstimateInput(handle.props.url.searchParams);
+		let bill = estimate(input);
+		return (
+			<UsageEstimate.Bill
+				label="Estimated monthly bill"
+				rows={bill.rows.map((row) => ({
+					label: row.label,
+					detail: row.detail,
+					amount: formatCents(row.cents),
+				}))}
+				total={{ label: `For ${input.hours} hours a month`, amount: formatCents(bill.totalCents) }}
+				footnote="Billed monthly on hours actually recorded. Audio is deleted within 24 hours whatever you pick."
+				cta={
+					<LinkButton href="/examples/margin/sign-up" color="brand" mix={[landingCtaChrome()]}>
+						Start with {FREE_HOURS} free hours
+					</LinkButton>
+				}
+			/>
 		);
 	};
 }

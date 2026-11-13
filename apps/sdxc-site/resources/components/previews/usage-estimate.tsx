@@ -1,7 +1,7 @@
 /**
  * Live preview for `UsageEstimate`: a usage calculator for recorded hours, its GET form
- * beside the bill printed for the default 40 hours, so the frame shows what a page renders
- * before and after a reader submits.
+ * beside the bill printed for the default 40 hours. The source also shows the live mode,
+ * whose bill is a frame the page's route answers while the reader types.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,14 +18,21 @@ const CODE = `<UsageEstimate
 		<TextField label="Recorded hours a month" type="number" name="hours" defaultValue="40" />
 	}
 	submitLabel="Estimate"
-	billLabel="Estimated monthly bill"
-	rows={[
-		{ label: "Free hours", detail: "5 h × $0.00", amount: "$0.00" },
-		{ label: "Recorded hours", detail: "35 h × $0.36", amount: "$12.60" },
-	]}
-	total={{ label: "Per month", amount: "$12.60" }}
-	footnote="Everyone in the workspace reads the notes free."
-/>`;
+	bill={
+		<UsageEstimate.Bill
+			label="Estimated monthly bill"
+			rows={[
+				{ label: "Free hours", detail: "5 h × $0.00", amount: "$0.00" },
+				{ label: "Recorded hours", detail: "35 h × $0.36", amount: "$12.60" },
+			]}
+			total={{ label: "Per month", amount: "$12.60" }}
+			footnote="Everyone in the workspace reads the notes free."
+		/>
+	}
+/>
+
+// Live: the bill is a frame the page's route answers for X-Remix-Target "pricing-bill"
+// <UsageEstimate action="#pricing" fields={…} submitLabel="Estimate" live={{ frame: "pricing-bill", src: "/?hours=40" }} />`;
 
 /** What the preview registry reads: the source to show, and the calculator to draw. */
 export default {
@@ -38,13 +45,17 @@ export default {
 				<TextField label="Recorded hours a month" type="number" name="hours" defaultValue="40" />
 			}
 			submitLabel="Estimate"
-			billLabel="Estimated monthly bill"
-			rows={[
-				{ label: "Free hours", detail: "5 h × $0.00", amount: "$0.00" },
-				{ label: "Recorded hours", detail: "35 h × $0.36", amount: "$12.60" },
-			]}
-			total={{ label: "Per month", amount: "$12.60" }}
-			footnote="Everyone in the workspace reads the notes free."
+			bill={
+				<UsageEstimate.Bill
+					label="Estimated monthly bill"
+					rows={[
+						{ label: "Free hours", detail: "5 h × $0.00", amount: "$0.00" },
+						{ label: "Recorded hours", detail: "35 h × $0.36", amount: "$12.60" },
+					]}
+					total={{ label: "Per month", amount: "$12.60" }}
+					footnote="Everyone in the workspace reads the notes free."
+				/>
+			}
 		/>
 	),
 };

@@ -20,7 +20,7 @@ import MarginHero from "~/resources/views/demos/ai/hero";
 import MarginIntegrations from "~/resources/views/demos/ai/integrations";
 import MarginLimits from "~/resources/views/demos/ai/limits";
 import MarginPaper from "~/resources/views/demos/ai/paper";
-import MarginPricing from "~/resources/views/demos/ai/pricing";
+import MarginPricing, { BILL_FRAME, MarginBill } from "~/resources/views/demos/ai/pricing";
 import MarginPrivacy from "~/resources/views/demos/ai/privacy";
 import MarginSources from "~/resources/views/demos/ai/sources";
 import MarginThumbnail from "~/resources/views/demos/ai/thumbnail";
@@ -95,6 +95,7 @@ export default {
 			<MarginThumbnail />
 		</DemoMiniature>
 	),
+	target: (name, url) => (name === BILL_FRAME ? <MarginBill url={url} /> : null),
 	render: (url) => (
 		<DemoTheme brand={BRAND} neutral={NEUTRAL} tokens={TOKENS}>
 			<MarginPaper>

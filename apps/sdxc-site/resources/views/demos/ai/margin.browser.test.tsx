@@ -7,9 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RenderResult } from "remix/component/test";
-
-import { render } from "remix/component/test";
+import { renderToStream } from "remix/component/server";
 import { afterEach, describe, expect, test } from "vitest";
 import { cdp, page } from "vitest/browser";
 
@@ -18,25 +16,41 @@ import landing from "~/resources/views/demos/ai/index";
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
 
-let mounted: RenderResult | undefined;
-
 afterEach(async () => {
-	mounted?.cleanup();
-	mounted = undefined;
+	document.body.replaceChildren();
+	for (let style of document.head.querySelectorAll("style[data-margin-test]")) style.remove();
 	history.replaceState(null, "", location.pathname + location.search);
 	await cdp().send("Emulation.setEmulatedMedia", { features: [] });
 	await page.viewport(414, 896);
 });
 
-/** Mounts the landing as `/demo/ai` renders it for `query`. */
-function mount(query = "") {
-	mounted = render(landing.render(new URL(`https://sdxc.dev/demo/ai${query}`)));
-	return mounted.container;
+/**
+ * Puts the landing in the document as `/demo/ai` serves it for `query`: rendered on the
+ * server, with each named frame filled from the landing's own `target`, and its styles kept.
+ */
+async function mount(query = "") {
+	let url = new URL(`https://sdxc.dev/demo/ai${query}`);
+	let html = await new Response(
+		renderToStream(landing.render(url), {
+			frameSrc: url.href,
+			resolveFrame: (src, name) =>
+				renderToStream(landing.target?.(name ?? "", new URL(src, url)) ?? null),
+		}),
+	).text();
+	let rendered = new DOMParser().parseFromString(html, "text/html");
+	for (let style of rendered.querySelectorAll("style")) {
+		let copy = document.createElement("style");
+		copy.setAttribute("data-margin-test", "");
+		copy.textContent = style.textContent;
+		document.head.appendChild(copy);
+	}
+	document.body.innerHTML = rendered.body.innerHTML;
+	return document.body;
 }
 
 describe("Margin's landing", () => {
-	test("links every timestamp to a transcript line", () => {
-		let root = mount();
+	test("links every timestamp to a transcript line", async () => {
+		let root = await mount();
 		let cites = [...root.querySelectorAll<HTMLAnchorElement>('[data-slot="margin-cite"]')];
 		expect(cites.length).toBeGreaterThan(0);
 		for (let cite of cites) {
@@ -45,8 +59,8 @@ describe("Margin's landing", () => {
 		}
 	});
 
-	test("marks the transcript line a timestamp lands on", () => {
-		let root = mount();
+	test("marks the transcript line a timestamp lands on", async () => {
+		let root = await mount();
 		let line = root.querySelector<HTMLElement>("#t-0218")!;
 		let before = getComputedStyle(line).backgroundColor;
 		location.hash = "t-0218";
@@ -54,8 +68,8 @@ describe("Margin's landing", () => {
 		expect(getComputedStyle(line).backgroundColor).not.toBe(before);
 	});
 
-	test("prints the bill for the hours and retention in the query", () => {
-		let root = mount("?hours=250&retention=2-years");
+	test("prints the bill for the hours and retention in the query", async () => {
+		let root = await mount("?hours=250&retention=2-years");
 		let form = root.querySelector<HTMLFormElement>("#pricing form")!;
 		expect(form.method).toBe("get");
 		expect(form.querySelector<HTMLInputElement>('input[name="hours"]')!.value).toBe("250");
@@ -63,14 +77,14 @@ describe("Margin's landing", () => {
 		expect(root.querySelector("#pricing tfoot td")?.textContent).toBe("$92.00");
 	});
 
-	test("falls back to the default estimate for a malformed query", () => {
-		let root = mount("?hours=lots&retention=forever");
+	test("falls back to the default estimate for a malformed query", async () => {
+		let root = await mount("?hours=lots&retention=forever");
 		expect(root.querySelector<HTMLInputElement>('input[name="hours"]')!.value).toBe("40");
 		expect(root.querySelector("#pricing tfoot td")?.textContent).toBe("$12.60");
 	});
 
-	test("opens its outline with one h1 and skips no level", () => {
-		let root = mount();
+	test("opens its outline with one h1 and skips no level", async () => {
+		let root = await mount();
 		let levels = [...root.querySelectorAll("h1, h2, h3, h4, h5, h6")]
 			.filter((heading) => heading.checkVisibility() || heading.closest("main"))
 			.map((heading) => Number(heading.tagName[1]));
@@ -84,8 +98,8 @@ describe("Margin's landing", () => {
 		}
 	});
 
-	test("paints its tinted bands flat, with no glow", () => {
-		let root = mount();
+	test("paints its tinted bands flat, with no glow", async () => {
+		let root = await mount();
 		for (let id of ["drafting", "privacy"]) {
 			expect(getComputedStyle(root.querySelector(`#${id}`)!).backgroundImage, id).toBe("none");
 		}
@@ -93,7 +107,7 @@ describe("Margin's landing", () => {
 
 	test("rules a stacked privacy row only above the row, never between its cells", async () => {
 		await page.viewport(375, 812);
-		let root = mount();
+		let root = await mount();
 		let cells = root.querySelectorAll("#privacy tbody tr:nth-child(2) > *");
 		for (let cell of cells) {
 			expect(getComputedStyle(cell).borderTopWidth).toBe("0px");
@@ -104,7 +118,7 @@ describe("Margin's landing", () => {
 		await cdp().send("Emulation.setEmulatedMedia", {
 			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
 		});
-		let root = mount();
+		let root = await mount();
 		for (let section of root.querySelectorAll<HTMLElement>("main > *")) {
 			section.style.contentVisibility = "visible";
 		}
@@ -119,7 +133,7 @@ describe("Margin's landing", () => {
 
 	test("stays inside a 320px phone", async () => {
 		await page.viewport(320, 720);
-		let root = mount();
+		let root = await mount();
 		for (let section of root.querySelectorAll<HTMLElement>("main > *")) {
 			section.style.contentVisibility = "visible";
 		}
