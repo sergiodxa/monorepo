@@ -89,6 +89,11 @@ export namespace DetailSheet {
 		description?: RemixNode;
 		/** The list URL without the record open. Close and Esc follow it. */
 		closeHref: string;
+		/**
+		 * The named `<Frame>` Close, Previous and Next load into, so stepping through records
+		 * reloads only that frame while the address still moves; unset loads the whole page.
+		 */
+		target?: string;
 		/** The URL a teammate can open this record at; shows the copy button. */
 		permalink?: string;
 		/** Shows `n / N` with previous/next links and their keys. */
@@ -125,6 +130,8 @@ export type DetailSheetControlsProps = {
 	total?: number;
 	previousHref?: string | null;
 	nextHref?: string | null;
+	/** The frame the navigation links load into. */
+	target?: string;
 	labels: DetailSheet.Labels;
 	/** Where Esc, k/j and ↑/↓ answer. */
 	keys?: DetailSheetKeyScope;
@@ -164,11 +171,12 @@ function NavLink(
 		href?: string | null;
 		label: string;
 		keys: string;
+		target?: string;
 		children: RemixNode;
 	}>,
 ) {
 	return () => {
-		let { link, rel, href, label, keys, children } = handle.props;
+		let { link, rel, href, label, keys, target, children } = handle.props;
 
 		return (
 			<a
@@ -177,6 +185,7 @@ function NavLink(
 				title={label}
 				aria-keyshortcuts={keys}
 				aria-disabled={href ? undefined : "true"}
+				data-rmx-target={href ? target : undefined}
 				rel={rel}
 				{...{ [DETAIL_SHEET_LINK_ATTRIBUTE]: link }}
 				mix={controlStyle()}
@@ -199,7 +208,7 @@ export const DetailSheetControls: EntryComponent<DetailSheetControlsProps> = cli
 	"@sdxc/ui/app/detail-sheet#DetailSheetControls",
 	function DetailSheetControls(handle) {
 		return () => {
-			let { closeHref, permalink, index, total, previousHref, nextHref, labels, keys } =
+			let { closeHref, permalink, index, total, previousHref, nextHref, target, labels, keys } =
 				handle.props;
 			let positioned = index !== undefined && total !== undefined;
 
@@ -233,6 +242,7 @@ export const DetailSheetControls: EntryComponent<DetailSheetControlsProps> = cli
 								href={previousHref}
 								label={labels.previous}
 								keys="k ArrowUp"
+								target={target}
 							>
 								<ChevronUpIcon size={16} aria-hidden="true" />
 							</NavLink>
@@ -242,6 +252,7 @@ export const DetailSheetControls: EntryComponent<DetailSheetControlsProps> = cli
 								href={nextHref}
 								label={labels.next}
 								keys="j ArrowDown"
+								target={target}
 							>
 								<ChevronDownIcon size={16} aria-hidden="true" />
 							</NavLink>
@@ -263,7 +274,7 @@ export const DetailSheetControls: EntryComponent<DetailSheetControlsProps> = cli
 							<span role="status" mix={[visuallyHidden()]} />
 						</button>
 					) : null}
-					<NavLink link="close" href={closeHref} label={labels.close} keys="Escape">
+					<NavLink link="close" href={closeHref} label={labels.close} keys="Escape" target={target}>
 						<XIcon size={16} aria-hidden="true" />
 					</NavLink>
 				</div>
@@ -300,6 +311,7 @@ export function DetailSheet(handle: Handle<DetailSheet.Props>) {
 			title,
 			description,
 			closeHref,
+			target,
 			permalink,
 			position,
 			actions,
@@ -410,6 +422,7 @@ export function DetailSheet(handle: Handle<DetailSheet.Props>) {
 								total={position?.total}
 								previousHref={position?.previousHref ?? null}
 								nextHref={position?.nextHref ?? null}
+								target={target}
 								labels={labels}
 								keys={keys}
 							/>

@@ -240,6 +240,29 @@ describe("ViewOptions", () => {
 		expect(new URLSearchParams(sent(form, button)).get("layout")).toBe("grid");
 	});
 
+	test("submits into the frame it names", () => {
+		mounted = render(
+			<ViewOptions
+				id="framed-view"
+				url="/monitors"
+				target="monitors"
+				inline
+				density={{
+					defaultValue: "compact",
+					options: [
+						{ value: "compact", label: "Compact" },
+						{ value: "comfortable", label: "Comfortable" },
+					],
+				}}
+				labels={LABELS}
+			/>,
+		);
+
+		expect(mounted.container.querySelector("form")!.getAttribute("data-rmx-target")).toBe(
+			"monitors",
+		);
+	});
+
 	test("draws the fields in place when inline, for a menu that has its own trigger", () => {
 		mounted = render(
 			<ViewOptions

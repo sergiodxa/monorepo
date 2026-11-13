@@ -107,6 +107,11 @@ export namespace Board {
 		 * at the top of its new column.
 		 */
 		position?: string;
+		/**
+		 * The named `<Frame>` a move loads into, so a drop or a menu pick reloads only that frame
+		 * rather than the page, such as the board's own.
+		 */
+		target?: string;
 		/** Hidden fields posted with every move, such as the page to return to. */
 		fields?: Record<string, string>;
 	}
@@ -410,6 +415,7 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 			<li
 				{...rest}
 				data-slot="board-card"
+				data-rmx-key={value}
 				mix={mergeMix(
 					[
 						attrs({ [SORTABLE_ITEM_ATTRIBUTE]: value }),
@@ -441,6 +447,7 @@ Board.Card = function BoardCard(handle: Handle<Board.CardProps>) {
 							id={boardMoveFormId(board.id, value)}
 							method="post"
 							action={move.action}
+							data-rmx-target={move.target}
 							hidden
 							mix={[
 								attrs({

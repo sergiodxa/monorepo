@@ -181,6 +181,11 @@ export namespace FilterBar {
 		/** Prefetches the page behind each tab, sort, chip-remove and clear link; unset prefetches none. */
 		prefetch?: Prefetch;
 		/**
+		 * The named `<Frame>` the bar's form and links load into, so applying a filter reloads only
+		 * that frame while the address still moves; unset loads the whole page.
+		 */
+		target?: string;
+		/**
 		 * The page's current URL, where every applied value is read from.
 		 *
 		 * @default "/", a page with no parameters
@@ -225,6 +230,8 @@ export namespace FilterBar {
 		href: string;
 		label: string;
 		prefetch?: Prefetch;
+		/** The frame the link loads into. */
+		target?: string;
 		/** The key cap printed after the label. */
 		keyHint: string;
 	};
@@ -257,6 +264,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 			id,
 			url = DEFAULT_URL,
 			prefetch,
+			target,
 			action,
 			tabs,
 			facets = [],
@@ -290,7 +298,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 					mix,
 				)}
 			>
-				<form id={formId} method="get" action={action} hidden>
+				<form id={formId} method="get" action={action} data-rmx-target={target} hidden>
 					{carriedParams(url, filterNames).map(([name, value]) => (
 						<input type="hidden" name={name} value={value} />
 					))}
@@ -305,7 +313,13 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 					mix={[flex(), flexWrap(), items("center"), raw({ gap: "0.5rem 0.75rem" }), minIs(0)]}
 				>
 					{tabs?.length ? (
-						<FilterTabs tabs={tabs} label={labels.tabs} numbers={numbers} prefetch={prefetch} />
+						<FilterTabs
+							tabs={tabs}
+							label={labels.tabs}
+							numbers={numbers}
+							prefetch={prefetch}
+							target={target}
+						/>
 					) : null}
 					{search ? (
 						<SearchField
@@ -392,6 +406,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 									sortId={`${id}-sort`}
 									url={url}
 									prefetch={prefetch}
+									target={target}
 									sort={sort}
 									label={labels.options}
 								>
@@ -410,6 +425,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 							<FilterChip
 								url={url}
 								prefetch={prefetch}
+								target={target}
 								facet={facet}
 								values={values}
 								popoverId={`${id}-facet-${facet.name}`}
@@ -420,6 +436,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 							<FilterChip
 								url={url}
 								prefetch={prefetch}
+								target={target}
 								facet={{ name: searchName, label: search.label, options: [] }}
 								values={[query]}
 								labels={labels}
@@ -428,6 +445,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 						<FilterBarClear
 							href={clearFiltersHref(url, filterNames)}
 							prefetch={prefetch}
+							target={target}
 							label={labels.clear}
 							keyHint={labels.clearKey ?? "Esc"}
 						/>
@@ -481,6 +499,8 @@ function collapsibleFacets() {
 interface FilterTabsProps {
 	tabs: FilterBar.Tab[];
 	prefetch?: FilterBar.Prefetch;
+	/** The frame each link loads into, as {@link FilterBar.Props.target}. */
+	target?: string;
 	label: string;
 	numbers: Intl.NumberFormat;
 }
@@ -495,7 +515,7 @@ interface FilterTabsProps {
  */
 function FilterTabs(handle: Handle<FilterTabsProps>) {
 	return () => {
-		let { tabs, label, numbers, prefetch } = handle.props;
+		let { tabs, label, numbers, prefetch, target } = handle.props;
 		return (
 			<nav
 				aria-label={label}
@@ -506,6 +526,7 @@ function FilterTabs(handle: Handle<FilterTabsProps>) {
 					<a
 						href={tab.href}
 						data-rmx-prefetch={prefetch}
+						data-rmx-target={target}
 						aria-current={tab.current ? "page" : undefined}
 						mix={[
 							interactiveTransition(),
@@ -721,6 +742,8 @@ interface OptionsMenuProps {
 	sortId: string;
 	url: URL | string;
 	prefetch?: FilterBar.Prefetch;
+	/** The frame each link loads into, as {@link FilterBar.Props.target}. */
+	target?: string;
 	sort?: FilterBar.Sort;
 	label: string;
 	/** The groups after sort, from the bar's `options`. */
@@ -737,7 +760,7 @@ interface OptionsMenuProps {
  */
 function OptionsMenu(handle: Handle<OptionsMenuProps>) {
 	return () => {
-		let { id, sortId, url, sort, label, prefetch, children } = handle.props;
+		let { id, sortId, url, sort, label, prefetch, target, children } = handle.props;
 		return (
 			<>
 				<Button
@@ -769,7 +792,9 @@ function OptionsMenu(handle: Handle<OptionsMenuProps>) {
 						when("& > *:not(:last-child)", pbe(3)),
 					]}
 				>
-					{sort ? <SortGroup id={sortId} url={url} sort={sort} prefetch={prefetch} /> : null}
+					{sort ? (
+						<SortGroup id={sortId} url={url} sort={sort} prefetch={prefetch} target={target} />
+					) : null}
 					{children}
 				</Popover>
 			</>
@@ -782,6 +807,8 @@ interface SortGroupProps {
 	id: string;
 	url: URL | string;
 	prefetch?: FilterBar.Prefetch;
+	/** The frame each link loads into, as {@link FilterBar.Props.target}. */
+	target?: string;
 	sort: FilterBar.Sort;
 }
 
@@ -794,7 +821,7 @@ interface SortGroupProps {
  */
 function SortGroup(handle: Handle<SortGroupProps>) {
 	return () => {
-		let { id, url, sort, prefetch } = handle.props;
+		let { id, url, sort, prefetch, target } = handle.props;
 		let name = sort.name ?? DEFAULT_SORT_PARAM;
 		let current = paramValues(url, name)[0] ?? sort.defaultValue;
 		return (
@@ -812,6 +839,7 @@ function SortGroup(handle: Handle<SortGroupProps>) {
 					<a
 						href={setParamHref(url, name, option.value === sort.defaultValue ? null : option.value)}
 						data-rmx-prefetch={prefetch}
+						data-rmx-target={target}
 						aria-current={option.value === current ? "true" : undefined}
 						mix={[
 							interactiveTransition(),
@@ -843,6 +871,8 @@ function SortGroup(handle: Handle<SortGroupProps>) {
 interface FilterChipProps {
 	url: URL | string;
 	prefetch?: FilterBar.Prefetch;
+	/** The frame each link loads into, as {@link FilterBar.Props.target}. */
+	target?: string;
 	facet: FilterBar.Facet;
 	values: string[];
 	/** The facet's picker, which the value segment reopens; unset draws the values as text. */
@@ -859,7 +889,7 @@ interface FilterChipProps {
  */
 function FilterChip(handle: Handle<FilterChipProps>) {
 	return () => {
-		let { url, facet, values, popoverId, labels, prefetch } = handle.props;
+		let { url, facet, values, popoverId, labels, prefetch, target } = handle.props;
 		let summary = values
 			.map((value) => facet.options.find((option) => option.value === value)?.label ?? value)
 			.join(", ");
@@ -926,6 +956,7 @@ function FilterChip(handle: Handle<FilterChipProps>) {
 				<a
 					href={removeFilterHref(url, facet.name)}
 					data-rmx-prefetch={prefetch}
+					data-rmx-target={target}
 					aria-label={labels.remove(facet.label, summary)}
 					data-slot="remove"
 					mix={[
@@ -953,11 +984,12 @@ export const FilterBarClear: EntryComponent<FilterBar.ClearProps> = clientEntry(
 	"@sdxc/ui/app/filter-bar#FilterBarClear",
 	function FilterBarClear(handle: Handle<FilterBar.ClearProps>) {
 		return () => {
-			let { href, label, keyHint, prefetch } = handle.props;
+			let { href, label, keyHint, prefetch, target } = handle.props;
 			return (
 				<a
 					href={href}
 					data-rmx-prefetch={prefetch}
+					data-rmx-target={target}
 					data-slot="filter-bar-clear"
 					aria-keyshortcuts="Escape"
 					mix={[

@@ -217,6 +217,22 @@ describe("Board", () => {
 		expect(header.getBoundingClientRect().top).toBe(scroller.getBoundingClientRect().top);
 	});
 
+	test("a card's move form posts into the frame its move names", () => {
+		mounted = render(
+			<Board id="framed-board" label="Framed">
+				<Board.Column value="todo" title="Todo">
+					<Board.Card value="F-1" move={{ action: "/move", name: "status", target: "board" }}>
+						<a href="#f-1">F-1</a>
+					</Board.Card>
+				</Board.Column>
+			</Board>,
+		);
+
+		expect(
+			mounted.container.querySelector("form[data-sortable-form]")!.getAttribute("data-rmx-target"),
+		).toBe("board");
+	});
+
 	test("each movable card owns a move form holding its own fields until a drop", () => {
 		let board = mount();
 		let form = board.querySelector<HTMLFormElement>(`#${boardMoveFormId("test-board", "A-1")}`)!;

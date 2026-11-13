@@ -298,6 +298,17 @@ describe("FilterBar", () => {
 		await expect.poll(() => getComputedStyle(chevron).rotate).toBe("180deg");
 	});
 
+	test("loads its form, tabs, chips and clear link into the frame it names", () => {
+		let host = mount("/monitors?state=active&status=down", 1024, { target: "monitors" });
+		let form = host.querySelector<HTMLFormElement>("form#monitors-form")!;
+		let links = [...host.querySelectorAll<HTMLAnchorElement>("a[href]")];
+
+		expect(form.getAttribute("data-rmx-target")).toBe("monitors");
+		expect(links.length).toBeGreaterThan(2);
+		for (let link of links)
+			expect(link.getAttribute("data-rmx-target"), link.href).toBe("monitors");
+	});
+
 	test("names the search input after the bar, so a list's / key can focus it", () => {
 		let host = mount("/monitors");
 

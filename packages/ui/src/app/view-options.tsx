@@ -104,6 +104,8 @@ export namespace ViewOptions {
 		url?: URL | string;
 		/** Where Apply submits. Defaults to the current path. */
 		action?: string;
+		/** The named `<Frame>` Apply loads into, so only that frame reloads; unset loads the page. */
+		target?: string;
 		/** @default name "layout" */
 		layout?: Field;
 		/** @default name "group" */
@@ -147,6 +149,7 @@ export function ViewOptions(handle: Handle<ViewOptions.Props>) {
 			id,
 			url = DEFAULT_URL,
 			action,
+			target,
 			layout,
 			grouping,
 			ordering,
@@ -177,6 +180,7 @@ export function ViewOptions(handle: Handle<ViewOptions.Props>) {
 			<form
 				method="get"
 				action={action}
+				data-rmx-target={target}
 				aria-label={inline ? labels.trigger : undefined}
 				mix={[vstack({ gap: 3 })]}
 			>

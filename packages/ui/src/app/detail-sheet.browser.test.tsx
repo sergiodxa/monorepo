@@ -178,6 +178,28 @@ describe("DetailSheet", () => {
 		expect(field.value).toBe("j");
 	});
 
+	test("loads Close, Previous and Next into the frame it names, and leaves a missing link inert", () => {
+		let host = document.createElement("div");
+		document.body.appendChild(host);
+		mounted.push(
+			render(
+				<DetailSheet
+					id="framed"
+					title="Framed"
+					closeHref="#list"
+					target="sheet"
+					position={{ index: 1, total: 2, previousHref: null, nextHref: "#m-2" }}
+					labels={LABELS}
+				/>,
+				{ container: host },
+			),
+		);
+
+		expect(link(host, "close").getAttribute("data-rmx-target")).toBe("sheet");
+		expect(link(host, "next").getAttribute("data-rmx-target")).toBe("sheet");
+		expect(link(host, "previous").hasAttribute("data-rmx-target")).toBe(false);
+	});
+
 	test("disables the previous link at the first record", () => {
 		let host = document.createElement("div");
 		document.body.appendChild(host);
