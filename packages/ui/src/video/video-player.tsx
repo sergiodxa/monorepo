@@ -12,7 +12,7 @@ import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { combine, mergeMix, raw } from "@sdxc/u/general";
 import { container, hidden } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
+import { at, motionSafe } from "@sdxc/u/responsive";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { clientEntry } from "remix/component";
 
@@ -34,13 +34,13 @@ const CONTAINER = "ui-video-player";
 const RADIUS = "var(--ui-video-player-radius, var(--ui-landing-radius-frame, 0.75rem))";
 
 /** Ink of the bar and the settings menu, which sit on the picture in any page scheme. */
-const ON_VIDEO = "oklch(0.97 0 0)";
+const ON_VIDEO = "var(--ui-video-player-on-video, oklch(0.97 0 0))";
 
 /** Muted ink on the picture, for values and the time's length. */
-const ON_VIDEO_MUTED = "oklch(0.8 0 0)";
+const ON_VIDEO_MUTED = "var(--ui-video-player-on-video-muted, oklch(0.8 0 0))";
 
 /** Wash behind a hovered control or row on the picture. */
-const ON_VIDEO_WASH = "rgb(255 255 255 / 0.14)";
+const ON_VIDEO_WASH = "var(--ui-video-player-on-video-wash, rgb(255 255 255 / 0.14))";
 
 /** Fill of the progress slider and an on switch. */
 const ON_VIDEO_ACCENT = "var(--ui-video-player-progress-color, oklch(0.63 0.22 27))";
@@ -74,6 +74,15 @@ const TONES: Record<VideoPlayer.Tone, Record<`--${string}`, string>> = {
 			"0 0 0 1px var(--ui-video-player-line), 0 30px 60px -20px rgb(0 0 0 / 0.45)",
 	},
 };
+
+/** Surface of the settings menu over the picture. */
+const MENU_BG = "var(--ui-video-player-menu-bg, rgb(28 28 30 / 0.96))";
+
+/** Colour scheme of a player that names none. */
+const DEFAULT_TONE: VideoPlayer.Tone = "plain";
+
+/** Language of the generated tracks when the screen names none. */
+const DEFAULT_LANGUAGE = "en";
 
 /** Playback rates {@link VideoPlayer.SpeedMenu} offers unless given its own. */
 const DEFAULT_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -155,10 +164,10 @@ export namespace VideoPlayer {
 		poster?: string;
 		/** Language of the chapters and captions tracks. @default "en" */
 		language?: string;
-		/** The captions track's name in the player's menus. @default "English" */
-		captionsLabel?: string;
-		/** The chapters track's name. @default "Chapters" */
-		chaptersLabel?: string;
+		/** The captions track's name in the player's menus, such as "English". */
+		captionsLabel: string;
+		/** The chapters track's name, such as "Chapters". */
+		chaptersLabel: string;
 		/**
 		 * {@link VideoPlayer.Source} elements in preference order, any extra `<track>`, an
 		 * optional {@link VideoPlayer.Frame} and an optional {@link VideoPlayer.Controls}.
@@ -185,32 +194,32 @@ export namespace VideoPlayer {
 
 	/** Props accepted by {@link VideoPlayer.Chapters}. */
 	export interface ChaptersProps extends Omit<TagProps<"nav">, "children"> {
-		/** The visible label and the list's accessible name. @default "Chapters" */
-		label?: string;
+		/** The visible label and the list's accessible name. */
+		label: string;
 	}
 
 	/** Props accepted by {@link VideoPlayer.Transcript}. */
 	export interface TranscriptProps extends Omit<TagProps<"div">, "children"> {
-		/** The visible label and the scroll region's accessible name. @default "Transcript" */
-		label?: string;
+		/** The visible label and the scroll region's accessible name. */
+		label: string;
 	}
 
 	/** Props accepted by {@link VideoPlayer.Controls}. */
 	export interface ControlsProps extends TagProps<"div"> {
-		/** The bar's accessible name. @default "Video controls" */
-		label?: string;
+		/** The bar's accessible name, such as "Video controls". */
+		label: string;
 	}
 
 	/** Props accepted by a bar button that only needs its accessible name. */
 	export interface ButtonProps extends Omit<TagProps<"button">, "children" | "type"> {
 		/** The button's accessible name. */
-		label?: string;
+		label: string;
 	}
 
 	/** Props accepted by {@link VideoPlayer.Play}. */
 	export interface PlayProps extends ButtonProps {
-		/** The name while the video plays. @default "Pause" */
-		pauseLabel?: string;
+		/** The name while the video plays; `label` is the name while it is paused. */
+		pauseLabel: string;
 	}
 
 	/** Props accepted by {@link VideoPlayer.Progress}. */
@@ -218,8 +227,8 @@ export namespace VideoPlayer {
 		TagProps<"input">,
 		"type" | "min" | "max" | "value" | "children" | "role"
 	> {
-		/** The slider's accessible name. @default "Seek" */
-		label?: string;
+		/** The slider's accessible name, such as "Seek". */
+		label: string;
 	}
 
 	/** Props accepted by {@link VideoPlayer.Settings}. */
@@ -252,8 +261,8 @@ export namespace VideoPlayer {
 		name: string;
 		/** The row's visible label, repeated on the submenu's back row. */
 		label: RemixNode;
-		/** The back row's accessible prefix. @default "Back" */
-		backLabel?: string;
+		/** The back row's accessible prefix, such as "Back". */
+		backLabel: string;
 		/** {@link VideoPlayer.SettingsOption} elements; the one marked `checked` is chosen. */
 		children: RemixNode;
 	}
@@ -278,23 +287,23 @@ export namespace VideoPlayer {
 	/** Props shared by the built-in submenus. */
 	export interface BuiltInMenuProps extends Omit<TagProps<"div">, "children"> {
 		/** The row's visible label. */
-		label?: string;
-		/** The back row's accessible prefix. @default "Back" */
-		backLabel?: string;
+		label: string;
+		/** The back row's accessible prefix, such as "Back". */
+		backLabel: string;
 	}
 
 	/** Props accepted by {@link VideoPlayer.CaptionsMenu}. */
 	export interface CaptionsMenuProps extends BuiltInMenuProps {
-		/** The option that hides every track. @default "Off" */
-		offLabel?: string;
+		/** The option that hides every track, such as "Off". */
+		offLabel: string;
 	}
 
 	/** Props accepted by {@link VideoPlayer.SpeedMenu}. */
 	export interface SpeedMenuProps extends BuiltInMenuProps {
 		/** Rates offered, in order. @default [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] */
 		rates?: readonly number[];
-		/** The name of rate 1. @default "Normal" */
-		normalLabel?: string;
+		/** The name of rate 1, such as "Normal". */
+		normalLabel: string;
 	}
 }
 
@@ -350,8 +359,8 @@ function captionsOf(children: RemixNode, transcript: readonly VideoPlayer.Cue[])
 	return [
 		...own,
 		{
-			label: text(screen?.props.captionsLabel) ?? "English",
-			language: text(screen?.props.language) ?? "en",
+			label: text(screen?.props.captionsLabel) ?? "",
+			language: text(screen?.props.language) ?? DEFAULT_LANGUAGE,
 		},
 	];
 }
@@ -366,8 +375,8 @@ function captionsOf(children: RemixNode, transcript: readonly VideoPlayer.Cue[])
  * @returns The render function producing the player.
  * @example
  * <VideoPlayer duration={703} chapters={chapters}>
- * 	<VideoPlayer.Screen label="Centering 3 kg"><VideoPlayer.Source src="/07.mp4" type="video/mp4" /></VideoPlayer.Screen>
- * 	<VideoPlayer.Side><VideoPlayer.Chapters /></VideoPlayer.Side>
+ * 	<VideoPlayer.Screen label="Centering 3 kg" captionsLabel="English" chaptersLabel="Chapters"><VideoPlayer.Source src="/07.mp4" type="video/mp4" /></VideoPlayer.Screen>
+ * 	<VideoPlayer.Side><VideoPlayer.Chapters label="Chapters" /></VideoPlayer.Side>
  * </VideoPlayer>
  */
 export function VideoPlayer(handle: Handle<VideoPlayer.Props, VideoPlayer.Context>) {
@@ -378,7 +387,7 @@ export function VideoPlayer(handle: Handle<VideoPlayer.Props, VideoPlayer.Contex
 			current,
 			duration,
 			mix,
-			tone = "plain",
+			tone = DEFAULT_TONE,
 			transcript = [],
 			...rest
 		} = handle.props;
@@ -478,16 +487,16 @@ function timeHref(context: VideoPlayer.Context, start: number): string {
  * @param handle Runtime handle carrying the screen's props.
  * @returns The render function producing the screen.
  * @example
- * <VideoPlayer.Screen label="Centering 3 kg" poster="/07.jpg"><VideoPlayer.Source src="/07.mp4" type="video/mp4" /></VideoPlayer.Screen>
+ * <VideoPlayer.Screen label="Centering 3 kg" poster="/07.jpg" captionsLabel="English" chaptersLabel="Chapters"><VideoPlayer.Source src="/07.mp4" type="video/mp4" /></VideoPlayer.Screen>
  */
 VideoPlayer.Screen = function VideoPlayerScreen(handle: Handle<VideoPlayer.ScreenProps>) {
 	return () => {
 		let {
-			captionsLabel = "English",
-			chaptersLabel = "Chapters",
+			captionsLabel,
+			chaptersLabel,
 			children,
 			label,
-			language = "en",
+			language = DEFAULT_LANGUAGE,
 			mix,
 			poster,
 			...rest
@@ -727,7 +736,7 @@ VideoPlayer.Side = function VideoPlayerSide(handle: Handle<TagProps<"div">>) {
  */
 VideoPlayer.Chapters = function VideoPlayerChapters(handle: Handle<VideoPlayer.ChaptersProps>) {
 	return () => {
-		let { label = "Chapters", mix, ...rest } = handle.props;
+		let { label, mix, ...rest } = handle.props;
 		let context = timeline(handle);
 		let playing = playingIndex(
 			context.chapters.map((chapter) => chapter.start),
@@ -781,7 +790,7 @@ VideoPlayer.Transcript = function VideoPlayerTranscript(
 	handle: Handle<VideoPlayer.TranscriptProps>,
 ) {
 	return () => {
-		let { label = "Transcript", mix, ...rest } = handle.props;
+		let { label, mix, ...rest } = handle.props;
 		let context = timeline(handle);
 		let playing = playingIndex(
 			context.transcript.map((cue) => cue.start),
@@ -838,13 +847,13 @@ VideoPlayer.Transcript = function VideoPlayerTranscript(
  * @param handle Runtime handle carrying the bar's props.
  * @returns The render function producing the bar.
  * @example
- * <VideoPlayer.Controls>
- * 	<VideoPlayer.Progress /><VideoPlayer.Play /><VideoPlayer.Time /><VideoPlayer.Fullscreen />
+ * <VideoPlayer.Controls label="Video controls">
+ * 	<VideoPlayer.Progress label="Seek" /><VideoPlayer.Play label="Play" pauseLabel="Pause" /><VideoPlayer.Time /><VideoPlayer.Fullscreen label="Full screen" />
  * </VideoPlayer.Controls>
  */
 VideoPlayer.Controls = function VideoPlayerControls(handle: Handle<VideoPlayer.ControlsProps>) {
 	return () => {
-		let { label = "Video controls", mix, ...rest } = handle.props;
+		let { label, mix, ...rest } = handle.props;
 		return (
 			<div
 				{...rest}
@@ -886,7 +895,7 @@ VideoPlayer.Controls = function VideoPlayerControls(handle: Handle<VideoPlayer.C
  */
 VideoPlayer.Progress = function VideoPlayerProgress(handle: Handle<VideoPlayer.ProgressProps>) {
 	return () => {
-		let { label = "Seek", mix, ...rest } = handle.props;
+		let { label, mix, ...rest } = handle.props;
 		let { current = 0, duration } = timeline(handle);
 		return (
 			<input
@@ -928,7 +937,7 @@ VideoPlayer.Progress = function VideoPlayerProgress(handle: Handle<VideoPlayer.P
  */
 VideoPlayer.Play = function VideoPlayerPlay(handle: Handle<VideoPlayer.PlayProps>) {
 	return () => {
-		let { label = "Play", mix, pauseLabel = "Pause", ...rest } = handle.props;
+		let { label, mix, pauseLabel, ...rest } = handle.props;
 		return (
 			<button
 				{...rest}
@@ -1005,7 +1014,7 @@ VideoPlayer.CaptionsToggle = function VideoPlayerCaptionsToggle(
 	handle: Handle<VideoPlayer.ButtonProps>,
 ) {
 	return () => {
-		let { label = "Subtitles/closed captions", mix, ...rest } = handle.props;
+		let { label, mix, ...rest } = handle.props;
 		return (
 			<button
 				{...rest}
@@ -1046,21 +1055,14 @@ VideoPlayer.CaptionsToggle = function VideoPlayerCaptionsToggle(
  * @param handle Runtime handle carrying the gear's props.
  * @returns The render function producing the gear and its menu.
  * @example
- * <VideoPlayer.Settings>
+ * <VideoPlayer.Settings label="Settings">
  * 	<VideoPlayer.SettingsToggle name="ambient" label="Ambient mode" />
- * 	<VideoPlayer.CaptionsMenu /><VideoPlayer.SpeedMenu /><VideoPlayer.QualityMenu />
+ * 	<VideoPlayer.SpeedMenu label="Playback speed" normalLabel="Normal" backLabel="Back" />
  * </VideoPlayer.Settings>
  */
 VideoPlayer.Settings = function VideoPlayerSettings(handle: Handle<VideoPlayer.SettingsProps>) {
 	return () => {
-		let {
-			badge,
-			children,
-			id = `${handle.id}-menu`,
-			label = "Settings",
-			mix,
-			...rest
-		} = handle.props;
+		let { badge, children, id = `${handle.id}-menu`, label, mix, ...rest } = handle.props;
 		let follows = badge === undefined;
 		let mark = follows ? timeline(handle).sources[0]?.badge : badge || undefined;
 		return (
@@ -1137,7 +1139,7 @@ VideoPlayer.SettingsToggle = function VideoPlayerSettingsToggle(
  * @param handle Runtime handle carrying the panel's props.
  * @returns The render function producing the row and its panel.
  * @example
- * <VideoPlayer.SettingsMenu name="sleep" label="Sleep timer">
+ * <VideoPlayer.SettingsMenu name="sleep" label="Sleep timer" backLabel="Back">
  * 	<VideoPlayer.SettingsOption value="off" checked>Off</VideoPlayer.SettingsOption>
  * 	<VideoPlayer.SettingsOption value="30">30 minutes</VideoPlayer.SettingsOption>
  * </VideoPlayer.SettingsMenu>
@@ -1146,7 +1148,7 @@ VideoPlayer.SettingsMenu = function VideoPlayerSettingsMenu(
 	handle: Handle<VideoPlayer.SettingsMenuProps, VideoPlayer.SettingsMenuContext>,
 ) {
 	return () => {
-		let { backLabel = "Back", children, label, mix, name, ...rest } = handle.props;
+		let { backLabel, children, label, mix, name, ...rest } = handle.props;
 		handle.context.set({ name });
 		let panelId = `${handle.id}-panel`;
 		let chosen = findAll(children, VideoPlayer.SettingsOption).find(
@@ -1249,7 +1251,7 @@ VideoPlayer.CaptionsMenu = function VideoPlayerCaptionsMenu(
 	handle: Handle<VideoPlayer.CaptionsMenuProps>,
 ) {
 	return () => {
-		let { label = "Subtitles/CC", offLabel = "Off", ...rest } = handle.props;
+		let { label, offLabel, ...rest } = handle.props;
 		let { captions } = timeline(handle);
 		return (
 			<VideoPlayer.SettingsMenu
@@ -1277,16 +1279,11 @@ VideoPlayer.CaptionsMenu = function VideoPlayerCaptionsMenu(
  *
  * @param handle Runtime handle carrying the panel's props.
  * @returns The render function producing the submenu.
- * @example <VideoPlayer.SpeedMenu rates={[1, 1.5, 2]} />
+ * @example <VideoPlayer.SpeedMenu label="Playback speed" normalLabel="Normal" backLabel="Back" rates={[1, 1.5, 2]} />
  */
 VideoPlayer.SpeedMenu = function VideoPlayerSpeedMenu(handle: Handle<VideoPlayer.SpeedMenuProps>) {
 	return () => {
-		let {
-			label = "Playback speed",
-			normalLabel = "Normal",
-			rates = DEFAULT_RATES,
-			...rest
-		} = handle.props;
+		let { label, normalLabel, rates = DEFAULT_RATES, ...rest } = handle.props;
 		return (
 			<VideoPlayer.SettingsMenu
 				{...rest}
@@ -1315,7 +1312,7 @@ VideoPlayer.QualityMenu = function VideoPlayerQualityMenu(
 	handle: Handle<VideoPlayer.BuiltInMenuProps>,
 ) {
 	return () => {
-		let { label = "Quality", ...rest } = handle.props;
+		let { label, ...rest } = handle.props;
 		let { sources } = timeline(handle);
 		return (
 			<VideoPlayer.SettingsMenu
@@ -1341,14 +1338,15 @@ VideoPlayer.QualityMenu = function VideoPlayerQualityMenu(
 
 /**
  * Theater mode: sets `data-theater` on the player, which drops the side column under the
- * screen so the video takes the full width. `aria-pressed` says whether it is on.
+ * screen so the video takes the full width. It shows from the `lg` container width, where
+ * the side column sits beside the screen; `aria-pressed` says whether it is on.
  *
  * @param handle Runtime handle carrying the button's props.
  * @returns The render function producing the button.
  */
 VideoPlayer.Theater = function VideoPlayerTheater(handle: Handle<VideoPlayer.ButtonProps>) {
 	return () => {
-		let { label = "Theater mode", mix, ...rest } = handle.props;
+		let { label, mix, ...rest } = handle.props;
 		return (
 			<button
 				{...rest}
@@ -1356,7 +1354,14 @@ VideoPlayer.Theater = function VideoPlayerTheater(handle: Handle<VideoPlayer.But
 				aria-label={label}
 				aria-pressed="false"
 				data-video-action="theater"
-				mix={mergeMix([barButton()], mix)}
+				mix={mergeMix(
+					[
+						barButtonShape(),
+						raw({ display: "none" }),
+						at("lg", CONTAINER, raw({ display: "inline-grid" })),
+					],
+					mix,
+				)}
 			>
 				<VideoIcon name="theater" />
 			</button>
@@ -1373,7 +1378,7 @@ VideoPlayer.Theater = function VideoPlayerTheater(handle: Handle<VideoPlayer.But
  */
 VideoPlayer.Fullscreen = function VideoPlayerFullscreen(handle: Handle<VideoPlayer.ButtonProps>) {
 	return () => {
-		let { label = "Full screen", mix, ...rest } = handle.props;
+		let { label, mix, ...rest } = handle.props;
 		return (
 			<button
 				{...rest}
@@ -1607,6 +1612,11 @@ function timeLink() {
 
 /** A 40px square icon button on the picture; a `hidden` one stays hidden. */
 function barButton() {
+	return combine([barButtonShape(), when("&:not([hidden])", raw({ display: "inline-grid" }))]);
+}
+
+/** The look of a bar button, leaving when it shows to the caller. */
+function barButtonShape() {
 	return combine([
 		raw({
 			position: "relative",
@@ -1620,7 +1630,6 @@ function barButton() {
 			color: "inherit",
 			cursor: "pointer",
 		}),
-		when("&:not([hidden])", raw({ display: "inline-grid" })),
 		when("& > svg", raw({ gridArea: "1 / 1" })),
 		hover(raw({ backgroundColor: ON_VIDEO_WASH })),
 		onVideoFocus(),
@@ -1647,13 +1656,16 @@ function gearBadge() {
 	]);
 }
 
-/** The menu's dark surface over the picture, scrolling when the screen is short. */
+/**
+ * The menu's dark surface over the picture, scrolling when the screen is short. Where it
+ * fits beside the gear on neither side, it centres on the gear across the viewport.
+ */
 function menuSurface() {
 	return raw({
+		positionTryFallbacks: "flip-block, top span-all, bottom span-all",
 		colorScheme: "dark",
 		color: ON_VIDEO,
-		backgroundColor: "rgb(28 28 30 / 0.94)",
-		backdropFilter: "blur(12px)",
+		backgroundColor: MENU_BG,
 		border: "0",
 		borderRadius: "0.75rem",
 		padding: "0.5rem 0",
@@ -1705,8 +1717,8 @@ function switchControl() {
 			borderRadius: "9999px",
 			backgroundColor: "rgb(255 255 255 / 0.3)",
 			cursor: "pointer",
-			transition: "background-color 150ms",
 		}),
+		motionSafe(raw({ transition: "background-color 150ms" })),
 		when(
 			"&::before",
 			raw({
@@ -1718,9 +1730,9 @@ function switchControl() {
 				blockSize: "1rem",
 				borderRadius: "9999px",
 				backgroundColor: "white",
-				transition: "translate 150ms",
 			}),
 		),
+		when("&::before", motionSafe(raw({ transition: "translate 150ms" }))),
 		when("&:checked", raw({ backgroundColor: ON_VIDEO_ACCENT })),
 		when("&:checked::before", raw({ translate: "1rem 0" })),
 		when("&:checked:dir(rtl)::before", raw({ translate: "-1rem 0" })),

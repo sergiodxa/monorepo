@@ -51,37 +51,42 @@ function mount(width: number, { controls = false, props = {} }: MountOptions = {
 	document.body.appendChild(host);
 	render(
 		<VideoPlayer duration={703} chapters={CHAPTERS} transcript={TRANSCRIPT} {...props}>
-			<VideoPlayer.Screen label="Centering 3 kg">
+			<VideoPlayer.Screen label="Centering 3 kg" captionsLabel="English" chaptersLabel="Chapters">
 				<VideoPlayer.Source src={SRC} type="video/mp4" label="1080p" badge="HD" />
 				<VideoPlayer.Source src={SRC_4K} type="video/mp4" label="2160p" badge="4K" />
 				{controls ? (
-					<VideoPlayer.Controls>
-						<VideoPlayer.Progress />
-						<VideoPlayer.Play />
+					<VideoPlayer.Controls label="Video controls">
+						<VideoPlayer.Progress label="Seek" />
+						<VideoPlayer.Play label="Play" pauseLabel="Pause" />
 						<VideoPlayer.Time />
-						<VideoPlayer.CaptionsToggle />
-						<VideoPlayer.Settings>
+						<VideoPlayer.CaptionsToggle label="Subtitles/closed captions" />
+						<VideoPlayer.Settings label="Settings">
 							<VideoPlayer.SettingsToggle name="ambient" label="Ambient mode" checked />
-							<VideoPlayer.CaptionsMenu />
-							<VideoPlayer.SettingsMenu name="sleep" label="Sleep timer">
+							<VideoPlayer.CaptionsMenu label="Subtitles/CC" offLabel="Off" backLabel="Back" />
+							<VideoPlayer.SettingsMenu name="sleep" label="Sleep timer" backLabel="Back">
 								<VideoPlayer.SettingsOption value="off" checked>
 									Off
 								</VideoPlayer.SettingsOption>
 								<VideoPlayer.SettingsOption value="30">30 minutes</VideoPlayer.SettingsOption>
 							</VideoPlayer.SettingsMenu>
-							<VideoPlayer.SpeedMenu rates={[0.5, 1, 1.5, 2]} />
-							<VideoPlayer.QualityMenu />
+							<VideoPlayer.SpeedMenu
+								label="Playback speed"
+								normalLabel="Normal"
+								backLabel="Back"
+								rates={[0.5, 1, 1.5, 2]}
+							/>
+							<VideoPlayer.QualityMenu label="Quality" backLabel="Back" />
 						</VideoPlayer.Settings>
-						<VideoPlayer.Theater />
-						<VideoPlayer.Fullscreen />
+						<VideoPlayer.Theater label="Theater mode" />
+						<VideoPlayer.Fullscreen label="Full screen" />
 					</VideoPlayer.Controls>
 				) : null}
 			</VideoPlayer.Screen>
 			<VideoPlayer.Scrubber />
 			<VideoPlayer.Caption meta="Lesson 7 · 11:43">Centering 3 kg</VideoPlayer.Caption>
 			<VideoPlayer.Side>
-				<VideoPlayer.Chapters />
-				<VideoPlayer.Transcript />
+				<VideoPlayer.Chapters label="Chapters" />
+				<VideoPlayer.Transcript label="Transcript" />
 			</VideoPlayer.Side>
 		</VideoPlayer>,
 		{ container: host },
@@ -330,10 +335,20 @@ describe("VideoPlayer.Controls", () => {
 		let root = mount(375, { controls: true });
 		let bar = get(root, '[data-slot="video-player-controls"]');
 		let screen = get(root, '[data-slot="video-player-screen"]').getBoundingClientRect();
-		for (let button of bar.querySelectorAll<HTMLElement>(":scope > button:not([hidden])")) {
+		let shown = [...bar.querySelectorAll<HTMLElement>(":scope > button")].filter((button) =>
+			button.checkVisibility(),
+		);
+		expect(shown.map((button) => button.dataset.videoAction ?? "settings")).toEqual([
+			"play",
+			"captions",
+			"settings",
+			"fullscreen",
+		]);
+		for (let button of shown) {
 			let box = button.getBoundingClientRect();
 			expect(box.right).toBeLessThanOrEqual(screen.right + 0.5);
 			expect(box.width).toBeGreaterThanOrEqual(40);
+			expect(box.top).toBe(shown[0]!.getBoundingClientRect().top);
 		}
 		expect(bar.scrollWidth).toBeLessThanOrEqual(bar.clientWidth);
 	});

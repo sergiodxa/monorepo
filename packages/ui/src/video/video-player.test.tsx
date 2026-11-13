@@ -23,23 +23,23 @@ async function serverHtml(): Promise<string> {
 			]}
 			transcript={[{ start: 0, text: "Today it's three kilos." }]}
 		>
-			<VideoPlayer.Screen label="Centering 3 kg">
+			<VideoPlayer.Screen label="Centering 3 kg" captionsLabel="English" chaptersLabel="Chapters">
 				<VideoPlayer.Source src="/07-1080.mp4" type="video/mp4" label="1080p" badge="HD" />
 				<VideoPlayer.Source src="/07-2160.mp4" type="video/mp4" label="2160p" badge="4K" />
-				<VideoPlayer.Controls>
-					<VideoPlayer.Progress />
-					<VideoPlayer.Play />
+				<VideoPlayer.Controls label="Video controls">
+					<VideoPlayer.Progress label="Seek" />
+					<VideoPlayer.Play label="Play" pauseLabel="Pause" />
 					<VideoPlayer.Time />
-					<VideoPlayer.Settings>
+					<VideoPlayer.Settings label="Settings">
 						<VideoPlayer.SettingsToggle name="ambient" label="Ambient mode" />
-						<VideoPlayer.SpeedMenu />
-						<VideoPlayer.QualityMenu />
+						<VideoPlayer.SpeedMenu label="Playback speed" normalLabel="Normal" backLabel="Back" />
+						<VideoPlayer.QualityMenu label="Quality" backLabel="Back" />
 					</VideoPlayer.Settings>
-					<VideoPlayer.Fullscreen />
+					<VideoPlayer.Fullscreen label="Full screen" />
 				</VideoPlayer.Controls>
 			</VideoPlayer.Screen>
 			<VideoPlayer.Side>
-				<VideoPlayer.Chapters />
+				<VideoPlayer.Chapters label="Chapters" />
 			</VideoPlayer.Side>
 		</VideoPlayer>,
 	);
