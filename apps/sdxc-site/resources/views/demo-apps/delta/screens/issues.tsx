@@ -48,10 +48,10 @@ const ROWS_ID = "delta-issue-rows";
 const SEARCH_ID = "delta-issues-search";
 
 /** The facets a list filters by beside its query, each one repeated parameter. */
-const FACETS = ["author", "label", "assignee"] as const;
+export const FACETS = ["author", "label", "assignee"] as const;
 
 /** One facet's parameter. */
-type Facet = (typeof FACETS)[number];
+export type Facet = (typeof FACETS)[number];
 
 /** The orders the Sort menu offers. */
 const SORTS = ["newest", "oldest", "comments", "updated"] as const;
@@ -62,6 +62,17 @@ export function listUrl(url: URL): URL {
 	if (!next.searchParams.has("q")) next.searchParams.set("q", DEFAULT_QUERY);
 	next.searchParams.delete("toast");
 	return next;
+}
+
+/** What the query and the facets read from an issue or a pull request. */
+export interface ListRecord {
+	number: number;
+	title: string;
+	author: string;
+	state: "open" | "closed" | "merged";
+	labels: readonly string[];
+	assignees: readonly string[];
+	milestone?: string;
 }
 
 /** Whether a label filter, by id or by name, names this label. */
@@ -76,14 +87,14 @@ function labelMatches(filter: string, id: string): boolean {
  * which is how each facet counts its own options.
  */
 export function issueMatches(
-	issue: IssueView,
+	issue: ListRecord,
 	query: ListQuery,
 	facets: Record<Facet, string[]>,
 	skip?: Facet,
 ): boolean {
 	if (query.state === "open" && issue.state !== "open") return false;
-	if ((query.state === "closed" || query.state === "merged") && issue.state !== "closed")
-		return false;
+	if (query.state === "closed" && issue.state === "open") return false;
+	if (query.state === "merged" && issue.state !== "merged") return false;
 	if (!query.labels.every((filter) => issue.labels.some((id) => labelMatches(filter, id))))
 		return false;
 	if (query.authors.length > 0 && !query.authors.includes(issue.author)) return false;
@@ -120,7 +131,7 @@ function sortIssues(issues: IssueView[], sort: string): IssueView[] {
 }
 
 /** The facet values the address applies. */
-function readFacets(url: URL): Record<Facet, string[]> {
+export function readFacets(url: URL): Record<Facet, string[]> {
 	return {
 		author: url.searchParams.getAll("author"),
 		label: url.searchParams.getAll("label"),
@@ -540,7 +551,7 @@ const SORT_LABELS: Record<(typeof SORTS)[number], string> = {
 };
 
 /** A label's colour as a dot, for the Labels facet's options. */
-function LabelDot(handle: Handle<{ color: string }>) {
+export function LabelDot(handle: Handle<{ color: string }>) {
 	return () => (
 		<span
 			aria-hidden="true"

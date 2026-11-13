@@ -355,6 +355,42 @@ describe("Delta's issue", () => {
 	});
 });
 
+describe("Delta's pull requests list", () => {
+	/** The pull request numbers a list page shows, in order. */
+	function numbers(body: string): number[] {
+		return [...body.matchAll(/data-pull="(\d+)"/g)].map(([, number]) => Number(number));
+	}
+
+	/** The count the repository's Pull requests tab shows. */
+	function tabCount(body: string): number {
+		let tab = new RegExp(`href="${href("delta/pulls")}"[^>]*>[\\s\\S]*?</a>`).exec(body)?.[0] ?? "";
+		return Number(/>(\d+)</.exec(tab)?.[1]);
+	}
+
+	test("shows open pull requests by default, and merged ones under Closed", async () => {
+		expect(numbers((await page("delta/pulls")).body)).toEqual([58, 57]);
+		expect(numbers((await page("delta/pulls?q=is%3Aclosed")).body).sort()).toEqual([55, 56]);
+		expect(numbers((await page("delta/pulls?q=is%3Amerged+author%3Atlindqvist")).body)).toEqual([
+			55,
+		]);
+	});
+
+	test("reads review qualifiers", async () => {
+		expect(numbers((await page("delta/pulls?q=is%3Aopen+review%3Aapproved")).body)).toEqual([57]);
+		expect(numbers((await page("delta/pulls?q=is%3Aopen+review%3Arequired")).body)).toEqual([58]);
+	});
+
+	test("a merge moves the pull request under Closed and the tab counts one fewer", async () => {
+		let before = await page("delta/pulls");
+		let response = await post("delta/pull/57?do=merge", { method: "merge" });
+		let body = await pageWith("delta/pulls", cookiesOf(response));
+
+		expect(tabCount(before.body)).toBe(2);
+		expect(numbers(body)).toEqual([58]);
+		expect(tabCount(body)).toBe(1);
+	});
+});
+
 describe("Delta's pull request conversation", () => {
 	test("places each thread on its real line, and one written on older code reads outdated", async () => {
 		let { body, status } = await page("delta/pull/57");

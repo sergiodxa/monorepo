@@ -16,6 +16,7 @@ import {
 	CirclePlayIcon,
 	CodeIcon,
 	GitCommitHorizontalIcon,
+	GitPullRequestIcon,
 	InboxIcon,
 	KeyboardIcon,
 	LayoutDashboardIcon,
@@ -143,6 +144,13 @@ const REPO_TABS: RepoTabEntry[] = [
 		label: COPY.tabs.issues,
 		icon: <CircleDotIcon />,
 		shortcut: "g i",
+	},
+	{
+		tab: "pulls",
+		page: "pulls",
+		label: COPY.tabs.pulls,
+		icon: <GitPullRequestIcon />,
+		shortcut: "g p",
 	},
 	{
 		tab: "commits",

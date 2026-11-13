@@ -652,6 +652,28 @@ describe("Delta's pull request", () => {
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 	});
 
+	test("merging counts one fewer open pull request on the repository's tab", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57");
+		let tab = () =>
+			[
+				...root.querySelectorAll<HTMLAnchorElement>(
+					'[data-main-screen] nav[aria-label="Repository"] a',
+				),
+			].find(
+				(link) =>
+					link.pathname === `${ROOT}/delta/pulls` && link.textContent?.includes("Pull requests"),
+			);
+		expect(tab()?.textContent).toContain("2");
+		root.querySelector<HTMLButtonElement>('#delta-merge button[type="submit"]')!.click();
+		await settle(
+			() => root.querySelector('[data-slot="delta-state-pill"][data-state="merged"]') !== null,
+		);
+
+		expect(tab()?.textContent).toContain("1");
+		expect(tab()?.textContent).not.toContain("2");
+	});
+
 	test("resolving a thread folds it in place, adding no history entry", async () => {
 		await page.viewport(1280, 800);
 		let root = await mountScreen("delta/pull/57");

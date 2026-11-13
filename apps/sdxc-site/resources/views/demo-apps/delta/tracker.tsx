@@ -19,20 +19,18 @@ import { readAnchors, readHistory, readTree } from "~/app/services/delta/source"
 import type { DeltaRoute } from "./data";
 import type { CiteContext } from "./markup";
 
-import { issueHref, issuesHref, parsePage, pullHref } from "./data";
+import { issueHref, issuesHref, parsePage, pullHref, pullsHref } from "./data";
 import { COPY } from "./labels";
 import { allPulls, findPull } from "./pull-records";
 import { allIssues, findIssue, seedBase } from "./records";
 import { IssueScreen } from "./screens/issue";
 import { IssuesScreen } from "./screens/issues";
 import { PullScreen } from "./screens/pull";
+import { PullsScreen } from "./screens/pulls";
 import { LABELS, MILESTONES } from "./seed/issues";
 import { ME, PEOPLE } from "./seed/people";
 import { PULLS } from "./seed/pulls";
 import { clearCookies, commentsCookie, editOf, readState, recordCookie } from "./state";
-
-/** Whether pull requests have pages a `#number` may link to. */
-const PULLS_LINKED = false;
 
 /** The repository's name as titles and the top bar write it. */
 const REPO_NAME = `${COPY.org}/${COPY.repo}`;
@@ -84,7 +82,7 @@ async function citeContext(): Promise<CiteContext> {
 		lines: (path) => files.get(path),
 		refHref: (number) => {
 			if (issues.has(number)) return issueHref(number);
-			return pulls.has(number) && PULLS_LINKED ? pullHref(number) : undefined;
+			return pulls.has(number) ? pullHref(number) : undefined;
 		},
 	};
 }
@@ -132,6 +130,21 @@ export async function trackerScreen(
 			),
 		};
 	}
+	if (target.screen === "pulls") {
+		return {
+			title: `${COPY.pulls.title} · ${REPO_NAME}`,
+			nav: "repo",
+			crumb: `${REPO_NAME} › ${COPY.pulls.title}`,
+			body: (
+				<PullsScreen
+					pulls={await allPulls(state, shared.now)}
+					url={request.url}
+					now={shared.now}
+					commits={shared.commits}
+				/>
+			),
+		};
+	}
 	if (target.screen === "pull" && target.tab === "conversation") {
 		let pull = await findPull(target.number, state, shared.now);
 		if (pull === undefined) return null;
@@ -145,6 +158,7 @@ export async function trackerScreen(
 					context={await citeContext()}
 					now={shared.now}
 					commits={shared.commits}
+					listHref={pullsHref()}
 				/>
 			),
 		};
