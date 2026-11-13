@@ -40,6 +40,11 @@ function escaped(text: string): string {
 		.replaceAll('"', "&quot;");
 }
 
+/** Text as the page escapes it inside an element, where quotes stay as typed. */
+function escapedText(text: string): string {
+	return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
 let tree = await readTree();
 let history = await readHistory();
 
@@ -75,7 +80,7 @@ describe("Delta's repository home", () => {
 		let { body } = await page("delta");
 		let latest = history.commits[0];
 
-		if (latest !== undefined) expect(body).toContain(escaped(latest.subject));
+		if (latest !== undefined) expect(body).toContain(escapedText(latest.subject));
 		expect(body).toContain("How a Worker shows git history");
 		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
 	});
@@ -120,7 +125,7 @@ describe("Delta's file view", () => {
 
 	test("blames every line with a commit the history knows", async () => {
 		let { body } = await page("delta/blame/main/shell.tsx");
-		let subjects = history.commits.map((commit) => escaped(commit.subject));
+		let subjects = history.commits.map((commit) => escapedText(commit.subject));
 
 		expect(subjects.some((subject) => body.includes(subject))).toBe(true);
 	});
@@ -179,7 +184,7 @@ describe("Delta's commits", () => {
 		let { body, status } = await page(`delta/commit/${commit.sha.slice(0, 10)}`);
 
 		expect(status).toBe(200);
-		expect(body).toContain(escaped(commit.subject));
+		expect(body).toContain(escapedText(commit.subject));
 		for (let file of commit.files) {
 			expect(body).toContain(`data-slot="diff-file" data-path="${escaped(file.path)}"`);
 		}
@@ -370,7 +375,9 @@ describe("Delta's pull requests list", () => {
 
 	test("shows open pull requests by default, and merged ones under Closed", async () => {
 		expect(numbers((await page("delta/pulls")).body)).toEqual([58, 57]);
-		expect(numbers((await page("delta/pulls?q=is%3Aclosed")).body).sort()).toEqual([55, 56]);
+		expect(numbers((await page("delta/pulls?q=is%3Aclosed")).body).sort((a, b) => a - b)).toEqual([
+			55, 56,
+		]);
 		expect(numbers((await page("delta/pulls?q=is%3Amerged+author%3Atlindqvist")).body)).toEqual([
 			55,
 		]);

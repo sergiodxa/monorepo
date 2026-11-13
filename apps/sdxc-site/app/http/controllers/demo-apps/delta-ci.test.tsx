@@ -31,6 +31,11 @@ function escaped(text: string): string {
 		.replaceAll('"', "&quot;");
 }
 
+/** Text as the page escapes it inside an element, where quotes stay as typed. */
+function escapedText(text: string): string {
+	return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
 /** The run ids a runs list shows, in order. */
 function runIds(body: string): number[] {
 	return [...body.matchAll(/data-run="(\d+)"/g)].map(([, id]) => Number(id));
@@ -47,7 +52,8 @@ describe("Delta's Actions list", () => {
 		expect(runIds(body).length).toBeGreaterThan(8);
 		for (let id of runIds(body))
 			expect(body).toContain(`href="${href(`delta/actions/runs/${id}`)}"`);
-		for (let commit of history.commits.slice(0, 3)) expect(body).toContain(escaped(commit.subject));
+		for (let commit of history.commits.slice(0, 3))
+			expect(body).toContain(escapedText(commit.subject));
 		expect(body).toContain("Auto-refresh");
 	});
 
