@@ -29,9 +29,9 @@ export default function MarginThumbnail() {
 					display: "flex",
 					flexDirection: "column",
 					paddingBlock: "1.75rem",
-					paddingInline: "3.5rem 1.25rem",
+					paddingInline: "4.25rem 1.25rem",
 					backgroundColor: "var(--ui-color-neutral-50)",
-					backgroundImage: `linear-gradient(to right, transparent 2.5rem, oklch(0.55 0.17 27 / 0.5) 2.5rem calc(2.5rem + 1px), transparent calc(2.5rem + 1px)), ${RULED_PAPER}`,
+					backgroundImage: `linear-gradient(to right, transparent 3.5rem, oklch(0.55 0.17 27 / 0.5) 3.5rem calc(3.5rem + 1px), transparent calc(3.5rem + 1px)), ${RULED_PAPER}`,
 					boxShadow:
 						"0 0 0 1px var(--ui-neutral-border), 0 12px 24px -16px oklch(0.4 0.05 70 / 0.4)",
 					color: "oklch(0.22 0.02 75)",
@@ -43,9 +43,9 @@ export default function MarginThumbnail() {
 					raw({
 						position: "absolute",
 						insetBlockStart: "1.75rem",
-						insetInlineStart: "0.5rem",
+						insetInlineStart: "0.375rem",
 						fontFamily: HAND,
-						fontSize: "0.9375rem",
+						fontSize: "0.8125rem",
 						lineHeight: "1.75rem",
 						color: "var(--ui-color-brand-600)",
 					}),
@@ -68,7 +68,13 @@ export default function MarginThumbnail() {
 						]}
 					>
 						<span
-							mix={[raw({ paddingInline: "0.25rem", backgroundColor: "oklch(0.93 0.15 102)" })]}
+							mix={[
+								raw({
+									paddingInline: "0.25rem",
+									whiteSpace: "nowrap",
+									backgroundColor: "oklch(0.93 0.15 102)",
+								}),
+							]}
 						>
 							Refunds: 14 days
 						</span>
