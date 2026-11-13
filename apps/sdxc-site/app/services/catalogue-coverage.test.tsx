@@ -181,4 +181,12 @@ describe("catalogue coverage", () => {
 		}
 		expect(missing).toEqual([]);
 	});
+
+	test("Gantt answers at its own pages, and the old Roadmap pages are gone", async () => {
+		expect((await fetchApp("/api/ui/gantt")).status).toBe(200);
+		expect((await fetchApp("/api/ui/mixins/gantt-today")).status).toBe(200);
+		expect((await fetchApp("/frames/previews/mixins-gantt-today")).status).toBe(200);
+		expect((await fetchApp("/api/ui/roadmap")).status).toBe(404);
+		expect((await fetchApp("/api/ui/mixins/roadmap-today")).status).toBe(404);
+	});
 });

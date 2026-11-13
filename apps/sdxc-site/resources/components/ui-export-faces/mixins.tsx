@@ -527,12 +527,12 @@ function InvokerFieldsFace(_handle: Handle<InvokerFieldsFace.Props>) {
 	);
 }
 
-namespace RoadmapTodayFace {
+namespace GanttTodayFace {
 	export interface Props {}
 }
 
 /** A timeline sliding sideways until today's line settles a third of the way across. */
-function RoadmapTodayFace(_handle: Handle<RoadmapTodayFace.Props>) {
+function GanttTodayFace(_handle: Handle<GanttTodayFace.Props>) {
 	return () => (
 		<div
 			mix={[
@@ -549,7 +549,7 @@ function RoadmapTodayFace(_handle: Handle<RoadmapTodayFace.Props>) {
 		>
 			<div
 				mix={[
-					keyframes("ui-export-roadmap-today", {
+					keyframes("ui-export-gantt-today", {
 						"0%, 20%": { translate: "0 0" },
 						"70%, 100%": { translate: "-55% 0" },
 					}),
@@ -558,7 +558,7 @@ function RoadmapTodayFace(_handle: Handle<RoadmapTodayFace.Props>) {
 						insetBlock: "0",
 						insetInlineStart: "0",
 						inlineSize: "220%",
-						animationName: "ui-export-roadmap-today",
+						animationName: "ui-export-gantt-today",
 						animationDuration: "3s",
 						animationIterationCount: "infinite",
 						animationDirection: "alternate",
@@ -1992,8 +1992,8 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 			case "statusStripKeys":
 				body = <Keycaps keys={["↑", "↓", "↵"]} />;
 				break;
-			case "roadmapToday":
-				body = <RoadmapTodayFace />;
+			case "ganttToday":
+				body = <GanttTodayFace />;
 				break;
 			case "sortable":
 				body = <SortableFace />;

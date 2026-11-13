@@ -354,7 +354,7 @@ describe("Cairn's frames reload alone", () => {
 		let title = root.querySelector("h1");
 
 		expect(await reloadFrame("cairn-roadmap", "roadmap?show=closed")).toEqual(["cairn-roadmap"]);
-		expect(root.querySelectorAll('[data-slot="roadmap-item"]')).toHaveLength(2);
+		expect(root.querySelectorAll('[data-slot="gantt-item"]')).toHaveLength(2);
 		expect(root.querySelector("h1")).toBe(title);
 		expect(
 			root.querySelector('nav[aria-label="Roadmap tabs"] a[aria-current="page"]')?.textContent,

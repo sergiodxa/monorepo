@@ -39,7 +39,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/app/filter-bar": () => import("@sdxc/ui/app/filter-bar"),
 	"@sdxc/ui/app/keyboard-help": () => import("@sdxc/ui/app/keyboard-help"),
 	"@sdxc/ui/app/optimistic-toggle": () => import("@sdxc/ui/app/optimistic-toggle"),
-	"@sdxc/ui/app/roadmap": () => import("@sdxc/ui/app/roadmap"),
+	"@sdxc/ui/app/gantt": () => import("@sdxc/ui/app/gantt"),
 	"@sdxc/ui/app/save-bar": () => import("@sdxc/ui/app/save-bar"),
 	"@sdxc/ui/app/save-status": () => import("@sdxc/ui/app/save-status"),
 	"@sdxc/ui/app/selection-bar": () => import("@sdxc/ui/app/selection-bar"),

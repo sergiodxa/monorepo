@@ -392,14 +392,14 @@ describe("Cairn screens", () => {
 	});
 
 	test("the roadmap draws late projects with a tail and keeps closed ones on their own tab", async () => {
-		let items = (body: string) => [...body.matchAll(/data-slot="roadmap-item"/g)].length;
+		let items = (body: string) => [...body.matchAll(/data-slot="gantt-item"/g)].length;
 		let active = await page("roadmap");
 		expect(items(active)).toBe(6);
-		expect([...active.matchAll(/data-slot="roadmap-late"/g)]).toHaveLength(2);
+		expect([...active.matchAll(/data-slot="gantt-late"/g)]).toHaveLength(2);
 
 		let closed = await page("roadmap?show=closed");
 		expect(items(closed)).toBe(2);
-		expect(closed).not.toContain('data-slot="roadmap-late"');
+		expect(closed).not.toContain('data-slot="gantt-late"');
 	});
 
 	test("a cycle's frames answer, and the burn-up counts the visitor's edits", async () => {
@@ -467,7 +467,7 @@ describe("Cairn frames", () => {
 
 	test("the roadmap answers its timeline frame per tab", async () => {
 		let closed = await frameOf("roadmap?show=closed", "cairn-roadmap");
-		expect([...closed.matchAll(/data-slot="roadmap-item"/g)]).toHaveLength(2);
+		expect([...closed.matchAll(/data-slot="gantt-item"/g)]).toHaveLength(2);
 		expect(closed).not.toContain('data-slot="app-shell"');
 	});
 

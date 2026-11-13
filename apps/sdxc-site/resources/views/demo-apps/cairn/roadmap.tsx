@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 import { LayersIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { LinkButton } from "@sdxc/ui";
-import { Roadmap } from "@sdxc/ui/app/roadmap";
+import { Gantt } from "@sdxc/ui/app/gantt";
 import { Sparkline } from "@sdxc/ui/app/sparkline";
 import { TAB_BAR_BLOCK_SIZE } from "@sdxc/ui/app/tab-bar";
 import { Frame } from "remix/component";
@@ -186,7 +186,7 @@ export function RoadmapTimeline(handle: Handle<{ issues: IssueView[]; tab: Roadm
 		);
 
 		return (
-			<Roadmap
+			<Gantt
 				label="Projects on a timeline"
 				start={RANGES[tab].start}
 				end={RANGES[tab].end}
@@ -202,13 +202,13 @@ export function RoadmapTimeline(handle: Handle<{ issues: IssueView[]; tab: Roadm
 				mix={[raw({ flex: "1 1 auto", minBlockSize: 0 })]}
 			>
 				{quarters.map((name) => (
-					<Roadmap.Group title={name}>
+					<Gantt.Group title={name}>
 						{shown
 							.filter((project) => quarter(project) === name)
 							.map((project) => {
 								let done = share(projectPoints(project, issues));
 								return (
-									<Roadmap.Item
+									<Gantt.Item
 										name={project.name}
 										href={href(`projects/${project.id}`)}
 										icon={<ProjectGlyph hue={project.hue} />}
@@ -236,9 +236,9 @@ export function RoadmapTimeline(handle: Handle<{ issues: IssueView[]; tab: Roadm
 									/>
 								);
 							})}
-					</Roadmap.Group>
+					</Gantt.Group>
 				))}
-			</Roadmap>
+			</Gantt>
 		);
 	};
 }

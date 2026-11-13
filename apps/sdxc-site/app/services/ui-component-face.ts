@@ -297,7 +297,7 @@ const CATALOGUE = [
 	{ slug: "range-picker", module: "app" },
 	{ slug: "relative-time", module: "components" },
 	{ slug: "resizable", module: "app" },
-	{ slug: "roadmap", module: "app" },
+	{ slug: "gantt", module: "app" },
 	{ slug: "rotating-text", module: "landing" },
 	{ slug: "save-bar", module: "app" },
 	{ slug: "save-status", module: "app" },
@@ -477,7 +477,7 @@ const OVERRIDES: Record<string, Shape[]> = {
 		{ kind: "line", x1: 89, y1: 41, x2: 101, y2: 41, tone: "accent", weight: 1.2 },
 		{ kind: "line", x1: 117, y1: 41, x2: 129, y2: 41, tone: "label", weight: 1.2 },
 	]),
-	roadmap: appShell([
+	gantt: appShell([
 		{ kind: "line", x1: 56, y1: 34, x2: 136, y2: 34, tone: "hairline", weight: 1 },
 		{ kind: "rect", x: 60, y: 40, w: 40, h: 8, r: 2, tone: "accent" },
 		{ kind: "rect", x: 72, y: 54, w: 34, h: 8, r: 2, tone: "surface", ring: true },

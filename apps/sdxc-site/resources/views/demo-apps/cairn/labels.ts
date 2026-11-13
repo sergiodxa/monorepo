@@ -11,8 +11,8 @@ import type { AppShell } from "@sdxc/ui/app/app-shell";
 import type { CommandPalette } from "@sdxc/ui/app/command-palette";
 import type { DetailSheet } from "@sdxc/ui/app/detail-sheet";
 import type { FilterBar } from "@sdxc/ui/app/filter-bar";
+import type { Gantt } from "@sdxc/ui/app/gantt";
 import type { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
-import type { Roadmap } from "@sdxc/ui/app/roadmap";
 import type { SelectionBar } from "@sdxc/ui/app/selection-bar";
 import type { SplitView } from "@sdxc/ui/app/split-view";
 import type { ViewOptions } from "@sdxc/ui/app/view-options";
@@ -101,7 +101,7 @@ export const SHEET_LABELS: DetailSheet.Labels = {
 };
 
 /** The roadmap's axis and bar descriptions. */
-export const ROADMAP_LABELS: Roadmap.Labels = {
+export const ROADMAP_LABELS: Gantt.Labels = {
 	today: "Today",
 	schedule: "{start} to {end}",
 	progress: "{percent} complete",

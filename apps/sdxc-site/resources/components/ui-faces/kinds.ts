@@ -158,7 +158,7 @@ export const FACE_KIND = {
 	"range-picker": "date-range",
 	"relative-time": "text-mono",
 	resizable: "split-view",
-	roadmap: "timeline",
+	gantt: "timeline",
 	"rotating-text": "landing-accent-text",
 	"save-bar": "save-bar",
 	"save-status": "status-strip",
