@@ -2,34 +2,43 @@
  * A hierarchical list of nodes built from nested `<details>` and `<summary>`
  * elements, so a branch's expand/collapse state, keyboard toggling, and
  * content hiding all come from the platform rather than tracked state.
- * {@link Tree.Item} nests further {@link Tree.Item} nodes directly inside
- * itself to describe a subtree, {@link Tree.ItemContent} renders each node's
- * always-visible row, and {@link Tree.LoadMoreItem} holds a trailing loading
- * placeholder exactly like a row list's own.
+ * {@link Tree.Item} nests further {@link Tree.Item} nodes and {@link Tree.Leaf}
+ * file rows inside itself, {@link Tree.ItemContent} renders a folder's row,
+ * {@link Tree.Filter} narrows the files, and {@link Tree.Navigation} adds arrow keys.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/component";
+import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { ChevronRightIcon } from "@sdxc/icons";
-import { bg, fg, outline } from "@sdxc/u/color";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
 import { cursor, listStyle, raw, mergeMix } from "@sdxc/u/general";
-import { center, hidden, hstack, interpolateSize, shrink, vstack } from "@sdxc/u/layout";
+import { center, hidden, hstack, interpolateSize, relative, shrink, vstack } from "@sdxc/u/layout";
 import { clip } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
-import { bs, is, pb, pie, pi } from "@sdxc/u/size";
+import { bs, is, mis, minIs, pb, pie, pi } from "@sdxc/u/size";
 import { detailsContent, when } from "@sdxc/u/state";
 import { rotate } from "@sdxc/u/transform";
-import { text } from "@sdxc/u/typography";
-import { attrs } from "remix/component";
+import { nowrap, tabularNums, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
+import { attrs, clientEntry } from "remix/component";
 
+import { SearchField } from "../components/search-field.js";
 import { SentinelRow } from "../components/sentinel-row.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { panelChrome } from "../styles/panel-chrome.js";
+import { fileIcon } from "../utils/file-icon.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
+
+import type { TreeNavigation as TreeNavigationMixin } from "./mixins/tree-navigation.js";
+
+import { TREE_FILTER_TEXT_ATTRIBUTE, treeFilter } from "./mixins/tree-filter.js";
+import { treeNavigation } from "./mixins/tree-navigation.js";
+
+export { treeFilterMatches } from "./utils/tree-filter.js";
 
 /** `role="tree"` applied to {@link Tree} through {@link attrs} unless a consumer supplies its own `role`. */
 const DEFAULT_ROLE = "tree";
@@ -42,7 +51,7 @@ const DEFAULT_ROLE = "tree";
 const DEFAULT_ITEM_ROLE = "group";
 
 /** `role="treeitem"` applied to {@link Tree.ItemContent} through {@link attrs} unless a consumer supplies its own `role`. */
-const DEFAULT_CONTENT_ROLE = "treeitem";
+const DEFAULT_CONTENT_ROLE = "treeitem" as const;
 
 /**
  * Nesting depth {@link Tree.Item} falls back to when nothing wraps it in
@@ -65,6 +74,28 @@ const DEFAULT_EXPAND_BUTTON_SLOT = "expand-button";
  */
 const LEAF_GUTTER = "calc(var(--ui-spacing, 0.25rem) * 7)";
 
+/** Search parameter {@link Tree.Filter} submits its query under when `name` is unset. */
+const DEFAULT_FILTER_PARAM = "filter";
+
+/** The letter each file status draws, the shape that tells statuses apart beside their tone. */
+const STATUS_LETTERS: Record<Tree.LeafStatus, string> = {
+	added: "A",
+	modified: "M",
+	deleted: "D",
+	renamed: "R",
+};
+
+/** The semantic tone each file status paints its letter in. */
+const STATUS_TONES: Record<Tree.LeafStatus, string> = {
+	added: "success",
+	modified: "warning",
+	deleted: "danger",
+	renamed: "brand",
+};
+
+/** Selector {@link Tree.Navigation} and {@link Tree.Filter} find their tree by. */
+const TREE_SELECTOR = '[role="tree"]';
+
 /**
  * Prop and context types for {@link Tree} and its compound parts.
  */
@@ -75,12 +106,82 @@ export namespace Tree {
 		depth: number;
 	}
 
+	/** Value {@link Tree} provides to every row inside it. */
+	export interface RootContext {
+		/** The frame every {@link Tree.Leaf} link swaps, unless the leaf names its own. */
+		frame: string | undefined;
+	}
+
 	/**
 	 * Props accepted by {@link Tree}.
 	 */
 	export interface Props extends TagProps<"div"> {
-		/** {@link Tree.Item} and {@link Tree.LoadMoreItem} nodes to render. */
+		/** {@link Tree.Item}, {@link Tree.Leaf} and {@link Tree.LoadMoreItem} nodes to render. */
 		children: RemixNode;
+		/**
+		 * The frame every file link swaps (`data-rmx-target`), such as `"main"`, so picking a
+		 * file redraws only the code while the tree, its open folders and scroll stay put.
+		 */
+		frame?: string;
+	}
+
+	/** How a file changed, drawn as a toned letter: A, M, D or R. */
+	export type LeafStatus = "added" | "modified" | "deleted" | "renamed";
+
+	/**
+	 * Props accepted by {@link Tree.Leaf}: every native `<a>` attribute.
+	 */
+	export interface LeafProps extends Omit<TagProps<"a">, "children" | "role" | "href"> {
+		href: string;
+		/** The file's name; picks its icon and is what type-ahead matches. */
+		name: string;
+		/** The file's full path, which {@link Tree.Filter} matches. @default name */
+		path?: string;
+		/** What the row shows in place of `name`, such as a name with a matched part marked. */
+		children?: RemixNode;
+		/** Marks the file being read, with `aria-current="page"`; render its folders `open`. */
+		current?: boolean;
+		/** The frame this link swaps, over the tree's own `frame`. */
+		frame?: string;
+		status?: LeafStatus;
+		/** What assistive technology reads for `status`, such as "Modified"; the letter is decoration. */
+		statusLabel?: string;
+		/** Lines added, drawn end-aligned as `+n`. */
+		additions?: number;
+		/** Lines removed, drawn end-aligned as `−n`. */
+		deletions?: number;
+	}
+
+	/**
+	 * Props accepted by {@link Tree.Filter}: every native `<form>` attribute. The form submits
+	 * with GET to `action`, so a reader without script gets the narrowed tree from the server.
+	 */
+	export interface FilterProps extends Omit<TagProps<"form">, "children" | "method"> {
+		/** The `id` of the {@link Tree} the field narrows as the reader types. */
+		tree: string;
+		/** The field's accessible name, such as "Filter files". */
+		label: string;
+		placeholder?: string;
+		/** The query the page was rendered with, so the field shows what narrowed the tree. */
+		value?: string;
+		/** Search parameter the query submits under. @default DEFAULT_FILTER_PARAM */
+		name?: string;
+		/** Other search parameters the submission keeps, as hidden fields. */
+		params?: Record<string, string>;
+	}
+
+	/** Props {@link TreeFilterField} receives from {@link Tree.Filter}. */
+	export interface FilterFieldProps {
+		tree: string;
+		label: string;
+		name: string;
+		value?: string;
+		placeholder?: string;
+	}
+
+	/** Props accepted by {@link Tree.Navigation}: the key copy the help sheet lists. */
+	export interface NavigationProps {
+		labels?: TreeNavigationMixin.Labels;
 	}
 
 	/**
@@ -162,9 +263,11 @@ function readAmbientDepth(handle: Handle<unknown, any>): number | undefined {
  * 	{t("files.empty")}
  * </Tree>
  */
-export function Tree(handle: Handle<Tree.Props>) {
+export function Tree(handle: Handle<Tree.Props, Tree.RootContext>) {
 	return () => {
-		let { children, mix, ...rest } = handle.props;
+		let { children, frame, mix, ...rest } = handle.props;
+
+		handle.context.set({ frame });
 
 		warnIfNoAccessibleLabel(
 			handle.props,
@@ -235,6 +338,7 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 				mix={mergeMix(
 					[
 						attrs({ role: DEFAULT_ITEM_ROLE }),
+						when("&[hidden]", hidden()),
 						interpolateSize(),
 						detailsContent([
 							clip(),
@@ -391,4 +495,238 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 			</span>
 		);
 	};
+};
+
+/**
+ * Reads the frame the nearest {@link Tree} names for its file links, `undefined` when the
+ * tree names none or the row renders outside one.
+ */
+function readTreeFrame(handle: Handle<unknown, any>): string | undefined {
+	try {
+		let root = handle.context.get(Tree) as Tree.RootContext | undefined;
+		return root?.frame;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Renders a file: a link row with the file's icon and name, indented from the depth of the
+ * folders around it, as a `role="treeitem"` so arrow keys reach it beside the folders. The
+ * current file reads `aria-current="page"` with a tint and an accent bar; a diff's file adds
+ * a toned A/M/D/R letter and end-aligned `+n −n` counts in tabular figures.
+ *
+ * @param handle Runtime handle carrying the link's props.
+ * @returns The render function producing the row's markup.
+ * @example
+ * <Tree.Leaf href="/blob/main/app/routes.ts" name="routes.ts" path="app/routes.ts" current />
+ * @example
+ * <Tree.Leaf href="#diff-routes" name="routes.ts" status="modified" statusLabel={t("files.modified")} additions={12} deletions={3} />
+ */
+Tree.Leaf = function TreeLeaf(handle: Handle<Tree.LeafProps>) {
+	return () => {
+		let {
+			additions,
+			children,
+			current,
+			deletions,
+			frame,
+			href,
+			mix,
+			name,
+			path,
+			status,
+			statusLabel,
+			...rest
+		} = handle.props;
+		let ambient = readAmbientDepth(handle);
+		let depth = ambient === undefined ? DEFAULT_DEPTH : ambient + 1;
+		let target = frame ?? readTreeFrame(handle);
+		let Glyph = fileIcon(name);
+		let counted = additions !== undefined || deletions !== undefined;
+
+		return (
+			<a
+				{...rest}
+				href={href}
+				role={DEFAULT_CONTENT_ROLE}
+				aria-level={depth + 1}
+				data-tree-leaf=""
+				data-search-value={name}
+				data-status={status}
+				data-rmx-target={target}
+				aria-current={current ? "page" : undefined}
+				{...{ [TREE_FILTER_TEXT_ATTRIBUTE]: path ?? name }}
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						relative(),
+						hstack({ gap: 2, align: "center" }),
+						rounded("md"),
+						pb(1.5),
+						pie(3),
+						raw({
+							paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem) + ${LEAF_GUTTER})`,
+						}),
+						fg("neutral.emphasis"),
+						textDecoration("none"),
+						outline("none"),
+						text("sm"),
+						media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
+						when("&[hidden]", hidden()),
+						when("& > svg", [shrink(), fg("neutral.muted")]),
+						when("&:hover", bg("neutral.bg-tint-hover")),
+						when("&:active", bg("neutral.bg-tint-pressed")),
+						when("&:focus-visible", outline({ color: "brand.ring", width: 2, offset: -2 })),
+						when('&[aria-current="page"]', [bg("brand.tint"), weight(500)]),
+						when('&[aria-current="page"] > svg', fg("brand")),
+						/** The accent bar marks the current file by shape, so it reads without its tint. */
+						when(
+							'&[aria-current="page"]::before',
+							raw({
+								content: '""',
+								position: "absolute",
+								insetBlock: "0.375rem",
+								insetInlineStart: 0,
+								inlineSize: "2px",
+								borderRadius: "1px",
+								backgroundColor: "var(--ui-brand-fg)",
+							}),
+						),
+						when('&[data-status="deleted"] > [data-slot="tree-leaf-name"]', [
+							textDecoration("line-through"),
+							fg("neutral.muted"),
+						]),
+					],
+					mix,
+				)}
+			>
+				<Glyph size={16} aria-hidden="true" />
+				<span data-slot="tree-leaf-name" mix={[minIs(0), truncate()]}>
+					{children ?? name}
+				</span>
+				{status || counted ? (
+					<span
+						data-slot="tree-leaf-meta"
+						mix={[mis("auto"), hstack({ gap: 2, align: "center" }), shrink(), text("xs")]}
+					>
+						{counted ? (
+							<span data-slot="tree-counts" mix={[hstack({ gap: 1 }), tabularNums(), nowrap()]}>
+								{additions !== undefined ? (
+									<span mix={[fg("success")]}>{`+${additions}`}</span>
+								) : null}
+								{deletions !== undefined ? (
+									<span mix={[fg("danger")]}>{`−${deletions}`}</span>
+								) : null}
+							</span>
+						) : null}
+						{status ? (
+							<span
+								data-slot="tree-status"
+								aria-hidden="true"
+								mix={[
+									center(),
+									is(4),
+									bs(4),
+									rounded("sm"),
+									border({ color: "currentColor", width: 1, style: "solid" }),
+									fg(STATUS_TONES[status]),
+									weight(600),
+									raw({ fontSize: "0.625rem", lineHeight: 1 }),
+								]}
+							>
+								{STATUS_LETTERS[status]}
+							</span>
+						) : null}
+						{status && statusLabel ? <span mix={[visuallyHidden()]}>{statusLabel}</span> : null}
+					</span>
+				) : null}
+			</a>
+		);
+	};
+};
+
+/**
+ * Renders a "Go to file" field over a tree: a GET form (`?filter=` by default), so without
+ * script the server renders the narrowed tree with {@link treeFilterMatches}; once hydrated,
+ * the {@link TreeFilterField} island narrows the tree named by `tree` on every keystroke.
+ *
+ * @param handle Runtime handle carrying the form's props.
+ * @returns The render function producing the form.
+ * @example
+ * <Tree.Filter tree="files" label={t("files.filter")} placeholder={t("files.goToFile")} value={url.searchParams.get("filter") ?? ""} />
+ */
+Tree.Filter = function TreeFilterForm(handle: Handle<Tree.FilterProps>) {
+	return () => {
+		let { label, name, params, placeholder, tree, value, ...rest } = handle.props;
+
+		return (
+			<form {...rest} method="get" role="search" data-slot="tree-filter">
+				{Object.entries(params ?? {}).map(([key, param]) => (
+					<input type="hidden" name={key} value={param} />
+				))}
+				<TreeFilterField
+					tree={tree}
+					label={label}
+					name={name ?? DEFAULT_FILTER_PARAM}
+					value={value}
+					placeholder={placeholder}
+				/>
+			</form>
+		);
+	};
+};
+
+/**
+ * Client island behind {@link Tree.Filter}: the search field, whose `treeFilter()` narrows
+ * the tree as the reader types. Loads from `@sdxc/ui/app/tree#TreeFilterField` once the
+ * app's browser entry maps it; until then the field submits its form.
+ */
+export const TreeFilterField: EntryComponent<Tree.FilterFieldProps> = clientEntry(
+	"@sdxc/ui/app/tree#TreeFilterField",
+	function TreeFilterField(handle: Handle<Tree.FilterFieldProps>) {
+		return () => {
+			let { label, name, placeholder, tree, value } = handle.props;
+			return (
+				<SearchField.Input
+					name={name}
+					defaultValue={value}
+					aria-label={label}
+					aria-controls={tree}
+					placeholder={placeholder}
+					autocomplete="off"
+					mix={[treeFilter({ tree })]}
+				/>
+			);
+		};
+	},
+);
+
+/**
+ * Client island behind {@link Tree.Navigation}: a hidden marker whose `treeNavigation()`
+ * walks the rows of the tree it sits in. Loads from `@sdxc/ui/app/tree#TreeNavigation` once
+ * the app's browser entry maps it; until then every row stays reachable by Tab.
+ */
+export const TreeNavigation: EntryComponent<Tree.NavigationProps> = clientEntry(
+	"@sdxc/ui/app/tree#TreeNavigation",
+	function TreeNavigation(handle: Handle<Tree.NavigationProps>) {
+		return () => (
+			<span
+				mix={[hidden(), treeNavigation({ labels: handle.props.labels, within: TREE_SELECTOR })]}
+			/>
+		);
+	},
+);
+
+/**
+ * Turns on keyboard navigation for a server-rendered tree: ↑↓ and `j`/`k` move one Tab stop
+ * between visible rows, → opens or enters a folder, ← closes it or goes to its parent,
+ * Home/End jump, and typing finds a row by name. Place it first inside {@link Tree}.
+ *
+ * @param handle Runtime handle carrying the keys' help-sheet copy.
+ * @returns The render function producing the island.
+ * @example <Tree aria-label={t("files.title")} frame="main"><Tree.Navigation labels={{ group: t("keys.files") }} />…</Tree>
+ */
+Tree.Navigation = function TreeNavigationPart(handle: Handle<Tree.NavigationProps>) {
+	return () => <TreeNavigation {...handle.props} />;
 };
