@@ -53,12 +53,14 @@ describe("Inkwell as a single-page app", () => {
 		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/inkwell/media"));
 		press(document.querySelector('a[data-main-nav="settings"]'));
 		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/inkwell/settings"));
+		await vi.waitFor(() =>
+			expect(document.querySelector("[data-main-crumb]")?.textContent).toContain("Settings"),
+		);
 
 		expect(shell()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 		expect((navigation.currentEntry?.index ?? 0) - start).toBe(2);
 		expect(mounted.requests.every((request) => request.endsWith(" main"))).toBe(true);
-		expect(document.querySelector("[data-main-crumb]")?.textContent).toContain("Settings");
 	});
 
 	test("saves a settings section in place with its toast and no history entry", async () => {
