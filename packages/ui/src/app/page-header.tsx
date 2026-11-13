@@ -168,7 +168,9 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 							minInlineSize: "0",
 							containerType: "inline-size",
 							containerName: CONTAINER,
-							...(sticky ? { [SCROLL_STATE_SUPPORT]: { containerType: "inline-size scroll-state" } } : {}),
+							...(sticky
+								? { [SCROLL_STATE_SUPPORT]: { containerType: "inline-size scroll-state" } }
+								: {}),
 							overflowWrap: "anywhere",
 						}),
 						sticky
