@@ -315,6 +315,17 @@ describe("PageHeader", () => {
 		expect(box.top).toBeGreaterThanOrEqual(more.element().getBoundingClientRect().bottom);
 	});
 
+	test("sets More in the same type as the tabs beside it", async () => {
+		await page.viewport(375, 700);
+		mountHeader("100%", { title: "acme / delta", tabs: REPO_TABS, tabsLabel: "Repository" });
+		let nav = document.querySelector<HTMLElement>('[data-slot="page-header-tabs"]')!;
+		let tab = nav.querySelector("a")!;
+		let more = nav.querySelector("button")!;
+
+		expect(getComputedStyle(more).fontSize).toBe(getComputedStyle(tab).fontSize);
+		expect(getComputedStyle(more).lineHeight).toBe(getComputedStyle(tab).lineHeight);
+	});
+
 	test("keeps the current tab in the narrow row when it would have folded", async () => {
 		await page.viewport(375, 700);
 		mountHeader("100%", {

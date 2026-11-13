@@ -468,7 +468,7 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 													border: "none",
 													background: "none",
 													padding: "0",
-													font: "inherit",
+													fontFamily: "inherit",
 													cursor: "pointer",
 												}),
 											]}
