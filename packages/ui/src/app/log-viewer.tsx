@@ -31,7 +31,7 @@ import { attrs, clientEntry } from "remix/component";
 
 import { spin } from "../animations/keyframes.js";
 
-import type { LogViewerController as LogViewerControllerOptions } from "./mixins/log-viewer.js";
+import type { LogViewerBehavior } from "./mixins/log-viewer.js";
 import type { AnsiSpan } from "./utils/ansi.js";
 import type { LogLine, LogNode } from "./utils/log-lines.js";
 
@@ -136,7 +136,7 @@ export namespace LogViewer {
 	}
 
 	/** Props for {@link LogViewerController}; plain data, since they cross into the browser. */
-	export type ControllerProps = LogViewerControllerOptions.Options;
+	export type ControllerProps = LogViewerBehavior.Options;
 }
 
 /** The id a line takes: its link's fragment, so following the link scrolls to and paints it. */

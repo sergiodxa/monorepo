@@ -43,7 +43,7 @@ const CURRENT_ATTRIBUTE = "data-log-current";
 /**
  * Types for {@link logViewerController}.
  */
-export namespace LogViewerController {
+export namespace LogViewerBehavior {
 	/** Plain data only, since the options cross into the browser with the viewer's island. */
 	export type Options = {
 		/** The counter, with `{index}` and `{count}` replaced. */
@@ -91,7 +91,7 @@ function reveal(row: HTMLElement, root: HTMLElement): void {
 
 /** The counter's text: empty with no query, the no-match copy, or "{index} of {count}". */
 function counterText(
-	options: LogViewerController.Options,
+	options: LogViewerBehavior.Options,
 	query: string,
 	current: number,
 	total: number,
@@ -102,11 +102,7 @@ function counterText(
 }
 
 /** Wires the search box: scanning, counting, painting and stepping through matches. */
-function attachSearch(
-	root: HTMLElement,
-	options: LogViewerController.Options,
-	signal: AbortSignal,
-) {
+function attachSearch(root: HTMLElement, options: LogViewerBehavior.Options, signal: AbortSignal) {
 	let box = root.querySelector<HTMLElement>("[data-log-search]");
 	let input = root.querySelector<HTMLInputElement>("[data-log-search-input]");
 	let count = root.querySelector<HTMLElement>("[data-log-search-count]");
@@ -343,7 +339,7 @@ async function stream(step: HTMLElement, appended: () => void, signal: AbortSign
 }
 
 /** Wires one viewer: search, the tail it follows, and every live step's stream. */
-function attach(root: HTMLElement, options: LogViewerController.Options, signal: AbortSignal) {
+function attach(root: HTMLElement, options: LogViewerBehavior.Options, signal: AbortSignal) {
 	attachSearch(root, options, signal);
 	let steps = [...root.querySelectorAll<HTMLElement>("[data-log-stream][data-stream-pending]")];
 	if (steps.length === 0) return;
@@ -357,18 +353,16 @@ function attach(root: HTMLElement, options: LogViewerController.Options, signal:
  * @param options The counter's copy.
  * @example <div hidden mix={[logViewerController({ matches: "{index} of {count}", noMatches: "No results" })]} />
  */
-export const logViewerController: MixinFactory<
-	HTMLElement,
-	[options: LogViewerController.Options]
-> = createMixin<HTMLElement, [options: LogViewerController.Options]>((handle) => {
-	let options: LogViewerController.Options | undefined;
+export const logViewerController: MixinFactory<HTMLElement, [options: LogViewerBehavior.Options]> =
+	createMixin<HTMLElement, [options: LogViewerBehavior.Options]>((handle) => {
+		let options: LogViewerBehavior.Options | undefined;
 
-	handle.addEventListener("insert", (event) => {
-		let root = event.node.closest<HTMLElement>('[data-slot="log-viewer"]');
-		if (root !== null && options !== undefined) attach(root, options, handle.signal);
+		handle.addEventListener("insert", (event) => {
+			let root = event.node.closest<HTMLElement>('[data-slot="log-viewer"]');
+			if (root !== null && options !== undefined) attach(root, options, handle.signal);
+		});
+
+		return (next) => {
+			options = next;
+		};
 	});
-
-	return (next) => {
-		options = next;
-	};
-});
