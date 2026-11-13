@@ -218,6 +218,48 @@ describe("UsageEstimate live", () => {
 		expect(total()).toBe("$14.40");
 	});
 
+	test("lets a named button submit natively, since its value changes the fields", async () => {
+		await serve(40, true);
+		let form = document.querySelector("form")!;
+		let add = document.createElement("button");
+		add.type = "submit";
+		add.name = "add";
+		add.value = "1";
+		form.appendChild(add);
+		let native: boolean | undefined;
+		document.addEventListener(
+			"submit",
+			(event) => {
+				native = !event.defaultPrevented;
+				event.preventDefault();
+			},
+			{ once: true },
+		);
+		form.requestSubmit(add);
+		await new Promise((resolve) => setTimeout(resolve, 60));
+		expect(native).toBe(true);
+		expect(requests).toEqual([]);
+		expect(location.search).toBe("?hours=40");
+	});
+
+	test("re-prices in place for the form's unnamed submit button", async () => {
+		await serve(40, true);
+		let form = document.querySelector("form")!;
+		let native: boolean | undefined;
+		document.addEventListener(
+			"submit",
+			(event) => {
+				native = !event.defaultPrevented;
+				event.preventDefault();
+			},
+			{ once: true },
+		);
+		document.querySelector<HTMLInputElement>('input[name="hours"]')!.value = "5";
+		form.requestSubmit(form.querySelector<HTMLButtonElement>('button[type="submit"]'));
+		await until(() => total() === "$1.80");
+		expect(native).toBe(false);
+	});
+
 	test("submits natively by GET without script", async () => {
 		await serve(40, false);
 		let form = document.querySelector("form")!;

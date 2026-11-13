@@ -23,10 +23,9 @@ export namespace UsageEstimateLiveMixin {
 }
 
 /**
- * Applied to an element inside a calculator's GET form: once the fields have been quiet for
- * `delay`, it reloads the bill for the form's query, and a submit reloads it at once in place
- * of a page load. The newest request wins: only it moves the address, through `replaceState`
- * so history gains no entry, and only its failure makes a submit fall back to a native one.
+ * Applied inside a calculator's GET form: once the fields go quiet for `delay`, and on a
+ * submit from Enter or an unnamed button, it reloads the bill for the form's query; a named
+ * button still loads the page. Only the newest request moves the address (`replaceState`).
  *
  * @example <span hidden mix={[usageEstimateLive({ reload: (src) => frame.reload({ src }), delay: 250 })]} />
  */
@@ -109,7 +108,7 @@ function follow(
 	form.addEventListener(
 		"submit",
 		(event) => {
-			if (event.defaultPrevented) return;
+			if (event.defaultPrevented || carriesValue(event.submitter)) return;
 			event.preventDefault();
 			clearTimeout(timer);
 			price().catch(() => form.submit());
@@ -132,4 +131,19 @@ function addressOf(form: HTMLFormElement): URL {
 	}
 	url.search = query.toString();
 	return url;
+}
+
+/**
+ * Whether a submit came from a button with its own `name`, such as "Add monitor". Its value is
+ * something the fields don't hold and may change which fields the form has, so the page has
+ * to render it; Enter, `requestSubmit()` and an unnamed button only re-price.
+ *
+ * @param submitter The element that submitted the form, if any.
+ * @returns `true` when the submit must reach the server as a page load.
+ */
+function carriesValue(submitter: HTMLElement | null): boolean {
+	return (
+		(submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) &&
+		submitter.name !== ""
+	);
 }
