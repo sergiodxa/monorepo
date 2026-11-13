@@ -81,6 +81,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"math",
 			"diagram",
 			"diff",
+			"emoji",
 			"yaml",
 			"xml",
 			"html",
