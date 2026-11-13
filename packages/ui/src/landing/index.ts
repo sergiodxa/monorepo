@@ -17,6 +17,7 @@ export * from "./check-row.js";
 export * from "./closing-cta.js";
 export * from "./code-stage.js";
 export * from "./contributor-wall.js";
+export * from "./countdown.js";
 export * from "./crosshair.js";
 export * from "./curriculum.js";
 export * from "./drawn-chart.js";
