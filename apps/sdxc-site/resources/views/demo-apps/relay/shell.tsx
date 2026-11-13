@@ -39,6 +39,7 @@ import type { ViewIcon } from "~/resources/views/demo-apps/relay/views";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
+import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 import { CONTACTS, CONVERSATIONS, findContact } from "~/resources/views/demo-apps/relay/data";
 import { HELP_ID, RelayKeyboardHelp } from "~/resources/views/demo-apps/relay/keyboard-help";
 import {
@@ -58,6 +59,12 @@ import {
 /** The cookie Relay's collapsed sidebar is remembered in, apart from the other demos'. */
 export const SHELL_COOKIE = "relay-sidebar";
 
+/**
+ * Marks a screen whose panes run edge to edge, such as the inbox's; the shell drops its
+ * content padding while such a screen is in `main`, so swapping screens restyles it too.
+ */
+export const FLUSH_ATTRIBUTE = "data-relay-flush";
+
 /** The id of the command palette every screen opens with ⌘K. */
 const PALETTE_ID = "relay-palette";
 
@@ -70,10 +77,8 @@ namespace RelayShell {
 		current: ShellSection;
 		/** The remembered collapsed sidebar, from {@link SHELL_COOKIE}. */
 		collapsed: boolean;
-		/** Where the person is, shown in the top bar. */
+		/** Where the person is, shown in the top bar and rewritten after each swap of `main`. */
 		crumb: string;
-		/** Drops the content padding, for the inbox's edge-to-edge panes. */
-		flush?: boolean;
 		children: RemixNode;
 	}
 }
@@ -165,6 +170,7 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 					countLabel={view.counts === "all" ? `${count} conversations` : `${count} unread`}
 					unread={view.counts === "unread" && count > 0}
 					current={current === `view:${view.slug}`}
+					data-main-nav={`view:${view.slug}`}
 					data-shortcut={view.shortcut}
 					data-shortcut-label={view.shortcut ? `Go to ${view.label}` : undefined}
 					data-shortcut-group={view.shortcut ? "Navigation" : undefined}
@@ -187,6 +193,7 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 						icon={<UsersIcon />}
 						label="Contacts"
 						current={current === "contacts"}
+						data-main-nav="contacts"
 						data-shortcut="g c"
 						data-shortcut-label="Go to Contacts"
 						data-shortcut-group="Navigation"
@@ -197,6 +204,7 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 						icon={<ChartLineIcon />}
 						label="Reports"
 						current={current === "reports"}
+						data-main-nav="reports"
 						data-shortcut="g r"
 						data-shortcut-label="Go to Reports"
 						data-shortcut-group="Navigation"
@@ -207,6 +215,7 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 						icon={<SettingsIcon />}
 						label="Settings"
 						active={current === "settings"}
+						data-main-nav="settings"
 						data-shortcut="g s"
 						data-shortcut-label="Go to Settings"
 						data-shortcut-group="Navigation"
@@ -318,12 +327,12 @@ function RelayPalette() {
 }
 
 /**
- * Renders a Relay screen inside the shell, with the command menu and the keyboard help on
- * every page so ⌘K and `?` answer wherever the person is.
+ * Renders the shell around the screen's `main` frame, which every in-app link and post swaps
+ * while the sidebar, the command menu and the keyboard help stay mounted.
  */
 export function RelayShell(handle: Handle<RelayShell.Props>) {
 	return () => {
-		let { current, collapsed, crumb, flush, children } = handle.props;
+		let { current, collapsed, crumb, children } = handle.props;
 
 		let shell = (
 			<AppShell
@@ -373,6 +382,7 @@ export function RelayShell(handle: Handle<RelayShell.Props>) {
 				topbar={
 					<>
 						<span
+							data-main-crumb=""
 							mix={[
 								grow(),
 								truncate(),
@@ -401,15 +411,23 @@ export function RelayShell(handle: Handle<RelayShell.Props>) {
 				}
 			>
 				{children}
+				<MainFrameSync root={href()} />
 				<RelayPalette />
 				<RelayKeyboardHelp />
 			</AppShell>
 		);
 
-		return flush ? (
-			<div mix={[raw({ display: "contents", "--ui-app-content-padding": "0px" })]}>{shell}</div>
-		) : (
-			shell
+		return (
+			<div
+				mix={[
+					raw({
+						display: "contents",
+						[`&:has([${FLUSH_ATTRIBUTE}])`]: { "--ui-app-content-padding": "0px" },
+					}),
+				]}
+			>
+				{shell}
+			</div>
 		);
 	};
 }

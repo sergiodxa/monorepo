@@ -29,10 +29,13 @@ import type { InboxView } from "~/resources/views/demo-apps/relay/views";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
-import { ConversationPlaceholder } from "~/resources/views/demo-apps/relay/conversation";
+import {
+	CONVERSATION_FRAME,
+	ConversationPlaceholder,
+} from "~/resources/views/demo-apps/relay/conversation";
 import { NOW, findContact, updatedAt } from "~/resources/views/demo-apps/relay/data";
 import { SPLIT_LABELS } from "~/resources/views/demo-apps/relay/labels";
-import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
+import { FLUSH_ATTRIBUTE } from "~/resources/views/demo-apps/relay/shell";
 import {
 	conversationPage,
 	conversationsIn,
@@ -52,8 +55,6 @@ namespace InboxScreen {
 		archived?: string;
 		/** The remembered list width, from {@link SPLIT_COOKIE}. */
 		layout?: SplitView.Layout;
-		/** The remembered collapsed sidebar. */
-		collapsed: boolean;
 	}
 }
 
@@ -262,44 +263,44 @@ function NoSelection(handle: Handle<{ view: InboxView }>) {
  */
 export function InboxScreen(handle: Handle<InboxScreen.Props>) {
 	return () => {
-		let { view, selected, archived, layout, collapsed } = handle.props;
+		let { view, selected, archived, layout } = handle.props;
 
 		return (
-			<RelayShell current={`view:${view.slug}`} collapsed={collapsed} crumb={view.label} flush>
-				<div
-					mix={[
-						raw({ blockSize: "calc(100dvh - var(--ui-app-header-height, 3.5rem))" }),
-						media(
-							"(min-width: 48rem)",
-							raw({
-								blockSize:
-									"calc(100dvh - var(--ui-app-header-height, 3.5rem) - 2 * var(--ui-app-inset-gap, 0.5rem) - 2px)",
-							}),
-						),
-					]}
-				>
-					<SplitView
-						cookiePath={demoAppCookiePath("relay")}
-						id="relay-inbox"
-						list={<ConversationList view={view} selected={selected} archived={archived} />}
-						detail={
-							selected ? (
-								<DemoAppFrame
-									app="relay"
-									part={conversationPart(view, selected)}
-									fallback={<ConversationPlaceholder conversation={selected} />}
-								/>
-							) : null
-						}
-						empty={<NoSelection view={view} />}
-						active={selected ? "detail" : "list"}
-						backHref={href(viewPage(view))}
-						layout={layout}
-						cookie={SPLIT_COOKIE}
-						labels={SPLIT_LABELS}
-					/>
-				</div>
-			</RelayShell>
+			<div
+				{...{ [FLUSH_ATTRIBUTE]: "" }}
+				mix={[
+					raw({ blockSize: "calc(100dvh - var(--ui-app-header-height, 3.5rem))" }),
+					media(
+						"(min-width: 48rem)",
+						raw({
+							blockSize:
+								"calc(100dvh - var(--ui-app-header-height, 3.5rem) - 2 * var(--ui-app-inset-gap, 0.5rem) - 2px)",
+						}),
+					),
+				]}
+			>
+				<SplitView
+					cookiePath={demoAppCookiePath("relay")}
+					id="relay-inbox"
+					list={<ConversationList view={view} selected={selected} archived={archived} />}
+					detail={
+						selected ? (
+							<DemoAppFrame
+								name={CONVERSATION_FRAME}
+								app="relay"
+								part={conversationPart(view, selected)}
+								fallback={<ConversationPlaceholder conversation={selected} />}
+							/>
+						) : null
+					}
+					empty={<NoSelection view={view} />}
+					active={selected ? "detail" : "list"}
+					backHref={href(viewPage(view))}
+					layout={layout}
+					cookie={SPLIT_COOKIE}
+					labels={SPLIT_LABELS}
+				/>
+			</div>
 		);
 	};
 }

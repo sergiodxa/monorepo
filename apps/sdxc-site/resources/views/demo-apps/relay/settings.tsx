@@ -16,7 +16,6 @@ import { SettingsLayout } from "@sdxc/ui/app/settings-layout";
 import { SettingsSection } from "@sdxc/ui/app/settings-section";
 
 import { SETTINGS_LABELS } from "~/resources/views/demo-apps/relay/labels";
-import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
 import { actionHref, href } from "~/resources/views/demo-apps/relay/views";
 
 /** The settings pages, by the path after `settings/`. */
@@ -27,7 +26,6 @@ export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 namespace SettingsScreen {
 	export interface Props {
-		collapsed: boolean;
 		/** The section shown; `null` is the settings index, which shows assignment beside the nav. */
 		page: SettingsPage | null;
 	}
@@ -159,39 +157,37 @@ function SignatureSettings() {
 /** Renders a settings page: the section nav beside the section, or the nav alone on a phone. */
 export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 	return () => {
-		let { collapsed, page } = handle.props;
+		let { page } = handle.props;
 		let shown = page ?? "assignment";
 
 		return (
-			<RelayShell current="settings" collapsed={collapsed} crumb="Settings">
-				<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-					<PageHeader title="Settings" description="For everyone on Fernway's support team." />
-					<SettingsLayout
-						sections={[
-							{
-								label: "Inbox",
-								items: [
-									{
-										href: href("settings/assignment"),
-										label: "Assignment",
-										current: shown === "assignment",
-									},
-									{
-										href: href("settings/signature"),
-										label: "Signature",
-										current: shown === "signature",
-									},
-								],
-							},
-						]}
-						page={page === null ? "index" : "section"}
-						backHref={href("settings")}
-						labels={SETTINGS_LABELS}
-					>
-						{shown === "signature" ? <SignatureSettings /> : <AssignmentSettings />}
-					</SettingsLayout>
-				</div>
-			</RelayShell>
+			<div mix={[vstack({ gap: 6, align: "stretch" })]}>
+				<PageHeader title="Settings" description="For everyone on Fernway's support team." />
+				<SettingsLayout
+					sections={[
+						{
+							label: "Inbox",
+							items: [
+								{
+									href: href("settings/assignment"),
+									label: "Assignment",
+									current: shown === "assignment",
+								},
+								{
+									href: href("settings/signature"),
+									label: "Signature",
+									current: shown === "signature",
+								},
+							],
+						},
+					]}
+					page={page === null ? "index" : "section"}
+					backHref={href("settings")}
+					labels={SETTINGS_LABELS}
+				>
+					{shown === "signature" ? <SignatureSettings /> : <AssignmentSettings />}
+				</SettingsLayout>
+			</div>
 		);
 	};
 }

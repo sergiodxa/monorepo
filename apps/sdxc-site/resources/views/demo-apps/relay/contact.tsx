@@ -32,13 +32,11 @@ import {
 	planOf,
 	updatedAt,
 } from "~/resources/views/demo-apps/relay/data";
-import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
 import { href } from "~/resources/views/demo-apps/relay/views";
 
 namespace ContactScreen {
 	export interface Props {
 		contact: Contact;
-		collapsed: boolean;
 	}
 }
 
@@ -139,67 +137,65 @@ export function ContactConversations(handle: Handle<{ contact: Contact; ghost?: 
 /** Renders the contact's page. */
 export function ContactScreen(handle: Handle<ContactScreen.Props>) {
 	return () => {
-		let { contact, collapsed } = handle.props;
+		let { contact } = handle.props;
 		let company = findCompany(contact.companyId);
 		let plan = planOf(contact);
 
 		return (
-			<RelayShell current="contacts" collapsed={collapsed} crumb="Contacts">
-				<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-					<PageHeader
-						crumbs={[{ label: "Contacts", href: href("contacts") }, { label: contact.name }]}
-						crumbsLabel="Breadcrumb"
-						parent={{ href: href("contacts"), label: "Contacts" }}
-						title={contact.name}
-						description={`${contact.title} at ${company?.name ?? "an unknown company"}`}
-						status={
-							<Badge variant="secondary" color={plan === "Enterprise" ? "brand" : "neutral"}>
-								{plan}
-							</Badge>
-						}
-						actions={
-							<LinkButton
-								href={href(`contacts?contact=${contact.id}`)}
-								variant="outline"
-								color="neutral"
-								size="sm"
-							>
-								Show in list
-							</LinkButton>
-						}
-					/>
-					<div
-						mix={[
-							raw({ display: "grid", gap: "2rem", gridTemplateColumns: "minmax(0, 1fr)" }),
-							atQuery(
-								"ui-app-content (min-width: 52rem)",
-								raw({ gridTemplateColumns: "minmax(0, 1fr) 18rem" }),
-							),
-						]}
-					>
-						<div mix={[vstack({ gap: 8, align: "stretch" })]}>
-							<Block title="Conversations">
-								<DemoAppFrame
-									app="relay"
-									part={`contacts/${contact.id}/conversations`}
-									fallback={<ContactConversations contact={contact} ghost />}
-								/>
-							</Block>
-							<Block title="Activity">
-								<DemoAppFrame
-									app="relay"
-									part={`contacts/${contact.id}/activity`}
-									fallback={<ContactActivity contact={contact} ghost />}
-								/>
-							</Block>
-						</div>
-						<aside aria-label="Details" mix={[vstack({ gap: 3, align: "stretch" })]}>
-							<h2 mix={[m(0), text("sm"), weight("semibold"), fg("neutral.emphasis")]}>Details</h2>
-							<ContactProperties contact={contact} />
-						</aside>
+			<div mix={[vstack({ gap: 6, align: "stretch" })]}>
+				<PageHeader
+					crumbs={[{ label: "Contacts", href: href("contacts") }, { label: contact.name }]}
+					crumbsLabel="Breadcrumb"
+					parent={{ href: href("contacts"), label: "Contacts" }}
+					title={contact.name}
+					description={`${contact.title} at ${company?.name ?? "an unknown company"}`}
+					status={
+						<Badge variant="secondary" color={plan === "Enterprise" ? "brand" : "neutral"}>
+							{plan}
+						</Badge>
+					}
+					actions={
+						<LinkButton
+							href={href(`contacts?contact=${contact.id}`)}
+							variant="outline"
+							color="neutral"
+							size="sm"
+						>
+							Show in list
+						</LinkButton>
+					}
+				/>
+				<div
+					mix={[
+						raw({ display: "grid", gap: "2rem", gridTemplateColumns: "minmax(0, 1fr)" }),
+						atQuery(
+							"ui-app-content (min-width: 52rem)",
+							raw({ gridTemplateColumns: "minmax(0, 1fr) 18rem" }),
+						),
+					]}
+				>
+					<div mix={[vstack({ gap: 8, align: "stretch" })]}>
+						<Block title="Conversations">
+							<DemoAppFrame
+								app="relay"
+								part={`contacts/${contact.id}/conversations`}
+								fallback={<ContactConversations contact={contact} ghost />}
+							/>
+						</Block>
+						<Block title="Activity">
+							<DemoAppFrame
+								app="relay"
+								part={`contacts/${contact.id}/activity`}
+								fallback={<ContactActivity contact={contact} ghost />}
+							/>
+						</Block>
 					</div>
+					<aside aria-label="Details" mix={[vstack({ gap: 3, align: "stretch" })]}>
+						<h2 mix={[m(0), text("sm"), weight("semibold"), fg("neutral.emphasis")]}>Details</h2>
+						<ContactProperties contact={contact} />
+					</aside>
 				</div>
-			</RelayShell>
+			</div>
 		);
 	};
 }

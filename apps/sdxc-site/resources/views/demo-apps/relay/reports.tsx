@@ -27,7 +27,6 @@ import {
 	DAILY_CONVERSATIONS,
 	PREVIOUS_DAILY_CONVERSATIONS,
 } from "~/resources/views/demo-apps/relay/data";
-import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
 import { conversationsIn, findView, href } from "~/resources/views/demo-apps/relay/views";
 
 /** The day each point of the chart stands for, oldest first, ending today. */
@@ -57,7 +56,6 @@ const BY_VIEW = [
 
 namespace ReportsScreen {
 	export interface Props {
-		collapsed: boolean;
 		/** Shows the chart's failure in its own region, as the demo's error link asks. */
 		failed: boolean;
 	}
@@ -266,70 +264,68 @@ export function ChartPlaceholder() {
 /** Renders the reports screen. */
 export function ReportsScreen(handle: Handle<ReportsScreen.Props>) {
 	return () => {
-		let { collapsed, failed } = handle.props;
+		let { failed } = handle.props;
 		let busiest = Math.max(...BY_VIEW.map((row) => row.conversations));
 
 		return (
-			<RelayShell current="reports" collapsed={collapsed} crumb="Reports">
-				<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-					<PageHeader title="Reports" description="The last 14 days, against the 14 before." />
-					<DemoAppFrame app="relay" part="reports/stats" fallback={<ReportStats ghost />} />
-					<section aria-labelledby="relay-volume" mix={[vstack({ gap: 3, align: "stretch" })]}>
-						<h2
-							id="relay-volume"
-							mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}
-						>
-							Conversations per day
-						</h2>
-						<DemoAppFrame
-							app="relay"
-							part={failed ? "reports/chart?state=error" : "reports/chart"}
-							fallback={<ChartPlaceholder />}
-						/>
-					</section>
-					<section aria-labelledby="relay-by-view" mix={[vstack({ gap: 3, align: "stretch" })]}>
-						<h2
-							id="relay-by-view"
-							mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}
-						>
-							By view
-						</h2>
-						<Table.Container>
-							<Table aria-labelledby="relay-by-view">
-								<Table.Header>
+			<div mix={[vstack({ gap: 6, align: "stretch" })]}>
+				<PageHeader title="Reports" description="The last 14 days, against the 14 before." />
+				<DemoAppFrame app="relay" part="reports/stats" fallback={<ReportStats ghost />} />
+				<section aria-labelledby="relay-volume" mix={[vstack({ gap: 3, align: "stretch" })]}>
+					<h2
+						id="relay-volume"
+						mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}
+					>
+						Conversations per day
+					</h2>
+					<DemoAppFrame
+						app="relay"
+						part={failed ? "reports/chart?state=error" : "reports/chart"}
+						fallback={<ChartPlaceholder />}
+					/>
+				</section>
+				<section aria-labelledby="relay-by-view" mix={[vstack({ gap: 3, align: "stretch" })]}>
+					<h2
+						id="relay-by-view"
+						mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}
+					>
+						By view
+					</h2>
+					<Table.Container>
+						<Table aria-labelledby="relay-by-view">
+							<Table.Header>
+								<Table.Row>
+									<Table.Column>View</Table.Column>
+									<Table.Column numeric>Conversations</Table.Column>
+									<Table.Column numeric>Median first response</Table.Column>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
+								{BY_VIEW.map((row) => (
 									<Table.Row>
-										<Table.Column>View</Table.Column>
-										<Table.Column numeric>Conversations</Table.Column>
-										<Table.Column numeric>Median first response</Table.Column>
+										<Table.Cell>
+											<Table.RowLink data-rmx-prefetch="intent" href={href(row.slug)}>
+												{findView(row.slug)?.label}
+											</Table.RowLink>
+										</Table.Cell>
+										<Table.BarCell
+											value={row.conversations}
+											max={busiest}
+											locale="en"
+											color="brand"
+										/>
+										<Table.NumberCell
+											value={row.firstResponse}
+											locale="en"
+											format={{ style: "unit", unit: "minute", unitDisplay: "short" }}
+										/>
 									</Table.Row>
-								</Table.Header>
-								<Table.Body>
-									{BY_VIEW.map((row) => (
-										<Table.Row>
-											<Table.Cell>
-												<Table.RowLink data-rmx-prefetch="intent" href={href(row.slug)}>
-													{findView(row.slug)?.label}
-												</Table.RowLink>
-											</Table.Cell>
-											<Table.BarCell
-												value={row.conversations}
-												max={busiest}
-												locale="en"
-												color="brand"
-											/>
-											<Table.NumberCell
-												value={row.firstResponse}
-												locale="en"
-												format={{ style: "unit", unit: "minute", unitDisplay: "short" }}
-											/>
-										</Table.Row>
-									))}
-								</Table.Body>
-							</Table>
-						</Table.Container>
-					</section>
-				</div>
-			</RelayShell>
+								))}
+							</Table.Body>
+						</Table>
+					</Table.Container>
+				</section>
+			</div>
 		);
 	};
 }

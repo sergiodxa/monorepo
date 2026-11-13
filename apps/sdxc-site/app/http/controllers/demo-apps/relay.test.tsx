@@ -45,6 +45,19 @@ async function html(page: string): Promise<string> {
 }
 
 /**
+ * Fetches a page as the browser runtime loads it into the `main` frame.
+ *
+ * @param page The page path, with its query string.
+ * @returns The response body.
+ */
+async function main(page: string, name = "main"): Promise<string> {
+	let response = await fetchApp(href(page), {
+		headers: { "x-remix-frame": "true", "x-remix-target": name },
+	});
+	return await response.text();
+}
+
+/**
  * Reads a table's column headers from rendered HTML.
  *
  * @param body The page's HTML.
@@ -62,10 +75,10 @@ describe("Relay triage", () => {
 
 		expect(response.status).toBe(303);
 		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
-			`${href("inbox/2044")}?toast=archived-2045`,
+			`${href("inbox/2044")}?archived=2045&toast=archived-2045`,
 		);
 
-		let body = await html("inbox/2044?toast=archived-2045");
+		let body = await html("inbox/2044?archived=2045&toast=archived-2045");
 		expect(body).toContain("Conversation archived");
 		expect(body).toContain("Undo");
 		expect(body).not.toContain(`href="${href("inbox/2045")}" data-split-view-item`);
@@ -75,7 +88,7 @@ describe("Relay triage", () => {
 	test("archiving the last conversation of a view returns to the one above it", async () => {
 		let response = await post("bugs/2045", { intent: "archive" });
 		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
-			`${href("bugs/2046")}?toast=archived-2045`,
+			`${href("bugs/2046")}?archived=2045&toast=archived-2045`,
 		);
 	});
 
@@ -223,5 +236,55 @@ describe("Relay frames", () => {
 		expect((await fetchApp(frame("contacts/nobody/sheet"))).status).toBe(404);
 		expect((await fetchApp(frame("contacts/maya-chen/nothing"))).status).toBe(404);
 		expect((await fetchApp(frame("reports/nothing"))).status).toBe(404);
+	});
+});
+
+describe("Relay main frame", () => {
+	test("each screen answers main alone, naming its title, sidebar row, crumb and address", async () => {
+		let inbox = await main("enterprise/2041");
+		expect(inbox).toContain('data-main-screen=""');
+		expect(inbox).toContain('data-nav="view:enterprise"');
+		expect(inbox).toContain('data-crumb="Enterprise"');
+		expect(inbox).toContain(`data-url="${href("enterprise/2041")}"`);
+		expect(inbox).toContain(frame("conversation/2041?view=enterprise"));
+		expect(inbox.match(/<h1\b/g)).toHaveLength(1);
+		expect(inbox).not.toContain("data-main-nav");
+
+		let contacts = await main("contacts?contact=priya-nair");
+		expect(contacts).toContain('data-nav="contacts"');
+		expect(contacts).toContain(`data-url="${href("contacts?contact=priya-nair")}"`);
+		expect(await main("settings/signature")).toContain('data-nav="settings"');
+		expect(await main("reports")).toContain('data-crumb="Reports"');
+	});
+
+	test("a post's redirect raises its toast in main and settles on the address without it", async () => {
+		let body = await main("inbox/2044?archived=2045&toast=archived-2045.0123abcd");
+		expect(body).toContain("data-main-toast=");
+		expect(body).toContain("Conversation archived");
+		expect(body).toContain(`data-url="${href("inbox/2044?archived=2045")}"`);
+		expect(body).not.toContain(`href="${href("inbox/2045")}" data-split-view-item`);
+	});
+
+	test("a reply or an assignment reloads the open conversation alone, with its toast", async () => {
+		let pane = await main("mine/2043?toast=assigned-mei.0123abcd", "relay-conversation");
+		expect(pane).toContain("Assigned to Mei");
+		expect(pane).toContain("data-main-toast=");
+		expect(pane).toContain(`action="${action("mine/2043")}"`);
+		expect(pane).not.toContain("data-split-view-item");
+		expect(pane).not.toContain("<h1");
+
+		let conversation = await (await fetchApp(frame("conversation/2043?view=mine"))).text();
+		expect(conversation).toMatch(/id="relay-reply"[^>]*data-rmx-target="relay-conversation"/);
+		expect(conversation).toMatch(/value="assign-mei"[^>]*data-rmx-target="relay-conversation"/);
+		expect(conversation).not.toMatch(/value="archive"[^>]*data-rmx-target/);
+	});
+
+	test("the whole page inlines main inside the shell, whose rows and crumb the browser updates", async () => {
+		let body = await html("inbox/2048");
+		expect(body).toContain('data-main-region=""');
+		expect(body).toContain('data-main-screen=""');
+		expect(body).toContain('data-main-crumb=""');
+		expect(body).toContain('data-main-nav="view:inbox"');
+		expect(body).toContain('data-main-nav="contacts"');
 	});
 });

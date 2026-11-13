@@ -68,6 +68,12 @@ function narrowHidden() {
 	return atQuery("ui-split-view (width < 40rem)", visuallyHidden());
 }
 
+/**
+ * The name the open conversation's frame mounts under. A reply or an assignment changes only
+ * the pane, so those posts reload this frame and the list keeps its scroll and selection.
+ */
+export const CONVERSATION_FRAME = "relay-conversation";
+
 /** The hidden form every triage button submits through, so a menu row is a plain submit. */
 const TRIAGE_FORM = "relay-triage";
 
@@ -212,6 +218,7 @@ export function ConversationToolbar(handle: Handle<ConversationPane.Props>) {
 								form={TRIAGE_FORM}
 								name="intent"
 								value={`assign-${teammate.id}`}
+								data-rmx-target={CONVERSATION_FRAME}
 								aria-current={conversation.assigneeId === teammate.id ? "true" : undefined}
 							>
 								<UserRoundIcon />
@@ -413,6 +420,7 @@ function ReplyComposer(handle: Handle<ConversationPane.Props>) {
 			<form
 				id="relay-reply"
 				method="post"
+				data-rmx-target={CONVERSATION_FRAME}
 				action={actionHref(conversationPage(view, conversation.id))}
 				mix={[
 					vstack({ gap: 2, align: "stretch" }),

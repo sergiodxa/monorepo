@@ -49,7 +49,6 @@ import {
 	SHEET_LABELS,
 	VIEW_OPTIONS_LABELS,
 } from "~/resources/views/demo-apps/relay/labels";
-import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
 import { href } from "~/resources/views/demo-apps/relay/views";
 
 /** The columns a person can show or hide, beside the name that always shows. */
@@ -84,7 +83,6 @@ export type ContactsState = "loading" | "first-run" | null;
 namespace ContactsScreen {
 	export interface Props {
 		url: URL;
-		collapsed: boolean;
 		state: ContactsState;
 	}
 }
@@ -587,7 +585,7 @@ function ContactsTable(handle: Handle<{ url: URL; query: ContactQuery; state: Co
  */
 export function ContactsScreen(handle: Handle<ContactsScreen.Props>) {
 	return () => {
-		let { url, collapsed, state } = handle.props;
+		let { url, state } = handle.props;
 		let query = readContactQuery(url);
 		let list = filterContacts(query);
 		let open = iife(() => {
@@ -596,7 +594,7 @@ export function ContactsScreen(handle: Handle<ContactsScreen.Props>) {
 		});
 
 		return (
-			<RelayShell current="contacts" collapsed={collapsed} crumb="Contacts">
+			<>
 				<div mix={[vstack({ gap: 4, align: "stretch" })]}>
 					<PageHeader
 						title="Contacts"
@@ -622,7 +620,7 @@ export function ContactsScreen(handle: Handle<ContactsScreen.Props>) {
 					)}
 				</div>
 				{open && state === null ? <ContactSheet contact={open} list={list} url={url} /> : null}
-			</RelayShell>
+			</>
 		);
 	};
 }

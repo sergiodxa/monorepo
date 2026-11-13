@@ -19,22 +19,29 @@ import { TOAST_UNDO_DURATION } from "@sdxc/ui/app/toast";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 
-import type {
-	DemoApp,
-	DemoAppRedirect,
-	DemoAppRequest,
-	DemoAppScreen,
-} from "~/resources/views/demo-apps";
+import type { DemoApp, DemoAppRedirect, DemoAppRequest } from "~/resources/views/demo-apps";
 import type { ContactsState } from "~/resources/views/demo-apps/relay/contacts";
+import type { ShellSection } from "~/resources/views/demo-apps/relay/shell";
 import type { InboxView } from "~/resources/views/demo-apps/relay/views";
 
+import { DEMO_APP_TOAST_PARAM, readToastParam } from "~/resources/views/demo-apps";
+import {
+	MAIN_FRAME,
+	MainFrame,
+	mainSource,
+	MainScreen,
+} from "~/resources/views/demo-apps/main-frame";
 import { ContactConversations, ContactScreen } from "~/resources/views/demo-apps/relay/contact";
 import {
 	ContactActivity,
 	ContactSheetBody,
 	ContactsScreen,
 } from "~/resources/views/demo-apps/relay/contacts";
-import { ConversationPane, SNOOZE_OPTIONS } from "~/resources/views/demo-apps/relay/conversation";
+import {
+	CONVERSATION_FRAME,
+	ConversationPane,
+	SNOOZE_OPTIONS,
+} from "~/resources/views/demo-apps/relay/conversation";
 import {
 	CONVERSATIONS,
 	TEAMMATES,
@@ -124,6 +131,12 @@ const SETTINGS_FORM = f.object({
 	autoReply: f.field(s.defaulted(s.string(), "")),
 });
 
+/**
+ * The query parameter an archive's redirect names the archived conversation in, so the list
+ * it lands on leaves that row out whether the whole page or only `main` renders it.
+ */
+const ARCHIVED_PARAM = "archived";
+
 /** Every toast a redirect can name; archiving a conversation offers Undo for that one. */
 const TOASTS: Record<string, Omit<Toast.Flash, "id">> = {
 	"reply-sent": { color: "success", title: "Reply sent" },
@@ -191,25 +204,45 @@ const SCREENS = [
 	"settings/signature",
 ];
 
+/** One Relay screen: its title and status, the sidebar row and crumb it names, and `main`. */
+interface RelayScreen {
+	title: string;
+	status?: number;
+	current: ShellSection;
+	crumb: string;
+	content: RemixNode;
+	/** The open conversation alone, which a reply or an assignment reloads in its own frame. */
+	pane?: RemixNode;
+}
+
 /** The app's own 404, inside the shell so the sidebar still leads somewhere. */
-function notFound(collapsed: boolean): DemoAppScreen {
+function notFound(): RelayScreen {
 	return {
 		title: "Page not found",
 		status: 404,
-		body: (
-			<RelayShell current="none" collapsed={collapsed} crumb="Not found">
-				<Empty icon={<CompassIcon />}>
-					<Empty.Title>Nothing lives at this address</Empty.Title>
-					<Empty.Description>
-						The conversation may have moved, or the link is mistyped. Your inbox is one click away.
-					</Empty.Description>
-					<Empty.Action>
-						<LinkButton href={href()}>Go to Inbox</LinkButton>
-					</Empty.Action>
-				</Empty>
-			</RelayShell>
+		current: "none",
+		crumb: "Not found",
+		content: (
+			<Empty icon={<CompassIcon />}>
+				<Empty.Title>Nothing lives at this address</Empty.Title>
+				<Empty.Description>
+					The conversation may have moved, or the link is mistyped. Your inbox is one click away.
+				</Empty.Description>
+				<Empty.Action>
+					<LinkButton href={href()}>Go to Inbox</LinkButton>
+				</Empty.Action>
+			</Empty>
 		),
 	};
+}
+
+/**
+ * The toast key a request's address names, without the redirect's one-time suffix, or
+ * `undefined` when it names none.
+ */
+function toastKey(url: URL): string | undefined {
+	let value = url.searchParams.get(DEMO_APP_TOAST_PARAM);
+	return value === null ? undefined : readToastParam(value).key;
 }
 
 /**
@@ -220,25 +253,18 @@ function inboxScreen(
 	view: InboxView,
 	conversationId: string | undefined,
 	request: DemoAppRequest,
-): DemoAppScreen | null {
-	let collapsed = readAppShellCookie(request.cookie, SHELL_COOKIE);
+): RelayScreen | null {
 	let layout = readSplitViewLayout(request.cookie, SPLIT_COOKIE);
 	let selected = conversationId === undefined ? null : (findConversation(conversationId) ?? null);
 	if (conversationId !== undefined && selected === null) return null;
-	let toast = request.url.searchParams.get("toast") ?? "";
-	let archived = toast.startsWith("archived-") ? toast.slice("archived-".length) : undefined;
+	let archived = request.url.searchParams.get(ARCHIVED_PARAM) ?? undefined;
 
 	return {
 		title: selected ? selected.subject : view.label,
-		body: (
-			<InboxScreen
-				view={view}
-				selected={selected}
-				archived={archived}
-				layout={layout}
-				collapsed={collapsed}
-			/>
-		),
+		current: `view:${view.slug}`,
+		crumb: view.label,
+		content: <InboxScreen view={view} selected={selected} archived={archived} layout={layout} />,
+		pane: selected ? <ConversationPane view={view} conversation={selected} /> : undefined,
 	};
 }
 
@@ -249,9 +275,8 @@ function contactsState(url: URL): ContactsState {
 }
 
 /** Answers a page path with its screen, or `null` when no screen lives there. */
-function route(request: DemoAppRequest): DemoAppScreen | null {
-	let { page, url, cookie } = request;
-	let collapsed = readAppShellCookie(cookie, SHELL_COOKIE);
+function findScreen(request: DemoAppRequest): RelayScreen | null {
+	let { page, url } = request;
 	let [first = "", second, ...rest] = page.split("/");
 	if (rest.length > 0) return null;
 
@@ -267,21 +292,28 @@ function route(request: DemoAppRequest): DemoAppScreen | null {
 		if (second === undefined) {
 			return {
 				title: "Contacts",
-				body: <ContactsScreen url={url} collapsed={collapsed} state={contactsState(url)} />,
+				current: "contacts",
+				crumb: "Contacts",
+				content: <ContactsScreen url={url} state={contactsState(url)} />,
 			};
 		}
 		let contact = findContact(second);
 		return contact
-			? { title: contact.name, body: <ContactScreen contact={contact} collapsed={collapsed} /> }
+			? {
+					title: contact.name,
+					current: "contacts",
+					crumb: "Contacts",
+					content: <ContactScreen contact={contact} />,
+				}
 			: null;
 	}
 
 	if (first === "reports" && second === undefined) {
 		return {
 			title: "Reports",
-			body: (
-				<ReportsScreen collapsed={collapsed} failed={url.searchParams.get("state") === "error"} />
-			),
+			current: "reports",
+			crumb: "Reports",
+			content: <ReportsScreen failed={url.searchParams.get("state") === "error"} />,
 		};
 	}
 
@@ -290,11 +322,18 @@ function route(request: DemoAppRequest): DemoAppScreen | null {
 		if (second !== undefined && settingsPage === undefined) return null;
 		return {
 			title: "Settings",
-			body: <SettingsScreen collapsed={collapsed} page={settingsPage ?? null} />,
+			current: "settings",
+			crumb: "Settings",
+			content: <SettingsScreen page={settingsPage ?? null} />,
 		};
 	}
 
 	return null;
+}
+
+/** The screen a page path names, or the app's 404 inside the shell. */
+function route(request: DemoAppRequest): RelayScreen {
+	return findScreen(request) ?? notFound();
 }
 
 /**
@@ -358,7 +397,10 @@ function submitTriage(
 	if (intent === "reply")
 		return body.trim() === "" ? { page: here } : { page: here, toast: "reply-sent" };
 	if (intent === "archive")
-		return { page: nextPage(view, conversationId), toast: `archived-${conversationId}` };
+		return {
+			page: `${nextPage(view, conversationId)}?${ARCHIVED_PARAM}=${conversationId}`,
+			toast: `archived-${conversationId}`,
+		};
 	if (intent === "unarchive") return { page: `inbox/${conversationId}`, toast: "restored" };
 	if (intent === "mark-unread") return { page: viewPage(view), toast: "marked-unread" };
 	if (intent.startsWith("snooze-"))
@@ -401,7 +443,38 @@ export default {
 	toasts: TOASTS,
 	frame: (part, request) => framePart(part, request.url),
 	render(request) {
-		return route(request) ?? notFound(readAppShellCookie(request.cookie, SHELL_COOKIE));
+		let screen = route(request);
+		return {
+			title: screen.title,
+			status: screen.status,
+			body: (
+				<RelayShell
+					current={screen.current}
+					collapsed={readAppShellCookie(request.cookie, SHELL_COOKIE)}
+					crumb={screen.crumb}
+				>
+					<MainFrame src={mainSource(request.url)} />
+				</RelayShell>
+			),
+		};
+	},
+	target(name, request) {
+		let screen = route(request);
+		let content = name === MAIN_FRAME ? screen.content : undefined;
+		if (name === CONVERSATION_FRAME) content = screen.pane;
+		if (content === undefined) return null;
+		let key = toastKey(request.url);
+		return (
+			<MainScreen
+				title={screen.title}
+				nav={screen.current}
+				crumb={screen.crumb}
+				url={request.url}
+				toast={key !== undefined && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined}
+			>
+				{content}
+			</MainScreen>
+		);
 	},
 	submit(page, form) {
 		let [first = "", second, ...rest] = page.split("/");
