@@ -7,6 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, test } from "vitest";
 
 import { readComponent } from "~/app/services/components";
@@ -230,6 +233,15 @@ function destinations(html: string): { method: string; url: string }[] {
 	return found;
 }
 
+/**
+ * Whether `pathname` names a file in the app's `public` folder, which the Worker's asset binding
+ * serves before the router sees the request, so a link to it answers in production.
+ */
+function isPublicFile(pathname: string): boolean {
+	let file = join(import.meta.dirname, "../../../public", decodeURIComponent(pathname));
+	return file.startsWith(join(import.meta.dirname, "../../../public/")) && existsSync(file);
+}
+
 describe("live example destinations", () => {
 	/**
 	 * A reader pressing a link or submitting a form inside an example stays on the site: each
@@ -246,6 +258,7 @@ describe("live example destinations", () => {
 				if (/^(#|data:|https?:|mailto:|tel:)/.test(url)) continue;
 				let component = src.split("/")[3] ?? "";
 				let target = new URL(url, `${ORIGIN}/api/ui/${component}`);
+				if (method === "GET" && target.origin === ORIGIN && isPublicFile(target.pathname)) continue;
 				let response =
 					target.origin === ORIGIN
 						? await fetchApp(`${target.pathname}${target.search}`, { method, redirect: "manual" })

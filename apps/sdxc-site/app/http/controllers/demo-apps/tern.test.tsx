@@ -231,7 +231,7 @@ describe("Tern's screens and frames", () => {
 
 describe("Tern's main frame", () => {
 	/** The headers the browser runtime sends for a navigation aimed at the main frame. */
-	const TO_MAIN = { "X-Remix-Frame": "true", "X-Remix-Target": "main" };
+	let toMain = { "X-Remix-Frame": "true", "X-Remix-Target": "main" };
 
 	test("a page inlines its pane in the main frame, so it reads without scripts", async () => {
 		let body = await (await fetchApp(href("c/flaky-test"))).text();
@@ -243,7 +243,7 @@ describe("Tern's main frame", () => {
 	});
 
 	test("a link aimed at the main frame answers the pane alone, top bar included", async () => {
-		let response = await fetchApp(href("c/flaky-test?model=dive"), { headers: TO_MAIN });
+		let response = await fetchApp(href("c/flaky-test?model=dive"), { headers: toMain });
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -257,7 +257,7 @@ describe("Tern's main frame", () => {
 
 	test("every link and form inside the pane is aimed at the main frame or opts out", async () => {
 		for (let page of ["c/debounce-search", "search", "projects/harbor-site", "settings/general"]) {
-			let body = await (await fetchApp(href(page), { headers: TO_MAIN })).text();
+			let body = await (await fetchApp(href(page), { headers: toMain })).text();
 			let tags = [...body.matchAll(/<(?:a|form)\s[^>]*>/g)].map((match) => match[0]);
 			let inApp = tags.filter(
 				(tag) =>
@@ -276,7 +276,7 @@ describe("Tern's main frame", () => {
 	test("a message posted at the main frame answers the pane with its reply to stream", async () => {
 		let response = await fetchApp(action("c/flaky-test"), {
 			method: "POST",
-			headers: TO_MAIN,
+			headers: toMain,
 			body: new URLSearchParams({ intent: "send", prompt: "Compare these two options in a table" }),
 		});
 		let body = await response.text();
@@ -289,7 +289,7 @@ describe("Tern's main frame", () => {
 	});
 
 	test("a shared chat owns no main frame, so a request aimed at it answers the whole page", async () => {
-		let body = await (await fetchApp(href("share/lisbon-offsite"), { headers: TO_MAIN })).text();
+		let body = await (await fetchApp(href("share/lisbon-offsite"), { headers: toMain })).text();
 		expect(body).toContain('name="robots"');
 	});
 });
