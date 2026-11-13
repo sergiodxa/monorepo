@@ -204,6 +204,7 @@ const CATALOGUE = [
 	{ slug: "contribution-graph", module: "app" },
 	{ slug: "contributor-wall", module: "landing" },
 	{ slug: "copy-button", module: "docs" },
+	{ slug: "countdown", module: "landing" },
 	{ slug: "crosshair", module: "landing" },
 	{ slug: "cta-group", module: "components" },
 	{ slug: "curriculum", module: "landing" },

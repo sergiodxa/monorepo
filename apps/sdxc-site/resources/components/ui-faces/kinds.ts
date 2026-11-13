@@ -65,6 +65,7 @@ export const FACE_KIND = {
 	"contribution-graph": "calendar",
 	"contributor-wall": "landing-logos",
 	"copy-button": "button-ghost",
+	countdown: "landing-stats",
 	crosshair: "landing-diagram",
 	"cta-group": "cta",
 	curriculum: "docs-steps",
