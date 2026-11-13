@@ -79,6 +79,7 @@ export const PACKAGES_WITHOUT_COMMAND_LINES: readonly string[] = [
 	"dates",
 	"digest-fields",
 	"duration",
+	"emoji",
 	"expression",
 	"feed",
 	"file-storage-r2",
