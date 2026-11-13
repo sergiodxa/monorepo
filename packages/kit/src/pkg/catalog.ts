@@ -77,6 +77,7 @@ export const PACKAGES_WITHOUT_COMMAND_LINES: readonly string[] = [
 	"data-table-sqlstorage",
 	"database-middleware",
 	"dates",
+	"diff",
 	"digest-fields",
 	"duration",
 	"expression",
