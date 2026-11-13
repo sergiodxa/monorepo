@@ -56,6 +56,9 @@ export namespace TypedTerminal {
 	/** Ink an output line prints in: a pass, a failure, or a quiet aside. */
 	export type Status = "ok" | "fail" | "muted";
 
+	/** Panel the session plays on: the dark terminal, or the page's own raised code card. */
+	export type Variant = "terminal" | "code";
+
 	/** One line of the session. */
 	export interface Line {
 		/** An `input` line types itself out; an `output` line fades in once typed lines finish. */
@@ -81,6 +84,12 @@ export namespace TypedTerminal {
 		title?: RemixNode;
 		/** Glyph before every input line, such as `$`; omit it for editor-style lines. */
 		prompt?: string;
+		/**
+		 * Panel the session plays on. `code` sets it on the raised code card in the page's
+		 * own scheme, for a session that reads as a document being written.
+		 * @default "terminal"
+		 */
+		variant?: Variant;
 		/** The session, in the order it plays. */
 		lines: readonly Line[];
 	}
@@ -106,7 +115,16 @@ export namespace TypedTerminal {
  */
 export function TypedTerminal(handle: Handle<TypedTerminal.Props>) {
 	return () => {
-		let { "aria-label": label, lines, mix, pauseLabel, prompt, title, ...rest } = handle.props;
+		let {
+			"aria-label": label,
+			lines,
+			mix,
+			pauseLabel,
+			prompt,
+			title,
+			variant = "terminal",
+			...rest
+		} = handle.props;
 		let schedule = scheduleFor(lines);
 		let nodes: RemixNode[] = [];
 		for (let [index, line] of lines.entries()) {
@@ -116,7 +134,13 @@ export function TypedTerminal(handle: Handle<TypedTerminal.Props>) {
 				line.kind === "input" ? (
 					<InputLine text={line.text} prompt={prompt} slot={slot} schedule={schedule} />
 				) : (
-					<OutputLine text={line.text} status={line.status} slot={slot} schedule={schedule} />
+					<OutputLine
+						text={line.text}
+						status={line.status}
+						variant={variant}
+						slot={slot}
+						schedule={schedule}
+					/>
 				),
 			);
 		}
@@ -133,7 +157,7 @@ export function TypedTerminal(handle: Handle<TypedTerminal.Props>) {
 					mix={[raw({ margin: "0", minInlineSize: "0" })]}
 				>
 					<CodeStage
-						variant="terminal"
+						variant={variant}
 						title={title}
 						actions={
 							<PauseToggle label={pauseLabel ?? "Pause the animation"} mix={[headerToggle()]} />
@@ -336,6 +360,7 @@ function InputLine(handle: Handle<InputLineProps>) {
 interface OutputLineProps {
 	text: string;
 	status?: TypedTerminal.Status;
+	variant: TypedTerminal.Variant;
 	slot: Slot;
 	schedule: Schedule;
 }
@@ -343,7 +368,7 @@ interface OutputLineProps {
 /** A line the session prints: it fades in at its slot in the status's ink. */
 function OutputLine(handle: Handle<OutputLineProps>) {
 	return () => {
-		let { schedule, slot, status, text } = handle.props;
+		let { schedule, slot, status, text, variant } = handle.props;
 		let name = frameName("output", schedule, slot);
 
 		return (
@@ -360,7 +385,7 @@ function OutputLine(handle: Handle<OutputLineProps>) {
 						[`${RESET_AT + 2}%`]: { opacity: "0" },
 						"100%": { opacity: "0" },
 					}),
-					raw({ color: statusInk(status) }),
+					raw({ color: statusInk(status, variant) }),
 					motionSafe(raw(loop(name, schedule, "linear"))),
 				]}
 			>
@@ -371,15 +396,17 @@ function OutputLine(handle: Handle<OutputLineProps>) {
 }
 
 /**
- * The ink for an output status. The terminal panel inverts the page's scheme, so a pass
- * or failure takes the palette step that reads on the panel rather than on the page.
+ * The ink for an output status. The terminal panel inverts the page's scheme, so there a
+ * pass or failure takes the palette step that reads on the panel; the code card follows
+ * the page's scheme and takes the step that reads on the page.
  */
-function statusInk(status: TypedTerminal.Status | undefined) {
+function statusInk(status: TypedTerminal.Status | undefined, variant: TypedTerminal.Variant) {
+	let [light, dark] = variant === "terminal" ? ["400", "700"] : ["700", "400"];
 	if (status === "ok") {
-		return "light-dark(var(--ui-color-success-400), var(--ui-color-success-700))";
+		return `light-dark(var(--ui-color-success-${light}), var(--ui-color-success-${dark}))`;
 	}
 	if (status === "fail") {
-		return "light-dark(var(--ui-color-danger-400), var(--ui-color-danger-700))";
+		return `light-dark(var(--ui-color-danger-${light}), var(--ui-color-danger-${dark}))`;
 	}
 	if (status === "muted") return "color-mix(in oklab, currentColor 65%, transparent)";
 	return "inherit";

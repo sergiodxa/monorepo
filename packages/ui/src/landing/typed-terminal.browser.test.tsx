@@ -203,4 +203,28 @@ describe("TypedTerminal", () => {
 		expect(getComputedStyle(output).opacity).toBe("1");
 		expect(getComputedStyle(output).animationName).toBe("none");
 	});
+
+	test("sets a code-card session in the page's scheme, its pass ink the page's step", () => {
+		let host = document.createElement("div");
+		document.body.appendChild(host);
+		mounted = render(
+			<TypedTerminal
+				aria-label="Notes written from a call"
+				variant="code"
+				lines={[
+					{ kind: "input", text: "Decided: refund window 14 days" },
+					{ kind: "output", text: "cites 02:18", status: "ok" },
+				]}
+			/>,
+			{ container: host },
+		);
+		let probe = document.createElement("span");
+		probe.style.color = "var(--ui-color-success-700)";
+		document.body.appendChild(probe);
+
+		let pre = host.querySelector("pre")!;
+		let output = host.querySelector('[data-kind="output"]')!;
+		expect(getComputedStyle(pre).color).not.toBe(getComputedStyle(document.body).backgroundColor);
+		expect(getComputedStyle(output).color).toBe(getComputedStyle(probe).color);
+	});
 });
