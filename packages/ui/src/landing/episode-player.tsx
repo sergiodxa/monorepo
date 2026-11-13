@@ -7,22 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type {
-	ElementProps,
-	EntryComponent,
-	Handle,
-	MixinFactory,
-	Props as TagProps,
-	RemixNode,
-} from "remix/component";
+import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { mergeMix, raw } from "@sdxc/u/general";
 import { hidden } from "@sdxc/u/layout";
 import { focusVisible, hover, when } from "@sdxc/u/state";
-import { clientEntry, createMixin } from "remix/component";
+import { clientEntry } from "remix/component";
 
 import { Heading } from "../components/heading.js";
+
+import { episodeSync } from "./mixins/episode-sync.js";
 
 /** Translucent ink the rules draw with, the page's hairline when it sets one. */
 const HAIRLINE = "var(--ui-landing-hairline, color-mix(in oklch, CanvasText 12%, transparent))";
@@ -63,14 +58,14 @@ export namespace EpisodePlayer {
 		chapters?: readonly Chapter[];
 		/** Transcript passages in playing order; the disclosure is left out when empty. */
 		transcript?: readonly Cue[];
-		/** Accessible name of the chapter list. @default "Chapters" */
-		chaptersLabel?: string;
-		/** Visible label of the transcript disclosure. @default "Transcript" */
-		transcriptLabel?: string;
+		/** Accessible name of the chapter list, such as "Chapters". */
+		chaptersLabel: string;
+		/** Visible label of the transcript disclosure, such as "Read the transcript". */
+		transcriptLabel: string;
 		/** The WebVTT captions file for the audio, which assistive technology can read out. */
 		captions: { src: string; srclang: string; label: string };
-		/** Text a browser without audio support shows in place of the player. */
-		fallback?: RemixNode;
+		/** Shown by a browser without audio support, such as a download link. */
+		fallback: RemixNode;
 		/** A line under the player, such as a credit or a download link. */
 		note?: RemixNode;
 	}
@@ -119,14 +114,14 @@ function timeLink() {
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the player.
  * @example
- * <EpisodePlayer src="/audio/63.mp3" captions={{ src: "/audio/63.vtt", srclang: "en", label: "English" }} title="No. 63" chapters={[{ start: 0, title: "Cold open" }]} />
+ * <EpisodePlayer src="/audio/63.mp3" captions={{ src: "/audio/63.vtt", srclang: "en", label: "English" }} title="No. 63" chaptersLabel="Chapters" transcriptLabel="Transcript" fallback={<a href="/audio/63.mp3">Download</a>} />
  */
 export function EpisodePlayer(handle: Handle<EpisodePlayer.Props>) {
 	return () => {
 		let {
 			captions,
 			chapters = [],
-			chaptersLabel = "Chapters",
+			chaptersLabel,
 			fallback,
 			meta,
 			mix,
@@ -134,7 +129,7 @@ export function EpisodePlayer(handle: Handle<EpisodePlayer.Props>) {
 			src,
 			title,
 			transcript = [],
-			transcriptLabel = "Transcript",
+			transcriptLabel,
 			type,
 			...rest
 		} = handle.props;
@@ -177,7 +172,7 @@ export function EpisodePlayer(handle: Handle<EpisodePlayer.Props>) {
 						srclang={captions.srclang}
 						label={captions.label}
 					/>
-					{fallback ?? <a href={src}>Download the episode</a>}
+					{fallback}
 				</audio>
 				<EpisodeSync />
 				{chapters.length > 0 ? (
@@ -284,75 +279,6 @@ export function EpisodePlayer(handle: Handle<EpisodePlayer.Props>) {
 			</div>
 		);
 	};
-}
-
-/**
- * Keeps an {@link EpisodePlayer}'s links and its audio in step: a plain click on a time
- * link seeks the player and plays, and as it plays the current chapter link and transcript
- * passage carry `aria-current="true"`. A modified click still opens the file itself.
- */
-const episodeSync: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
-	HTMLElement,
-	[],
-	ElementProps
->((handle) => {
-	let controller: AbortController | undefined;
-
-	handle.addEventListener("insert", (event) => {
-		controller?.abort();
-		let root = event.node.closest<HTMLElement>('[data-slot="episode-player"]');
-		let audio = root?.querySelector("audio");
-		if (!root || !audio) return;
-		let player = audio;
-		controller = new AbortController();
-		let { signal } = controller;
-
-		root.addEventListener(
-			"click",
-			(click) => {
-				if (click.defaultPrevented || click.button !== 0) return;
-				if (click.metaKey || click.ctrlKey || click.shiftKey || click.altKey) return;
-				let link = (click.target as Element | null)?.closest<HTMLElement>("a[data-start]");
-				if (!link) return;
-				click.preventDefault();
-				player.currentTime = Number(link.dataset.start);
-				void player.play().catch(() => undefined);
-				markCurrent(root, player.currentTime);
-			},
-			{ signal },
-		);
-		player.addEventListener("timeupdate", () => markCurrent(root, player.currentTime), {
-			signal,
-		});
-	});
-
-	handle.addEventListener("remove", () => {
-		controller?.abort();
-		controller = undefined;
-	});
-});
-
-/**
- * Marks the chapter link and the transcript passage playing at `time`: the last of each
- * whose start is at or before it. The attribute is written only when it changes.
- */
-function markCurrent(root: HTMLElement, time: number) {
-	mark(root.querySelectorAll<HTMLElement>('[data-slot="episode-player-chapters"] a'), time);
-	mark(root.querySelectorAll<HTMLElement>('[data-slot="episode-player-cue"]'), time);
-}
-
-/** Sets `aria-current` on the last element of a playing-order list that has started. */
-function mark(items: NodeListOf<HTMLElement>, time: number) {
-	let current: HTMLElement | undefined;
-	for (let item of items) {
-		if (Number(item.dataset.start ?? item.dataset.cue) <= time + 0.25) current = item;
-	}
-	for (let item of items) {
-		let isCurrent = item === current;
-		if (isCurrent === (item.getAttribute("aria-current") === "true")) continue;
-		if (isCurrent) item.setAttribute("aria-current", "true");
-		else item.removeAttribute("aria-current");
-	}
 }
 
 /**

@@ -130,6 +130,15 @@ const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
 			largeDiff: "a",
 		},
 	},
+	EpisodePlayer: {
+		src: "/a.mp3",
+		captions: { src: "/a.vtt", srclang: "en", label: "a" },
+		chaptersLabel: "a",
+		transcriptLabel: "a",
+		fallback: "a",
+		chapters: [{ start: 0, title: "a" }],
+		transcript: [{ start: 0, text: "a" }],
+	},
 	ReviewThread: {
 		comments: [{ avatar: "a", author: "a", body: "a", pending: true }],
 		replyAction: "/a",
