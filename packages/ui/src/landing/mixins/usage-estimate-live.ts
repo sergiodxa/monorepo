@@ -25,8 +25,8 @@ export namespace UsageEstimateLiveMixin {
 /**
  * Applied to an element inside a calculator's GET form: once the fields have been quiet for
  * `delay`, it reloads the bill for the form's query, and a submit reloads it at once in place
- * of a page load. After each reload the address takes the query through `replaceState`, so it
- * stays shareable and history gains no entry; a submit whose reload fails submits natively.
+ * of a page load. The newest request wins: only it moves the address, through `replaceState`
+ * so history gains no entry, and only its failure makes a submit fall back to a native one.
  *
  * @example <span hidden mix={[usageEstimateLive({ reload: (src) => frame.reload({ src }), delay: 250 })]} />
  */
@@ -68,15 +68,27 @@ function follow(
 	signal: AbortSignal,
 ): void {
 	let timer: ReturnType<typeof setTimeout> | undefined;
+	/** Counts requests, so only the newest one moves the address or falls back to a submit. */
+	let latest = 0;
 	signal.addEventListener("abort", () => clearTimeout(timer));
 
-	/** Reloads the bill for the form's query and moves the address to it once it has landed. */
+	/**
+	 * Reloads the bill for the form's query and moves the address to it once it has landed.
+	 * A request a newer one overtook settles without touching the address, and its failure
+	 * is swallowed, since the newer request owns the bill.
+	 */
 	let price = async () => {
+		let request = ++latest;
 		let options = current();
 		if (options === undefined) throw new Error("usageEstimateLive has no options");
 		let target = addressOf(form);
-		await options.reload(`${target.pathname}${target.search}`);
-		if (signal.aborted) return;
+		try {
+			await options.reload(`${target.pathname}${target.search}`);
+		} catch (error) {
+			if (request === latest) throw error;
+			return;
+		}
+		if (signal.aborted || request !== latest) return;
 		let { history, location } = form.ownerDocument.defaultView ?? window;
 		let next = `${target.pathname}${target.search}${location.hash}`;
 		if (next !== `${location.pathname}${location.search}${location.hash}`) {

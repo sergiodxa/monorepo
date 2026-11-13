@@ -1,7 +1,8 @@
 /**
  * Runs a live {@link UsageEstimate} the way a page serves it: rendered on the server with its
  * bill frame inlined, then hydrated. Typing re-prices the bill with one document load and no
- * history entry, and without script the form still submits natively by GET.
+ * history entry, the newest request wins over a slow older one, and without script the form
+ * still submits natively by GET.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,11 +28,14 @@ const PAGE = "/pricing-under-test";
 let runtime: AppRuntime | undefined;
 let requests: string[] = [];
 let startPath = "";
+/** Milliseconds the stand-in server holds its answer for a given `hours`, to make it slow. */
+let slow: Record<string, number> = {};
 
 afterEach(() => {
 	runtime?.dispose();
 	runtime = undefined;
 	requests = [];
+	slow = {};
 	document.body.replaceChildren();
 	history.replaceState(null, "", startPath);
 });
@@ -97,6 +101,8 @@ async function serve(hours: number, script: boolean) {
 		resolveFrame: async (src, options) => {
 			let url = new URL(src, location.origin);
 			requests.push(`${url.pathname}${url.search} ${options?.target ?? "top"}`);
+			let wait = slow[url.searchParams.get("hours") ?? ""] ?? 0;
+			if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
 			let body = await text(renderToStream(bill(url.href)));
 			return new Response(body, { headers: { "Content-Type": "text/html" } });
 		},
@@ -167,6 +173,40 @@ describe("UsageEstimate live", () => {
 		input.value = "5";
 		document.querySelector("form")!.requestSubmit();
 		await until(() => total() === "$1.80");
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("keeps the newest bill and address when an older answer arrives late", async () => {
+		await serve(40, true);
+		slow = { "10": 300 };
+		type("10");
+		await until(() => requests.length === 1);
+		type("20");
+		await until(() => total() === "$7.20");
+		await new Promise((resolve) => setTimeout(resolve, 400));
+		expect(requests.map((request) => request.split(" ")[0])).toEqual([
+			`${PAGE}?hours=10`,
+			`${PAGE}?hours=20`,
+		]);
+		expect(total()).toBe("$7.20");
+		expect(location.search).toBe("?hours=20");
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("never falls back to a page load for a submit a newer one overtook", async () => {
+		await serve(40, true);
+		slow = { "10": 300 };
+		let input = document.querySelector<HTMLInputElement>('input[name="hours"]')!;
+		let form = document.querySelector("form")!;
+		input.value = "10";
+		form.requestSubmit();
+		await until(() => requests.length === 1);
+		input.value = "20";
+		form.requestSubmit();
+		await until(() => total() === "$7.20");
+		await new Promise((resolve) => setTimeout(resolve, 400));
+		expect(total()).toBe("$7.20");
+		expect(location.search).toBe("?hours=20");
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 	});
 
