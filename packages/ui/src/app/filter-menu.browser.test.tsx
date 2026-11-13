@@ -456,7 +456,7 @@ describe("FilterMenu in a property row", () => {
 
 describe("FilterMenu with a long list", () => {
 	/** 2,000 branches, the kind of list a big repository's picker holds. */
-	const MANY: FilterMenu.Item[] = Array.from({ length: 2000 }, (_, index) => ({
+	let many: FilterMenu.Item[] = Array.from({ length: 2000 }, (_, index) => ({
 		value: `branch-${index}`,
 		label: `branch-${index}`,
 		href: `/tree/branch-${index}`,
@@ -469,7 +469,7 @@ describe("FilterMenu with a long list", () => {
 				id="many"
 				mode="navigate"
 				trigger="branch-1500"
-				groups={[{ label: "Branches", items: MANY }]}
+				groups={[{ label: "Branches", items: many }]}
 				labels={LABELS}
 			/>
 		);

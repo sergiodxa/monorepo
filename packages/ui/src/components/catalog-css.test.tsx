@@ -139,6 +139,14 @@ const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
 		chapters: [{ start: 0, title: "a" }],
 		transcript: [{ start: 0, text: "a" }],
 	},
+	CaseStudy: {
+		client: "a",
+		scene: "a",
+		sceneLabel: "a",
+		problem: "a",
+		built: "a",
+		result: { value: "a", label: "a" },
+	},
 	ReviewThread: {
 		comments: [{ avatar: "a", author: "a", body: "a", pending: true }],
 		replyAction: "/a",
