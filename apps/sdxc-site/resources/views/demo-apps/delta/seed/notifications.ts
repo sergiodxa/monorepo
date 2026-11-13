@@ -1,7 +1,7 @@
 /**
  * Delta's seeded notifications: why each one reached the signed-in person (a failed run, a
- * mention, a comment on their commit), who caused it and what they wrote. Each points at a
- * real commit or a seeded run, so its title and time come from git and the run it names.
+ * mention, an assignment, a review), who caused it and what they wrote. Each points at a real
+ * commit, a seeded run, issue or pull request, so its title and time come from what it names.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,14 +11,35 @@ import type { DeltaCommitMeta } from "~/app/services/delta/source";
 
 import type { Run } from "./actions";
 
+/** An issue or pull request as a notification reads it: its number, title, state and time. */
+export interface RecordSummary {
+	number: number;
+	title: string;
+	state: "open" | "closed" | "merged";
+	draft?: boolean;
+	/** ISO 8601, when it last changed. */
+	updatedAt: string;
+}
+
 /** Why a notification reached the person, which the inbox filters and labels by. */
-export type Reason = "ci_activity" | "mention" | "comment" | "author";
+export type Reason = "review" | "assign" | "mention" | "ci_activity" | "comment" | "author";
 
 /** The reasons in the order the filter lists them. */
-export const REASONS: readonly Reason[] = ["ci_activity", "mention", "comment", "author"];
+export const REASONS: readonly Reason[] = [
+	"review",
+	"assign",
+	"mention",
+	"ci_activity",
+	"comment",
+	"author",
+];
 
 /** What a notification is about. */
-type Subject = { kind: "run"; run: number } | { kind: "commit"; commit: number };
+type Subject =
+	| { kind: "run"; run: number }
+	| { kind: "commit"; commit: number }
+	| { kind: "issue"; number: number }
+	| { kind: "pull"; number: number };
 
 /** A notification as the seed writes it, before it meets the runs and the history. */
 interface NotificationSeed {
@@ -35,6 +56,34 @@ interface NotificationSeed {
 
 /** Every notification, newest subject first. */
 const NOTIFICATIONS: readonly NotificationSeed[] = [
+	{
+		id: "review-58",
+		reason: "review",
+		subject: { kind: "pull", number: 58 },
+		actor: "mara",
+		excerpt:
+			"The facets read well. One nit before I approve: the chip for no:assignee should say No assignee, not no:assignee.",
+		after: 35,
+		unread: true,
+	},
+	{
+		id: "assign-48",
+		reason: "assign",
+		subject: { kind: "issue", number: 48 },
+		actor: "ines",
+		after: 4,
+		unread: true,
+	},
+	{
+		id: "mention-42",
+		reason: "mention",
+		subject: { kind: "issue", number: 42 },
+		actor: "kenji",
+		excerpt:
+			"@sergiodxa histogram alignment would help here too: a moved block keeps its anchor, so the citation follows it.",
+		after: 20,
+		unread: false,
+	},
 	{
 		id: "ci-812",
 		reason: "ci_activity",
@@ -107,10 +156,12 @@ export interface Notification {
 	reason: Reason;
 	/** The run's or commit's title. */
 	title: string;
-	kind: "run" | "commit";
+	kind: "run" | "commit" | "issue" | "pull";
 	/** For a run, how it ended, which picks the icon. */
 	state?: Run["status"];
-	/** The run or commit it is about, by number or sha. */
+	/** For an issue or pull request, where it stands, which picks the icon. */
+	record?: { state: RecordSummary["state"]; draft: boolean };
+	/** The run, issue or pull request it is about by number, or the commit by sha. */
 	target: number | string;
 	repo: string;
 	actor: string;
@@ -123,17 +174,22 @@ export interface Notification {
 }
 
 /**
- * Every notification, each joined to the run or commit it names and timed after it; one whose
- * run or commit isn't in the build is left out.
+ * Every notification, each joined to the run, commit, issue or pull request it names and timed
+ * after it; one whose subject isn't there is left out.
  *
  * @param runs Every run, as Actions lists them.
  * @param commits The history, newest first.
  * @param now The request's time; no notification arrives after it.
+ * @param records The issues and pull requests as the visitor sees them.
  */
 export function buildNotifications(
 	runs: readonly Run[],
 	commits: readonly DeltaCommitMeta[],
 	now: number,
+	records: { issues: readonly RecordSummary[]; pulls: readonly RecordSummary[] } = {
+		issues: [],
+		pulls: [],
+	},
 ): Notification[] {
 	if (commits.length === 0) return [];
 	let built = NOTIFICATIONS.flatMap((seed): Notification[] => {
@@ -159,6 +215,23 @@ export function buildNotifications(
 					target: run.id,
 					label: `${run.workflow.name} #${run.id}`,
 					at: Math.min(now - 60_000, ended + seed.after * 60_000),
+				},
+			];
+		}
+		if (seed.subject.kind === "issue" || seed.subject.kind === "pull") {
+			let { kind, number } = seed.subject;
+			let list = kind === "issue" ? records.issues : records.pulls;
+			let record = list.find((candidate) => candidate.number === number);
+			if (record === undefined) return [];
+			return [
+				{
+					...common,
+					kind,
+					title: record.title,
+					record: { state: record.state, draft: record.draft ?? false },
+					target: number,
+					label: `#${number}`,
+					at: Math.min(now - 60_000, Date.parse(record.updatedAt) + seed.after * 60_000),
 				},
 			];
 		}

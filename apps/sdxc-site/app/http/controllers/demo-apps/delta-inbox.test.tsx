@@ -65,13 +65,15 @@ function rows(body: string): string[] {
 let history = await readHistory();
 
 describe("Delta's inbox", () => {
-	test("links each row to the run or the real commit it names", async () => {
+	test("links each row to the run, the real commit, the issue or the pull request it names", async () => {
 		let { body, status } = await page("notifications");
 
 		expect(status).toBe(200);
 		expect(rows(body).length).toBeGreaterThan(4);
 		expect(body).toContain(`href="${href("delta/actions/runs/812")}"`);
 		expect(body).toContain(`href="${href(`delta/commit/${history.commits[0]!.sha}`)}"`);
+		expect(body).toContain(`href="${href("delta/issues/48")}"`);
+		expect(body).toContain(`href="${href("delta/pull/58")}"`);
 		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
 	});
 
@@ -80,13 +82,13 @@ describe("Delta's inbox", () => {
 
 		expect(body).toMatch(/data-notification="ci-812" data-unread/);
 		expect(body).toContain("Unread. ");
-		expect(body).toContain("3 unread notifications.");
+		expect(body).toContain("5 unread notifications.");
 	});
 
 	test("says why each notification arrived, and filters by it", async () => {
 		let { body } = await page("notifications?reason=mention");
 
-		expect(rows(body)).toEqual(["mention-head", "mention-readme"]);
+		expect(rows(body).sort()).toEqual(["mention-42", "mention-head", "mention-readme"]);
 		expect(body).toContain("Mentioned");
 	});
 

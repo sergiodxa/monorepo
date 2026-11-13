@@ -32,13 +32,15 @@ import { SelectionBar } from "@sdxc/ui/app/selection-bar";
 import { DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
 
 import type { Notification, Reason } from "../seed/notifications";
+import type { RecordState } from "../states";
 
-import { actionHref, commitHref, runHref, shortSha } from "../data";
+import { actionHref, commitHref, issueHref, pullHref, runHref, shortSha } from "../data";
 import { InitialsTile } from "../glyphs";
 import { InboxKeys } from "../inbox-keys";
 import { COPY, INBOX_FILTER_LABELS, INBOX_SELECTION_LABELS } from "../labels";
 import { REASONS } from "../seed/notifications";
 import { nameOf } from "../seed/people";
+import { StateIcon as RecordIcon } from "../states";
 
 import { StateIcon } from "./ci-parts";
 
@@ -75,7 +77,10 @@ function inView(item: InboxItem, view: InboxView): boolean {
 
 /** The address of a notification's subject. */
 function subjectHref(item: InboxItem): string {
-	return item.kind === "run" ? runHref(Number(item.target)) : commitHref(String(item.target));
+	if (item.kind === "run") return runHref(Number(item.target));
+	if (item.kind === "issue") return issueHref(Number(item.target));
+	if (item.kind === "pull") return pullHref(Number(item.target));
+	return commitHref(String(item.target));
 }
 
 /** The line under a notification's title: who did what, in a few words. */
@@ -83,8 +88,21 @@ function activity(item: InboxItem): string {
 	let copy = COPY.inbox.activity;
 	if (item.kind === "run") return copy.run(item.label ?? "", item.state ?? "failure");
 	if (item.reason === "mention") return copy.mention(item.actor);
+	if (item.reason === "assign") return copy.assign(item.actor);
+	if (item.reason === "review") return copy.review(item.actor);
 	if (item.reason === "author") return copy.author(item.actor);
 	return copy.comment(item.actor);
+}
+
+/** The icon state an issue or pull request draws, from where it stands. */
+function recordState(
+	kind: "issue" | "pull",
+	record: NonNullable<InboxItem["record"]>,
+): RecordState {
+	if (kind === "issue") return record.state === "open" ? "open" : "completed";
+	if (record.state === "merged") return "merged";
+	if (record.state === "closed") return "pr-closed";
+	return record.draft ? "draft" : "pr-open";
 }
 
 /** The day group a time falls in, counted in whole UTC days back from `now`. */
@@ -124,6 +142,12 @@ function SubjectIcon(handle: Handle<{ item: InboxItem }>) {
 	return () => {
 		let { item } = handle.props;
 		if (item.kind === "run") return <StateIcon state={item.state ?? "failure"} />;
+		if (item.kind === "issue" || item.kind === "pull") {
+			let record = item.record ?? { state: "open", draft: false };
+			return (
+				<RecordIcon state={recordState(item.kind, record)} label={COPY.inbox.kinds[item.kind]} />
+			);
+		}
 		return (
 			<span
 				role="img"
@@ -144,7 +168,7 @@ function SubjectIcon(handle: Handle<{ item: InboxItem }>) {
 export function InboxRow(handle: Handle<InboxRow.Props>) {
 	return () => {
 		let { item, now, returnTo } = handle.props;
-		let reference = item.kind === "run" ? (item.label ?? "") : shortSha(String(item.target));
+		let reference = item.kind === "commit" ? shortSha(String(item.target)) : (item.label ?? "");
 		return (
 			<li
 				data-row=""

@@ -21,8 +21,11 @@ import { loadRuns } from "./ci";
 import { actionHref } from "./data";
 import { COPY } from "./labels";
 import { inboxCookie, readPrefs, undoCookie } from "./prefs";
+import { allPulls } from "./pull-records";
+import { allIssues, seedBase } from "./records";
 import { NotificationsScreen } from "./screens/notifications";
 import { buildNotifications } from "./seed/notifications";
+import { readState } from "./state";
 
 /** How long a toast offering Undo stays, long enough to reach for it. */
 const UNDO_DURATION = 8000;
@@ -47,10 +50,19 @@ interface Screen {
 	body: RemixNode;
 }
 
-/** Every notification as of `now`, joined to the runs and commits it names. */
-async function loadNotifications(now: number): Promise<Notification[]> {
-	let [{ runs }, history] = await Promise.all([loadRuns(now), readHistory()]);
-	return buildNotifications(runs, history.commits, now);
+/**
+ * Every notification as of `now`, joined to the runs, commits, issues and pull requests it
+ * names, the issues and pull requests as the visitor's own work left them.
+ */
+async function loadNotifications(now: number, cookie: string | null): Promise<Notification[]> {
+	let state = readState(cookie);
+	let [{ runs }, history, pulls] = await Promise.all([
+		loadRuns(now),
+		readHistory(),
+		allPulls(state, now),
+	]);
+	let issues = allIssues(state, seedBase(history.commits[0]?.date, now));
+	return buildNotifications(runs, history.commits, now, { issues, pulls });
 }
 
 /**
@@ -62,7 +74,7 @@ async function loadNotifications(now: number): Promise<Notification[]> {
  */
 export async function inboxItems(cookie: string | null, now: number): Promise<InboxItem[]> {
 	let prefs = readPrefs(cookie);
-	return (await loadNotifications(now)).map((notification) => {
+	return (await loadNotifications(now, cookie)).map((notification) => {
 		let flags = prefs.inbox.get(notification.id) ?? {};
 		let done = flags.done ?? false;
 		return {
@@ -94,7 +106,7 @@ function returnPage(form: FormData): string {
 
 /** The notification ids a post names, kept to the ones the seed holds. */
 async function readIds(values: FormDataEntryValue[]): Promise<string[]> {
-	let known = new Set((await loadNotifications(Date.now())).map((item) => item.id));
+	let known = new Set((await loadNotifications(Date.now(), null)).map((item) => item.id));
 	return [...new Set(values)].filter((id): id is string => typeof id === "string" && known.has(id));
 }
 
