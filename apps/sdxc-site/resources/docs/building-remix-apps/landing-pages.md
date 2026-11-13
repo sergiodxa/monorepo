@@ -5,11 +5,9 @@ section:
     title: Interface
     order: 4.5
 order: 2
-lastUpdated: 2026-11-10
+lastUpdated: 2026-11-13
 outcomes:
     - "How to stack a landing from hero, proof, feature, FAQ and closing bands"
-    - "How to frame product shots with ProductFrame, PhoneFrame and PhoneFan"
-    - "How to flip a split FeatureBand with mediaSide"
     - "How to give the bands your brand through the landing tokens"
     - "How to build a band of your own from the landing primitives"
 ---
@@ -484,6 +482,21 @@ The rest of the patterns cover bands most landings reach for sooner or later:
 - `LogoSentence`: customer marks set inline in one line of prose.
 - `FlowDiagram`: an animated run, a trigger and then each step passing along a rail, for a
   pipeline or a scheduled check shown in the product's own syntax.
+- `ContributorWall`: an open-source project's contributors as a mosaic of square tiles, ending
+  on one that counts everyone left out.
+- `Countdown`: the days, hours and minutes to a launch or an event, rendered from the request's
+  time; add `live` and map `@sdxc/ui/landing/countdown` to keep it ticking.
+- `PriceList`: a menu or price list, names joined to prices by dotted leaders, in as many
+  columns as the band holds.
+- `CaseStudy`: one client project as a full-bleed scene with the result it earned.
+- `ScrollScene`: a pinned stage that plays as the reader scrolls past it, with `sceneMotion()`
+  driving each part's keyframes, all in CSS.
+- `TypedTerminal`: a command or spec typing itself out; `variant="code"` plays it on the page's
+  own light code card.
+- `EpisodePlayer`: an audio episode with chapters and a transcript; see
+  [Play audio and video](/docs/building-remix-apps/audio-and-video).
+- `UsageEstimate`: a usage-pricing calculator that prices on the server; see
+  [Build a pricing calculator](/docs/building-remix-apps/pricing-calculator).
 
 So the bands on one page don't all share a shape, most of them come in more than one:
 
