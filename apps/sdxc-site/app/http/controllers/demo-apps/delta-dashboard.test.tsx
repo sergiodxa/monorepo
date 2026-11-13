@@ -77,6 +77,15 @@ describe("Delta's dashboard", () => {
 		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
 	});
 
+	test("sets each recent commit for its narrow column: sha and age, no copy button", async () => {
+		let body = await dashboard();
+		let recent = section(body, "delta-recent");
+
+		expect(recent).not.toContain('data-slot="delta-sha"');
+		expect(recent).toContain(history.commits[0]!.sha.slice(0, 7));
+		expect(section(body, "delta-repos")).toMatch(/\d+\+? commits</);
+	});
+
 	test("marks the repository archived, and offers Restore once it's deleted", async () => {
 		let archived = await dashboard(await post("delta/settings/archive"));
 		let deleted = await dashboard(

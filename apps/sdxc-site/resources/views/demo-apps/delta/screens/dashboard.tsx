@@ -331,7 +331,7 @@ function RepoCard(handle: Handle<RepoCard.Props>) {
 					]}
 				>
 					<span>{COPY.dashboard.files(files)}</span>
-					<span>{COPY.latest.commits(history.commits.length, history.capped)}</span>
+					<span>{COPY.dashboard.commits(history.commits.length, history.capped)}</span>
 					{latest === undefined ? null : (
 						<span>
 							{COPY.dashboard.updated} <RelativeTime date={latest.date} now={now} locale="en" />
@@ -576,7 +576,7 @@ export function DashboardScreen(handle: Handle<DashboardScreen.Props>) {
 										</div>
 										<CommitList label={copy.recent}>
 											{history.commits.slice(0, RECENT).map((commit) => (
-												<CommitRow commit={commit} now={now} scope="recent" />
+												<CommitRow commit={commit} now={now} scope="recent" compact />
 											))}
 										</CommitList>
 									</section>

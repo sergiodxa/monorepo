@@ -88,7 +88,7 @@ const TOKENS = {
 	"--ui-font-sans":
 		'-apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "Noto Sans", Helvetica, Arial, system-ui, sans-serif',
 	"--ui-font-mono":
-		'"SF Mono", ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace',
+		'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 	"--ui-radius-md": "0.25rem",
 	"--ui-radius-lg": "0.375rem",
 	"--ui-button-radius": "0.25rem",

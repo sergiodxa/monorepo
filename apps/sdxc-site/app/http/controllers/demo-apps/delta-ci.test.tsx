@@ -103,6 +103,12 @@ describe("Delta's run summary", () => {
 		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
 	});
 
+	test("keeps the workflow's path on one line in the summary, named whole on hover", async () => {
+		let { body } = await page("delta/actions/runs/804");
+
+		expect(body).toMatch(/title="\.github\/workflows\/deploy\.yml"[^>]*><bdi>/);
+	});
+
 	test("cites the real lines its findings are about", async () => {
 		let { body } = await page("delta/actions/runs/812");
 		let failure = anchors["ci-phone-scroll"];

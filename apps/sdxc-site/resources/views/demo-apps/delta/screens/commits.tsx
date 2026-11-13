@@ -13,7 +13,7 @@ import { GitCommitHorizontalIcon, GitBranchIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { font, tabularNums, text, weight } from "@sdxc/u/typography";
+import { font, lineClamp, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
 import { HeadingScope, LinkButton, RelativeTime } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 import { CopyButton } from "@sdxc/ui/docs/copy-button";
@@ -88,6 +88,11 @@ namespace CommitRow {
 		now: number;
 		/** Prefix for the row's copy target, unique per list on the page. */
 		scope: string;
+		/**
+		 * Sets the row for a narrow column: the subject in at most two lines, and the short sha
+		 * in the meta line in place of the copy button.
+		 */
+		compact?: boolean;
 	}
 }
 
@@ -97,7 +102,7 @@ namespace CommitRow {
  */
 export function CommitRow(handle: Handle<CommitRow.Props>) {
 	return () => {
-		let { commit, now, scope } = handle.props;
+		let { commit, compact, now, scope } = handle.props;
 		let coAuthors = "coAuthors" in commit ? commit.coAuthors : [];
 		let people = joinNames([commit.author, ...coAuthors], COPY.commits.and);
 		return (
@@ -119,6 +124,7 @@ export function CommitRow(handle: Handle<CommitRow.Props>) {
 					<a
 						href={commitHref(commit.sha)}
 						data-rmx-prefetch="intent"
+						title={compact ? commit.subject : undefined}
 						mix={[
 							text("sm"),
 							weight("semibold"),
@@ -128,6 +134,7 @@ export function CommitRow(handle: Handle<CommitRow.Props>) {
 								overflowWrap: "anywhere",
 								"&:hover": { textDecoration: "underline" },
 							}),
+							compact ? lineClamp(2) : null,
 						]}
 					>
 						{commit.subject}
@@ -146,13 +153,21 @@ export function CommitRow(handle: Handle<CommitRow.Props>) {
 								</span>
 							))}
 						</span>
-						<span mix={[raw({ minInlineSize: 0, overflowWrap: "anywhere" })]}>
-							<span mix={[weight("medium"), fg("neutral.emphasis")]}>{people}</span>{" "}
-							{COPY.commits.authored} <RelativeTime date={commit.date} now={now} locale="en" />
-						</span>
+						{compact ? (
+							<span mix={[raw({ minInlineSize: 0 }), truncate(), tabularNums()]}>
+								<span mix={[font("mono"), fg("neutral.emphasis")]}>{shortSha(commit.sha)}</span>
+								{" · "}
+								<RelativeTime date={commit.date} now={now} locale="en" />
+							</span>
+						) : (
+							<span mix={[raw({ minInlineSize: 0, overflowWrap: "anywhere" })]}>
+								<span mix={[weight("medium"), fg("neutral.emphasis")]}>{people}</span>{" "}
+								{COPY.commits.authored} <RelativeTime date={commit.date} now={now} locale="en" />
+							</span>
+						)}
 					</span>
 				</div>
-				<ShaButton sha={commit.sha} scope={scope} />
+				{compact ? null : <ShaButton sha={commit.sha} scope={scope} />}
 			</li>
 		);
 	};

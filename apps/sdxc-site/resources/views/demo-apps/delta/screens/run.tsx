@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 import { CircleXIcon, FileCodeIcon, PackageIcon, TriangleAlertIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { font, tabularNums, text, weight } from "@sdxc/u/typography";
+import { font, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
 import { Badge, HeadingScope, RelativeTime } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 import { LogViewer } from "@sdxc/ui/app/log-viewer";
@@ -149,8 +149,11 @@ function SummaryStats(handle: Handle<{ run: Run; now: number }>) {
 						{run.status === "in_progress" ? (
 							COPY.run.runningFor
 						) : (
-							<span mix={[font("mono"), raw({ overflowWrap: "anywhere" })]}>
-								{run.workflow.file}
+							<span
+								title={run.workflow.file}
+								mix={[font("mono"), truncate(), raw({ display: "block", direction: "rtl" })]}
+							>
+								<bdi>{run.workflow.file}</bdi>
 							</span>
 						)}
 					</StatCard.Footer>

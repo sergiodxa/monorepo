@@ -640,6 +640,8 @@ export const COPY = {
 		recent: "Recent commits",
 		all: "View all commits",
 		files: (count: number) => `${count} ${count === 1 ? "file" : "files"}`,
+		commits: (count: number, capped: boolean) =>
+			`${count}${capped ? "+" : ""} ${count === 1 ? "commit" : "commits"}`,
 		updated: "Updated",
 		nothing: "Nothing needs you right now.",
 		summary: (pulls: number, issues: number, runs: number) =>
