@@ -243,6 +243,27 @@ describe("MergeBox", () => {
 		expect(data.get("csrf")).toBe("token");
 	});
 
+	test("fills the button with the checks' success colour only when it can merge", () => {
+		let fill = (state: MergeBox.State) => {
+			let host = mount(
+				<MergeBox state={state} action="/merge" labels={LABELS} rows={READY_ROWS} />,
+			);
+			let submit = getComputedStyle(find(host, '[data-slot="merge-box-submit"]')).backgroundColor;
+			let met = getComputedStyle(
+				find(host, '[data-tone="success"] [data-slot="merge-box-icon"]'),
+			).backgroundColor;
+			host.remove();
+			return { submit, met };
+		};
+
+		let ready = fill("ready");
+		expect(ready.submit).toBe(ready.met);
+		for (let state of ["blocked", "conflicts"] as const) {
+			let { submit, met } = fill(state);
+			expect(submit, state).not.toBe(met);
+		}
+	});
+
 	for (let state of ["blocked", "conflicts"] as const) {
 		test(`keeps the button on screen when ${state}, disabled and described by its reason`, async () => {
 			let host = mount(
