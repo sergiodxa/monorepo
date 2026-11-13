@@ -81,7 +81,8 @@ namespace FilesPane {
 
 /**
  * Renders the pane: its title, the filter (a GET to the finder without script, narrowing the
- * tree as the visitor types with it) and the tree with keyboard navigation.
+ * tree as the visitor types with it, and saying so when nothing matches) and the tree with
+ * keyboard navigation.
  */
 export function FilesPane(handle: Handle<FilesPane.Props>) {
 	return () => {
@@ -101,6 +102,7 @@ export function FilesPane(handle: Handle<FilesPane.Props>) {
 				<Tree id={TREE_ID} aria-label={COPY.files.tree}>
 					<Tree.Navigation labels={TREE_LABELS} />
 					<TreeNodes nodes={nodes} current={current} />
+					<Tree.NoMatches>{COPY.find.none}</Tree.NoMatches>
 				</Tree>
 				<DeltaTreeSync tree={TREE_ID} pane={PANE_ID} />
 			</>

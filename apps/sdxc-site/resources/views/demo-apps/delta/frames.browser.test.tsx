@@ -16,7 +16,7 @@ import { http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";
 import { render } from "remix/component/test";
 import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 
 import { readHistory, readTree } from "~/app/services/delta/source";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
@@ -245,6 +245,20 @@ describe("Delta works like an app once its script runs", () => {
 		expect(folder.open).toBe(true);
 		expect(leaf(topLevel.path).getAttribute("aria-current")).toBe("page");
 		expect(leaf(nested.path).hasAttribute("aria-current")).toBe(false);
+	});
+
+	test("the tree's filter says no file matches when nothing does", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen(`delta/blob/main/${nested.path}`);
+		let field = root.querySelector<HTMLInputElement>(
+			'[data-slot="tree-filter"] input[type="search"]',
+		)!;
+		let note = root.querySelector<HTMLElement>("#delta-tree [data-tree-no-matches]")!;
+
+		expect(note.checkVisibility()).toBe(false);
+		await userEvent.type(field, "zzzz");
+		expect(note.checkVisibility()).toBe(true);
+		expect(note.textContent).toBe("No file matches");
 	});
 
 	test("one entry per file opened, and Back and Forward restore the address, screen and scroll", async () => {
