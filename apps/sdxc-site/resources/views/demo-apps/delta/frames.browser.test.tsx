@@ -521,6 +521,65 @@ describe("Delta's inbox", () => {
 	});
 });
 
+describe("Delta's issues list", () => {
+	test("a tab swaps only main and moves the address, and Back restores the list", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/issues");
+		interceptNavigations();
+		let sidebar = root.querySelector("#delta-sidebar")!;
+		let index = navigation.currentEntry!.index;
+		let closed = [...root.querySelectorAll<HTMLAnchorElement>('[data-slot="filter-bar"] a')].find(
+			(link) => link.textContent?.startsWith("Closed"),
+		)!;
+		closed.click();
+		await settle(() => root.querySelector('[data-issue="39"]') !== null);
+
+		expect(new URL(location.href).searchParams.get("q")).toBe("is:closed");
+		expect(navigation.currentEntry!.index).toBe(index + 1);
+		expect(root.querySelector('[data-issue="54"]')).toBeNull();
+		expect(root.querySelector("#delta-sidebar")).toBe(sidebar);
+
+		await navigation.back().finished;
+		await settle(() => root.querySelector('[data-issue="54"]') !== null);
+		expect(root.querySelector('[data-issue="39"]')).toBeNull();
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("the bulk bar closes the checked issues in place, adding no history entry", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/issues");
+		let entries = navigation.entries().length;
+		for (let number of ["54", "53"]) {
+			root.querySelector<HTMLInputElement>(`input[name="ids"][value="${number}"]`)!.click();
+		}
+		await settle(
+			() => root.querySelector('[data-slot="selection-bar"] button[value="close"]') !== null,
+		);
+		root
+			.querySelector<HTMLButtonElement>('[data-slot="selection-bar"] button[value="close"]')!
+			.click();
+		await settle(() => root.querySelector('[data-issue="54"]') === null);
+
+		expect(posted).toEqual(["delta/issues"]);
+		expect(root.querySelector('[data-issue="53"]')).toBeNull();
+		expect(navigation.entries().length).toBe(entries);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("each row links to its issue and posts its checkbox with the bulk form, without script", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/issues");
+		let row = root.querySelector<HTMLElement>('[data-issue="54"]')!;
+		let form = root.querySelector<HTMLFormElement>("#delta-issues-bulk")!;
+
+		expect(row.querySelector<HTMLAnchorElement>("a[data-row-link]")!.pathname).toBe(
+			`${ROOT}/delta/issues/54`,
+		);
+		expect(row.querySelector<HTMLInputElement>('input[name="ids"]')!.form).toBe(form);
+		expect(form.method).toBe("post");
+	});
+});
+
 describe("Delta's issue", () => {
 	test("a comment posts through main and redraws in place, adding no history entry", async () => {
 		await page.viewport(1280, 800);

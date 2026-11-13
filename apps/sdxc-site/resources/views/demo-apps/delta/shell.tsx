@@ -11,6 +11,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import {
 	BookOpenIcon,
+	CircleDotIcon,
 	CirclePlayIcon,
 	CodeIcon,
 	GitCommitHorizontalIcon,
@@ -123,6 +124,13 @@ interface RepoTabEntry {
  */
 const REPO_TABS: RepoTabEntry[] = [
 	{ tab: "code", page: "", label: COPY.tabs.code, icon: <CodeIcon />, shortcut: "g c" },
+	{
+		tab: "issues",
+		page: "issues",
+		label: COPY.tabs.issues,
+		icon: <CircleDotIcon />,
+		shortcut: "g i",
+	},
 	{
 		tab: "commits",
 		page: `commits/${DELTA_BRANCH}`,

@@ -19,19 +19,24 @@ import { readAnchors, readHistory, readTree } from "~/app/services/delta/source"
 import type { DeltaRoute } from "./data";
 import type { CiteContext } from "./markup";
 
-import { issueHref, parsePage } from "./data";
+import { issueHref, issuesHref, parsePage } from "./data";
 import { COPY } from "./labels";
 import { allIssues, findIssue, seedBase } from "./records";
 import { IssueScreen } from "./screens/issue";
+import { IssuesScreen } from "./screens/issues";
 import { LABELS, MILESTONES } from "./seed/issues";
-import { PEOPLE } from "./seed/people";
+import { ME, PEOPLE } from "./seed/people";
 import { clearCookies, commentsCookie, editOf, readState, recordCookie } from "./state";
 
 /** The repository's name as titles and the top bar write it. */
 const REPO_NAME = `${COPY.org}/${COPY.repo}`;
 
 /** The toasts these screens' forms name. */
-export const TRACKER_TOASTS: Record<string, Omit<Toast.Flash, "id">> = {};
+export const TRACKER_TOASTS: Record<string, Omit<Toast.Flash, "id">> = {
+	"issues-close": { title: "Issues closed" },
+	"issues-reopen": { title: "Issues reopened" },
+	"issues-assign-me": { title: "Issues assigned to you" },
+};
 
 /** A screen as Delta's router draws it. */
 interface Screen {
@@ -97,6 +102,21 @@ export async function trackerScreen(
 ): Promise<Screen | null> {
 	let state = readState(request.cookie);
 	let base = await readBase(shared.now);
+	if (target.screen === "issues") {
+		return {
+			title: `${COPY.issues.title} · ${REPO_NAME}`,
+			nav: "repo",
+			crumb: `${REPO_NAME} › ${COPY.issues.title}`,
+			body: (
+				<IssuesScreen
+					issues={allIssues(state, base)}
+					url={request.url}
+					now={shared.now}
+					commits={shared.commits}
+				/>
+			),
+		};
+	}
 	if (target.screen === "issue") {
 		let issue = findIssue(target.number, state, base);
 		if (issue === undefined) return null;
@@ -110,6 +130,7 @@ export async function trackerScreen(
 					context={await citeContext()}
 					now={shared.now}
 					commits={shared.commits}
+					listHref={issuesHref()}
 				/>
 			),
 		};
@@ -187,6 +208,30 @@ function submitIssue(
 }
 
 /**
+ * Answers the issues list's bulk bar: the same change to every checked issue, then the list
+ * as it was, with one toast for all of them.
+ */
+function submitBulk(form: FormData, request: DemoAppRequest): DemoAppRedirect | null {
+	let intent = field(form, "intent");
+	if (intent !== "close" && intent !== "reopen" && intent !== "assign-me") return null;
+	let state = readState(request.cookie);
+	let numbers = fields(form, "ids").map(Number);
+	let issues = allIssues(state, 0).filter((issue) => numbers.includes(issue.number));
+	let back = backTo("delta/issues", request.url);
+	if (issues.length === 0) return { page: back };
+	let cookies = issues.map((issue) => {
+		let edit = editOf(state, issue.number);
+		if (intent === "close") edit.state = "closed";
+		if (intent === "reopen") edit.state = "open";
+		if (intent === "assign-me" && !issue.assignees.includes(ME)) {
+			edit.assignees = [...issue.assignees, ME];
+		}
+		return recordCookie(issue.number, edit);
+	});
+	return { page: back, toast: `issues-${intent}`, cookies };
+}
+
+/**
  * Answers a post on one of these screens, or `null` for a page they don't own; Reset clears
  * every cookie the visitor's work is kept in.
  *
@@ -202,5 +247,6 @@ export function submitTracker(
 	if (page === "reset") return { page: "", toast: "reset", cookies: clearCookies(request.cookie) };
 	let target = parsePage(page);
 	if (target?.screen === "issue") return submitIssue(target.number, form, request);
+	if (target?.screen === "issues" && form.has("bulk")) return submitBulk(form, request);
 	return null;
 }

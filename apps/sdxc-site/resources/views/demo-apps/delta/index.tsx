@@ -147,6 +147,10 @@ const SCREENS = [
 	"delta/find/main",
 	"delta/find/main?q=shell",
 	"delta/commits/main",
+	"delta/issues",
+	"delta/issues?q=is%3Aclosed",
+	"delta/issues?q=is%3Aopen+label%3Abug&sort=comments",
+	"delta/issues?q=zzz",
 	"delta/issues/42",
 	"delta/actions",
 	"delta/actions?status=failure",
@@ -306,6 +310,7 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 		case "actions":
 		case "run":
 			return (await ciScreen(target, request, { commits: count, now })) ?? notFound();
+		case "issues":
 		case "issue":
 			return (await trackerScreen(target, request, { commits: count, now })) ?? notFound();
 		case "commit": {

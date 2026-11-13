@@ -253,6 +253,59 @@ async function pageWith(path: string, cookie: string): Promise<string> {
 	return (await fetchApp(href(path), { headers: { Cookie: cookie } })).text();
 }
 
+describe("Delta's issues list", () => {
+	/** The issue numbers a list page shows, in order. */
+	function numbers(body: string): number[] {
+		return [...body.matchAll(/data-issue="(\d+)"/g)].map(([, number]) => Number(number));
+	}
+
+	test("shows open issues by default, writing the query into its field", async () => {
+		let { body, status } = await page("delta/issues");
+
+		expect(status).toBe(200);
+		expect(body).toContain('value="is:open"');
+		expect(numbers(body)).toContain(54);
+		expect(numbers(body)).not.toContain(39);
+	});
+
+	test("reads GitHub's grammar: state, labels, authors and free words", async () => {
+		expect(numbers((await page("delta/issues?q=is%3Aclosed")).body)).toEqual([39, 37, 34, 31]);
+		let bugs = numbers((await page("delta/issues?q=is%3Aopen+label%3Abug")).body);
+		expect(bugs.length).toBeGreaterThan(0);
+		expect(bugs).not.toContain(52);
+		expect(numbers((await page("delta/issues?q=is%3Aopen+author%3Akenji")).body)).toEqual([54, 49]);
+		expect(numbers((await page("delta/issues?q=avatar")).body)).toEqual([53, 51]);
+	});
+
+	test("narrows by a facet in the address, and counts each tab", async () => {
+		let { body } = await page("delta/issues?q=is%3Aopen&label=diff");
+
+		expect(numbers(body)).toEqual([49, 48]);
+		expect(body).toMatch(/Closed[\s\S]{0,400}?>0</);
+	});
+
+	test("says nothing matches, offering to clear the filters", async () => {
+		let { body } = await page("delta/issues?q=zzzz");
+
+		expect(body).toContain("No issues match");
+		expect(body).toContain("Clear filters");
+	});
+
+	test("the bulk bar closes every checked issue and comes back with one toast", async () => {
+		let response = await post("delta/issues?q=is%3Aopen", {
+			bulk: "1",
+			intent: "close",
+			ids: ["54", "53"],
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toMatch(/issues\?q=is%3Aopen&toast=issues-close\./);
+		let body = await pageWith("delta/issues", cookiesOf(response));
+		expect(numbers(body)).not.toContain(54);
+		expect(numbers(body)).not.toContain(53);
+	});
+});
+
 describe("Delta's issue", () => {
 	test("opens with its body, its timeline and a citation of real lines", async () => {
 		let { body, status } = await page("delta/issues/42");

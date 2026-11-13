@@ -13,12 +13,11 @@ import type { CodeView } from "@sdxc/ui/app/code-view";
 import type { CommandPalette } from "@sdxc/ui/app/command-palette";
 import type { Diff } from "@sdxc/ui/app/diff";
 import type { FilterBar } from "@sdxc/ui/app/filter-bar";
-import type { FilterBar } from "@sdxc/ui/app/filter-bar";
 import type { FilterMenu } from "@sdxc/ui/app/filter-menu";
 import type { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
-import type { LogViewer } from "@sdxc/ui/app/log-viewer";
 import type { SaveStatusProps } from "@sdxc/ui/app/save-status";
 import type { SelectionBar } from "@sdxc/ui/app/selection-bar";
+import type { LogViewer } from "@sdxc/ui/app/log-viewer";
 import type { Tree } from "@sdxc/ui/app/tree";
 
 /** The shell's landmark, skip link, phone menu and collapse toggle. */
