@@ -29,6 +29,12 @@ import {
 export const LESSON_CLIP = "/demos/video/lesson.webm";
 
 /**
+ * The same length in H.264 for browsers without WebM. An MP4 carries no alpha, so it sits on
+ * a solid ground the colour of the wheel frame's backdrop.
+ */
+export const LESSON_CLIP_MP4 = "/demos/video/lesson.mp4";
+
+/**
  * A one-pixel transparent GIF as the poster, so Chrome paints nothing over the drawn frame
  * before playback instead of its grey placeholder.
  */
@@ -100,6 +106,7 @@ export function LessonPlayer() {
 						</div>
 					</VideoPlayer.Frame>
 					<VideoPlayer.Source src={LESSON_CLIP} type="video/webm" label="1080p" badge="HD" />
+					<VideoPlayer.Source src={LESSON_CLIP_MP4} type="video/mp4" />
 					<VideoPlayer.Controls label="Lesson controls">
 						<VideoPlayer.Progress label="Seek" />
 						<VideoPlayer.Play label="Play" pauseLabel="Pause" />

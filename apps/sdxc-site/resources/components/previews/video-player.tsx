@@ -15,6 +15,7 @@ const CODE = `<VideoPlayer duration={703} chapters={chapters} transcript={transc
 	<VideoPlayer.Screen label="Centering 3 kg" captionsLabel="English" chaptersLabel="Chapters">
 		<VideoPlayer.Source src="/lesson-2160.webm" type="video/webm" label="2160p" badge="4K" />
 		<VideoPlayer.Source src="/lesson-1080.webm" type="video/webm" label="1080p" badge="HD" />
+		<VideoPlayer.Source src="/lesson.mp4" type="video/mp4" />
 		<VideoPlayer.Controls label="Video controls">
 			<VideoPlayer.Progress label="Seek" />
 			<VideoPlayer.Play label="Play" pauseLabel="Pause" />
@@ -45,6 +46,12 @@ const CODE = `<VideoPlayer duration={703} chapters={chapters} transcript={transc
 
 /** A transparent clip as long as the lesson, so every control works over the drawn frame. */
 const CLIP = "/demos/video/lesson.webm";
+
+/**
+ * The same length in H.264 for browsers without WebM, on a solid ground the colour of the
+ * drawn frame's backdrop, since an MP4 carries no alpha.
+ */
+const CLIP_MP4 = "/demos/video/lesson.mp4";
 
 /** The lesson's chapters. */
 const CHAPTERS: VideoPlayer.Chapter[] = [
@@ -92,6 +99,7 @@ export default {
 					</VideoPlayer.Frame>
 					<VideoPlayer.Source src={`${CLIP}?q=2160`} type="video/webm" label="2160p" badge="4K" />
 					<VideoPlayer.Source src={`${CLIP}?q=1080`} type="video/webm" label="1080p" badge="HD" />
+					<VideoPlayer.Source src={CLIP_MP4} type="video/mp4" />
 					<VideoPlayer.Controls label="Video controls">
 						<VideoPlayer.Progress label="Seek" />
 						<VideoPlayer.Play label="Play" pauseLabel="Pause" />
