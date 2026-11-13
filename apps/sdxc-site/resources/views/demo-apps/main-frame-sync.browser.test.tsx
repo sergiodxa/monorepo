@@ -110,6 +110,15 @@ describe("MainFrameSync after a swap", () => {
 		await vi.waitFor(() => expect(document.activeElement?.textContent).toBe("Beta"));
 	});
 
+	test("keeps focus on the control the visitor used when only the query changes", async () => {
+		link("Beta").focus();
+		let screen = document.querySelector<HTMLElement>("[data-main-screen]")!;
+		screen.dataset.url = "/demo/apps/demo/alpha?sort=name";
+
+		await new Promise((resolve) => setTimeout(resolve, 200));
+		expect(document.activeElement).toBe(link("Beta"));
+	});
+
 	test("announces the new screen in a live region it owns", async () => {
 		swapTo("Beta", "beta");
 

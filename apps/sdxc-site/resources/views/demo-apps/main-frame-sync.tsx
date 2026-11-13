@@ -40,6 +40,7 @@ export const MainFrameSync = clientEntry(
 		let lastUrl = "";
 		let suffix = "";
 		let pendingFocus: string | null = null;
+		let samePath = false;
 		let scrolls = new Map<string, number>();
 		let lastNavigation: string | null = null;
 
@@ -144,8 +145,9 @@ export const MainFrameSync = clientEntry(
 		/**
 		 * Brings the shell in line with the screen now in `main`: its title, the nav item it
 		 * marks and the address a post's redirect landed on, every time it runs, so a runtime
-		 * that restores the page's own title afterwards is corrected again. Focus and the
-		 * announcement wait for the swap to settle, once per new screen; each toast shows once.
+		 * that restores the page's own title afterwards is corrected again. Once a swap settles,
+		 * focus moves to the new heading for a new path, or when the focused control is gone, and
+		 * stays put for a filter or sort on the same path; each toast shows once.
 		 */
 		function sync(cause: "swap" | "settled" | "action" | "initial") {
 			let screen = document.querySelector<HTMLElement>("[data-main-region] [data-main-screen]");
@@ -176,6 +178,7 @@ export const MainFrameSync = clientEntry(
 				pageToaster().add(toast, { duration: toast.duration });
 			}
 			if (url !== lastUrl) {
+				samePath = url.split("?")[0] === lastUrl.split("?")[0];
 				lastUrl = url;
 				if (cause === "initial") return;
 				pendingFocus = url;
@@ -183,7 +186,10 @@ export const MainFrameSync = clientEntry(
 			let settling = cause === "swap" && globalThis.navigation?.transition !== null;
 			if (settling || pendingFocus !== url) return;
 			pendingFocus = null;
-			if (cause !== "action" || !screen.contains(document.activeElement)) {
+			let focusKept =
+				document.activeElement !== document.body && document.activeElement?.isConnected;
+			let moveFocus = cause === "action" ? !screen.contains(document.activeElement) : !samePath;
+			if (moveFocus || !focusKept) {
 				let heading = screen.querySelector<HTMLElement>("h1");
 				if (heading !== null) {
 					heading.tabIndex = -1;
