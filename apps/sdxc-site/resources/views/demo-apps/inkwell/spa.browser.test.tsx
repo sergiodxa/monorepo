@@ -81,6 +81,27 @@ describe("Inkwell as a single-page app", () => {
 		expect(mounted.requests.at(-1)).toBe("POST /demo/apps/inkwell/settings/general main");
 	});
 
+	test("keeps focus on the page when a bulk action closes the selection bar it was in", async () => {
+		mounted = await mountApp(inkwell, "inkwell", "posts");
+		let row = document.querySelector<HTMLInputElement>('input[type="checkbox"][form="posts-bulk"]');
+		row?.click();
+		let publish = document.querySelector<HTMLButtonElement>(
+			'button[form="posts-bulk"][value="publish"]',
+		);
+		await vi.waitFor(() => expect(publish?.checkVisibility()).toBe(true));
+		publish?.focus();
+
+		press(publish);
+		await vi.waitFor(() =>
+			expect(document.querySelector('[data-slot="toast-item"]')?.textContent).toContain(
+				"published",
+			),
+		);
+
+		await vi.waitFor(() => expect(document.activeElement).not.toBe(document.body));
+		expect(document.activeElement?.checkVisibility()).toBe(true);
+	});
+
 	test("goes back to the previous screen without loading a document", async () => {
 		mounted = await mountApp(inkwell, "inkwell", "posts");
 		let marker = shell();

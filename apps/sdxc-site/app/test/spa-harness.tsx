@@ -9,6 +9,7 @@
 
 import type { AppRuntime, RemixNode } from "remix/component";
 
+import { pageToaster } from "@sdxc/ui/app/toast";
 import { Toasts } from "@sdxc/ui/app/toasts";
 import { run } from "remix/component";
 import { renderToStream } from "remix/component/server";
@@ -185,6 +186,7 @@ export async function mountApp(app: DemoApp, slug: string, page: string): Promis
 		requests,
 		dispose: () => {
 			runtime.dispose();
+			pageToaster().dispose();
 			document.body?.replaceChildren();
 		},
 	};

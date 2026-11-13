@@ -44,6 +44,11 @@ export const MainFrameSync = clientEntry(
 		let scrolls = new Map<string, number>();
 		let lastNavigation: string | null = null;
 		let leftPath = "";
+		/**
+		 * The form and button of the last post, kept until the next navigation: a reload can
+		 * settle before the frame swaps, so focus is restored again once the swap lands.
+		 */
+		let posted: { form: HTMLFormElement; submitter: HTMLElement | null } | null = null;
 
 		/**
 		 * The element the main area scrolls in: the nearest scrolling ancestor of the region,
@@ -156,25 +161,27 @@ export const MainFrameSync = clientEntry(
 			void frame
 				.reload({ src: action, method: "post", encType: form.enctype, body })
 				.then(() => {
+					posted = { form, submitter: submitter instanceof HTMLElement ? submitter : null };
 					sync("action");
-					restoreFocus(form, submitter);
+					restoreFocus(form, posted.submitter);
 				})
 				.catch(() => form.submit());
 		}
 
 		/**
 		 * Puts focus back after a post redrew the control the visitor used: on the element with
-		 * the submitter's id, else on the form, else on the screen's heading.
+		 * the submitter's id, else on the form, else on the screen's heading. A target the post
+		 * left hidden, such as a selection bar that closes with its selection, is passed over.
 		 */
 		function restoreFocus(form: HTMLFormElement, submitter: HTMLElement | null) {
 			if (document.activeElement !== document.body && document.activeElement?.isConnected) return;
 			let byId = (element: Element | null) =>
 				element?.id ? document.getElementById(element.id) : null;
-			let target = byId(submitter) ?? (form.isConnected ? form : byId(form));
-			if (target instanceof HTMLElement) {
+			for (let target of [byId(submitter), form.isConnected ? form : byId(form)]) {
+				if (!(target instanceof HTMLElement) || !target.checkVisibility()) continue;
 				if (target === form) target.tabIndex = -1;
 				target.focus({ preventScroll: true });
-				return;
+				if (document.activeElement === target) return;
 			}
 			let screen = document.querySelector<HTMLElement>("[data-main-region] [data-main-screen]");
 			if (screen !== null) focusHeading(screen);
@@ -295,6 +302,7 @@ export const MainFrameSync = clientEntry(
 					pending = false;
 					let screen = region.querySelector<HTMLElement>("[data-main-screen]");
 					if (screen !== null) sync("swap");
+					if (posted !== null) restoreFocus(posted.form, posted.submitter);
 				});
 			});
 			observer.observe(region, {
@@ -304,6 +312,19 @@ export const MainFrameSync = clientEntry(
 				attributeFilter: ["data-url"],
 			});
 			signal.addEventListener("abort", () => observer.disconnect());
+			document.addEventListener(
+				"focusout",
+				(event) => {
+					let left = event.target;
+					if (posted === null || !(left instanceof HTMLElement)) return;
+					let { form, submitter } = posted;
+					setTimeout(() => {
+						if (left.isConnected && left.checkVisibility()) return;
+						restoreFocus(form, submitter);
+					});
+				},
+				{ signal, capture: true },
+			);
 			globalThis.navigation?.addEventListener(
 				"navigate",
 				(event) => {
@@ -311,6 +332,7 @@ export const MainFrameSync = clientEntry(
 					if (key !== undefined) scrolls.set(key, scroller().scrollTop);
 					leftPath = location.pathname;
 					lastNavigation = event.navigationType;
+					posted = null;
 				},
 				{ signal },
 			);

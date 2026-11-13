@@ -69,13 +69,17 @@ describe("Pulse as a single-page app", () => {
 		let marker = shell();
 		let start = navigation.currentEntry?.index ?? 0;
 
-		await press(document.querySelector('form[action$="/pause"] button'));
+		let button = document.querySelector<HTMLButtonElement>('form[action$="/pause"] button');
+		button?.focus();
+		await press(button);
 		await vi.waitFor(() =>
 			expect(document.querySelector('[data-slot="toast-item"]')?.textContent).toContain(
 				"Service paused",
 			),
 		);
 
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(document.activeElement).not.toBe(document.body);
 		expect(shell()).toBe(marker);
 		expect(navigation.currentEntry?.index ?? 0).toBe(start);
 		expect(mounted.requests.at(-1)).toMatch(/^POST \/demo\/apps\/pulse\/services\/.+\/pause main$/);
