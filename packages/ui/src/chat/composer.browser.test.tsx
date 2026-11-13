@@ -182,6 +182,34 @@ describe("ComposerSubmit", () => {
 		await vi.waitFor(() => expect(input.value).toBe(""));
 	});
 
+	test("a message a script posts itself is read first, and the field empties after", async () => {
+		let mounted = render(
+			<Composer method="post" action={`${location.pathname}?sent`} enctype="multipart/form-data">
+				<Composer.Input name="prompt" aria-label="Message" />
+				<Composer.Toolbar>
+					<ComposerSubmit labels={{ send: "Send", stop: "Stop" }} />
+				</Composer.Toolbar>
+			</Composer>,
+		);
+		let input = mounted.container.querySelector("textarea")!;
+		let read: FormDataEntryValue | null = null;
+		let takeOver = (event: SubmitEvent) => {
+			event.preventDefault();
+			read = new FormData(event.target as HTMLFormElement).get("prompt");
+		};
+		document.addEventListener("submit", takeOver);
+		onTestFinished(() => {
+			document.removeEventListener("submit", takeOver);
+			mounted.cleanup();
+		});
+
+		input.value = "Hello";
+		input.form!.requestSubmit();
+
+		expect(read).toBe("Hello");
+		await vi.waitFor(() => expect(input.value).toBe(""));
+	});
+
 	test("turns into Stop while the reply streams, and Stop freezes it", async () => {
 		let { root, cleanup } = mountReply();
 		onTestFinished(cleanup);

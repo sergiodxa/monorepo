@@ -18,15 +18,23 @@ import { COMPOSER_INPUT_SLOT } from "../composer.js";
 import { STREAM_PENDING_ATTRIBUTE, collapseStream, revealStream } from "./reveal-stream.js";
 
 /**
- * Empties the field once the submission it belongs to has been read. With the Navigation API,
- * a navigation's form data is taken when its `navigate` event fires, which for a multipart
- * form comes a task after `submit`, so the field empties after that event.
+ * Empties the field once the submission it belongs to has been read. A script that takes the
+ * submission over (`preventDefault` in a later `submit` listener) reads it during `submit`, so
+ * the field empties a task later. A navigation's form data is taken when its `navigate` event
+ * fires, which for a multipart form comes a task after `submit`, so it empties after that.
  */
-function clearAfterSubmit(input: HTMLTextAreaElement, signal: AbortSignal) {
+function clearAfterSubmit(event: SubmitEvent, input: HTMLTextAreaElement, signal: AbortSignal) {
 	let clear = () => setTimeout(() => (input.value = ""));
 	let navigation = input.ownerDocument.defaultView?.navigation;
 	if (navigation === undefined) return clear();
-	navigation.addEventListener("navigate", clear, { once: true, signal });
+	let controller = new AbortController();
+	signal.addEventListener("abort", () => controller.abort(), { once: true });
+	navigation.addEventListener("navigate", clear, { once: true, signal: controller.signal });
+	setTimeout(() => {
+		if (!event.defaultPrevented) return;
+		controller.abort();
+		input.value = "";
+	});
 }
 
 /** The slot of the button that stops a streaming reply, inside the mixin's host. */
@@ -117,7 +125,7 @@ export const composerSend: MixinFactory<HTMLElement, [options: ComposerSendOptio
 			"submit",
 			(event) => {
 				if (event.defaultPrevented || !input) return;
-				clearAfterSubmit(input, signal);
+				clearAfterSubmit(event, input, signal);
 			},
 			{ signal },
 		);
