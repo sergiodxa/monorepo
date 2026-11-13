@@ -17,7 +17,7 @@ import {
 } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
-import { HeadingScope, LinkButton } from "@sdxc/ui";
+import { HeadingScope, LabelChip, LinkButton } from "@sdxc/ui";
 import { clearFiltersHref, paramValues, setParamHref } from "@sdxc/ui/app";
 import { Empty } from "@sdxc/ui/app/empty";
 import { FilterBar } from "@sdxc/ui/app/filter-bar";
@@ -51,7 +51,7 @@ import {
 	priorityRank,
 } from "./data";
 import { IssueDetail } from "./detail";
-import { LabelChip, PersonTile, PriorityIcon, ProjectGlyph, StatusIcon } from "./glyphs";
+import { PersonTile, PriorityIcon, ProjectGlyph, StatusIcon } from "./glyphs";
 import { FILTER_LABELS, SELECTION_LABELS, SPLIT_LABELS, VIEW_LABELS } from "./labels";
 import { ListKeys } from "./list-keys";
 import { CairnShell, type ShellSection } from "./shell";
@@ -443,7 +443,11 @@ function IssueRow(
 						>
 							{issue.labels.map((id) => {
 								let label = findLabel(id);
-								return label ? <LabelChip label={label} /> : null;
+								return label ? (
+									<LabelChip variant="dot" color={label.color}>
+										{label.name}
+									</LabelChip>
+								) : null;
 							})}
 						</span>
 						{project ? (

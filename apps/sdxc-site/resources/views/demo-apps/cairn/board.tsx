@@ -11,7 +11,7 @@ import type { Handle } from "remix/component";
 
 import { EllipsisIcon, PlusIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
-import { Button, Menu } from "@sdxc/ui";
+import { Button, LabelChip, Menu } from "@sdxc/ui";
 import { setParamHref } from "@sdxc/ui/app";
 import { Board, boardMoveFormId } from "@sdxc/ui/app/board";
 import { DetailSheet } from "@sdxc/ui/app/detail-sheet";
@@ -24,7 +24,7 @@ import type { IssueView, VisitorState } from "./state";
 
 import { STATUSES, STATUS_NAMES, editHref, findLabel, findPerson, href } from "./data";
 import { IssueDetail } from "./detail";
-import { LabelChip, PersonTile, PriorityIcon, StatusIcon } from "./glyphs";
+import { PersonTile, PriorityIcon, StatusIcon } from "./glyphs";
 import { SHEET_LABELS } from "./labels";
 import { frameSrc } from "./list";
 import { CREATE_ID, CairnShell } from "./shell";
@@ -164,7 +164,11 @@ function IssueCard(handle: Handle<{ issue: IssueView; team: Team; url: URL; page
 						<PriorityIcon priority={issue.priority} label />
 						{issue.labels.slice(0, 2).map((id) => {
 							let label = findLabel(id);
-							return label ? <LabelChip label={label} /> : null;
+							return label ? (
+								<LabelChip variant="dot" color={label.color}>
+									{label.name}
+								</LabelChip>
+							) : null;
 						})}
 						<span mix={[raw({ flex: "1 1 auto" })]} />
 						{issue.estimate === undefined ? null : (

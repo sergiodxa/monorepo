@@ -114,6 +114,7 @@ export const FACE_KIND = {
 	keyboard: "keyboard",
 	"keyboard-help": "keyboard",
 	label: "label",
+	"label-chip": "badge",
 	"landing-header": "landing-header",
 	"landing-hero": "landing-hero",
 	"landing-section": "landing-feature",

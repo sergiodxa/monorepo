@@ -27,6 +27,7 @@ import {
 	Button,
 	Header,
 	Keyboard,
+	LabelChip,
 	Menu,
 	PropertyList,
 	RelativeTime,
@@ -57,7 +58,7 @@ import {
 	href,
 	isClosed,
 } from "./data";
-import { LabelChip, PersonTile, PriorityIcon, ProjectGlyph, StatusIcon } from "./glyphs";
+import { PersonTile, PriorityIcon, ProjectGlyph, StatusIcon } from "./glyphs";
 import { SAVE_LABELS } from "./labels";
 import { SavingSignal } from "./saving-signal";
 import { SAVED_WINDOW_MS, allIssues } from "./state";
@@ -275,7 +276,11 @@ function Properties(handle: Handle<{ issue: IssueView }>) {
 						<span mix={[raw({ display: "flex", flexWrap: "wrap", gap: "0.25rem" })]}>
 							{issue.labels.map((id) => {
 								let label = findLabel(id);
-								return label ? <LabelChip label={label} /> : null;
+								return label ? (
+									<LabelChip variant="dot" color={label.color}>
+										{label.name}
+									</LabelChip>
+								) : null;
 							})}
 						</span>
 					)}

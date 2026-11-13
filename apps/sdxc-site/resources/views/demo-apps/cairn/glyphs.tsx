@@ -1,6 +1,6 @@
 /**
  * Cairn's small drawings: the mark, a glyph per workflow state that fills as work advances,
- * priority bars, square initials tiles and label chips, so a row's state reads at a glance
+ * priority bars and square initials tiles, so a row's state reads at a glance
  * in the same shapes on the list, the board, the menus and the roadmap.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -13,7 +13,7 @@ import { iife } from "@sdxc/iife";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
 
-import type { Label, Person, PriorityId, StatusId } from "./data";
+import type { Person, PriorityId, StatusId } from "./data";
 
 import { PRIORITY_NAMES, STATUS_NAMES } from "./data";
 
@@ -232,46 +232,6 @@ export function PersonTile(
 				]}
 			>
 				<span aria-hidden="true">{person.initials}</span>
-			</span>
-		);
-	};
-}
-
-/** A label as a quiet outlined chip with its coloured dot. */
-export function LabelChip(handle: Handle<{ label: Label }>) {
-	return () => {
-		let { label } = handle.props;
-		return (
-			<span
-				mix={[
-					raw({
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "0.3125rem",
-						blockSize: "1.25rem",
-						paddingInline: "0.4375rem",
-						boxSizing: "border-box",
-						border: "1px solid var(--ui-neutral-border)",
-						borderRadius: "999px",
-						fontSize: "0.75rem",
-						lineHeight: "1rem",
-						color: "var(--ui-neutral-fg)",
-						whiteSpace: "nowrap",
-					}),
-				]}
-			>
-				<span
-					aria-hidden="true"
-					mix={[
-						raw({
-							inlineSize: "0.5rem",
-							blockSize: "0.5rem",
-							borderRadius: "999px",
-							backgroundColor: label.color,
-						}),
-					]}
-				/>
-				{label.name}
 			</span>
 		);
 	};

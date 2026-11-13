@@ -253,6 +253,7 @@ const CATALOGUE = [
 	{ slug: "keyboard", module: "components" },
 	{ slug: "keyboard-help", module: "app" },
 	{ slug: "label", module: "components" },
+	{ slug: "label-chip", module: "components" },
 	{ slug: "landing-header", module: "landing" },
 	{ slug: "landing-hero", module: "landing" },
 	{ slug: "landing-section", module: "landing" },
@@ -375,6 +376,15 @@ const OVERRIDES: Record<string, Shape[]> = {
 	"link-button": windowScene([
 		{ kind: "rect", x: 44, y: 46, w: 72, h: 20, r: 10, tone: "surface", ring: true },
 		txt("Open docs", 80, 59, 8, "ink", { align: "center", font: "semibold" }),
+	]),
+	"label-chip": windowScene([
+		{ kind: "rect", x: 34, y: 38, w: 36, h: 14, r: 7, tone: "accent" },
+		txt("bug", 52, 48, 7, "surface", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 74, y: 38, w: 52, h: 14, r: 7, tone: "label" },
+		txt("feature", 100, 48, 7, "ink", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 50, y: 58, w: 60, h: 14, r: 7, tone: "surface", ring: true },
+		{ kind: "circle", cx: 59, cy: 65, r: 3, tone: "accent" },
+		txt("design", 66, 68, 7, "ink", { font: "semibold" }),
 	]),
 	badge: windowScene([
 		{ kind: "rect", x: 58, y: 44, w: 44, h: 16, r: 8, tone: "label" },
