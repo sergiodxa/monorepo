@@ -59,6 +59,7 @@ export const FACE_KIND = {
 	"composer-submit": "button",
 	confirm: "dialog",
 	"context-menu": "menu",
+	"contributor-wall": "landing-logos",
 	"copy-button": "button-ghost",
 	crosshair: "landing-diagram",
 	"cta-group": "cta",

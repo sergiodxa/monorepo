@@ -198,6 +198,7 @@ const CATALOGUE = [
 	{ slug: "composer-submit", module: "chat" },
 	{ slug: "confirm", module: "components" },
 	{ slug: "context-menu", module: "app" },
+	{ slug: "contributor-wall", module: "landing" },
 	{ slug: "copy-button", module: "docs" },
 	{ slug: "crosshair", module: "landing" },
 	{ slug: "cta-group", module: "components" },
