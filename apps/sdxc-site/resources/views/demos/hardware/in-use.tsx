@@ -1,7 +1,7 @@
 /**
- * The third scroll scene: Strata Two at work on a desk, typing a commit message one key at
- * a time as the reader scrolls, under the screen line that fills in with it. At rest the
- * line is complete and every key is up.
+ * The third scroll scene: Strata Two at work on a desk, seen close and tilted back, typing a
+ * commit message one key at a time as the reader scrolls, under the screen line that fills
+ * in with it. At rest the line is complete and every key is up.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -70,6 +70,39 @@ function typing() {
 			),
 		),
 	]);
+}
+
+/**
+ * The window the board is seen through: a close crop of its middle, where every key of
+ * {@link LINE} sits down to the space bar, fading out at every edge, so the scene reads as the
+ * board on a desk and leaves the whole flat board to the band where the reader plays it.
+ */
+function deskCrop() {
+	return raw({
+		inlineSize: "100%",
+		aspectRatio: "2.5 / 1",
+		position: "relative",
+		overflow: "hidden",
+		maskImage:
+			"linear-gradient(to right, transparent, black 14%, black 86%, transparent), linear-gradient(to top, transparent, black 8%, black 72%, transparent)",
+		maskComposite: "intersect",
+	});
+}
+
+/**
+ * The board tilted back as if it lay on the desk and drawn half again as wide, so the crop
+ * lands on the letter rows; the typing rules on this wrapper still reach every key.
+ */
+function deskTilt() {
+	return raw({
+		position: "absolute",
+		insetInlineStart: "50%",
+		insetBlockEnd: "-6%",
+		inlineSize: "150%",
+		translate: "-50% 0",
+		transform: "perspective(1400px) rotateX(30deg)",
+		transformOrigin: "50% 100%",
+	});
 }
 
 /** A status reading on the desk beside the board. */
@@ -173,8 +206,10 @@ export default function InUseScene() {
 							/>
 						</span>
 					</div>
-					<div mix={[typing(), raw({ inlineSize: "100%" })]}>
-						<Keyboard id="in-use" pressable />
+					<div mix={[deskCrop()]}>
+						<div mix={[typing(), deskTilt()]}>
+							<Keyboard id="in-use" pressable />
+						</div>
 					</div>
 					<dl
 						aria-hidden="true"
