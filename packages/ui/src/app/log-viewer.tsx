@@ -548,6 +548,7 @@ export function LogViewer(handle: Handle<LogViewer.Props>) {
 							overscrollBehavior: "contain",
 							fontSize: "0.75rem",
 							lineHeight: LINE_HEIGHT,
+							fontVariantLigatures: "none",
 						}),
 						font("mono"),
 						focusVisible(outline({ color: "brand.ring", offset: -2, width: 2 })),

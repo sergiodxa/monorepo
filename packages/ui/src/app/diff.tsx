@@ -1048,6 +1048,7 @@ function tableRules(view: Diff.View, digits: number) {
 		margin: 0,
 		borderCollapse: "collapse",
 		fontFamily: "var(--ui-font-mono, ui-monospace, monospace)",
+		fontVariantLigatures: "none",
 		fontSize: "var(--diff-font-size, 0.75rem)",
 		lineHeight: LINE_HEIGHT,
 		color: "var(--ui-neutral-fg-emphasis)",

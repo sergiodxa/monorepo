@@ -314,9 +314,39 @@ describe("CodeView blame", () => {
 		);
 		expect(cells[0]!.textContent).toContain("Change old");
 	});
+
+	test("keeps every line one line tall beside one- and two-line hunks", () => {
+		mount({
+			now: "2026-11-13",
+			blame: [
+				{ start: 1, end: 1, commit: commit("a", "2025-01-01") },
+				{ start: 2, end: 3, commit: commit("b", "2025-06-01") },
+				{ start: 4, end: 4, commit: commit("c", "2026-01-01") },
+				{ start: 5, end: 30, commit: commit("d", "2026-11-10") },
+			],
+		});
+		let step = number(7).getBoundingClientRect().top - number(6).getBoundingClientRect().top;
+		let tops = Array.from(
+			{ length: 6 },
+			(_, index) => number(index + 1).getBoundingClientRect().top,
+		);
+
+		expect(tops.slice(1).map((top, index) => Math.round(top - tops[index]!))).toEqual(
+			Array.from({ length: 5 }, () => Math.round(step)),
+		);
+		let single = document.querySelector<HTMLElement>("td[data-blame]")!;
+		expect(single.querySelector("[data-slot='blame-subject']")!.getBoundingClientRect().top).toBe(
+			single.querySelector("time")!.getBoundingClientRect().top,
+		);
+	});
 });
 
 describe("CodeView layout", () => {
+	test("draws every character as typed, with no ligatures", () => {
+		mount();
+		expect(getComputedStyle(number(1).closest("table")!).fontVariantLigatures).toBe("none");
+	});
+
 	test("draws numbers from an attribute, so the text holds only code", () => {
 		mount();
 		expect(number(12).textContent).toBe("");

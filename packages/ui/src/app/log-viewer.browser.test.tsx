@@ -185,6 +185,12 @@ function nodesPerLine(scope: Element): number {
 }
 
 describe("LogViewer", () => {
+	test("draws every character as typed, with no ligatures", async () => {
+		let root = await mount({ steps: bigJob() });
+		let body = root.querySelector<HTMLElement>('[data-slot="log-viewer-body"]')!;
+		expect(getComputedStyle(body).fontVariantLigatures).toBe("none");
+	});
+
 	test("draws a 20,000-line log in three nodes per plain line, with only the failed step open", async () => {
 		let root = await mount({ steps: bigJob() });
 		let rows = root.querySelectorAll("[data-log-line]");

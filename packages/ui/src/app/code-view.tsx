@@ -347,6 +347,7 @@ function tableRules(digits: number, hasBlame: boolean) {
 		margin: 0,
 		borderCollapse: "collapse",
 		fontFamily: "var(--ui-font-mono, ui-monospace, monospace)",
+		fontVariantLigatures: "none",
 		fontSize: "var(--code-view-font-size, 0.75rem)",
 		lineHeight: LINE_HEIGHT,
 		color: "var(--ui-neutral-fg-emphasis)",
@@ -404,22 +405,27 @@ function tableRules(digits: number, hasBlame: boolean) {
 			gridColumn: 1,
 			display: "flex",
 			flexDirection: "column",
-			gap: "0.125rem",
 			minInlineSize: 0,
-			paddingBlock: "0.375rem",
 			paddingInline: "0.75rem",
-			borderBlockStart: "1px solid var(--ui-neutral-border)",
+			boxShadow: "inset 0 1px 0 var(--ui-neutral-border)",
 			borderInlineEnd: "3px solid var(--code-view-age)",
 			fontFamily: "var(--ui-font-sans, system-ui, sans-serif)",
 			fontSize: "0.75rem",
-			lineHeight: "1rem",
+			lineHeight: LINE_HEIGHT,
 			color: "var(--ui-neutral-fg-muted)",
 			whiteSpace: "nowrap",
 		},
-		"& tbody:first-child > tr:first-child > td[data-blame]": {
-			borderBlockStartColor: "transparent",
+		"& td[data-blame][data-rows='1']": {
+			flexDirection: "row",
+			alignItems: "baseline",
+			gap: "0.5rem",
 		},
-		"& td[data-blame][data-continued]": { borderBlockStartColor: "transparent" },
+		"& td[data-blame][data-rows='1'] > [data-slot='blame-subject']": { flex: "1 1 auto" },
+		"& td[data-blame][data-rows='1'] > [data-slot='blame-meta']": { flex: "none" },
+		"& td[data-blame][data-rows='1'] [data-slot='blame-author']": { display: "none" },
+		"& tbody:first-child > tr:first-child > td[data-blame], & td[data-blame][data-continued]": {
+			boxShadow: "none",
+		},
 		"& [data-slot='blame-subject']": {
 			overflow: "hidden",
 			textOverflow: "ellipsis",
@@ -526,8 +532,9 @@ function blameSegments(
  * The rows of one chunk. Rows are plain local render values built in one loop: a file can
  * hold ten thousand of them, and each row is four elements (the row, two cells, the number
  * link) plus its runs, with no component instance or class of its own. A row that starts a
- * blame piece leads with the hunk's cell (subject, author, age); a continued piece draws
- * only its strip.
+ * blame piece leads with the hunk's cell (subject, author, age), set in code lines so the
+ * code never stretches, and a one-line hunk keeps subject and age on its one line; a
+ * continued piece draws only its strip.
  */
 function chunkRows(
 	lines: CodeToken[][],
@@ -546,6 +553,7 @@ function chunkRows(
 				data-blame=""
 				data-age={cell.age}
 				data-continued={cell.continued ? "" : undefined}
+				data-rows={cell.rows === 1 ? "1" : undefined}
 				rowSpan={cell.rows}
 				mix={[raw({ gridRowEnd: `span ${cell.rows}` })]}
 			>

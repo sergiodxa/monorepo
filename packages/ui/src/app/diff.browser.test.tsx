@@ -173,6 +173,11 @@ function centre(element: Element): { clientX: number; clientY: number } {
 }
 
 describe("Diff unified view", () => {
+	test("draws every character as typed, with no ligatures", () => {
+		mount();
+		expect(getComputedStyle(code("R", 5)).fontVariantLigatures).toBe("none");
+	});
+
 	test("colours added and deleted rows and paints their signs, keeping numbers out of the text", () => {
 		mount();
 		let added = code("R", 5);
