@@ -17,7 +17,7 @@ import { http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";
 import { renderToStream } from "remix/component/server";
 import { render } from "remix/component/test";
-import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, onTestFinished, test } from "vitest";
 import { page } from "vitest/browser";
 
 import { blockSize } from "~/app/test/frame-size";
@@ -116,6 +116,32 @@ function expectSameSize(content: number, fallback: number) {
 	expect(content).toBeGreaterThan(0);
 	expect(Math.abs(content - fallback)).toBeLessThanOrEqual(1);
 }
+
+/** Whether a rejection is a Navigation API abort Vitest would otherwise fail the suite on. */
+function isNavigationAbort(reason: unknown): boolean {
+	if (reason instanceof DOMException) return reason.name === "AbortError";
+	if (reason instanceof Error) return reason.name === "AbortError";
+	return false;
+}
+
+/**
+ * Swallows Navigation API `AbortError` rejections so a frame reload that aborts an
+ * in-flight navigation does not fail the suite as an unhandled rejection.
+ */
+function ignoreNavigationAborts() {
+	let aborted = (event: PromiseRejectionEvent) => {
+		if (!isNavigationAbort(event.reason)) return;
+		event.preventDefault();
+	};
+	window.addEventListener("unhandledrejection", aborted);
+	onTestFinished(() => {
+		window.removeEventListener("unhandledrejection", aborted);
+	});
+}
+
+beforeEach(() => {
+	ignoreNavigationAborts();
+});
 
 /**
  * Mounts one screen of the app at the current viewport and waits for its column frame to
@@ -394,15 +420,8 @@ describe("Chorus's New post dialog", () => {
 			opened.push((event as Event & { destination: { url: string } }).destination.url);
 			event.preventDefault();
 		};
-		let aborted = (event: PromiseRejectionEvent) => {
-			if (event.reason instanceof DOMException && event.reason.name === "AbortError") {
-				event.preventDefault();
-			}
-		};
 		globalThis.navigation?.addEventListener("navigate", hold);
-		window.addEventListener("unhandledrejection", aborted);
 		onTestFinished(() => {
-			window.removeEventListener("unhandledrejection", aborted);
 			globalThis.navigation?.removeEventListener("navigate", hold);
 			WORKER.resetHandlers();
 		});
