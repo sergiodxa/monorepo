@@ -100,6 +100,16 @@ export function linesHref(path: string, start: number, end: number = start): str
 	return `${fileHref(path, { query: `L=${range}` })}#L${start}`;
 }
 
+/** The address of the issues list, with its query when it keeps one. */
+export function issuesHref(query?: string): string {
+	return repoHref(query === undefined ? "issues" : `issues?q=${encodeURIComponent(query)}`);
+}
+
+/** The address of one issue. */
+export function issueHref(number: number): string {
+	return repoHref(`issues/${number}`);
+}
+
 /** A commit's sha as lists show it. */
 export function shortSha(sha: string): string {
 	return sha.slice(0, 7);
@@ -109,6 +119,8 @@ export function shortSha(sha: string): string {
 export type DeltaRoute =
 	| { screen: "dashboard" }
 	| { screen: "home" }
+	| { screen: "issues" }
+	| { screen: "issue"; number: number }
 	| { screen: "tree"; ref: string; path: string }
 	| { screen: "blob"; view: "blob" | "blame"; ref: string; path: string }
 	| { screen: "find"; ref: string }
@@ -141,6 +153,7 @@ export function parsePage(page: string): DeltaRoute | null {
 	if (first !== REPO) return null;
 	if (second === undefined) return { screen: "home" };
 	if (second === "actions") return parseActions(third, rest);
+	if (second === "issues") return parseIssues(third, rest);
 	if (third === undefined) return null;
 	if (second === "tree") return { screen: "tree", ref: third, path: rest.join("/") };
 	if ((second === "blob" || second === "blame") && rest.length > 0) {
@@ -162,6 +175,13 @@ function parseActions(third: string | undefined, rest: string[]): DeltaRoute | n
 	if (jobSegment === undefined) return { screen: "run", id: Number(id) };
 	if (jobSegment !== "job" || job === undefined || !/^\d{1,3}$/.test(job)) return null;
 	return { screen: "run", id: Number(id), job: Number(job) };
+}
+
+/** Reads `issues` and `issues/<number>`. */
+function parseIssues(third: string | undefined, rest: string[]): DeltaRoute | null {
+	if (third === undefined) return { screen: "issues" };
+	if (rest.length > 0 || !/^[1-9]\d{0,4}$/.test(third)) return null;
+	return { screen: "issue", number: Number(third) };
 }
 
 /**

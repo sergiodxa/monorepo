@@ -221,6 +221,81 @@ describe("Delta's commits", () => {
 	});
 });
 
+/** Posts a form to one of Delta's pages, as a browser without script would. */
+async function post(
+	path: string,
+	fields: Record<string, string | string[]>,
+	cookie?: string,
+): Promise<Response> {
+	let body = new URLSearchParams();
+	for (let [name, value] of Object.entries(fields)) {
+		for (let entry of [value].flat()) body.append(name, entry);
+	}
+	let [page = "", query] = path.split("?");
+	let action = demoAppActionHref("delta")(page);
+	return fetchApp(query === undefined ? action : `${action}?${query}`, {
+		method: "POST",
+		body,
+		headers: cookie === undefined ? {} : { Cookie: cookie },
+	});
+}
+
+/** The `name=value` pairs a response sets, as the next request's `Cookie` header. */
+function cookiesOf(response: Response): string {
+	return response.headers
+		.getSetCookie()
+		.map((header) => header.split(";")[0])
+		.join("; ");
+}
+
+/** Fetches one of Delta's screens as a visitor carrying cookies. */
+async function pageWith(path: string, cookie: string): Promise<string> {
+	return (await fetchApp(href(path), { headers: { Cookie: cookie } })).text();
+}
+
+describe("Delta's issue", () => {
+	test("opens with its body, its timeline and a citation of real lines", async () => {
+		let { body, status } = await page("delta/issues/42");
+
+		expect(status).toBe(200);
+		expect(body).toContain('data-slot="delta-citation"');
+		expect(body).toContain('data-anchor="readme-how"');
+		expect(body).toMatch(/href="[^"]*README\.md\?L=\d+#L\d+"/);
+	});
+
+	test("a comment lands on the page, as the visitor's own, through a cookie", async () => {
+		let response = await post("delta/issues/42", { intent: "comment", body: "Ship it." });
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toMatch(/issues\/42#comment-v-/);
+		let body = await pageWith("delta/issues/42", cookiesOf(response));
+		expect(body).toContain("Ship it.");
+	});
+
+	test("a picker replaces its field whole and the timeline says what changed", async () => {
+		let response = await post("delta/issues/42?set=labels", { label: ["bug", "a11y"] });
+		let body = await pageWith("delta/issues/42", cookiesOf(response));
+
+		expect(body).toContain("added the");
+		expect(body).toContain("removed the");
+		expect(body).toMatch(/>accessibility</);
+	});
+
+	test("Close changes the state, and Reset forgets everything the visitor did", async () => {
+		let closed = await post("delta/issues/53", { intent: "close", body: "" });
+		let cookie = cookiesOf(closed);
+
+		expect(await pageWith("delta/issues/53", cookie)).toContain("closed this as completed");
+		let reset = await post("reset", {}, cookie);
+		expect(reset.headers.getSetCookie().every((header) => /Max-Age=0/.test(header))).toBe(true);
+		expect(reset.headers.getSetCookie().length).toBeGreaterThan(0);
+	});
+
+	test("a number no issue has answers the app's 404", async () => {
+		expect((await page("delta/issues/9999")).status).toBe(404);
+	});
+});
+
 describe("Delta's forms", () => {
 	test("Reset the demo redirects home with its toast", async () => {
 		let response = await fetchApp(demoAppActionHref("delta")("reset"), {

@@ -39,8 +39,10 @@ import { CommitScreen, CommitsScreen } from "./screens/commits";
 import { DashboardScreen, NotFoundScreen } from "./screens/dashboard";
 import { FindScreen } from "./screens/find";
 import { HomeScreen } from "./screens/home";
-import { DeltaFrame, SHELL_COOKIE } from "./shell";
+import { DeltaFrame, RepoCounts, SHELL_COOKIE } from "./shell";
+import { isPersonal } from "./state";
 import { DeltaThumbnail } from "./thumbnail";
+import { TRACKER_TOASTS, repoCounts, submitTracker, trackerScreen } from "./tracker";
 
 /** Brass at hue 75: warm, unused by the other demos, its 600 step dark enough for white text. */
 const BRAND = [
@@ -126,8 +128,9 @@ const TOKENS = {
 const TOASTS: Record<string, Omit<Toast.Flash, "id">> = {
 	reset: {
 		title: "Demo reset",
-		description: "Delta keeps nothing of yours yet, so it starts fresh.",
+		description: "Your comments, edits and reviews are gone, so Delta starts fresh.",
 	},
+	...TRACKER_TOASTS,
 };
 
 /** The screens a visitor reaches by clicking, the dashboard first. */
@@ -142,6 +145,7 @@ const SCREENS = [
 	"delta/find/main",
 	"delta/find/main?q=shell",
 	"delta/commits/main",
+	"delta/issues/42",
 	"delta/actions",
 	"delta/actions?status=failure",
 	"delta/actions/runs/812",
@@ -295,6 +299,8 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 		case "actions":
 		case "run":
 			return (await ciScreen(target, request, { commits: count, now })) ?? notFound();
+		case "issue":
+			return (await trackerScreen(target, request, { commits: count, now })) ?? notFound();
 		case "commit": {
 			let commit = await findCommit(target.sha);
 			if (commit === undefined) return notFound();
@@ -350,12 +356,13 @@ export default {
 	thumbnail: () => <DeltaThumbnail />,
 	screens: SCREENS,
 	cookies: [SHELL_COOKIE],
+	isPersonal,
 	toasts: TOASTS,
 	stream: (part, request) => ciStream(part, request),
 	frame: (part, request) => framePart(part, request),
 	async target(name, request) {
 		if (name !== MAIN_FRAME) return null;
-		let screen = await route(request);
+		let [screen, counts] = await Promise.all([route(request), repoCounts(request.cookie)]);
 		let param = request.url.searchParams.get(DEMO_APP_TOAST_PARAM);
 		let key = param === null ? null : readToastParam(param).key;
 		return (
@@ -366,7 +373,7 @@ export default {
 				url={request.url}
 				toast={key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined}
 			>
-				{screen.body}
+				<RepoCounts counts={counts}>{screen.body}</RepoCounts>
 			</MainScreen>
 		);
 	},
@@ -389,8 +396,7 @@ export default {
 			),
 		};
 	},
-	submit(page) {
-		if (page === "reset") return { page: "", toast: "reset" };
-		return null;
+	submit(page, form, request) {
+		return submitTracker(page, form, request);
 	},
 } satisfies DemoApp;

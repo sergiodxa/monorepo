@@ -13,9 +13,12 @@ import type { CodeView } from "@sdxc/ui/app/code-view";
 import type { CommandPalette } from "@sdxc/ui/app/command-palette";
 import type { Diff } from "@sdxc/ui/app/diff";
 import type { FilterBar } from "@sdxc/ui/app/filter-bar";
+import type { FilterBar } from "@sdxc/ui/app/filter-bar";
 import type { FilterMenu } from "@sdxc/ui/app/filter-menu";
 import type { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 import type { LogViewer } from "@sdxc/ui/app/log-viewer";
+import type { SaveStatusProps } from "@sdxc/ui/app/save-status";
+import type { SelectionBar } from "@sdxc/ui/app/selection-bar";
 import type { Tree } from "@sdxc/ui/app/tree";
 
 /** The shell's landmark, skip link, phone menu and collapse toggle. */
@@ -158,6 +161,70 @@ export const LOG_LABELS: LogViewer.Labels = {
 	refresh: "Refresh to see the latest lines",
 };
 
+/** The toolbar over a list of issues or pull requests. */
+export const FILTER_LABELS: FilterBar.Labels = {
+	toolbar: "Filter the list",
+	tabs: "States",
+	filters: "Filters",
+	options: "Sort",
+	apply: "Apply",
+	is: "is",
+	isAnyOf: "is any of",
+	clear: "Clear filters",
+	remove: (field, values) => `Remove ${field}: ${values}`,
+};
+
+/** The bar a list's selection turns its footer into. */
+export const SELECTION_LABELS: SelectionBar.Labels = {
+	toolbar: "Selected issues",
+	clear: "Clear selection",
+	selected: "{count} selected",
+	cleared: "Selection cleared",
+	previous: "Previous page",
+	next: "Next page",
+};
+
+/** The pickers a record's side panel edits its people, labels and milestone with. */
+export const PICKER_LABELS = {
+	assignees: {
+		title: "Assign up to 10 people",
+		filter: "Filter people",
+		empty: "Nobody matches",
+		more: "{count} more, refine your filter",
+		save: "Save",
+	},
+	reviewers: {
+		title: "Request up to 15 reviewers",
+		filter: "Filter people",
+		empty: "Nobody matches",
+		more: "{count} more, refine your filter",
+		save: "Save",
+	},
+	labels: {
+		title: "Apply labels",
+		filter: "Filter labels",
+		empty: "No label matches",
+		more: "{count} more, refine your filter",
+		save: "Save",
+	},
+	milestone: {
+		title: "Set milestone",
+		filter: "Filter milestones",
+		empty: "No milestone matches",
+		more: "{count} more, refine your filter",
+		save: "Save",
+	},
+} satisfies Record<string, FilterMenu.Labels>;
+
+/** The quiet status a record's side panel says its saves with. */
+export const SAVE_LABELS: SaveStatusProps["labels"] = {
+	saving: "Saving…",
+	saved: "Saved",
+	failed: "Couldn't save",
+	retry: "Retry",
+	edited: "Edited {time}",
+};
+
 /** The app's own words, by screen. */
 export const COPY = {
 	app: "Delta",
@@ -175,6 +242,7 @@ export const COPY = {
 	tabs: {
 		label: "Repository",
 		code: "Code",
+		issues: "Issues",
 		commits: "Commits",
 		actions: "Actions",
 		more: "More",
@@ -250,6 +318,103 @@ export const COPY = {
 		missingTitle: "This commit isn't in Delta's build",
 		missingHint:
 			"The build keeps the latest commits that touch Delta. Older ones keep only their name and date.",
+	},
+	issues: {
+		title: "Issues",
+		search: "Search all issues",
+		placeholder: "is:open label:bug author:mara",
+		open: "Open",
+		closed: "Closed",
+		author: "Author",
+		label: "Labels",
+		assignee: "Assignees",
+		noAssignee: "No assignee",
+		sort: "Sort by",
+		newest: "Newest",
+		oldest: "Oldest",
+		commented: "Most commented",
+		updated: "Recently updated",
+		list: "Issues",
+		select: (number: number) => `Select issue #${number}`,
+		opened: "opened",
+		closedBy: "closed",
+		by: "by",
+		comments: (count: number) => `${count} ${count === 1 ? "comment" : "comments"}`,
+		assignedTo: (names: string) => `Assigned to ${names}`,
+		close: "Close",
+		reopen: "Reopen",
+		assignMe: "Assign to me",
+		shown: (count: number) => `${count} ${count === 1 ? "issue" : "issues"}`,
+		noneTitle: "No issues match",
+		noneHint: "Try fewer filters, or search for a word in a title like diff.",
+		emptyOpenTitle: "No open issues",
+		emptyClosedTitle: "No closed issues",
+		emptyHint: "Issues that land in this state show up here.",
+		clear: "Clear filters",
+		keys: {
+			group: "Issues",
+			next: "Next issue",
+			previous: "Previous issue",
+			open: "Open issue",
+			toggle: "Select issue",
+			selected: "Issue selected",
+			deselected: "Issue deselected",
+			search: "Search issues",
+		},
+	},
+	issue: {
+		title: (title: string, number: number) => `${title} · Issue #${number}`,
+		open: "Open",
+		closed: "Closed",
+		notPlanned: "Closed as not planned",
+		opened: "opened this issue",
+		commented: "commented",
+		comments: (count: number) => `${count} ${count === 1 ? "comment" : "comments"}`,
+		you: "You",
+		assignees: "Assignees",
+		labels: "Labels",
+		milestone: "Milestone",
+		participants: "Participants",
+		noAssignees: "No one assigned",
+		noLabels: "None yet",
+		noMilestone: "No milestone",
+		editAssignees: "Edit assignees",
+		editLabels: "Edit labels",
+		editMilestone: "Edit milestone",
+		suggestions: "Org members",
+		repoLabels: "Labels",
+		milestones: "Open milestones",
+		clearMilestone: "No milestone",
+		conversation: "Conversation",
+		details: "Details",
+		comment: "Comment",
+		commentLabel: "Add a comment",
+		commentPlaceholder: "Leave a comment",
+		closeIssue: "Close issue",
+		closeWithComment: "Close with comment",
+		reopenIssue: "Reopen issue",
+		events: {
+			labeled: "added the",
+			unlabeled: "removed the",
+			label: "label",
+			assigned: "assigned",
+			selfAssigned: "self-assigned this",
+			unassigned: "unassigned",
+			milestoned: "added this to the",
+			milestoneSuffix: "milestone",
+			completed: "closed this as completed",
+			notPlanned: "closed this as not planned",
+			reopened: "reopened this",
+			mentioned: "mentioned this issue in",
+			renamed: "changed the title",
+		},
+	},
+	cite: {
+		line: (line: number) => `Line ${line}`,
+		lines: (start: number, end: number) => `Lines ${start} to ${end}`,
+		onMain: "in main",
+		outdated: "Outdated",
+		at: (sha: string) => `as of ${sha}`,
 	},
 	notInBuild: {
 		title: "Files at this commit aren't in the build",
@@ -346,6 +511,7 @@ export const COPY = {
 	keys: {
 		goCode: "Go to Code",
 		goCommits: "Go to Commits",
+		goIssues: "Go to Issues",
 		goDashboard: "Go to Dashboard",
 		goToFile: "Go to file",
 		blame: "Switch to blame",

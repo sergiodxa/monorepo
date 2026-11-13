@@ -59,15 +59,49 @@ function pageOf(url: URL): string {
 	return url.pathname.replace(new RegExp(`^${ROOT}/?`), "");
 }
 
-/** Resolves Delta's named frames as the page route does; any other frame stays pending. */
-function resolveDeltaFrame(src: string, options?: { target?: string }) {
+/** The visitor's cookies as the mounted screen's posts set them, name to `name=value`. */
+let jar = new Map<string, string>();
+
+/** The `Cookie` header the jar sends. */
+function jarHeader(): string | null {
+	return jar.size === 0 ? null : [...jar.values()].join("; ");
+}
+
+/** Every post a mounted screen sent through a frame, as the page path it posted to. */
+let posted: string[] = [];
+
+/**
+ * Resolves Delta's named frames as the page route does: a post goes through the app's own
+ * `submit`, keeps the cookies it sets, and the frame draws the page its redirect names. Any
+ * other frame stays pending.
+ */
+async function resolveDeltaFrame(
+	src: string,
+	options?: { target?: string; method?: string; formData?: FormData },
+) {
 	let target = options?.target;
 	if (target === undefined || delta.target === undefined) return new Promise<never>(() => {});
 	requested.push(target);
 	let url = new URL(src, location.origin);
-	return Promise.resolve(delta.target(target, { page: pageOf(url), url, cookie: null })).then(
-		(node) => node ?? new Promise<never>(() => {}),
-	);
+	if (options?.method?.toLowerCase() === "post" && options.formData) {
+		posted.push(pageOf(url));
+		let answer = await delta.submit(pageOf(url), options.formData, {
+			page: pageOf(url),
+			url,
+			cookie: jarHeader(),
+		});
+		if (answer && !("body" in answer)) {
+			for (let header of answer.cookies ?? []) {
+				let pair = header.split(";")[0] ?? "";
+				let name = pair.split("=")[0] ?? "";
+				if (/Max-Age=0/.test(header)) jar.delete(name);
+				else jar.set(name, pair);
+			}
+			url = new URL(`${ROOT}/${answer.page}`, location.origin);
+		}
+	}
+	let node = await delta.target(target, { page: pageOf(url), url, cookie: jarHeader() });
+	return node ?? new Promise<never>(() => {});
 }
 
 /**
@@ -83,6 +117,8 @@ async function mountScreen(screen: string): Promise<HTMLElement> {
 	history.replaceState(null, "", url);
 	let rendered = await delta.render({ page: pageOf(url), url, cookie: null });
 	requested = [];
+	posted = [];
+	jar = new Map();
 	let mounted = render(
 		<>
 			{themed(rendered.body)}
@@ -407,5 +443,53 @@ describe("Delta's CI", () => {
 		let refresh = step.querySelector<HTMLAnchorElement>("[data-log-refresh] a")!;
 		expect(refresh.checkVisibility()).toBe(true);
 		expect(new URL(refresh.href).pathname).toBe(`${ROOT}/delta/actions/runs/815/job/4`);
+	});
+});
+
+describe("Delta's issue", () => {
+	test("a comment posts through main and redraws in place, adding no history entry", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/issues/42");
+		let sidebar = root.querySelector("#delta-sidebar")!;
+		sidebar.setAttribute("data-marker", "kept");
+		let entries = navigation.entries().length;
+		let path = location.pathname;
+		let box = root.querySelector<HTMLTextAreaElement>("#delta-issue-comment")!;
+		box.value = "Quoting by content keeps this honest.";
+		root.querySelector<HTMLButtonElement>('button[name="intent"][value="comment"]')!.click();
+		await settle(
+			() => root.textContent?.includes("Quoting by content keeps this honest.") ?? false,
+		);
+
+		expect(posted).toEqual(["delta/issues/42"]);
+		expect(location.pathname).toBe(path);
+		expect(navigation.entries().length).toBe(entries);
+		expect(root.querySelector("#delta-sidebar")?.getAttribute("data-marker")).toBe("kept");
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("closing it redraws the state pill and adds a closed event in place", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/issues/53");
+		let entries = navigation.entries().length;
+		root.querySelector<HTMLButtonElement>('button[name="intent"][value="close"]')!.click();
+		await settle(
+			() => root.querySelector('[data-slot="delta-state-pill"][data-state="completed"]') !== null,
+		);
+
+		expect(root.querySelector('[data-slot="delta-state-pill"]')?.textContent).toContain("Closed");
+		expect(root.textContent).toContain("closed this as completed");
+		expect(navigation.entries().length).toBe(entries);
+	});
+
+	test("every form posts to the issue's own page, so it works without script", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/issues/42");
+		let forms = [...root.querySelectorAll<HTMLFormElement>("[data-main-screen] form[method=post]")];
+
+		expect(forms.length).toBeGreaterThan(3);
+		for (let form of forms) {
+			expect(new URL(form.action).pathname).toBe(`${ROOT}/delta/issues/42`);
+		}
 	});
 });

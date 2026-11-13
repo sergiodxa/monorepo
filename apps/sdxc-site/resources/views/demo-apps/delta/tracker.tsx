@@ -1,0 +1,206 @@
+/**
+ * Delta's issue screens as the router reaches them: each address's screen drawn from the seeds
+ * and the visitor's cookies, the counts the repository tabs show, and every form those screens
+ * post, answered by redirecting back with the visitor's work in a cookie.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { Toast } from "@sdxc/ui/app";
+import type { RemixNode } from "remix/component";
+
+import { generateUUID } from "@sdxc/uuid/v4";
+
+import type { DemoAppRedirect, DemoAppRequest } from "~/resources/views/demo-apps";
+
+import { readAnchors, readHistory, readTree } from "~/app/services/delta/source";
+
+import type { DeltaRoute } from "./data";
+import type { CiteContext } from "./markup";
+
+import { issueHref, parsePage } from "./data";
+import { COPY } from "./labels";
+import { allIssues, findIssue, seedBase } from "./records";
+import { IssueScreen } from "./screens/issue";
+import { LABELS, MILESTONES } from "./seed/issues";
+import { PEOPLE } from "./seed/people";
+import { clearCookies, commentsCookie, editOf, readState, recordCookie } from "./state";
+
+/** The repository's name as titles and the top bar write it. */
+const REPO_NAME = `${COPY.org}/${COPY.repo}`;
+
+/** The toasts these screens' forms name. */
+export const TRACKER_TOASTS: Record<string, Omit<Toast.Flash, "id">> = {};
+
+/** A screen as Delta's router draws it. */
+interface Screen {
+	title: string;
+	nav: string;
+	crumb: string;
+	body: RemixNode;
+	status?: number;
+}
+
+/** The moment seeds count back from, for this build's history. */
+async function readBase(now: number): Promise<number> {
+	let history = await readHistory();
+	return seedBase(history.commits[0]?.date, now);
+}
+
+/** Each file's lines at the deployed commit, split once per isolate. */
+let splitFiles: Promise<Map<string, string[]>> | undefined;
+
+/**
+ * What a body needs to cite code and link `#number`: the anchors, the deployed files' lines,
+ * and an address for every number that has a page.
+ */
+async function citeContext(): Promise<CiteContext> {
+	splitFiles ??= readTree().then(
+		(tree) =>
+			new Map(
+				tree.files.map((file) => [file.path, file.text.replace(/\r?\n$/, "").split(/\r?\n/)]),
+			),
+	);
+	let [anchors, files] = await Promise.all([readAnchors(), splitFiles]);
+	let issues = new Set(
+		allIssues({ records: new Map(), comments: [] }, 0).map((issue) => issue.number),
+	);
+	return {
+		anchors,
+		lines: (path) => files.get(path),
+		refHref: (number) => (issues.has(number) ? issueHref(number) : undefined),
+	};
+}
+
+/**
+ * The counts the repository tabs show for one visitor: open issues, after their own closes
+ * and reopens.
+ */
+export async function repoCounts(cookie: string | null): Promise<Record<string, number>> {
+	let state = readState(cookie);
+	let base = await readBase(Date.now());
+	return { issues: allIssues(state, base).filter((issue) => issue.state === "open").length };
+}
+
+/**
+ * Draws an issue screen, or `null` for an address none of them answers.
+ *
+ * @param target The route the address names.
+ * @param request The request, whose cookie carries the visitor's work.
+ * @param shared The commit count and the request's time, as every repository screen takes them.
+ */
+export async function trackerScreen(
+	target: DeltaRoute,
+	request: DemoAppRequest,
+	shared: { commits: number; now: number },
+): Promise<Screen | null> {
+	let state = readState(request.cookie);
+	let base = await readBase(shared.now);
+	if (target.screen === "issue") {
+		let issue = findIssue(target.number, state, base);
+		if (issue === undefined) return null;
+		return {
+			title: COPY.issue.title(issue.title, issue.number),
+			nav: "repo",
+			crumb: `${REPO_NAME} › #${issue.number}`,
+			body: (
+				<IssueScreen
+					issue={issue}
+					context={await citeContext()}
+					now={shared.now}
+					commits={shared.commits}
+				/>
+			),
+		};
+	}
+	return null;
+}
+
+/** The text of a form field, or `""` when it is missing or a file. */
+function field(form: FormData, name: string): string {
+	let value = form.getAll(name).at(-1);
+	return typeof value === "string" ? value : "";
+}
+
+/** Every text value a form posts under one name. */
+function fields(form: FormData, name: string): string[] {
+	return form.getAll(name).filter((value): value is string => typeof value === "string");
+}
+
+/** The page a post on `page` returns to, keeping its query and dropping what only the post used. */
+function backTo(page: string, url: URL): string {
+	let params = new URLSearchParams(url.search);
+	for (let name of ["toast", "set", "at"]) params.delete(name);
+	let search = params.toString();
+	return search === "" ? page : `${page}?${search}`;
+}
+
+/**
+ * Answers an issue's forms: a comment joins the visitor's comments and the page lands on it;
+ * Close and Reopen change the state, closing with the typed text as a comment when there is
+ * one; a side panel picker replaces its field whole.
+ */
+function submitIssue(
+	number: number,
+	form: FormData,
+	request: DemoAppRequest,
+): DemoAppRedirect | null {
+	let state = readState(request.cookie);
+	let issue = findIssue(number, state, 0);
+	if (issue === undefined) return null;
+	let back = backTo(`delta/issues/${number}`, request.url);
+	let set = request.url.searchParams.get("set");
+	let edit = editOf(state, number);
+	if (set === "labels") {
+		edit.labels = fields(form, "label").filter((id) => LABELS.some((label) => label.id === id));
+		return { page: back, cookies: [recordCookie(number, edit)] };
+	}
+	if (set === "assignees") {
+		edit.assignees = fields(form, "assignee")
+			.filter((handle) => PEOPLE.some((person) => person.handle === handle))
+			.slice(0, 10);
+		return { page: back, cookies: [recordCookie(number, edit)] };
+	}
+	if (set === "milestone") {
+		let milestone = field(form, "milestone");
+		if (milestone !== "" && !MILESTONES.some((entry) => entry.id === milestone)) return null;
+		edit.milestone = milestone === "" ? null : milestone;
+		return { page: back, cookies: [recordCookie(number, edit)] };
+	}
+	let intent = field(form, "intent");
+	let body = field(form, "body").trim().slice(0, 600);
+	let cookies: string[] = [];
+	let hash: string | undefined;
+	if (body !== "" && (intent === "comment" || intent === "close" || intent === "reopen")) {
+		let comment = { id: `v-${generateUUID().slice(0, 8)}`, number, body, at: Date.now() };
+		cookies.push(commentsCookie(state, comment));
+		hash = `comment-${comment.id}`;
+	}
+	if (intent === "close" || intent === "reopen") {
+		edit.state = intent === "close" ? "closed" : "open";
+		cookies.push(recordCookie(number, edit));
+	} else if (intent !== "comment") {
+		return null;
+	}
+	return { page: back, hash, cookies };
+}
+
+/**
+ * Answers a post on one of these screens, or `null` for a page they don't own; Reset clears
+ * every cookie the visitor's work is kept in.
+ *
+ * @param page The page path the form posted to.
+ * @param form The form's fields.
+ * @param request The request, whose address and cookie the answer reads.
+ */
+export function submitTracker(
+	page: string,
+	form: FormData,
+	request: DemoAppRequest,
+): DemoAppRedirect | null {
+	if (page === "reset") return { page: "", toast: "reset", cookies: clearCookies(request.cookie) };
+	let target = parsePage(page);
+	if (target?.screen === "issue") return submitIssue(target.number, form, request);
+	return null;
+}

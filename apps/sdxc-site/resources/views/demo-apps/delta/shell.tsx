@@ -413,6 +413,25 @@ export function DeltaFrame(handle: Handle<DeltaFrame.Props>) {
 /** A repository tab's key, as {@link REPO_TABS} names it. */
 export type RepoTab = string;
 
+namespace RepoCounts {
+	export interface Props {
+		/** Open records by the tab that counts them, such as `{ issues: 9, pulls: 3 }`. */
+		counts: Record<string, number>;
+		children: RemixNode;
+	}
+}
+
+/**
+ * Hands every repository header under it the counts its tabs show, which the visitor's own
+ * work changes, so a merge redrawing `main` also redraws "Pull requests 3" as 2.
+ */
+export function RepoCounts(handle: Handle<RepoCounts.Props, Record<string, number>>) {
+	return () => {
+		handle.context.set(handle.props.counts);
+		return handle.props.children;
+	};
+}
+
 namespace RepoHeader {
 	export interface Props {
 		/** The screen's own title, the page's one `h1`. */
@@ -423,6 +442,12 @@ namespace RepoHeader {
 		parent?: { href: string; label: string };
 		description?: RemixNode;
 		actions?: RemixNode;
+		/** A badge after the title, such as an issue's state pill. */
+		status?: RemixNode;
+		/** Sticks the header under the top bar and compacts it once the page scrolls under it. */
+		sticky?: boolean;
+		/** Tabs in place of the repository's own, such as a pull request's Conversation and Files. */
+		tabs?: PageHeader.Tab[];
 		/** The tab this screen belongs to. */
 		tab: RepoTab;
 		/** The commits on the branch, which the Commits tab counts. */
@@ -437,13 +462,26 @@ namespace RepoHeader {
  */
 export function RepoHeader(handle: Handle<RepoHeader.Props>) {
 	return () => {
-		let { actions, commits, description, parent, tab, title, trail = [] } = handle.props;
-		let tabs: PageHeader.Tab[] = REPO_TABS.map((entry) => ({
-			href: repoHref(entry.page),
-			label: entry.label,
-			count: entry.tab === "commits" && commits > 0 ? commits : undefined,
-			current: entry.tab === tab,
-		}));
+		let {
+			actions,
+			commits,
+			description,
+			parent,
+			status,
+			sticky,
+			tab,
+			title,
+			trail = [],
+		} = handle.props;
+		let counts: Record<string, number> = { ...handle.context.get(RepoCounts), commits };
+		let tabs: PageHeader.Tab[] =
+			handle.props.tabs ??
+			REPO_TABS.map((entry) => ({
+				href: repoHref(entry.page),
+				label: entry.label,
+				count: counts[entry.tab] || undefined,
+				current: entry.tab === tab,
+			}));
 		return (
 			<PageHeader
 				title={title}
@@ -455,11 +493,16 @@ export function RepoHeader(handle: Handle<RepoHeader.Props>) {
 				]}
 				parent={parent}
 				description={description}
+				status={status}
+				sticky={sticky}
 				actions={actions}
 				tabs={tabs}
 				tabsLabel={COPY.tabs.label}
 				tabsMore={COPY.tabs.more}
-				mix={[raw({ "& nav[aria-label] a, & h1": { overflowWrap: "anywhere" } })]}
+				mix={[
+					raw({ "& nav[aria-label] a, & h1": { overflowWrap: "anywhere" } }),
+					sticky ? raw({ zIndex: 5 }) : null,
+				]}
 			/>
 		);
 	};
