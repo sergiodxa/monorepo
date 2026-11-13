@@ -119,7 +119,9 @@ export default function MarginPrivacy() {
 							textAlign: "start",
 							verticalAlign: "top",
 						},
-						"& tbody tr + tr > *": { borderBlockStart: "1px solid var(--ui-landing-hairline)" },
+						"@media (min-width: 48rem)": {
+							"& tbody tr + tr > *": { borderBlockStart: "1px solid var(--ui-landing-hairline)" },
+						},
 						"& thead th": {
 							fontFamily: MONO,
 							fontSize: "0.6875rem",

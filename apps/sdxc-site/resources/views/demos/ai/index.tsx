@@ -59,7 +59,8 @@ const NEUTRAL: PaletteScale = [
 
 /**
  * A typed sans for the notes and headings, ink-blue mono for labels and times like a
- * stamped page header, and small soft corners like a cut sheet of paper.
+ * stamped page header, small soft corners like a cut sheet of paper, and tinted bands as
+ * flat as the paper they are printed on.
  */
 const TOKENS = {
 	"--ui-font-sans": SANS,
@@ -76,6 +77,7 @@ const TOKENS = {
 	"--ui-landing-card-radius-inner": "0.25rem",
 	"--ui-landing-plan-radius": "0.5rem",
 	"--ui-landing-band-radius": "1rem",
+	"--ui-landing-band-glow": "none",
 	"--ui-landing-eyebrow-weight": "500",
 	"--ui-landing-eyebrow-color": "var(--ui-brand-fg)",
 } as const;

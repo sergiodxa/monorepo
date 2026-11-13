@@ -1,7 +1,7 @@
 /**
  * Renders Margin's landing in a real browser: every timestamp links to a transcript line
  * that marks itself when reached, the calculator answers a GET query with no script, the
- * outline holds one `h1`, and nothing runs wider than a 320px phone.
+ * outline holds one `h1`, tinted bands stay flat, and nothing runs wider than a 320px phone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -80,6 +80,22 @@ describe("Margin's landing", () => {
 		expect(main[0]).toBe(1);
 		for (let [index, level] of main.entries()) {
 			if (index > 0) expect(level - main[index - 1]!, `heading ${index}`).toBeLessThanOrEqual(1);
+		}
+	});
+
+	test("paints its tinted bands flat, with no glow", () => {
+		let root = mount();
+		for (let id of ["drafting", "privacy"]) {
+			expect(getComputedStyle(root.querySelector(`#${id}`)!).backgroundImage, id).toBe("none");
+		}
+	});
+
+	test("rules a stacked privacy row only above the row, never between its cells", async () => {
+		await page.viewport(375, 812);
+		let root = mount();
+		let cells = root.querySelectorAll("#privacy tbody tr:nth-child(2) > *");
+		for (let cell of cells) {
+			expect(getComputedStyle(cell).borderTopWidth).toBe("0px");
 		}
 	});
 
