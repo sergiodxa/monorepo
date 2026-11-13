@@ -240,7 +240,7 @@ export default function Services(handle: Handle<Services.Props>) {
 				{ value: 30, label: COPY.refresh.every(30) },
 				{ value: 60, label: COPY.refresh.every(60) },
 			],
-			refreshedAt: new Date(NOW),
+			refreshedAt: new Date(),
 			locale: LOCALE,
 			labels: { trigger: COPY.refresh.trigger, updated: COPY.refresh.updated },
 		};

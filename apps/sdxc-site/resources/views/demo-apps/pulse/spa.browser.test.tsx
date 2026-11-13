@@ -85,6 +85,17 @@ describe("Pulse as a single-page app", () => {
 		expect(mounted.requests.at(-1)).toMatch(/^POST \/demo\/apps\/pulse\/services\/.+\/pause main$/);
 	});
 
+	test("loads Services without reloading the page, so the shell keeps what the browser set", async () => {
+		mounted = await mountApp(pulse, "pulse", "services");
+		let links = [...document.querySelectorAll('[data-slot="app-shell-nav"] a')];
+		for (let link of links) link.setAttribute("data-visited", "");
+
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(mounted.requests).toEqual([]);
+		expect(links.every((link) => link.hasAttribute("data-visited"))).toBe(true);
+	});
+
 	test("goes back to the previous screen without loading a document", async () => {
 		mounted = await mountApp(pulse, "pulse", "services");
 		let marker = shell();
