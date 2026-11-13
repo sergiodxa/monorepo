@@ -102,6 +102,46 @@ describe("Inkwell as a single-page app", () => {
 		expect(document.activeElement?.checkVisibility()).toBe(true);
 	});
 
+	test("empties the invite form after it sends, as a whole-page post leaves it", async () => {
+		mounted = await mountApp(inkwell, "inkwell", "settings/team");
+		let email = document.querySelector<HTMLInputElement>("#invite-email");
+		if (email === null) throw new Error("No invite field");
+		email.value = "ada@example.com";
+
+		press(email.form?.querySelector('button[type="submit"]'));
+		await vi.waitFor(() =>
+			expect(document.querySelector('[data-slot="toast-item"]')?.textContent).toContain("nvite"),
+		);
+
+		expect(document.querySelector<HTMLInputElement>("#invite-email")?.value).toBe("");
+	});
+
+	test("keeps what was typed when a quick edit comes back with an issue", async () => {
+		mounted = await mountApp(inkwell, "inkwell", "posts");
+		press(document.querySelector('a[href*="quick="]'));
+		await vi.waitFor(() => expect(document.querySelector("#quick-edit-form")).not.toBeNull());
+		let form = document.querySelector<HTMLFormElement>("#quick-edit-form")!;
+		form.noValidate = true;
+		form.querySelector<HTMLInputElement>('[name="title"]')!.value = "";
+		form.querySelector<HTMLInputElement>('[name="slug"]')!.value = "typed-slug";
+
+		press(
+			document.querySelector(
+				'button[form="quick-edit-form"][type="submit"], #quick-edit-form button[type="submit"]',
+			),
+		);
+		await vi.waitFor(() => expect(mounted?.requests.at(-1)).toMatch(/^POST /));
+		await vi.waitFor(() =>
+			expect(
+				document.querySelector('#quick-edit-form [name="title"]')?.getAttribute("aria-invalid"),
+			).toBe("true"),
+		);
+
+		expect(document.querySelector<HTMLInputElement>('#quick-edit-form [name="slug"]')?.value).toBe(
+			"typed-slug",
+		);
+	});
+
 	test("goes back to the previous screen without loading a document", async () => {
 		mounted = await mountApp(inkwell, "inkwell", "posts");
 		let marker = shell();

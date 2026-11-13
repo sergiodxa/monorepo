@@ -142,7 +142,8 @@ export const MainFrameSync = clientEntry(
 		/**
 		 * Sends an in-app post through a frame reload, which follows the redirect and renders it
 		 * without adding a history entry: the frame the form or its submitter names in
-		 * `data-rmx-target` when it is mounted, `main` otherwise. The address settles afterwards.
+		 * `data-rmx-target` when it is mounted, `main` otherwise. The address settles afterwards,
+		 * and the form's fields return to what the server rendered, as a whole-page post leaves them.
 		 */
 		function submit(event: SubmitEvent) {
 			let form = event.target;
@@ -161,6 +162,7 @@ export const MainFrameSync = clientEntry(
 			void frame.reload({ src: action, method: "post", encType: form.enctype, body }).then(
 				() => {
 					let used = submitter instanceof HTMLElement ? submitter : null;
+					form.reset();
 					sync("action");
 					posted = { form, submitter: used };
 					restoreFocus(form, used);

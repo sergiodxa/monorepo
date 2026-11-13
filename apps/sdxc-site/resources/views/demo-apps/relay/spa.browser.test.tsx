@@ -92,6 +92,9 @@ describe("Relay as a single-page app", () => {
 		await vi.waitFor(() => expect(toasts()).toContain("Reply sent"));
 
 		expect(mounted.requests.at(-1)).toMatch(/^POST .+ relay-conversation$/);
+		await vi.waitFor(() =>
+			expect(document.querySelector<HTMLTextAreaElement>('textarea[name="body"]')?.value).toBe(""),
+		);
 		expect(document.querySelector("[data-split-view-item]")?.closest("ul, ol, [role='list']")).toBe(
 			list,
 		);
