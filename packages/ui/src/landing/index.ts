@@ -21,6 +21,7 @@ export * from "./countdown.js";
 export * from "./crosshair.js";
 export * from "./curriculum.js";
 export * from "./drawn-chart.js";
+export * from "./episode-player.js";
 export * from "./event-ticker.js";
 export * from "./fan-out-diagram.js";
 export * from "./faq-band.js";
