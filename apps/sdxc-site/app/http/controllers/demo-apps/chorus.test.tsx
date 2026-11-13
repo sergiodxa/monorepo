@@ -463,6 +463,14 @@ describe("Chorus frames", () => {
 		expect(poll).not.toContain('id="post-');
 	});
 
+	test("a poll answered after a vote posts its next vote to the page, without the anchor", async () => {
+		let poll = await (
+			await targeted(href("?feed=following&at=post-p-friday-poll"), pollFrame("p-friday-poll"))
+		).text();
+
+		expect(poll).toContain(`action="${href("?feed=following")}"`);
+	});
+
 	test("a post from the composer comes back as the column it was written in, on top", async () => {
 		let response = await fetchApp(href("?feed=following"), {
 			method: "POST",
@@ -476,7 +484,6 @@ describe("Chorus frames", () => {
 		expect(location.startsWith(`${href("?feed=following")}&toast=posted.`)).toBe(true);
 		expect(column).toContain("Framed hello");
 		expect(column).toContain("Home: Following");
-		expect(column).toContain('data-rmx-key="composer-home-1"');
 		expect(column).not.toContain('data-slot="chorus"');
 	});
 
@@ -502,7 +509,6 @@ describe("Chorus frames", () => {
 		let thread = await (await targeted(location, MAIN_FRAME, cookie)).text();
 
 		expect(thread).toContain("Framed message");
-		expect(thread).toContain('data-rmx-key="reply-');
 		expect(thread).not.toContain('data-slot="chorus"');
 	});
 });

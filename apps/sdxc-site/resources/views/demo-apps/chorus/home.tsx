@@ -247,7 +247,6 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 					<ChorusComposer
 						id="home"
 						from={homePage(feed, arrived)}
-						revision={state.posts.length}
 						placeholder="Share something with your circle"
 						value={draft?.value}
 						issue={draft?.issue}

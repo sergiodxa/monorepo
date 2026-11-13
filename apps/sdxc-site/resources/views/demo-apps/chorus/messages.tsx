@@ -292,7 +292,6 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 				<form
 					method="post"
 					action={actionHref(`messages/${person.handle}`)}
-					data-rmx-key={`reply-${messages.length}`}
 					mix={[
 						raw({
 							position: "sticky",

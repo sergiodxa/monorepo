@@ -1,8 +1,8 @@
 /**
  * The post composer: the writer's avatar, a field that grows with its text, and a footer with
  * the character ring and the Post button. It posts to the page it sits on; with script the
- * answer lands in the main frame, where a fresh, empty box replaces it, and the ring counts as
- * you type while Post waits until there is something within the limit to send.
+ * answer lands in the main frame and the box empties, and the ring counts as you type while
+ * Post waits until there is something within the limit to send.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,11 +25,6 @@ namespace Composer {
 		id: string;
 		/** The page the composer sits on and posts to, which a refused post is answered on again. */
 		from: string;
-		/**
-		 * Counts the visitor's posts, so the box the column's frame redraws after a post is a new,
-		 * empty one rather than the one holding what was just sent.
-		 */
-		revision?: number;
 		/** The field's placeholder and accessible name. */
 		placeholder: string;
 		/** The submit button's text. @default "Post" */
@@ -63,7 +58,6 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 			placeholder,
 			quote,
 			replyTo,
-			revision = 0,
 			submit = "Post",
 			tall,
 			value = "",
@@ -76,7 +70,6 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 				method="post"
 				action={href(from)}
 				data-slot="chorus-composer"
-				data-rmx-key={`composer-${id}-${revision}`}
 				mix={[
 					raw({
 						display: "grid",

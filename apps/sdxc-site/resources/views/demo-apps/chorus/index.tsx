@@ -28,7 +28,11 @@ import type { ProfileTab } from "~/resources/views/demo-apps/chorus/profile";
 import type { Destination } from "~/resources/views/demo-apps/chorus/shell";
 import type { ToggleKind, VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
-import { DEMO_APP_TOAST_PARAM, readToastParam } from "~/resources/views/demo-apps";
+import {
+	DEMO_APP_ANCHOR_PARAM,
+	DEMO_APP_TOAST_PARAM,
+	readToastParam,
+} from "~/resources/views/demo-apps";
 import {
 	ARRIVALS,
 	CONVERSATIONS,
@@ -376,10 +380,11 @@ function targetPart(name: string, request: DemoAppRequest): RemixNode | null {
 	return null;
 }
 
-/** The page path a request is on, with its query and without its one-time toast. */
+/** The page path a request is on, with its query and without its one-time toast and anchor. */
 function pageOf(request: DemoAppRequest): string {
 	let query = new URLSearchParams(request.url.search);
 	query.delete(DEMO_APP_TOAST_PARAM);
+	query.delete(DEMO_APP_ANCHOR_PARAM);
 	let search = query.toString();
 	return search === "" ? request.page : `${request.page}?${search}`;
 }
