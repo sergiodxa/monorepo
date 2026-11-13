@@ -125,6 +125,21 @@ function indent(element: HTMLElement): number {
 	return Number.parseFloat(getComputedStyle(element).paddingInlineStart);
 }
 
+describe("Tree.Item", () => {
+	test("rings a folder row on keyboard focus, as a file row is ringed", async () => {
+		let tree = mount();
+		document.getElementById("outside")!.focus();
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		let focused = document.activeElement as HTMLElement;
+
+		expect(focused.matches(":focus-visible")).toBe(true);
+		let folder = row(tree, "app");
+		folder.focus();
+		expect(getComputedStyle(folder).outlineStyle).toBe("solid");
+		expect(getComputedStyle(folder).outlineWidth).toBe("2px");
+	});
+});
+
 describe("Tree.Leaf", () => {
 	test("is a treeitem link one level below its folder, indented under it", () => {
 		let tree = mount();

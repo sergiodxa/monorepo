@@ -441,6 +441,7 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 						when("&:hover", bg("neutral.bg-tint-hover")),
 						when("&:active", bg("neutral.bg-tint-pressed")),
 						when("&:focus", bg("neutral.bg-tint-hover")),
+						when("&:focus-visible", outline({ color: "brand.ring", width: 2, offset: -2 })),
 						when('&[aria-selected="true"]', bg("brand.tint")),
 						when('&[aria-disabled="true"]', opacity(50)),
 					],
