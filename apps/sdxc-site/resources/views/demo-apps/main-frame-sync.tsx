@@ -43,6 +43,7 @@ export const MainFrameSync = clientEntry(
 		let samePath = false;
 		let scrolls = new Map<string, number>();
 		let lastNavigation: string | null = null;
+		let leftPath = "";
 
 		/**
 		 * The element the main area scrolls in: the nearest scrolling ancestor of the region,
@@ -59,14 +60,30 @@ export const MainFrameSync = clientEntry(
 
 		/**
 		 * Puts the main area's scroll where a visitor expects it once a navigation settles: where
-		 * they left that history entry on Back and Forward, and at the top for a new screen.
+		 * they left that history entry on Back and Forward, at the top for a new screen, and
+		 * where it was for a filter, sort or sheet on the same screen.
 		 */
 		function restoreScroll() {
 			let type = lastNavigation;
 			lastNavigation = null;
 			let key = globalThis.navigation?.currentEntry?.key;
 			if (type === "traverse" && key !== undefined) scroller().scrollTop = scrolls.get(key) ?? 0;
-			else if (type === "push") scroller().scrollTop = 0;
+			else if (type === "push" && leftPath !== location.pathname) scroller().scrollTop = 0;
+		}
+
+		/**
+		 * Marks the history entry the visitor landed on as a `main` navigation, so Back to it
+		 * reloads `main` like every later entry; the runtime gives a landing entry no target, and
+		 * Back to it would otherwise reload the whole page.
+		 */
+		function markLandingEntry() {
+			let entry = globalThis.navigation?.currentEntry;
+			if (entry === undefined || entry === null) return;
+			let state = entry.getState();
+			let current = typeof state === "object" && state !== null ? state : {};
+			globalThis.navigation?.updateCurrentEntry({
+				state: { ...current, target: MAIN, src: location.href },
+			});
 		}
 
 		/** Whether an address belongs to this app, so following it keeps the visitor in the shell. */
@@ -138,8 +155,29 @@ export const MainFrameSync = clientEntry(
 			let body = new FormData(form, submitter instanceof HTMLElement ? submitter : null);
 			void frame
 				.reload({ src: action, method: "post", encType: form.enctype, body })
-				.then(() => sync("action"))
+				.then(() => {
+					sync("action");
+					restoreFocus(form, submitter);
+				})
 				.catch(() => form.submit());
+		}
+
+		/**
+		 * Puts focus back after a post redrew the control the visitor used: on the element with
+		 * the submitter's id, else on the form, else on the screen's heading.
+		 */
+		function restoreFocus(form: HTMLFormElement, submitter: HTMLElement | null) {
+			if (document.activeElement !== document.body && document.activeElement?.isConnected) return;
+			let byId = (element: Element | null) =>
+				element?.id ? document.getElementById(element.id) : null;
+			let target = byId(submitter) ?? (form.isConnected ? form : byId(form));
+			if (target instanceof HTMLElement) {
+				if (target === form) target.tabIndex = -1;
+				target.focus({ preventScroll: true });
+				return;
+			}
+			let screen = document.querySelector<HTMLElement>("[data-main-region] [data-main-screen]");
+			if (screen !== null) focusHeading(screen);
 		}
 
 		/**
@@ -190,13 +228,22 @@ export const MainFrameSync = clientEntry(
 				document.activeElement !== document.body && document.activeElement?.isConnected;
 			let moveFocus = cause === "action" ? !screen.contains(document.activeElement) : !samePath;
 			if (moveFocus || !focusKept) {
-				let heading = screen.querySelector<HTMLElement>("h1");
-				if (heading !== null) {
-					heading.tabIndex = -1;
-					heading.focus({ preventScroll: true });
-				}
+				focusHeading(screen);
 			}
 			announce(title ?? "");
+		}
+
+		/**
+		 * Moves focus to the screen's first visible heading, so a reader starts at the new content;
+		 * a screen whose heading is hidden (a list pane on a phone) takes focus itself.
+		 */
+		function focusHeading(screen: HTMLElement) {
+			let heading =
+				[...screen.querySelectorAll<HTMLElement>("h1, h2")].find(
+					(candidate) => candidate.getClientRects().length > 0,
+				) ?? screen;
+			heading.tabIndex = -1;
+			heading.focus({ preventScroll: true });
 		}
 
 		/** The part of the document title after the screen's own, such as " — Pulse". */
@@ -236,6 +283,8 @@ export const MainFrameSync = clientEntry(
 				document.addEventListener(type, claim, { capture: true, signal });
 			}
 			document.addEventListener("submit", submit, { signal });
+			markLandingEntry();
+			document.documentElement.toggleAttribute("data-main-ready", true);
 			let region = document.querySelector("[data-main-region]");
 			if (region === null) return;
 			let pending = false;
@@ -260,6 +309,7 @@ export const MainFrameSync = clientEntry(
 				(event) => {
 					let key = globalThis.navigation?.currentEntry?.key;
 					if (key !== undefined) scrolls.set(key, scroller().scrollTop);
+					leftPath = location.pathname;
 					lastNavigation = event.navigationType;
 				},
 				{ signal },

@@ -99,6 +99,17 @@ describe("MainFrameSync claims links at use time", () => {
 	});
 });
 
+describe("MainFrameSync on load", () => {
+	test("marks the entry the visitor landed on as a main navigation, so Back to it stays in main", () => {
+		let state = navigation.currentEntry?.getState() as
+			| { target?: string; src?: string }
+			| undefined;
+
+		expect(state?.target).toBe("main");
+		expect(state?.src).toBe(location.href);
+	});
+});
+
 describe("MainFrameSync after a swap", () => {
 	test("sets the title, the current nav item and the crumb, and focuses the new heading", async () => {
 		swapTo("Beta", "beta");
@@ -117,6 +128,14 @@ describe("MainFrameSync after a swap", () => {
 
 		await new Promise((resolve) => setTimeout(resolve, 200));
 		expect(document.activeElement).toBe(link("Beta"));
+	});
+
+	test("focuses the screen itself when its heading is hidden, as a list pane is on a phone", async () => {
+		let screen = document.querySelector<HTMLElement>("[data-main-screen]")!;
+		swapTo("Beta", "beta");
+		screen.querySelector("h1")!.hidden = true;
+
+		await vi.waitFor(() => expect(document.activeElement).toBe(screen));
 	});
 
 	test("announces the new screen in a live region it owns", async () => {
