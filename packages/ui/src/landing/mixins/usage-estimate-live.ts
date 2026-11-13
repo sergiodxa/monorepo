@@ -1,0 +1,123 @@
+/**
+ * Why JS: re-pricing while a reader types or drags needs input events, a debounce and a frame
+ * reload, which a GET form cannot do on its own. No-JS baseline: the form submits by GET and
+ * the page renders the bill for the new query.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { MixinFactory } from "remix/component";
+
+import { createMixin } from "remix/component";
+
+/** Types for {@link usageEstimateLive}. */
+export namespace UsageEstimateLiveMixin {
+	/** Configuration for {@link usageEstimateLive}, read on every event. */
+	export interface Options {
+		/** Loads the bill for `src`, the form's address with its current query. */
+		reload: (src: string) => Promise<unknown>;
+		/** Milliseconds of quiet after the last input before the bill is requested. */
+		delay: number;
+	}
+}
+
+/**
+ * Applied to an element inside a calculator's GET form: once the fields have been quiet for
+ * `delay`, it reloads the bill for the form's query, and a submit reloads it at once in place
+ * of a page load. After each reload the address takes the query through `replaceState`, so it
+ * stays shareable and history gains no entry; a submit whose reload fails submits natively.
+ *
+ * @example <span hidden mix={[usageEstimateLive({ reload: (src) => frame.reload({ src }), delay: 250 })]} />
+ */
+export const usageEstimateLive: MixinFactory<
+	HTMLElement,
+	[options: UsageEstimateLiveMixin.Options]
+> = createMixin<HTMLElement, [options: UsageEstimateLiveMixin.Options]>((handle) => {
+	let options: UsageEstimateLiveMixin.Options | undefined;
+	let controller: AbortController | undefined;
+
+	handle.addEventListener("insert", (event) => {
+		controller?.abort();
+		controller = new AbortController();
+		let form = event.node.closest("form");
+		if (form !== null) follow(form, () => options, controller.signal);
+	});
+
+	handle.addEventListener("remove", () => {
+		controller?.abort();
+		controller = undefined;
+	});
+
+	return (next) => {
+		options = next;
+	};
+});
+
+/**
+ * Listens to `form` until `signal` aborts, reading the latest options on each event so a
+ * re-rendered island's new callback is the one used.
+ *
+ * @param form The calculator's GET form.
+ * @param current Returns the options in force.
+ * @param signal Ends the listeners and any pending timer.
+ */
+function follow(
+	form: HTMLFormElement,
+	current: () => UsageEstimateLiveMixin.Options | undefined,
+	signal: AbortSignal,
+): void {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	signal.addEventListener("abort", () => clearTimeout(timer));
+
+	/** Reloads the bill for the form's query and moves the address to it once it has landed. */
+	let price = async () => {
+		let options = current();
+		if (options === undefined) throw new Error("usageEstimateLive has no options");
+		let target = addressOf(form);
+		await options.reload(`${target.pathname}${target.search}`);
+		if (signal.aborted) return;
+		let { history, location } = form.ownerDocument.defaultView ?? window;
+		let next = `${target.pathname}${target.search}${location.hash}`;
+		if (next !== `${location.pathname}${location.search}${location.hash}`) {
+			history.replaceState(history.state, "", next);
+		}
+	};
+
+	/** Waits for the reader to pause, then prices the form if its values are valid. */
+	let schedule = () => {
+		clearTimeout(timer);
+		timer = setTimeout(() => {
+			if (form.checkValidity()) price().catch(() => undefined);
+		}, current()?.delay ?? 0);
+	};
+
+	form.addEventListener("input", schedule, { signal });
+	form.addEventListener("change", schedule, { signal });
+	form.addEventListener(
+		"submit",
+		(event) => {
+			if (event.defaultPrevented) return;
+			event.preventDefault();
+			clearTimeout(timer);
+			price().catch(() => form.submit());
+		},
+		{ signal },
+	);
+}
+
+/**
+ * The address a GET submission of `form` would load: its action with the fields as the query.
+ *
+ * @param form The calculator's GET form.
+ * @returns The action URL with its query replaced by the form's values.
+ */
+function addressOf(form: HTMLFormElement): URL {
+	let url = new URL(form.action, form.ownerDocument.baseURI);
+	let query = new URLSearchParams();
+	for (let [name, value] of new FormData(form)) {
+		if (typeof value === "string") query.append(name, value);
+	}
+	url.search = query.toString();
+	return url;
+}

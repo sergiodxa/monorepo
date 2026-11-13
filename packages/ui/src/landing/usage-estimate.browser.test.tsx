@@ -39,13 +39,17 @@ function mount(width: number): HTMLElement {
 				</label>
 			}
 			submitLabel="Estimate"
-			billLabel="Estimated monthly bill"
-			rows={[
-				{ label: "Free hours", detail: "5 h × $0.00", amount: "$0.00" },
-				{ label: "Recorded hours", detail: "35 h × $0.36", amount: "$12.60" },
-			]}
-			total={{ label: "Per month", amount: "$12.60" }}
-			footnote="Everyone in the workspace reads the notes free."
+			bill={
+				<UsageEstimate.Bill
+					label="Estimated monthly bill"
+					rows={[
+						{ label: "Free hours", detail: "5 h × $0.00", amount: "$0.00" },
+						{ label: "Recorded hours", detail: "35 h × $0.36", amount: "$12.60" },
+					]}
+					total={{ label: "Per month", amount: "$12.60" }}
+					footnote="Everyone in the workspace reads the notes free."
+				/>
+			}
 		/>,
 		{ container: host },
 	);
