@@ -32,10 +32,12 @@ import {
 	PropertyList,
 	RelativeTime,
 	Section,
-	TextArea,
 	Timeline,
 } from "@sdxc/ui";
 import { SaveStatus } from "@sdxc/ui/app/save-status";
+
+import { EmojiTextarea } from "~/resources/views/demo-apps/emoji-textarea";
+import { expandEmoji } from "~/resources/views/demo-apps/expand-emoji";
 
 import type { Change } from "./data";
 import type { IssueView, VisitorState } from "./state";
@@ -508,7 +510,7 @@ function Activity(handle: Handle<{ issue: IssueView; returnTo: string; frame?: s
 									}),
 								]}
 							>
-								{comment.body}
+								{expandEmoji(comment.body)}
 							</p>
 						}
 					>
@@ -538,9 +540,10 @@ function Activity(handle: Handle<{ issue: IssueView; returnTo: string; frame?: s
 					<label htmlFor={`cairn-comment-${issue.id}`} mix={[visuallyHidden()]}>
 						Leave a comment
 					</label>
-					<TextArea
+					<EmojiTextarea
 						id={`cairn-comment-${issue.id}`}
 						name="body"
+						variant="cairn"
 						rows={3}
 						maxLength={600}
 						required
@@ -765,7 +768,7 @@ export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 											}),
 										]}
 									>
-										{issue.title}
+										{expandEmoji(issue.title)}
 									</h1>
 								);
 							}
@@ -784,7 +787,7 @@ export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 										}),
 									]}
 								>
-									{issue.title}
+									{expandEmoji(issue.title)}
 								</h2>
 							);
 						})}
@@ -809,7 +812,7 @@ export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 										}),
 									]}
 								>
-									{paragraph}
+									{expandEmoji(paragraph)}
 								</p>
 							))
 						)}

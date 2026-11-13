@@ -44,13 +44,13 @@ import {
 	LinkButton,
 	Menu,
 	Section,
-	TextArea,
 } from "@sdxc/ui";
 import { FileTrigger } from "@sdxc/ui/app/file-trigger";
 import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
 import {
 	Attachment,
 	Bubble,
+	COMPOSER_INPUT_SLOT,
 	Composer,
 	ComposerSubmit,
 	Message,
@@ -64,6 +64,8 @@ import type { AssistantTurn, FileRef, UserTurn } from "~/resources/views/demo-ap
 import type { Thread } from "~/resources/views/demo-apps/tern/thread";
 
 import { absoluteUrl } from "~/config/constants";
+import { EmojiTextarea } from "~/resources/views/demo-apps/emoji-textarea";
+import { expandEmoji } from "~/resources/views/demo-apps/expand-emoji";
 import { TurnActivityView } from "~/resources/views/demo-apps/tern/activity";
 import { ReplyBlocks } from "~/resources/views/demo-apps/tern/blocks";
 import { MODELS, actionHref, findModel, href } from "~/resources/views/demo-apps/tern/data";
@@ -196,7 +198,15 @@ function EditDialog(handle: Handle<{ thread: Thread; index: number; turn: UserTu
 					</Dialog.Header>
 					<input type="hidden" name="intent" value={`edit-${index}`} />
 					<ThreadFields thread={thread} />
-					<TextArea name="prompt" aria-label="Message" required rows={4} defaultValue={turn.text} />
+					<EmojiTextarea
+						id={`${id}-field`}
+						name="prompt"
+						variant="cairn"
+						aria-label="Message"
+						required
+						rows={4}
+						defaultValue={turn.text}
+					/>
 					<Dialog.Footer>
 						<Button type="button" variant="ghost" color="neutral" commandfor={id} command="close">
 							Cancel
@@ -240,7 +250,7 @@ function UserMessage(
 							id={textId}
 							mix={[raw({ whiteSpace: "pre-wrap", overflowWrap: "anywhere" })]}
 						>
-							{turn.text}
+							{expandEmoji(turn.text)}
 						</Bubble.Content>
 					</Bubble>
 				</Message.Content>
@@ -515,11 +525,14 @@ export function ChatComposer(handle: Handle<ChatComposer.Props>) {
 				>
 					<input type="hidden" name="intent" value="send" />
 					<ThreadFields thread={thread} />
-					<Composer.Input
+					<EmojiTextarea
+						id={`tern-composer-${threadKey(thread)}`}
 						name="prompt"
+						variant="plain"
 						aria-label={COMPOSER_LABELS.field}
 						placeholder={COMPOSER_LABELS.placeholder}
 						required
+						data-slot={COMPOSER_INPUT_SLOT}
 						data-shortcut="mod+/"
 						data-shortcut-label="Focus the message field"
 					/>

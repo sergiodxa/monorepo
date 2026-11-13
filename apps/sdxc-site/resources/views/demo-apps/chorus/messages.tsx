@@ -30,6 +30,8 @@ import { TitleBar, postById } from "~/resources/views/demo-apps/chorus/feed";
 import { PersonAvatar, fullDate, shortAge } from "~/resources/views/demo-apps/chorus/parts";
 import { QuotedPost } from "~/resources/views/demo-apps/chorus/post";
 import { ChorusColumn } from "~/resources/views/demo-apps/chorus/shell";
+import { EmojiTextarea } from "~/resources/views/demo-apps/emoji-textarea";
+import { expandEmoji } from "~/resources/views/demo-apps/expand-emoji";
 
 /**
  * A conversation's messages with the visitor's own sent ones after them, as the visitor reads it.
@@ -297,7 +299,7 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 										]}
 									>
 										{sender}
-										{linked.text}
+										{expandEmoji(linked.text)}
 									</p>
 								)}
 								{posts.map((post) => (
@@ -334,34 +336,17 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 						}),
 					]}
 				>
-					<textarea
+					<EmojiTextarea
+						id={`chorus-dm-${person.handle}`}
 						name="text"
+						variant="chorus-dm"
 						aria-label={`Message ${person.name}`}
 						placeholder="Write a message"
 						required
 						rows={1}
 						defaultValue={draft}
 						autofocus={share !== undefined}
-						mix={[
-							raw({
-								flex: "1 1 auto",
-								fieldSizing: "content",
-								minBlockSize: "2.5rem",
-								maxBlockSize: "10rem",
-								boxSizing: "border-box",
-								padding: "0.5rem 1rem",
-								borderRadius: "1.25rem",
-								border: "1px solid transparent",
-								backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-								color: "inherit",
-								font: "inherit",
-								fontSize: "1rem",
-								resize: "none",
-								outline: "none",
-							}),
-							when("&:focus", raw({ borderColor: "var(--ui-brand-border-strong)" })),
-						]}
-					></textarea>
+					/>
 					<Button
 						type="submit"
 						variant="solid"

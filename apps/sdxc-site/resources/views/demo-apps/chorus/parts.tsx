@@ -16,6 +16,7 @@ import { when } from "@sdxc/u/state";
 import type { Person, Scene } from "~/resources/views/demo-apps/chorus/data";
 
 import { findPerson, href } from "~/resources/views/demo-apps/chorus/data";
+import { expandEmoji } from "~/resources/views/demo-apps/expand-emoji";
 
 /** Counts as Chorus prints them: 940, 3.8K, 152K, 1.2M. */
 const COMPACT = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
@@ -320,48 +321,50 @@ namespace RichText {
 export function RichText(handle: Handle<RichText.Props>) {
 	return () => (
 		<>
-			{handle.props.text.split(TOKEN).map((part, index) => {
-				if (index % 2 === 0) return part;
-				if (part.startsWith("@")) {
-					let person = findPerson(part.slice(1));
-					return person ? (
-						<a href={href(`u/${person.handle}`)} data-rmx-prefetch="intent" mix={[inlineLink()]}>
-							{part}
-						</a>
-					) : (
-						part
-					);
-				}
-				if (part.startsWith("#")) {
+			{expandEmoji(handle.props.text)
+				.split(TOKEN)
+				.map((part, index) => {
+					if (index % 2 === 0) return part;
+					if (part.startsWith("@")) {
+						let person = findPerson(part.slice(1));
+						return person ? (
+							<a href={href(`u/${person.handle}`)} data-rmx-prefetch="intent" mix={[inlineLink()]}>
+								{part}
+							</a>
+						) : (
+							part
+						);
+					}
+					if (part.startsWith("#")) {
+						return (
+							<a href={href(`explore?q=${encodeURIComponent(part)}`)} mix={[inlineLink()]}>
+								{part}
+							</a>
+						);
+					}
+					if (part.startsWith("`")) {
+						return (
+							<code
+								mix={[
+									raw({
+										fontFamily: "var(--ui-font-mono)",
+										fontSize: "0.9em",
+										paddingInline: "0.25em",
+										borderRadius: "0.3em",
+										backgroundColor: "var(--ui-neutral-bg-tint-hover)",
+									}),
+								]}
+							>
+								{part.slice(1, -1)}
+							</code>
+						);
+					}
 					return (
-						<a href={href(`explore?q=${encodeURIComponent(part)}`)} mix={[inlineLink()]}>
-							{part}
+						<a href={part} rel="noopener" mix={[inlineLink(), raw({ wordBreak: "break-all" })]}>
+							{part.replace(/^https?:\/\//, "")}
 						</a>
 					);
-				}
-				if (part.startsWith("`")) {
-					return (
-						<code
-							mix={[
-								raw({
-									fontFamily: "var(--ui-font-mono)",
-									fontSize: "0.9em",
-									paddingInline: "0.25em",
-									borderRadius: "0.3em",
-									backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-								}),
-							]}
-						>
-							{part.slice(1, -1)}
-						</code>
-					);
-				}
-				return (
-					<a href={part} rel="noopener" mix={[inlineLink(), raw({ wordBreak: "break-all" })]}>
-						{part.replace(/^https?:\/\//, "")}
-					</a>
-				);
-			})}
+				})}
 		</>
 	);
 }

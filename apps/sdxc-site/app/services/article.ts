@@ -11,6 +11,8 @@ import type { MarkdownWalkError } from "@sdxc/markdown";
 import type { Result } from "@sdxc/result";
 
 import { diagram } from "@sdxc/diagram/markdown";
+import { emojis as emojiCatalog } from "@sdxc/emoji/catalog";
+import { emojis as emojiVisitor } from "@sdxc/emoji/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
 import { iife } from "@sdxc/iife";
 import { Markdown } from "@sdxc/markdown";
@@ -113,7 +115,10 @@ export function prepareArticle(
 	let anchored = anchorArticle(document, options);
 	if (isFailure(anchored)) return anchored;
 
-	return Markdown.walk(anchored.data, Markdown.compose(diagram, math, highlight));
+	return Markdown.walk(
+		anchored.data,
+		Markdown.compose(diagram, math, highlight, emojiVisitor(emojiCatalog)),
+	);
 }
 
 /**
@@ -175,7 +180,7 @@ export function preparePackageReadme(
 
 	return Markdown.walk(
 		anchored.data,
-		Markdown.compose(diagram, math, highlight, {
+		Markdown.compose(diagram, math, highlight, emojiVisitor(emojiCatalog), {
 			link(node: Markdown.Link) {
 				let href = rewriteHref(node.href, directory);
 				if (href === node.href) return;

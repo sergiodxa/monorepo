@@ -11,7 +11,6 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
-import { when } from "@sdxc/u/state";
 import { Button } from "@sdxc/ui";
 import { CharacterCount } from "@sdxc/ui/character-count";
 
@@ -19,6 +18,7 @@ import { ComposeSubmit } from "~/resources/views/demo-apps/chorus/compose-submit
 import { ME, POST_LIMIT, href } from "~/resources/views/demo-apps/chorus/data";
 import { COUNT_LABELS } from "~/resources/views/demo-apps/chorus/labels";
 import { PersonAvatar } from "~/resources/views/demo-apps/chorus/parts";
+import { EmojiTextarea } from "~/resources/views/demo-apps/emoji-textarea";
 import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
 
 namespace Composer {
@@ -100,37 +100,19 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 						}),
 					]}
 				>
-					<textarea
+					<EmojiTextarea
 						id={fieldId}
 						name="text"
+						variant="chorus"
 						aria-label={placeholder}
 						placeholder={placeholder}
 						autofocus={autofocus}
 						rows={tall ? 4 : 2}
+						tall={tall}
 						defaultValue={value}
 						aria-invalid={issue ? "true" : undefined}
 						aria-describedby={issue ? issueId : undefined}
-						mix={[
-							raw({
-								fieldSizing: "content",
-								minBlockSize: tall ? "7.5rem" : "3.25rem",
-								maxBlockSize: "24rem",
-								inlineSize: "100%",
-								boxSizing: "border-box",
-								paddingBlock: "0.5rem",
-								paddingInline: "0",
-								border: "0",
-								resize: "none",
-								background: "transparent",
-								color: "inherit",
-								font: "inherit",
-								fontSize: "1.1875rem",
-								lineHeight: "1.4",
-								outline: "none",
-							}),
-							when("&::placeholder", raw({ color: "var(--ui-neutral-fg-muted)" })),
-						]}
-					></textarea>
+					/>
 					{issue ? (
 						<p
 							id={issueId}

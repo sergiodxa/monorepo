@@ -14,7 +14,10 @@ import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Button, Dialog, HeadingScope, Label, Select, TextArea, TextField } from "@sdxc/ui";
+import { Button, Dialog, HeadingScope, Label, Select } from "@sdxc/ui";
+
+import { EmojiInputField } from "~/resources/views/demo-apps/emoji-input-field";
+import { EmojiTextarea } from "~/resources/views/demo-apps/emoji-textarea";
 
 import type { PriorityId, StatusId } from "./data";
 
@@ -108,7 +111,8 @@ export function CreateIssueFields(handle: Handle<CreateIssueFields.Props>) {
 		return (
 			<div mix={[vstack({ gap: 4, align: "stretch" })]}>
 				<input type="hidden" name="from" value={from} />
-				<TextField
+				<EmojiInputField
+					id={`${id}-title`}
 					label="Title"
 					name="title"
 					defaultValue={draft.title}
@@ -120,9 +124,10 @@ export function CreateIssueFields(handle: Handle<CreateIssueFields.Props>) {
 				/>
 				<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
 					<Label htmlFor={`${id}-description`}>Description</Label>
-					<TextArea
+					<EmojiTextarea
 						id={`${id}-description`}
 						name="description"
+						variant="cairn"
 						rows={4}
 						placeholder="Add a description…"
 						defaultValue={draft.description}

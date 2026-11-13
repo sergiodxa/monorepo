@@ -30,6 +30,7 @@ import { href, pollFrame } from "~/resources/views/demo-apps/chorus/data";
 import { FeedKeys } from "~/resources/views/demo-apps/chorus/feed-keys";
 import { FollowCard, TrendsCard } from "~/resources/views/demo-apps/chorus/rail";
 import { readState } from "~/resources/views/demo-apps/chorus/state";
+import { EmojiTextarea } from "~/resources/views/demo-apps/emoji-textarea";
 import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
 
 import "@sdxc/ui/reset.css";
@@ -58,6 +59,7 @@ const ISLANDS: Record<string, Function> = {
 	ComposeReturn,
 	ComposeSubmit,
 	CopyLink,
+	EmojiTextarea,
 	FeedKeys,
 	OptimisticToggle,
 };
