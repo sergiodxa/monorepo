@@ -33,6 +33,27 @@ const CRUMBS: PageHeader.Crumb[] = [
 	{ label: "api.acme.dev" },
 ];
 
+/** Every style rule on the page that sets `container-type`, with its at-rule ancestors. */
+function containerTypeRules(): Array<{ rule: CSSStyleRule; ancestors: string[] }> {
+	let found: Array<{ rule: CSSStyleRule; ancestors: string[] }> = [];
+	let visit = (rules: CSSRuleList, ancestors: string[]) => {
+		for (let rule of rules) {
+			if (rule instanceof CSSSupportsRule)
+				visit(rule.cssRules, [...ancestors, `@supports ${rule.conditionText}`]);
+			else if (rule instanceof CSSMediaRule)
+				visit(rule.cssRules, [...ancestors, `@media ${rule.conditionText}`]);
+			else if (rule instanceof CSSLayerBlockRule) visit(rule.cssRules, ancestors);
+			else if (rule instanceof CSSStyleRule) {
+				if (rule.style.containerType !== "") found.push({ rule, ancestors });
+				if (rule.cssRules.length > 0) visit(rule.cssRules, ancestors);
+			}
+		}
+	};
+	for (let sheet of document.styleSheets) visit(sheet.cssRules, []);
+	for (let sheet of document.adoptedStyleSheets) visit(sheet.cssRules, []);
+	return found;
+}
+
 /** Three views of one monitor. */
 const TABS: PageHeader.Tab[] = [
 	{ href: "#overview", label: "Overview", current: true },
@@ -267,6 +288,19 @@ describe("PageHeader", () => {
 
 		expect(Math.round(box.left)).toBe(Math.round(scroller.left));
 		expect(Math.round(box.right)).toBe(Math.round(scroller.right));
+	});
+
+	test("the sticky header stays a width container where scroll-state containers are unknown", () => {
+		mounted = render(<PageHeader sticky crumbs={CRUMBS} title="api.acme.dev" />);
+		let rules = containerTypeRules();
+		let plain = rules.filter(({ rule }) => rule.style.containerType === "inline-size");
+		let stuck = rules.filter(({ rule }) => rule.style.containerType.includes("scroll-state"));
+
+		expect(plain.some(({ ancestors }) => ancestors.length === 0)).toBe(true);
+		expect(stuck.length).toBeGreaterThan(0);
+		for (let { rule, ancestors } of stuck) {
+			expect(ancestors, rule.cssText).toContain("@supports (container-type: scroll-state)");
+		}
 	});
 
 	test("under reduced motion the sticky header sticks at full size", async () => {

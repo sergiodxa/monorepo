@@ -29,6 +29,12 @@ const WIDE = `@container ${CONTAINER} (min-width: 40rem)`;
 /** Every header width under {@link WIDE}. */
 const NARROW = `@container ${CONTAINER} (max-width: 39.9375rem)`;
 
+/**
+ * Browsers that take a scroll-state container. Every other browser keeps a plain inline-size
+ * container, so the width queries that pick the trail or the parent link apply everywhere.
+ */
+const SCROLL_STATE_SUPPORT = "@supports (container-type: scroll-state)";
+
 /** The sticky header once it is held at the top while motion is welcome, which is when it compacts. */
 const STUCK = `@container ${CONTAINER} scroll-state(stuck: top)`;
 
@@ -160,8 +166,9 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 							display: "block",
 							inlineSize: "100%",
 							minInlineSize: "0",
-							containerType: sticky ? "inline-size scroll-state" : "inline-size",
+							containerType: "inline-size",
 							containerName: CONTAINER,
+							...(sticky ? { [SCROLL_STATE_SUPPORT]: { containerType: "inline-size scroll-state" } } : {}),
 							overflowWrap: "anywhere",
 						}),
 						sticky
