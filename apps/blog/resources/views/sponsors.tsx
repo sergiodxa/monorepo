@@ -8,27 +8,15 @@
  */
 
 import type { DocumentAssets } from "@sdxc/assets-middleware";
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { iife } from "@sdxc/iife";
 import { fg } from "@sdxc/u/color";
-import { vars } from "@sdxc/u/general";
-import { listStyle } from "@sdxc/u/general";
-import {
-	basis,
-	flexWrap,
-	gap,
-	grid,
-	gridTemplate,
-	grow,
-	hstack,
-	shrink,
-	vstack,
-} from "@sdxc/u/layout";
+import { basis, flexWrap, gap, grid, grow, hstack, shrink } from "@sdxc/u/layout";
 import { m, maxIs, minIs, p } from "@sdxc/u/size";
-import { spacing } from "@sdxc/u/tokens";
-import { textAlign, text, weight } from "@sdxc/u/typography";
-import { Avatar, Card, Heading, Link, LinkButton } from "@sdxc/ui";
+import { text, weight } from "@sdxc/u/typography";
+import { Card, Heading, Link, LinkButton } from "@sdxc/ui";
+import { SponsorWall } from "@sdxc/ui/landing";
 
 import type { Sponsor, SponsorRoster } from "~/app/services/sponsors";
 
@@ -104,102 +92,105 @@ export function SponsorsView() {
 					through PayPal, or any amount on <Link href={PROFILE.kofi.profile}>Ko-fi</Link>.
 				</p>
 
-				{model.current.length > 0 ? (
-					<section id="current" mix={[grid(), gap(4)]}>
-						<Heading level={2} mix={[text("2xl")]}>
-							Current sponsors
-						</Heading>
-						<ul
-							mix={[
-								grid(),
-								gap(6),
-								gridTemplate({ columns: `repeat(auto-fill, minmax(${spacing(32)}, 1fr))` }),
-								m(0),
-								p(0),
-								listStyle("none"),
-							]}
-						>
-							{model.current.map((sponsor) => (
-								<li key={sponsor.login}>
-									<a
-										href={sponsor.url}
-										rel="noreferrer"
-										mix={[
-											vstack({ gap: 2, align: "center" }),
-											textAlign("center"),
-											text("sm"),
-											weight("medium"),
-											fg("neutral.emphasis"),
-										]}
-									>
-										<SponsorAvatar sponsor={sponsor} large />
-										{sponsor.name}
-									</a>
-								</li>
-							))}
-						</ul>
-					</section>
-				) : null}
-
-				{model.past.length > 0 ? (
-					<section id="past" mix={[grid(), gap(4)]}>
-						<Heading level={2} mix={[text("2xl")]}>
-							Past sponsors
-						</Heading>
-						<p mix={[m(0), fg("neutral")]}>Thank you to everyone who sponsored before.</p>
-						<ul
-							mix={[
-								hstack({ gap: 2, align: "center" }),
-								flexWrap("wrap"),
-								m(0),
-								p(0),
-								listStyle("none"),
-							]}
-						>
-							{model.past.map((sponsor) => (
-								<li key={sponsor.login}>
-									<a
-										href={sponsor.url}
-										rel="noreferrer"
-										title={sponsor.name}
-										aria-label={sponsor.name}
-									>
-										<SponsorAvatar sponsor={sponsor} />
-									</a>
-								</li>
-							))}
-						</ul>
-					</section>
-				) : null}
+				<SponsorLists roster={model} />
 			</main>
 		</BlogLayout>
 	);
 }
 
-namespace SponsorAvatar {
+namespace SponsorLists {
 	export interface Props {
-		sponsor: Sponsor;
-		/** Draws the picture at the size a current sponsor is named with. */
-		large?: boolean;
+		roster: SponsorRoster;
 	}
 }
 
 /**
- * Renders one sponsor's picture, falling back to their initials while it loads or when it
- * fails. The picture sits beside the name or a label, so its text alternative is empty.
+ * Renders the current sponsors, large and named, then the past ones as a wall of small
+ * avatars, each list only while it names someone. The ways to join close whichever list
+ * comes last, so the page ends on them.
  */
-function SponsorAvatar(handle: Handle<SponsorAvatar.Props>) {
+export function SponsorLists(handle: Handle<SponsorLists.Props>) {
 	return () => {
-		let { large, sponsor } = handle.props;
+		let { roster } = handle.props;
 
 		return (
-			<Avatar
-				size={large ? "lg" : "md"}
-				mix={large ? [vars({ "ui-image-placeholder-size-lg": spacing(20) }), text("xl")] : []}
-			>
-				<Avatar.Image src={sponsor.avatarUrl} alt="" loading="lazy" />
-				<Avatar.Fallback>{sponsor.name.trim().slice(0, 2).toUpperCase()}</Avatar.Fallback>
-			</Avatar>
+			<>
+				{roster.current.length > 0 ? (
+					<section id="current" mix={[grid(), gap(4)]}>
+						<Heading level={2} mix={[text("2xl")]}>
+							Current sponsors
+						</Heading>
+						<Roster
+							sponsors={roster.current}
+							named
+							actions={roster.past.length > 0 ? null : <JoinActions />}
+						/>
+					</section>
+				) : null}
+
+				{roster.past.length > 0 ? (
+					<section id="past" mix={[grid(), gap(4)]}>
+						<Heading level={2} mix={[text("2xl")]}>
+							Past sponsors
+						</Heading>
+						<p mix={[m(0), fg("neutral")]}>Thank you to everyone who sponsored before.</p>
+						<Roster sponsors={roster.past} actions={<JoinActions />} />
+					</section>
+				) : null}
+			</>
 		);
 	};
+}
+
+namespace Roster {
+	export interface Props {
+		sponsors: Sponsor[];
+		/** Draws each sponsor large with their name under the picture, for the people sponsoring now. */
+		named?: boolean;
+		/** The ways to join, closing the wall; the page passes them to its last list only. */
+		actions?: RemixNode;
+	}
+}
+
+/**
+ * Renders one list as a sponsor wall set on the column's start edge, the way the rest of
+ * the page reads. Every circle links the sponsor's GitHub profile and is named for
+ * assistive technology; a picture that fails shows the sponsor's initials.
+ */
+function Roster(handle: Handle<Roster.Props>) {
+	return () => {
+		let { actions, named, sponsors } = handle.props;
+
+		return (
+			<SponsorWall align="start" actions={actions ?? undefined}>
+				<SponsorWall.Individuals>
+					{sponsors.map((sponsor) => (
+						<SponsorWall.Person
+							key={sponsor.login}
+							href={sponsor.url}
+							name={sponsor.name}
+							src={sponsor.avatarUrl}
+							size={named ? "lg" : undefined}
+							showName={named}
+							rel="noreferrer"
+						/>
+					))}
+				</SponsorWall.Individuals>
+			</SponsorWall>
+		);
+	};
+}
+
+/** The two ongoing and one-off ways to join the list, closing the page's last wall. */
+function JoinActions() {
+	return () => (
+		<>
+			<LinkButton href={PROFILE.github.sponsor} color="brand">
+				Sponsor me on GitHub
+			</LinkButton>
+			<LinkButton href={PROFILE.kofi.profile} variant="outline" color="neutral">
+				Give once on Ko-fi
+			</LinkButton>
+		</>
+	);
 }
