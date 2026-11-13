@@ -212,7 +212,8 @@ namespace CommentFields {
 /**
  * The inline comment form: the lines it covers, the text box, and the buttons that add the
  * comment to a pending review or post it on its own. With script it lives in a template the
- * island copies under the lines a `+` or a drag names.
+ * island copies under the lines a `+` or a drag names; the text box sits inside its label, so
+ * the drawn form and every copy share the page without an id between them.
  */
 function CommentFields(handle: Handle<CommentFields.Props>) {
 	return () => {
@@ -250,17 +251,16 @@ function CommentFields(handle: Handle<CommentFields.Props>) {
 						{range}
 					</span>
 				</span>
-				<label mix={[visuallyHidden()]} htmlFor="delta-line-comment-body">
-					{COPY.review.commentLabel}
+				<label mix={[raw({ display: "grid" })]}>
+					<span mix={[visuallyHidden()]}>{COPY.review.commentLabel}</span>
+					<TextArea
+						name="body"
+						rows={3}
+						maxLength={600}
+						required
+						placeholder={COPY.review.commentPlaceholder}
+					/>
 				</label>
-				<TextArea
-					id="delta-line-comment-body"
-					name="body"
-					rows={3}
-					maxLength={600}
-					required
-					placeholder={COPY.review.commentPlaceholder}
-				/>
 				<div
 					mix={[
 						raw({ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: "0.5rem" }),

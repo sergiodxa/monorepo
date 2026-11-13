@@ -847,6 +847,30 @@ describe("Delta's pull request files", () => {
 		expect(target.searchParams.get("comment")).toBe("diffs.tsx:R34");
 	});
 
+	test("the drawn comment form and a + draft share the page without repeating an id", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57/files?comment=diffs.tsx:R34");
+		let diff = root.querySelector<HTMLElement>('[data-slot="diff"]')!;
+		await settle(() => diff.hasAttribute("data-diff-live"));
+		root
+			.querySelector<HTMLAnchorElement>(
+				'[data-slot="diff-file"][data-path="diffs.tsx"] a[data-comment="R40"]',
+			)!
+			.click();
+		await settle(() => root.querySelector("tr[data-delta-draft]") !== null);
+		let ids = [...document.querySelectorAll("[id]")].map((element) => element.id);
+
+		expect(root.querySelectorAll('[data-slot="delta-line-comment"]').length).toBeGreaterThanOrEqual(
+			2,
+		);
+		expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);
+		for (let box of root.querySelectorAll<HTMLTextAreaElement>(
+			'[data-slot="delta-line-comment"] textarea',
+		)) {
+			expect(box.labels).toHaveLength(1);
+		}
+	});
+
 	test("Finish your review opens its dialog, and submitting it posts in place", async () => {
 		await page.viewport(1280, 800);
 		let root = await mountScreen("delta/pull/57/files");
