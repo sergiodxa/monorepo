@@ -207,4 +207,11 @@ export default route({
 		/** An interactive piece of a docs demo page, such as its feedback form or a live example. */
 		docs: get("/demo/frames/docs/:site/*part"),
 	},
+	/**
+	 * A live part of a demo app's screen as a streamed `text/plain` body, such as a running CI
+	 * job's log, which the page appends line by line as it arrives.
+	 */
+	demoStreams: {
+		app: get("/demo/apps/:app/streams/*part"),
+	},
 });

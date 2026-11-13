@@ -112,6 +112,11 @@ export interface DemoApp {
 	 */
 	frame?: (part: string, request: DemoAppRequest) => RemixNode | null | Promise<RemixNode | null>;
 	/**
+	 * Answers a live part of a screen as a stream of text, such as a running job's log: `part`
+	 * is its path (`runs/815/job/4`). `null` answers the stream route's `404`.
+	 */
+	stream?: (part: string, request: DemoAppRequest) => ReadableStream<string> | null;
+	/**
 	 * Renders the content of the named `<Frame>` a screen mounts with the screen's own address
 	 * as its `src`, for a request carrying that name in `X-Remix-Target`: a link, a form or the
 	 * frame's first render. `null` for a name the screen does not own answers the whole screen.
@@ -241,6 +246,21 @@ export function demoAppFrameHref(slug: string): (part: string) => string {
  */
 export function demoAppCookiePath(slug: string): string {
 	return routes.demoApps.show.href({ app: slug });
+}
+
+/**
+ * Builds the addresses of one demo app's streams, so a screen names a live part by its path.
+ *
+ * @param slug The demo's folder name.
+ * @returns A function from a part path, with its query string when it keeps one, to its address.
+ * @example demoAppStreamHref("delta")("runs/815/job/4?after=14") // "/demo/apps/delta/streams/runs/815/job/4?after=14"
+ */
+export function demoAppStreamHref(slug: string): (part: string) => string {
+	return (part) => {
+		let [path = "", query] = part.split("?", 2);
+		let href = routes.demoStreams.app.href({ app: slug, part: path });
+		return query === undefined || query === "" ? href : `${href}?${query}`;
+	};
 }
 
 /**

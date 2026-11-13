@@ -344,6 +344,10 @@ export function createWebRouter() {
 		routes.demoFrames.docs,
 		lazy(() => import("~/app/http/controllers/demo-docs/frame")),
 	);
+	router.map(
+		routes.demoStreams.app,
+		lazy(() => import("~/app/http/controllers/demo-apps/stream")),
+	);
 
 	return router;
 }
