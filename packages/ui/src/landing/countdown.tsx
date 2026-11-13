@@ -45,9 +45,9 @@ export namespace Countdown {
 	}
 
 	/**
-	 * The moment and the countdown's text. A page styles the figures from an ancestor through
-	 * the `countdown-units`, `countdown-unit`, `countdown-value`, `countdown-label` and
-	 * `countdown-done` slots, which reach the server render and the island alike.
+	 * The moment and the countdown's text. A page sets the figures in its own type from an
+	 * ancestor: `--ui-countdown-value-font/-size/-weight/-color`, `--ui-countdown-label-font/-size`,
+	 * `--ui-countdown-gap` and `--ui-countdown-align`, which reach the server render and the island alike.
 	 */
 	export interface Props {
 		/** The moment counted down to. */
@@ -179,7 +179,7 @@ function CountdownBody(handle: Handle<CountdownBody.Props>) {
 						display: "inline-flex",
 						flexWrap: "wrap",
 						alignItems: "flex-start",
-						columnGap: "1em",
+						columnGap: "var(--ui-countdown-gap, 1em)",
 						rowGap: "0.5em",
 						"&[hidden]": { display: "none" },
 					})}
@@ -189,22 +189,32 @@ function CountdownBody(handle: Handle<CountdownBody.Props>) {
 							key={unit}
 							data-slot="countdown-unit"
 							data-unit={unit}
-							mix={css({ display: "inline-flex", flexDirection: "column", alignItems: "center" })}
+							mix={css({
+								display: "inline-flex",
+								flexDirection: "column",
+								alignItems: "var(--ui-countdown-align, center)",
+							})}
 						>
 							<span
 								data-slot="countdown-value"
 								mix={css({
+									fontFamily: "var(--ui-countdown-value-font, inherit)",
 									fontVariantNumeric: "tabular-nums",
-									fontSize: "1.5em",
-									fontWeight: "600",
+									fontSize: "var(--ui-countdown-value-size, 1.5em)",
+									fontWeight: "var(--ui-countdown-value-weight, 600)",
 									lineHeight: "1",
+									color: "var(--ui-countdown-value-color, inherit)",
 								})}
 							>
 								{formatUnit(unit, left[unit])}
 							</span>
 							<span
 								data-slot="countdown-label"
-								mix={css({ fontSize: "0.75em", lineHeight: "1.4" })}
+								mix={css({
+									fontFamily: "var(--ui-countdown-label-font, inherit)",
+									fontSize: "var(--ui-countdown-label-size, 0.75em)",
+									lineHeight: "1.4",
+								})}
 							>
 								{labels[unit]}
 							</span>

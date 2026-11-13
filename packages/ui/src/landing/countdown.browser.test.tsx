@@ -69,6 +69,24 @@ describe("Countdown", () => {
 		expect(time.textContent).toContain("días");
 	});
 
+	test("sets its figures in the type an ancestor's custom properties name", () => {
+		let host = document.createElement("div");
+		host.style.setProperty("--ui-countdown-value-size", "40px");
+		host.style.setProperty("--ui-countdown-value-color", "rgb(255, 0, 128)");
+		host.style.setProperty("--ui-countdown-label-size", "9px");
+		document.body.appendChild(host);
+		render(<Countdown to="2027-04-15T07:00:00Z" now="2027-04-13T05:58:03Z" done="Open" />, {
+			container: host,
+		});
+
+		let value = getComputedStyle(host.querySelector('[data-slot="countdown-value"]')!);
+		expect(value.fontSize).toBe("40px");
+		expect(value.color).toBe("rgb(255, 0, 128)");
+		expect(getComputedStyle(host.querySelector('[data-slot="countdown-label"]')!).fontSize).toBe(
+			"9px",
+		);
+	});
+
 	test("shows the done text alone once the moment has passed", () => {
 		let time = mount(
 			<Countdown to="2027-04-15T07:00:00Z" now="2027-04-15T09:00:00Z" done="Doors are open" />,
