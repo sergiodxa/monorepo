@@ -34,6 +34,7 @@ export const FACE_KIND = {
 	callout: "alert",
 	card: "card",
 	carousel: "carousel",
+	"case-study": "landing-stage",
 	"character-count": "textarea",
 	"changelog-strip": "landing-strip",
 	chart: "chart",

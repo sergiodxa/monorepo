@@ -173,6 +173,7 @@ const CATALOGUE = [
 	{ slug: "callout", module: "docs" },
 	{ slug: "card", module: "components" },
 	{ slug: "carousel", module: "components" },
+	{ slug: "case-study", module: "landing" },
 	{ slug: "character-count", module: "components" },
 	{ slug: "changelog-strip", module: "landing" },
 	{ slug: "chart", module: "app" },
