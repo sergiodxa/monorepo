@@ -254,18 +254,15 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 									href={back.href}
 									data-slot="page-header-parent"
 									mix={[
+										raw({
+											display: "inline-flex",
+											alignItems: "center",
+											gap: "0.25rem",
+											maxInlineSize: "100%",
+											textDecoration: "none",
+											borderRadius: "0.25rem",
+										}),
 										when(WIDE, raw({ display: "none" })),
-										when(
-											NARROW,
-											raw({
-												display: "inline-flex",
-												alignItems: "center",
-												gap: "0.25rem",
-												maxInlineSize: "100%",
-												textDecoration: "none",
-												borderRadius: "0.25rem",
-											}),
-										),
 										text("sm"),
 										fg("neutral.muted"),
 										hover(fg("neutral.emphasis")),

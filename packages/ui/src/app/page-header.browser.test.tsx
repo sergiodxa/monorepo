@@ -191,6 +191,20 @@ describe("PageHeader", () => {
 		expect(parent.textContent).toBe("Monitors");
 	});
 
+	test("sets the parent link's chevron on its label's row, centered with it", () => {
+		mountHeader("20rem", { sticky: true });
+		let parent = document.querySelector<HTMLAnchorElement>('[data-slot="page-header-parent"]')!;
+		let chevron = parent.querySelector("svg")!.getBoundingClientRect();
+		let label = document.createRange();
+		label.selectNodeContents(parent.lastChild!);
+		let text = label.getBoundingClientRect();
+
+		expect(chevron.right).toBeLessThanOrEqual(text.left);
+		expect(
+			Math.abs((chevron.top + chevron.bottom) / 2 - (text.top + text.bottom) / 2),
+		).toBeLessThan(2);
+	});
+
 	test("takes an explicit parent link", () => {
 		mountHeader("20rem", { crumbs: [], parent: { href: "#all", label: "All monitors" } });
 		let parent = document.querySelector<HTMLAnchorElement>('[data-slot="page-header-parent"]')!;
