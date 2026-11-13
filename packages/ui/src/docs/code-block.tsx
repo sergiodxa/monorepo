@@ -10,14 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { tokenize } from "@sdxc/highlight";
-import {
-	FileBracesIcon,
-	FileCodeIcon,
-	FileCogIcon,
-	FileIcon,
-	FileTextIcon,
-	TerminalIcon,
-} from "@sdxc/icons";
+import { FileCodeIcon, FileIcon, TerminalIcon } from "@sdxc/icons";
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { mergeMix, raw } from "@sdxc/u/general";
@@ -28,6 +21,8 @@ import { z } from "@sdxc/u/stacking";
 import { font, text, truncate } from "@sdxc/u/typography";
 
 import { COPY_EXCLUDE_ATTRIBUTE } from "../mixins/copy-to-clipboard.js";
+import { codeLines } from "../utils/code-lines.js";
+import { fileIcon } from "../utils/file-icon.js";
 
 import { CopyButton } from "./copy-button.js";
 
@@ -339,7 +334,8 @@ interface TitleIconProps {
 
 /**
  * The glyph before the header text: a terminal for a shell session, otherwise a file
- * glyph picked by the title's extension, so a reader sees what kind of file it is.
+ * glyph picked by the title's extension, so a reader sees what kind of file it is; an
+ * extension without a glyph of its own reads as source code.
  */
 function TitleIcon(handle: Handle<TitleIconProps>) {
 	return () => {
@@ -347,17 +343,8 @@ function TitleIcon(handle: Handle<TitleIconProps>) {
 		let extension = title?.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
 
 		if (shell && !extension) return <TerminalIcon size={14} aria-hidden="true" />;
-		if (extension === "json" || extension === "jsonc") {
-			return <FileBracesIcon size={14} aria-hidden="true" />;
-		}
-		if (extension && ["md", "mdx", "txt"].includes(extension)) {
-			return <FileTextIcon size={14} aria-hidden="true" />;
-		}
-		if (extension && ["toml", "yaml", "yml", "env", "ini"].includes(extension)) {
-			return <FileCogIcon size={14} aria-hidden="true" />;
-		}
-		if (extension) return <FileCodeIcon size={14} aria-hidden="true" />;
-		return <FileIcon size={14} aria-hidden="true" />;
+		let Glyph = title && extension ? fileIcon(title, { fallback: FileCodeIcon }) : FileIcon;
+		return <Glyph size={14} aria-hidden="true" />;
 	};
 }
 
@@ -398,7 +385,7 @@ function paintLines(
 	let lines: Line[] = [];
 	let continued = false;
 
-	for (let [index, lineTokens] of splitLines(runs).slice(0, rawLines.length).entries()) {
+	for (let [index, lineTokens] of codeLines(runs).slice(0, rawLines.length).entries()) {
 		let prompt = prompts[index] ?? false;
 		let command: boolean = prompt || continued;
 		continued = command && (rawLines[index] ?? "").endsWith("\\");
@@ -422,21 +409,6 @@ function markOf(
 	if (marks.add?.includes(number)) return "add";
 	if (marks.highlight?.includes(number)) return "highlight";
 	return undefined;
-}
-
-/**
- * Splits runs at newlines so each line owns its runs; a run spanning lines (a block
- * comment, a template literal) becomes one run per line, same type.
- */
-function splitLines(runs: readonly CodeBlock.Token[]): CodeBlock.Token[][] {
-	let lines: CodeBlock.Token[][] = [[]];
-	for (let run of runs) {
-		for (let [index, piece] of run.value.split(/\r?\n/).entries()) {
-			if (index > 0) lines.push([]);
-			if (piece.length > 0) lines[lines.length - 1]?.push({ type: run.type, value: piece });
-		}
-	}
-	return lines;
 }
 
 /** Drops the first `count` characters of a line's runs, for a prompt already painted in. */

@@ -9,20 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import {
-	EllipsisIcon,
-	FileBracesIcon,
-	FileCodeIcon,
-	FileCogIcon,
-	FileIcon,
-	FileImageIcon,
-	FileLockIcon,
-	FileTerminalIcon,
-	FileTextIcon,
-	FileTypeIcon,
-	FolderIcon,
-	FolderOpenIcon,
-} from "@sdxc/icons";
+import { EllipsisIcon, FolderIcon, FolderOpenIcon } from "@sdxc/icons";
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor, listStyle, mergeMix, raw } from "@sdxc/u/general";
@@ -31,6 +18,8 @@ import { overflowX } from "@sdxc/u/overflow";
 import { m, minIs, mis, p, pi, pis } from "@sdxc/u/size";
 import { focusVisible, when } from "@sdxc/u/state";
 import { font, nowrap, text, weight } from "@sdxc/u/typography";
+
+import { fileIcon } from "../utils/file-icon.js";
 
 /** Placeholder entry standing for "more files here" that a tree leaves out. */
 const MORE = "…";
@@ -71,53 +60,6 @@ export namespace FileTree {
 		/** Accessible text for the `"…"` placeholder, such as "More files". */
 		moreLabel?: string;
 	}
-}
-
-/** Icons for file extensions whose type a reader recognises at a glance. */
-const ICON_BY_EXTENSION: Record<string, typeof FileIcon> = {
-	ts: FileCodeIcon,
-	tsx: FileCodeIcon,
-	js: FileCodeIcon,
-	jsx: FileCodeIcon,
-	mjs: FileCodeIcon,
-	cjs: FileCodeIcon,
-	mts: FileCodeIcon,
-	cts: FileCodeIcon,
-	html: FileCodeIcon,
-	sql: FileCodeIcon,
-	json: FileBracesIcon,
-	jsonc: FileBracesIcon,
-	md: FileTextIcon,
-	mdx: FileTextIcon,
-	txt: FileTextIcon,
-	css: FileTypeIcon,
-	png: FileImageIcon,
-	jpg: FileImageIcon,
-	jpeg: FileImageIcon,
-	gif: FileImageIcon,
-	svg: FileImageIcon,
-	webp: FileImageIcon,
-	avif: FileImageIcon,
-	ico: FileImageIcon,
-	sh: FileTerminalIcon,
-	toml: FileCogIcon,
-	yaml: FileCogIcon,
-	yml: FileCogIcon,
-	env: FileCogIcon,
-	lock: FileLockIcon,
-	lockb: FileLockIcon,
-};
-
-/**
- * Picks a file's icon from its extension, treating a dotfile's name as its extension
- * (`.env`), and falls back to a plain file icon for anything unrecognised.
- *
- * @param name File name as shown in the tree.
- */
-function iconFor(name: string): typeof FileIcon {
-	let dot = name.lastIndexOf(".");
-	if (dot === -1) return FileIcon;
-	return ICON_BY_EXTENSION[name.slice(dot + 1).toLowerCase()] ?? FileIcon;
 }
 
 /**
@@ -227,7 +169,7 @@ function Entry(handle: Handle<Entry.Props>) {
 		}
 
 		if (entry.children === undefined) {
-			let Glyph = iconFor(entry.name);
+			let Glyph = fileIcon(entry.name);
 
 			return (
 				<li data-slot="file-tree-file" mix={[m(0)]}>

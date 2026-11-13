@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export * from "./code-lines.js";
 export * from "./color-math.js";
 export * from "./command-event.js";
 export * from "./css-styles.js";
@@ -15,6 +16,7 @@ export * from "./disabled-selector.js";
 export * from "./dispatch-change.js";
 export * from "./eyebrow.js";
 export * from "./field-parts.js";
+export * from "./file-icon.js";
 export * from "./full-turn-radians.js";
 export * from "./geometry.js";
 export * from "./glyph-edges.js";
