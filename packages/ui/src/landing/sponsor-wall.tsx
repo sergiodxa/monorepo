@@ -91,7 +91,10 @@ export namespace SponsorWall {
 	export interface TierProps extends TagProps<"div"> {
 		/** The tier's name, such as "Gold partners"; it heads the tier at the ambient depth. */
 		label: RemixNode;
-		/** Cell and logo scale. Defaults to {@link DEFAULT_TIER_SIZE}. */
+		/**
+		 * Cell and logo scale, larger for a more prominent tier.
+		 * @default "md"
+		 */
 		size?: TierSize;
 		/**
 		 * The marks: inline SVGs drawn in `currentColor`, images, or links wrapping either.
@@ -120,19 +123,23 @@ export namespace SponsorWall {
 		name: string;
 		/** Picture URL; without one the circle shows the name's initials. */
 		src?: string;
-		/** Circle size. Defaults to {@link DEFAULT_PERSON_SIZE}. */
+		/**
+		 * Circle diameter: 2rem, 2.75rem or 3.5rem.
+		 * @default "md"
+		 */
 		size?: PersonSize;
 		/**
-		 * Sets the name under the circle, for a backer the page names in full. The caption
-		 * links to `href` too, while the circle stays the one link focus and assistive technology reach.
+		 * Sets the name under the circle in two centred lines at most, every named backer 6rem
+		 * wide. The caption links to `href` for a pointer; the circle stays the focusable, named link.
 		 */
 		showName?: boolean;
 	}
 }
 
 /**
- * Stacks sponsor tiers, the backer cloud and the closing actions, and opens a heading
- * scope so every tier label sits one level under the band's title.
+ * Stacks sponsor tiers, the backer cloud and the closing actions, all server-rendered with no
+ * script, and opens a heading scope so every tier label sits one level under the band's title.
+ * Tier grids rule their cells in `--ui-landing-hairline`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the wall's markup.
@@ -140,6 +147,12 @@ export namespace SponsorWall {
  * <SponsorWall actions={<LinkButton href={sponsor}>{t("sponsor.cta")}</LinkButton>}>
  * 	<SponsorWall.Tier label={t("sponsor.gold")} size="xl">{goldMarks}</SponsorWall.Tier>
  * 	<SponsorWall.Tier label={t("sponsor.silver")} size="lg">{silverMarks}</SponsorWall.Tier>
+ * </SponsorWall>
+ * @example
+ * <SponsorWall align="start" actions={<LinkButton href={profile}>Sponsor</LinkButton>}>
+ * 	<SponsorWall.Individuals label="Backers">
+ * 		<SponsorWall.Person href={ana.url} name="Ana Souza" src={ana.avatar} size="lg" showName />
+ * 	</SponsorWall.Individuals>
  * </SponsorWall>
  */
 export function SponsorWall(handle: Handle<SponsorWall.Props>) {
@@ -302,8 +315,8 @@ SponsorWall.Tier = function SponsorWallTier(handle: Handle<SponsorWall.TierProps
 };
 
 /**
- * The individual backers: a centred, wrapping cloud of {@link SponsorWall.Person} circles
- * under an optional label.
+ * The individual backers: a wrapping cloud of {@link SponsorWall.Person} circles under an
+ * optional label, centred or on the start edge by the wall's `align`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the cloud's markup.

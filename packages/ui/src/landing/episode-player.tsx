@@ -29,6 +29,7 @@ export namespace EpisodePlayer {
 	export interface Chapter {
 		/** Seconds from the start of the audio. */
 		start: number;
+		/** The chapter's name, the link text a reader presses to play from its start. */
 		title: RemixNode;
 	}
 
@@ -38,6 +39,7 @@ export namespace EpisodePlayer {
 		start: number;
 		/** The speaker's name, shown once at the start of the passage. */
 		speaker?: RemixNode;
+		/** What is said, set after the time link and the speaker. */
 		text: RemixNode;
 	}
 
@@ -45,9 +47,9 @@ export namespace EpisodePlayer {
 	 * Props accepted by {@link EpisodePlayer}.
 	 */
 	export interface Props extends Omit<TagProps<"div">, "title"> {
-		/** Address of the audio file; chapter links append `#t=<seconds>` to it. */
+		/** Address of the audio file; every time link appends `#t=<whole seconds>` to it. */
 		src: string;
-		/** Media type of the file, such as `audio/mpeg`. */
+		/** Media type of the file, such as `audio/mpeg`, so a browser skips a format it cannot play. */
 		type?: string;
 		/** The episode's title, rendered as a heading at the surrounding level. */
 		title: RemixNode;
@@ -63,7 +65,7 @@ export namespace EpisodePlayer {
 		transcriptLabel: string;
 		/** The WebVTT captions file for the audio, which assistive technology can read out. */
 		captions: { src: string; srclang: string; label: string };
-		/** Shown by a browser without audio support, such as a download link. */
+		/** Rendered inside `<audio>` for a browser without audio support, such as a download link. */
 		fallback: RemixNode;
 		/** A line under the player, such as a credit or a download link. */
 		note?: RemixNode;
@@ -105,15 +107,16 @@ function timeLink() {
 }
 
 /**
- * Renders the player, then the chapters as an ordered list of links and the transcript
- * in a closed `<details>`. Without script each link opens the audio at its moment; with
- * the island it seeks this player, starts it, and the playing chapter and passage carry
- * `aria-current`.
+ * The audio, chapter links and a closed transcript; with no script a time link opens the file
+ * at its moment. Map {@link EpisodeSync} (`@sdxc/ui/landing/episode-player`) in the browser entry
+ * to seek in place and mark what plays. `--ui-landing-hairline` colours the chapter rules.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the player.
  * @example
  * <EpisodePlayer src="/audio/63.mp3" captions={{ src: "/audio/63.vtt", srclang: "en", label: "English" }} title="No. 63" chaptersLabel="Chapters" transcriptLabel="Transcript" fallback={<a href="/audio/63.mp3">Download</a>} />
+ * @example
+ * <EpisodePlayer src="/audio/63.mp3" type="audio/mpeg" captions={{ src: "/audio/63.vtt", srclang: "en", label: "English" }} title="No. 63" meta="Episode 63 · 14:20" chaptersLabel="Chapters" transcriptLabel="Read the transcript" fallback={<a href="/audio/63.mp3">Download</a>} chapters={[{ start: 0, title: "Opening" }, { start: 112, title: "Pressure" }]} transcript={[{ start: 0, speaker: "Tove", text: "This is Undercurrent." }]} />
  */
 export function EpisodePlayer(handle: Handle<EpisodePlayer.Props>) {
 	return () => {
@@ -281,9 +284,9 @@ export function EpisodePlayer(handle: Handle<EpisodePlayer.Props>) {
 }
 
 /**
- * The island inside every {@link EpisodePlayer}: a hidden marker that runs the seeking and
- * current-chapter behaviour. It loads from the `@sdxc/ui/landing/episode-player` specifier,
- * which the app's browser entry maps to a dynamic import.
+ * The island inside every {@link EpisodePlayer}: a hidden marker running {@link mediaSync},
+ * so a time link seeks and plays, and the playing chapter and passage carry `aria-current`.
+ * It loads from `@sdxc/ui/landing/episode-player`, which the browser entry maps to an import.
  */
 export const EpisodeSync: EntryComponent<Record<never, never>> = clientEntry(
 	"@sdxc/ui/landing/episode-player#EpisodeSync",

@@ -31,6 +31,7 @@ const DEFAULT_DELAY = 250;
 export namespace UsageEstimate {
 	/** One line of the bill. */
 	export interface Row {
+		/** What the line charges for, set as the row's header cell. */
 		label: RemixNode;
 		/** The arithmetic behind the amount, such as `35 h × $0.36`. */
 		detail?: RemixNode;
@@ -71,12 +72,15 @@ export namespace UsageEstimate {
 	export interface StaticProps extends FormProps {
 		/** The bill for the query the page rendered, a {@link UsageEstimate.Bill}. */
 		bill: RemixNode;
+		/** Left unset: a printed bill and a live frame are the two exclusive modes. */
 		live?: undefined;
 	}
 
 	/** A calculator whose bill is a frame re-requested while the reader types. */
 	export interface LiveProps extends FormProps {
+		/** The frame the sheet holds, and where and how often it reloads as the reader types. */
 		live: Live;
+		/** Left unset: the route prints the bill into the `live` frame. */
 		bill?: undefined;
 	}
 
@@ -87,7 +91,7 @@ export namespace UsageEstimate {
 
 	/** Props accepted by {@link UsageEstimate.Bill}. */
 	export interface BillProps {
-		/** Accessible name of the bill. Required — the library ships no copy. */
+		/** Accessible name of the bill's table, such as "Estimated monthly bill". */
 		label: string;
 		/** The bill's lines, in the order they add up. */
 		rows: readonly Row[];
@@ -101,18 +105,33 @@ export namespace UsageEstimate {
 
 	/** Props accepted by {@link UsageEstimateLive}. */
 	export interface LiveIslandProps {
+		/** Name of the bill frame the island reloads, the calculator's `live.frame`. */
 		frame: string;
+		/** Milliseconds of quiet after the last input before the frame reloads. */
 		delay: number;
 	}
 }
 
 /**
- * Renders the form and the bill on one raised card, side by side from a 40rem card and
- * stacked on a phone, the bill on a tinted sheet so it reads as the answer. In live mode the
- * sheet holds a blocking frame, so the server still inlines the bill and the form is unchanged.
+ * A GET form beside its bill on one card, side by side from 40rem, the sheet ruled in
+ * `--ui-landing-hairline`; with no script a submit reloads the page on the new bill. For `live`,
+ * map {@link UsageEstimateLive} (`@sdxc/ui/landing/usage-estimate`) to re-price while typing.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the calculator's markup.
+ * @example
+ * <UsageEstimate
+ * 	action="#pricing"
+ * 	fields={<TextField label="Hours a month" type="number" name="hours" defaultValue="40" />}
+ * 	submitLabel="Estimate"
+ * 	bill={
+ * 		<UsageEstimate.Bill
+ * 			label="Estimated monthly bill"
+ * 			rows={[{ label: "Recorded hours", detail: "35 h × $0.36", amount: "$12.60" }]}
+ * 			total={{ label: "Per month", amount: "$12.60" }}
+ * 		/>
+ * 	}
+ * />
  * @example
  * <UsageEstimate
  * 	action="#pricing"
@@ -193,13 +212,14 @@ export function UsageEstimate(handle: Handle<UsageEstimate.Props>) {
 }
 
 /**
- * The bill a calculator shows: its lines and total in one right-aligned column of tabular
- * figures, then the footnote and the CTA pinned to the sheet's foot. A live calculator's
- * route returns this alone for the frame's target. The total is a polite live region, so a
- * re-priced bill is announced by its sum.
+ * The bill a calculator shows: its lines and total in a column of tabular figures, then the
+ * footnote and the CTA at the sheet's foot. A live route returns it alone for the frame, and
+ * the total is a polite live region, so a re-priced bill is announced by its sum.
  *
  * @param handle Runtime handle carrying the bill.
  * @returns The render function producing the bill.
+ * @example
+ * <UsageEstimate.Bill label="Estimated monthly bill" rows={[{ label: "Free hours", detail: "5 h × $0.00", amount: "$0.00" }]} total={{ label: "Per month", amount: "$0.00" }} footnote="Readers are free." />
  */
 UsageEstimate.Bill = function UsageEstimateBill(handle: Handle<UsageEstimate.BillProps>) {
 	return () => {

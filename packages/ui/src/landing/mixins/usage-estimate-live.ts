@@ -15,7 +15,10 @@ import { createMixin } from "remix/component";
 export namespace UsageEstimateLiveMixin {
 	/** Configuration for {@link usageEstimateLive}, read on every event. */
 	export interface Options {
-		/** Loads the bill for `src`, the form's address with its current query. */
+		/**
+		 * Loads the bill for `src`, the form's path with its current query. When the newest
+		 * reload behind a submit rejects, the form submits natively and the page loads the bill.
+		 */
 		reload: (src: string) => Promise<unknown>;
 		/** Milliseconds of quiet after the last input before the bill is requested. */
 		delay: number;

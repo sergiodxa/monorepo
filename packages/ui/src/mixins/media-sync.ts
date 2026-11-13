@@ -20,7 +20,7 @@ export namespace MediaSync {
 	export interface Options {
 		/**
 		 * Selectors, each matching one playing-order list under the player whose items carry
-		 * their start in `data-start` or `data-cue`; the item playing carries `aria-current`.
+		 * their start in `data-start` or `data-cue`; the item playing carries `aria-current="true"`.
 		 */
 		marks: readonly string[];
 		/** Runs after every seek and time update, with the items that newly became current. */
@@ -40,7 +40,7 @@ export namespace MediaSync {
  *
  * @param items The list's items in playing order, each with `data-start` or `data-cue`.
  * @param time The media's current time in seconds.
- * @returns The item that newly became current, or `undefined` when none changed.
+ * @returns The item that newly became current, or `undefined` when no item became current.
  */
 export function markPlaying(items: Iterable<HTMLElement>, time: number): HTMLElement | undefined {
 	let list = [...items];
@@ -103,8 +103,9 @@ export function installMediaSync(
 }
 
 /**
- * Runs {@link installMediaSync} for the player around the host: the closest `root` match and
- * the first `<audio>` or `<video>` inside it. Usually the host is a hidden marker in an island.
+ * Makes a player's `a[data-start]` time links seek and play its first `<audio>` or `<video>`,
+ * and marks the playing item of each `marks` list, as {@link installMediaSync} does. The player
+ * is the host's closest `root` match; the host is usually a hidden marker in the player's island.
  *
  * @param options The player's root selector and the lists to mark.
  * @returns A mixin descriptor for an element inside the player.

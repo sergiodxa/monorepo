@@ -210,6 +210,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Alert` — an inline status panel.
 - `Badge`, `TagGroup` — a status pill, and a labeled set of removable pills.
 - `Spinner` — a busy indicator.
+- `LabelChip` — a label pill in any colour whose text stays readable in both schemes.
 
 ### Components: layout and content
 
@@ -257,8 +258,16 @@ Landing bands, composition craft and animated visuals. Every piece imports from
 - `SequenceDiagram` — animated exchange: `actors` on lifelines and `messages` travelling between them in order.
 - `FanOutDiagram` — animated one-to-many: a `source` reaching every one of its `targets` (`direction="in"` for many-to-one).
 - `EventTicker` — animated activity log: `rows` arriving newest first, a status that can flip with `flipTo`.
-- `TypedTerminal` — animated terminal: input `lines` typing themselves out, then their output.
+- `TypedTerminal` — animated terminal: input `lines` typing themselves out, then their output. `variant="code"` plays on the light code card.
 - `DrawnChart` — animated figure: a `metric` counting up over a `bars` or `line` `series` that draws in.
+- `ScrollScene`, `sceneMotion()` — a pinned stage that plays its parts' keyframes as the reader scrolls, in CSS.
+- `CaseStudy` — one client project as a full-bleed scene with the result it earned.
+- `ContributorWall` — contributors as square tiles, ending on a tile counting the rest.
+- `SponsorWall` — sponsor tiers in ruled grids, then backers; `SponsorWall.Person` takes `showName`.
+- `PriceList` — a menu or price list with dotted leaders, in as many columns as fit.
+- `Countdown`, `countdownParts` — time left until a moment, server-rendered; `live` ticks it (island `@sdxc/ui/landing/countdown`).
+- `EpisodePlayer` — native `<audio>` with chapter and transcript time links (island `@sdxc/ui/landing/episode-player`).
+- `UsageEstimate`, `UsageEstimate.Bill` — a GET-form pricing calculator; `live` re-prices a bill frame as the reader types (island `@sdxc/ui/landing/usage-estimate`).
 
 **Composition craft**
 
@@ -357,7 +366,7 @@ Dashboard and workspace components.
   `linearScale`, `bandScale`, `ticks`, `linePath`, `areaPath`, `arcPath`, `pieAngles` and
   `computeMarkerIndices`; `chartPalette()` and `legendToggle()` style its series.
 - `Table` — a table whose `.Column` takes a sort `href` and whose `.LoadMore` row is a link.
-- `GridList`, `Tree` — an interactive row list, and nested `<details>`.
+- `GridList`, `Tree` — an interactive row list, and nested `<details>`. `Tree.Leaf` file rows, `Tree.Filter` and `Tree.Navigation` make it a file browser.
 - `DropIndicator` — the bar marking where a dragged row will land.
 - `Toast` — a notification stacked by `Toast.Region`, queued by a `Toaster`.
 - `Skeleton`, `Empty` — a loading block, and an empty-state panel; `Skeleton.Text` bars real
@@ -369,6 +378,14 @@ Dashboard and workspace components.
   hatched tail for a late projection.
 - `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
   pointer-positioned menu.
+- `PageHeader` — a screen's title row and tabs; tabs that overflow fold into a More menu.
+- `CommandPalette` — a ⌘K command list; `CommandPalette.Finder` is a fuzzy file finder page.
+- `FilterMenu` — a filterable popover of links, radios or checkboxes, posted as a form on close.
+- `CheckRuns`, `MergeBox` — a commit's checks summarised by state, and a merge box that says why it is blocked.
+- `ContributionGraph` — a year of daily counts as a grid of cells.
+- `CodeView` — a whole file with line links from `?L=`, a line menu and blame (island `@sdxc/ui/app/code-view`).
+- `Diff`, `ReviewThread` — a change unified or split with comment links, and a resolvable thread anchored to its lines (island `@sdxc/ui/app/diff`).
+- `LogViewer` — a CI job's log by step, with search and timestamps.
 - `Resizable` — split panes.
 - `ShortcutList` — a `<dl>` pairing actions with key caps.
 - `FileTrigger`, `DropZone` — a button opening the file picker, and a drop target, both over a
@@ -523,6 +540,7 @@ handled there — no separate landing animation system.
 - **DOM** — `asCommandEvent`, `dispatchChange`, `isNewPrimaryPress`, `isPrintableKey`, `focusItem`,
   `queryItems`, `setRovingTabindex`, `labelFor`, `hasAccessibleText`, `glyphEdges`, `mergeStyle`, `prefersReducedMotion`, `writeCookie(name, value, { maxAgeSeconds?, path? })`,
   `DISABLED_SELECTOR`, `DEFAULT_ICON_ARIA_HIDDEN`, `ONE_YEAR_SECONDS`.
+- **Code** — `codeLines(runs)` splits a highlighter's runs into lines, and `fileIcon(path)` picks a file's icon.
 - **Accessibility checks** — `warnIfNoAccessibleName(props, children, message)` and
   `warnIfNoAccessibleLabel(props, message)`, development-only warnings.
 

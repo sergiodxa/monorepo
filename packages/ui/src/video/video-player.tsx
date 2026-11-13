@@ -131,22 +131,31 @@ export namespace VideoPlayer {
 
 	/** One file the player may play, as the quality menu and the settings badge read it. */
 	export interface SourceInfo {
+		/** The file's address, which the quality menu swaps the video to. */
 		src: string;
+		/** The source's name in the quality menu, which falls back to the file's name. */
 		label?: string;
+		/** The source's `badge`, shown on the gear while this file plays. */
 		badge?: string;
 	}
 
 	/** One captions or subtitles track, as the captions menu lists it. */
 	export interface CaptionsInfo {
+		/** The track's name in the captions menu. */
 		label: string;
+		/** The track's `srclang`, when it names one. */
 		language?: string;
 	}
 
 	/** What {@link VideoPlayer} shares with its parts. */
 	export interface Context {
+		/** The player's `duration`, in seconds. */
 		duration: number;
+		/** The player's chapters, empty when it gives none. */
 		chapters: readonly Chapter[];
+		/** The player's transcript lines, empty when it gives none. */
 		transcript: readonly Cue[];
+		/** The moment the server renders as now, in seconds. */
 		current?: number;
 		/** The first source's address, which every time link points into. */
 		href?: string;
@@ -177,10 +186,11 @@ export namespace VideoPlayer {
 
 	/** Props accepted by {@link VideoPlayer.Source}. */
 	export interface SourceProps extends Omit<TagProps<"source">, "children"> {
+		/** The file's address; the first source's is where every time link points. */
 		src: string;
 		/** Media type, such as `video/webm`, so the browser skips files it cannot play. */
 		type?: string;
-		/** The file's name in the quality menu, such as `1080p`. */
+		/** The file's name in the quality menu, such as `1080p`; the file name stands in when unset. */
 		label?: string;
 		/** Short mark beside the label and on the settings gear, such as `HD` or `4K`. */
 		badge?: string;
@@ -269,6 +279,7 @@ export namespace VideoPlayer {
 
 	/** What {@link VideoPlayer.SettingsMenu} shares with its options. */
 	export interface SettingsMenuContext {
+		/** The radio group's form name every option takes. */
 		name: string;
 	}
 
@@ -277,6 +288,7 @@ export namespace VideoPlayer {
 		TagProps<"input">,
 		"type" | "name" | "children" | "value"
 	> {
+		/** The value a `change` listener reads from the menu's `name` once this is chosen. */
 		value: string;
 		/** A short mark after the label, such as `4K`. */
 		badge?: RemixNode;
@@ -366,10 +378,9 @@ function captionsOf(children: RemixNode, transcript: readonly VideoPlayer.Cue[])
 }
 
 /**
- * Renders the player's `<figure>` in its tone and shares the timeline with its parts. Parts
- * sit in one column; a {@link VideoPlayer.Side} takes a second from the `lg` container and
- * stacks under the rest below it, or always in theater mode. Without script every time is a
- * link that opens the first source at that moment; with the island it seeks this player.
+ * A `<figure>` sharing one timeline with its parts; with no script its native controls play and
+ * time links open the file there. Map {@link VideoPlayerSync} (`@sdxc/ui/video/video-player`) for
+ * the bar. Theming: `--ui-video-player-` radius, progress-color, menu-bg, on-video, transcript-height.
  *
  * @param handle Runtime handle carrying the host `<figure>`'s props.
  * @returns The render function producing the player.
@@ -377,6 +388,14 @@ function captionsOf(children: RemixNode, transcript: readonly VideoPlayer.Cue[])
  * <VideoPlayer duration={703} chapters={chapters}>
  * 	<VideoPlayer.Screen label="Centering 3 kg" captionsLabel="English" chaptersLabel="Chapters"><VideoPlayer.Source src="/07.mp4" type="video/mp4" /></VideoPlayer.Screen>
  * 	<VideoPlayer.Side><VideoPlayer.Chapters label="Chapters" /></VideoPlayer.Side>
+ * </VideoPlayer>
+ * @example
+ * <VideoPlayer duration={703} chapters={chapters} transcript={lines} tone="theater">
+ * 	<VideoPlayer.Screen label="Centering 3 kg" captionsLabel="English" chaptersLabel="Chapters">
+ * 		<VideoPlayer.Source src="/07.mp4" type="video/mp4" label="1080p" badge="HD" />
+ * 		<VideoPlayer.Controls label="Video controls"><VideoPlayer.Progress label="Seek" /><VideoPlayer.Play label="Play" pauseLabel="Pause" /><VideoPlayer.Time /></VideoPlayer.Controls>
+ * 	</VideoPlayer.Screen>
+ * 	<VideoPlayer.Side><VideoPlayer.Transcript label="Transcript" /></VideoPlayer.Side>
  * </VideoPlayer>
  */
 export function VideoPlayer(handle: Handle<VideoPlayer.Props, VideoPlayer.Context>) {
@@ -577,7 +596,7 @@ VideoPlayer.Screen = function VideoPlayerScreen(handle: Handle<VideoPlayer.Scree
 
 /**
  * One file the video may play, in preference order, exactly as a `<source>` inside
- * `<video>`; the first one also gives every time link its address. A `label` lists it in
+ * `<video>`; the first one also gives every time link its address. A `label` names it in
  * the quality menu and a `badge` marks it there and on the settings gear.
  *
  * @param handle Runtime handle carrying the `<source>`'s props.
@@ -839,9 +858,8 @@ VideoPlayer.Transcript = function VideoPlayerTranscript(
 };
 
 /**
- * The custom control bar along the bottom of the screen. It renders `hidden` while the
- * video keeps its native controls, and the island swaps one for the other, so a page with
- * no script still plays. A {@link VideoPlayer.Progress} spans the top of the bar and a
+ * The custom control bar along the bottom of the screen, rendered `hidden` until the island
+ * swaps it for the native controls. A {@link VideoPlayer.Progress} spans its top line and a
  * {@link VideoPlayer.Time} pushes what follows it to the inline end.
  *
  * @param handle Runtime handle carrying the bar's props.
@@ -1783,9 +1801,8 @@ function optionBadge() {
 
 /**
  * The island inside every {@link VideoPlayer}: a hidden marker that seeks from time links,
- * keeps the marks on what plays, and swaps the native controls for a
- * {@link VideoPlayer.Controls} bar. It loads from `@sdxc/ui/video/video-player`, which the
- * app's browser entry maps to a dynamic import.
+ * marks what plays, and swaps the native controls for a {@link VideoPlayer.Controls} bar.
+ * It loads from `@sdxc/ui/video/video-player`, which the browser entry maps to an import.
  */
 export const VideoPlayerSync: EntryComponent<Record<never, never>> = clientEntry(
 	"@sdxc/ui/video/video-player#VideoPlayerSync",
