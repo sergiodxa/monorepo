@@ -276,6 +276,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/cbor](packages/cbor)                     | CBOR (RFC 8949) decoding and deterministic encoding, bounded for untrusted input                              |
 | [@sdxc/codemod](packages/codemod)               | Source-to-source edits of JavaScript and TypeScript imports and declarations, changing only the edited ranges |
 | [@sdxc/csv](packages/csv)                       | Read and write RFC 4180 CSV, with a streaming writer and formula neutralization                               |
+| [@sdxc/diff](packages/diff)                     | Line and word diffs with git's histogram alignment, and unified diffs parsed and written as plain data        |
 | [@sdxc/epub](packages/epub)                     | Build EPUB 3.3 publications from XHTML chapters, checked against what epubcheck rejects                       |
 | [@sdxc/font](packages/font)                     | Font reader: metrics, outlines, layout, shaping, variable fonts, color glyphs, subsetting                     |
 | [@sdxc/icalendar](packages/icalendar)           | Read and write iCalendar documents, with recurrence rules and time zones                                      |

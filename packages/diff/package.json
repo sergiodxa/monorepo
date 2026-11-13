@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/diff",
+	"version": "0.0.1",
+	"description": "Line and word diffs with git's histogram alignment, and unified diffs parsed and written as plain data",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"diff": "9.0.0"
+	}
+}

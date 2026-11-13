@@ -1,0 +1,66 @@
+diff --git a/old.txt b/new.txt
+index 494876a..9d65169 100644
+--- a/old.txt
++++ b/new.txt
+@@ -60,29 +60,43 @@ function focusSheet(controls: Element): void {
+ }
+ 
+ /**
+- * Binds the sheet's keys to the document for as long as the controls stay mounted: Esc
+- * follows Close unless a popover is open (the popover takes it), k/j and ↑/↓ follow
+- * previous/next. Keys typed in a field, or claimed nearer their target, pass through.
+- *
+- * @returns A mixin descriptor for the sheet's controls.
+- * @example <div mix={[detailSheetKeys()]}>{links}</div>
++ * Where the sheet's keys answer: `"page"` anywhere in the document, with focus moved into
++ * the sheet on open; `"sheet"` only while focus is inside the sheet, for a sheet shown on
++ * a page whose own keys come first, such as a catalogue.
+  */
+-export const detailSheetKeys: MixinFactory<HTMLElement> = createMixin<HTMLElement>((handle) => {
++export type DetailSheetKeyScope = "page" | "sheet";
++
++/**
++ * Binds the sheet's keys for as long as the controls stay mounted: Esc follows Close
++ * unless a popover is open (the popover takes it), k/j and ↑/↓ follow previous/next.
++ * Keys typed in a field, or claimed nearer their target, pass through.
++ *
++ * @param scope Where the keys answer.
++ * @returns A mixin descriptor for the sheet's controls.
++ * @example <div mix={[detailSheetKeys("page")]}>{links}</div>
++ */
++export const detailSheetKeys: MixinFactory<HTMLElement, [scope: DetailSheetKeyScope]> = createMixin<
++	HTMLElement,
++	[scope: DetailSheetKeyScope]
++>((handle) => {
++	let current: DetailSheetKeyScope = "page";
++
+ 	handle.addEventListener("insert", (event) => {
+ 		let controls = event.node;
+ 		let document = controls.ownerDocument;
+-		focusSheet(controls);
++		if (current === "page") focusSheet(controls);
+ 
+ 		document.addEventListener(
+ 			"keydown",
+ 			(keystroke) => {
+ 				if (isClaimedKeystroke(keystroke)) return;
++				let target = keystroke.target instanceof Element ? keystroke.target : null;
++				if (current === "sheet" && !target?.closest(SHEET_SELECTOR)) return;
+ 				let match = KEY_LINKS.find(([combo]) => matchesKeyCombo(keystroke, combo));
+ 				if (match === undefined) return;
+ 
+ 				let [, link, arrow] = match;
+ 				if (link === "close" && document.querySelector(":popover-open") !== null) return;
+-				let target = keystroke.target instanceof Element ? keystroke.target : null;
+ 				if (arrow && target?.closest(SCROLL_REGION_SELECTOR)) return;
+ 
+ 				if (follow(controls, link)) keystroke.preventDefault();
+@@ -91,5 +105,7 @@ export const detailSheetKeys: MixinFactory<HTMLElement> = createMixin<HTMLElemen
+ 		);
+ 	});
+ 
+-	return () => undefined;
++	return (scope) => {
++		current = scope;
++	};
+ });

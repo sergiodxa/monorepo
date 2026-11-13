@@ -1063,6 +1063,13 @@
         "remix": "3.2.0",
       },
     },
+    "packages/diff": {
+      "name": "@sdxc/diff",
+      "version": "0.0.1",
+      "devDependencies": {
+        "diff": "9.0.0",
+      },
+    },
     "packages/digest-fields": {
       "name": "@sdxc/digest-fields",
       "version": "0.0.1",
@@ -3395,6 +3402,8 @@
 
     "@sdxc/diagram": ["@sdxc/diagram@workspace:packages/diagram"],
 
+    "@sdxc/diff": ["@sdxc/diff@workspace:packages/diff"],
+
     "@sdxc/digest-fields": ["@sdxc/digest-fields@workspace:packages/digest-fields"],
 
     "@sdxc/distill": ["@sdxc/distill@workspace:packages/distill"],
@@ -3792,6 +3801,8 @@
     "dequal": ["dequal@2.0.3", "", {}, "sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA=="],
 
     "detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
+
+    "diff": ["diff@9.0.0", "", {}, "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="],
 
     "dom-accessibility-api": ["dom-accessibility-api@0.5.16", "", {}, "sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg=="],
 

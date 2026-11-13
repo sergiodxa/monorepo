@@ -1,0 +1,68 @@
+diff --git a/old.txt b/new.txt
+index 97eb20c..5df3290 100644
+--- a/old.txt
++++ b/new.txt
+@@ -20,15 +20,17 @@ const BACKGROUNDS = { light: "#f6f8fa", dark: "#161b22" };
+ const MINIMUM_CONTRAST = 4.5;
+ 
+ /**
+- * The hex colours one block of the stylesheet declares, by property. A property that
+- * points at another one through `var()` inherits that colour's contrast and is skipped.
++ * The `[light, dark]` hex pair each property declares through `light-dark()`. A property
++ * that points at another one through `var()` inherits that pair's contrast and is skipped.
+  */
+-function declaredColours(block: string): Map<string, string> {
+-	let colours = new Map<string, string>();
+-	for (let match of block.matchAll(/(--highlight-[\w-]+):\s*(#[\da-f]{6});/gi)) {
+-		colours.set(match[1]!, match[2]!);
++function declaredPairs(styles: string): Map<string, readonly [string, string]> {
++	let pairs = new Map<string, readonly [string, string]>();
++	for (let match of styles.matchAll(
++		/(--highlight-[\w-]+):\s*light-dark\((#[\da-f]{6}),\s*(#[\da-f]{6})\);/gi,
++	)) {
++		pairs.set(match[1]!, [match[2]!, match[3]!]);
+ 	}
+-	return colours;
++	return pairs;
+ }
+ 
+ /** WCAG relative luminance of a `#rrggbb` colour. */
+@@ -46,20 +48,25 @@ function contrast(a: string, b: string): number {
+ 	return (high! + 0.05) / (low! + 0.05);
+ }
+ 
+-let [light = "", dark = ""] = STYLES.split("@media (prefers-color-scheme: dark)");
++let PAIRS = [...declaredPairs(STYLES)];
+ 
+ describe("styles.css", () => {
+-	test.each([...declaredColours(light)])(
+-		"paints %s at 4.5:1 or more on a light page",
+-		(_property, colour) => {
+-			expect(contrast(colour, BACKGROUNDS.light)).toBeGreaterThanOrEqual(MINIMUM_CONTRAST);
+-		},
+-	);
++	test("declares every palette colour as a light-dark() pair", () => {
++		expect(PAIRS.map(([property]) => property)).toEqual(
++			expect.arrayContaining(["--highlight-text", "--highlight-string", "--highlight-deleted"]),
++		);
++		expect(STYLES).not.toMatch(/--highlight-[\w-]+:\s*#/);
++	});
+ 
+-	test.each([...declaredColours(dark)])(
+-		"paints %s at 4.5:1 or more on a dark page",
+-		(_property, colour) => {
+-			expect(contrast(colour, BACKGROUNDS.dark)).toBeGreaterThanOrEqual(MINIMUM_CONTRAST);
+-		},
+-	);
++	test("switches palettes by color-scheme rather than the system preference", () => {
++		expect(STYLES).not.toContain("prefers-color-scheme");
++	});
++
++	test.each(PAIRS)("paints %s at 4.5:1 or more on a light page", (_property, [colour]) => {
++		expect(contrast(colour, BACKGROUNDS.light)).toBeGreaterThanOrEqual(MINIMUM_CONTRAST);
++	});
++
++	test.each(PAIRS)("paints %s at 4.5:1 or more on a dark page", (_property, [, colour]) => {
++		expect(contrast(colour, BACKGROUNDS.dark)).toBeGreaterThanOrEqual(MINIMUM_CONTRAST);
++	});
+ });
