@@ -2112,6 +2112,9 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 			case "carouselControls":
 				body = <Keycaps keys={["‹", "›"]} />;
 				break;
+			case "videoPlayerSync":
+				body = <Keycaps keys={["▶", "CC", "⚙"]} />;
+				break;
 			case "tableSelection":
 				body = <NavFace kind="table" />;
 				break;

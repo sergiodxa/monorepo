@@ -150,6 +150,7 @@ const COMPONENT_GROUPS: Array<{ module: ComponentModule; title: string }> = [
 	{ module: "chat", title: "Chat" },
 	{ module: "color", title: "Color" },
 	{ module: "app", title: "App" },
+	{ module: "video", title: "Video" },
 ];
 
 /**

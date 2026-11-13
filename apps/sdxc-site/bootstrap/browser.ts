@@ -66,6 +66,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/landing/episode-player": () => import("@sdxc/ui/landing/episode-player"),
 	"@sdxc/ui/landing/countdown": () => import("@sdxc/ui/landing/countdown"),
 	"@sdxc/ui/relative-time": () => import("@sdxc/ui/relative-time"),
+	"@sdxc/ui/video/video-player": () => import("@sdxc/ui/video/video-player"),
 };
 
 /**

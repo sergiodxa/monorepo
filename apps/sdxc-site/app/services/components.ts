@@ -22,7 +22,14 @@ export interface ComponentEntry {
  * The `@sdxc/ui` folder a component's module lives in, which decides the subpath it is
  * imported from: `components` from `@sdxc/ui`, a namespace from `@sdxc/ui/<namespace>`.
  */
-export type ComponentModule = "components" | "landing" | "docs" | "chat" | "color" | "app";
+export type ComponentModule =
+	| "components"
+	| "landing"
+	| "docs"
+	| "chat"
+	| "color"
+	| "app"
+	| "video";
 
 /** One catalogue page as the tree lists it, sorted into the group it belongs to. */
 export interface CatalogueEntry extends ComponentEntry {

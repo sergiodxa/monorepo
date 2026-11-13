@@ -100,12 +100,13 @@ describe("buildComponentsNav", () => {
 			"Chat",
 			"Color",
 			"App",
+			"Video",
 			"Mixins",
 			"Behaviors",
 			"Animations",
 			"Styles",
 		]);
-		expect(tree.sections.at(7)?.entries).toContainEqual({
+		expect(tree.sections.at(8)?.entries).toContainEqual({
 			title: "hotkey",
 			href: "/api/ui/mixins/hotkey",
 		});
@@ -136,11 +137,12 @@ describe("namespace groups", () => {
 		);
 		expect(titles("Color")).toEqual(expect.arrayContaining(["ColorPicker", "ColorWheel"]));
 		expect(titles("App")).toEqual(expect.arrayContaining(["Chart", "Table", "Toast"]));
+		expect(titles("Video")).toEqual(["Foundations", "VideoPlayer"]);
 		expect(
 			["Landing", "Docs", "Chat", "Color", "App"].map(
 				(section) => titles(section).filter((title) => title !== "Foundations").length,
 			),
-		).toEqual([49, 24, 8, 7, 47]);
+		).toEqual([51, 24, 8, 7, 49]);
 		expect(titles("Components")).toEqual(
 			expect.arrayContaining(["Accordion", "CtaGroup", "DialogDismiss", "Sidebar"]),
 		);

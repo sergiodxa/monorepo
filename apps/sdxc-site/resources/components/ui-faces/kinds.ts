@@ -228,6 +228,7 @@ export const FACE_KIND = {
 	"ui-label": "label",
 	"usage-estimate": "landing-pricing",
 	"view-options": "view-options",
+	"video-player": "video",
 	"youtube-embed": "video",
 } as const;
 

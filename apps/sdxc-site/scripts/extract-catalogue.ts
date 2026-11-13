@@ -53,7 +53,7 @@ const SHARED_TYPE_MODULES = ["semantic-color.ts", "placement.ts"];
  * The `@sdxc/ui` namespaces, each a folder of components plus the mixins, behaviors,
  * styles and animations only they use, which the site files under those subpaths.
  */
-const NAMESPACES = ["landing", "docs", "chat", "color", "app"] as const;
+const NAMESPACES = ["landing", "docs", "chat", "color", "app", "video"] as const;
 
 /**
  * The `@sdxc/ui` folders whose modules each publish one component page: the general

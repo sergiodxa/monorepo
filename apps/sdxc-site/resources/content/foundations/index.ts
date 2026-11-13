@@ -15,6 +15,7 @@ import COLOR from "~/resources/content/foundations/color";
 import COMPONENTS from "~/resources/content/foundations/components";
 import DOCS from "~/resources/content/foundations/docs";
 import LANDING from "~/resources/content/foundations/landing";
+import VIDEO from "~/resources/content/foundations/video";
 
 /** One CSS custom property as the variables table lists it. */
 export interface FoundationsVariable {
@@ -70,6 +71,7 @@ const FOUNDATIONS_BY_MODULE: Record<ComponentModule, Foundations> = {
 	chat: CHAT,
 	color: COLOR,
 	app: APP,
+	video: VIDEO,
 };
 
 /** Every namespace's Foundations, in the order the sidebar lists the namespaces. */

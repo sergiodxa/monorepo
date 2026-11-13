@@ -114,7 +114,7 @@ interface TextShape {
 type Shape = RectShape | CircleShape | LineShape | PathShape | StrokeShape | TextShape;
 
 /** Module a catalogue entry ships from; drives the default stage composition. */
-type ModuleKind = "components" | "app" | "docs" | "landing" | "chat" | "color";
+type ModuleKind = "components" | "app" | "docs" | "landing" | "chat" | "color" | "video";
 
 /** Quiet stage wash in the site's brand hue — one step off the card, like DemoMiniature. */
 const WASH = {
@@ -367,6 +367,7 @@ const CATALOGUE = [
 	{ slug: "ui-label", module: "docs" },
 	{ slug: "usage-estimate", module: "landing" },
 	{ slug: "view-options", module: "app" },
+	{ slug: "video-player", module: "video" },
 	{ slug: "youtube-embed", module: "components" },
 ] as const satisfies ReadonlyArray<{ slug: string; module: ModuleKind }>;
 
