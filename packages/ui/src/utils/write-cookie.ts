@@ -33,7 +33,7 @@ export interface WriteCookieOptions {
  * @param options How long the cookie lasts and which path it is sent under.
  * @example writeCookie("app-sidebar:collapsed", true);
  * @example writeCookie("ui:announcement-dismissed", true, { maxAgeSeconds: 60 * 60 * 24 * 7 });
- * @example writeCookie("crm-sidebar", false, { path: "/apps/crm" });
+ * @example writeCookie("crm-sidebar", false, { path: "/crm" });
  */
 export function writeCookie(
 	name: string,

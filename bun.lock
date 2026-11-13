@@ -127,6 +127,7 @@
         "@sdxc/diagram": "workspace:*",
         "@sdxc/distill": "workspace:*",
         "@sdxc/email-address": "workspace:*",
+        "@sdxc/emoji": "workspace:*",
         "@sdxc/epub": "workspace:*",
         "@sdxc/file-storage-r2": "workspace:*",
         "@sdxc/font": "workspace:*",
@@ -463,6 +464,7 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/diagram": "workspace:*",
+        "@sdxc/emoji": "workspace:*",
         "@sdxc/file-storage-r2": "workspace:*",
         "@sdxc/font": "workspace:*",
         "@sdxc/health": "workspace:*",
@@ -1142,6 +1144,20 @@
       },
       "devDependencies": {
         "@sdxc/zone-file": "workspace:*",
+      },
+    },
+    "packages/emoji": {
+      "name": "@sdxc/emoji",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/markdown": "workspace:*",
+        "@sdxc/u": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.2.0",
+      },
+      "peerDependencies": {
+        "remix": "3.2.0",
       },
     },
     "packages/epub": {
@@ -3402,6 +3418,8 @@
     "@sdxc/email-address": ["@sdxc/email-address@workspace:packages/email-address"],
 
     "@sdxc/email-auth": ["@sdxc/email-auth@workspace:packages/email-auth"],
+
+    "@sdxc/emoji": ["@sdxc/emoji@workspace:packages/emoji"],
 
     "@sdxc/epub": ["@sdxc/epub@workspace:packages/epub"],
 

@@ -27,6 +27,7 @@
 		"@sdxc/diagram": "workspace:*",
 		"@sdxc/distill": "workspace:*",
 		"@sdxc/email-address": "workspace:*",
+		"@sdxc/emoji": "workspace:*",
 		"@sdxc/epub": "workspace:*",
 		"@sdxc/file-storage-r2": "workspace:*",
 		"@sdxc/font": "workspace:*",
