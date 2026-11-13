@@ -17,7 +17,11 @@ export namespace RefreshSchedule {
 		every: number;
 		/** Reloads what the schedule keeps current; a rejection leaves the schedule running. */
 		reload: () => Promise<unknown>;
-		/** When the content on screen was last fetched. Defaults to construction time. */
+		/**
+		 * When the content on screen was last fetched, which the schedule reports until its first
+		 * reload; the first interval counts from construction, so a cached page reloads on schedule.
+		 * Defaults to construction time.
+		 */
 		refreshedAt?: Date;
 	}
 
@@ -29,8 +33,9 @@ export namespace RefreshSchedule {
 }
 
 /**
- * Reloads on an interval measured from the last finished reload, so a slow reload never
- * stacks a second one behind it, and a resume after a long pause catches up with one reload.
+ * Reloads on an interval measured from the last finished reload (the first from when it was
+ * created), so a slow reload never stacks a second one behind it, and a resume after a long
+ * pause catches up with one reload.
  *
  * @example let schedule = new RefreshSchedule({ every: 30_000, reload: () => frame.reload() }); schedule.start();
  */
@@ -54,7 +59,7 @@ export class RefreshSchedule extends TypedEventTarget<RefreshSchedule.Events> {
 		this.every = init.every;
 		this.#reload = init.reload;
 		this.#refreshedAt = init.refreshedAt ?? new Date();
-		this.#attemptedAt = this.#refreshedAt.getTime();
+		this.#attemptedAt = Date.now();
 	}
 
 	/** When the last reload finished, or the initial content was fetched. */

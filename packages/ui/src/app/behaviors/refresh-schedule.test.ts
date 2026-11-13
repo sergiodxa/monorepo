@@ -44,6 +44,21 @@ describe(RefreshSchedule.name, () => {
 		expect(reloads).toBe(2);
 	});
 
+	test("waits a full interval from load for a page fetched long before, such as a cached copy", async () => {
+		let schedule = new RefreshSchedule({
+			every: 1000,
+			reload,
+			refreshedAt: new Date("2026-11-01T09:00:00Z"),
+		});
+		schedule.start();
+
+		await vi.advanceTimersByTimeAsync(999);
+		expect(reloads).toBe(0);
+		expect(schedule.refreshedAt.toISOString()).toBe("2026-11-01T09:00:00.000Z");
+		await vi.advanceTimersByTimeAsync(1);
+		expect(reloads).toBe(1);
+	});
+
 	test("counts the next interval from the end of a slow reload", async () => {
 		let release: (() => void) | undefined;
 		let schedule = new RefreshSchedule({
