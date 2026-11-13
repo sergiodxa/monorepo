@@ -410,6 +410,26 @@ export default {
 		},
 
 		pricing: {
+			estimate: {
+				title: "月額料金を見積もる",
+				description:
+					"モニター頻度から月間 ping コストを見積もります。ブラウザフローの実行は別途 {$flowRunPrice} / 1,000 で課金されます。",
+				monitor: "モニター {$index} のチェック間隔",
+				minutes: "分",
+				remove: "モニター {$index} を削除",
+				add: "モニターを追加",
+				submit: "見積もりを更新",
+				bill: "月額料金の見積もり",
+				subscription: "サブスクリプション",
+				subscriptionDetail: "{$included} ping を含む",
+				extra: "追加 ping",
+				extraNone: "月 {$pings} ping、すべて込み",
+				extraDetail:
+					".input {$blocks :number}\n.match $blocks\none {{超過 {$over} → 1 ブロック × {$blockPrice}}}\n* {{超過 {$over} → {$blocks} ブロック × {$blockPrice}}}",
+				total: "月額",
+				totalDetail: "月 {$pings} ping",
+				footnote: "1 か月を 28 日として計算するため、これは最低額です。",
+			},
 			badge: "料金",
 			title: "モニター数ではなく Ping 数で課金",
 			description:
@@ -440,32 +460,6 @@ export default {
 						description:
 							"シートや機能の追加料金はありません。使用した ping とブラウザ実行の分だけお支払いください。",
 					},
-				},
-			},
-
-			calculator: {
-				title: "月額料金を見積もる",
-				description:
-					"モニター頻度から月間 ping コストを見積もります。ブラウザフローの実行は別途 {$flowRunPrice} / 1,000 で課金されます。",
-
-				add: "モニターを追加",
-
-				monitor: {
-					label: "モニターの頻度",
-					delete: "削除",
-					frequency: {
-						lower: "1分",
-						upper: "60分",
-					},
-				},
-
-				stats: {
-					pingsPerMonth: "月間ping数：",
-					baseSubscription: "基本サブスクリプション",
-					includes: "最初の{$amount}回のpingを含む",
-					additionalPings: "追加ping：",
-					additionalPingsCost: "{$blocks} × {$blockSize}pingあたり{$blockPrice}（超過{$pings}）",
-					totalCost: "月額合計：",
 				},
 			},
 		},

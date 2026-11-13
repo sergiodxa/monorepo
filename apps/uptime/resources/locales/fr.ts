@@ -419,6 +419,26 @@ export default {
 		},
 
 		pricing: {
+			estimate: {
+				title: "Estimez votre facture mensuelle",
+				description:
+					"Estimez le coût mensuel des pings selon la fréquence. Les exécutions de flux navigateur sont facturées séparément à {$flowRunPrice} pour 1 000.",
+				monitor: "Le moniteur {$index} vérifie toutes les",
+				minutes: "min",
+				remove: "Retirer le moniteur {$index}",
+				add: "Ajouter un moniteur",
+				submit: "Mettre à jour l’estimation",
+				bill: "Facture mensuelle estimée",
+				subscription: "Abonnement",
+				subscriptionDetail: "{$included} pings inclus",
+				extra: "Pings supplémentaires",
+				extraNone: "{$pings} pings par mois, tous inclus",
+				extraDetail:
+					".input {$blocks :number}\n.match $blocks\none {{{$over} en plus → 1 bloc × {$blockPrice}}}\n* {{{$over} en plus → {$blocks} blocs × {$blockPrice}}}",
+				total: "Par mois",
+				totalDetail: "{$pings} pings par mois",
+				footnote: "Un mois compte 28 jours, c’est donc le minimum que vous paierez.",
+			},
 			badge: "Tarifs",
 			title: "Facturé au ping, pas au moniteur",
 			description:
@@ -449,33 +469,6 @@ export default {
 						description:
 							"Pas de frais de siège ni de fonctionnalités. Payez pour les pings et les exécutions navigateur que vous utilisez.",
 					},
-				},
-			},
-
-			calculator: {
-				title: "Estimez votre facture mensuelle",
-				description:
-					"Estimez le coût mensuel des pings selon la fréquence. Les exécutions de flux navigateur sont facturées séparément à {$flowRunPrice} pour 1 000.",
-
-				add: "Ajouter un moniteur",
-
-				monitor: {
-					label: "Fréquence du moniteur",
-					delete: "Supprimer",
-					frequency: {
-						lower: "1m",
-						upper: "60m",
-					},
-				},
-
-				stats: {
-					pingsPerMonth: "Pings par mois :",
-					baseSubscription: "Abonnement de base",
-					includes: "Inclut les {$amount} premiers pings",
-					additionalPings: "Pings supplémentaires :",
-					additionalPingsCost:
-						"{$blocks} × {$blockPrice} par {$blockSize} pings ({$pings} au-delà)",
-					totalCost: "Coût mensuel total :",
 				},
 			},
 		},

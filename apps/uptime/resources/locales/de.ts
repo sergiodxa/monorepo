@@ -419,6 +419,26 @@ export default {
 		},
 
 		pricing: {
+			estimate: {
+				title: "Monatliche Kosten schätzen",
+				description:
+					"Schätzen Sie die monatlichen Ping-Kosten anhand der Monitor-Frequenz. Browser-Flow-Läufe werden separat mit {$flowRunPrice} pro 1.000 abgerechnet.",
+				monitor: "Monitor {$index} prüft alle",
+				minutes: "Min.",
+				remove: "Monitor {$index} entfernen",
+				add: "Monitor hinzufügen",
+				submit: "Schätzung aktualisieren",
+				bill: "Geschätzte Monatsrechnung",
+				subscription: "Abonnement",
+				subscriptionDetail: "{$included} Pings inklusive",
+				extra: "Zusätzliche Pings",
+				extraNone: "{$pings} Pings im Monat, alle inklusive",
+				extraDetail:
+					".input {$blocks :number}\n.match $blocks\none {{{$over} darüber → 1 Block × {$blockPrice}}}\n* {{{$over} darüber → {$blocks} Blöcke × {$blockPrice}}}",
+				total: "Pro Monat",
+				totalDetail: "{$pings} Pings im Monat",
+				footnote: "Ein Monat zählt als 28 Tage, also ist das der Mindestbetrag, den Sie zahlen.",
+			},
 			badge: "Preise",
 			title: "Bezahlt pro Ping, nicht pro Monitor",
 			description:
@@ -450,33 +470,6 @@ export default {
 						description:
 							"Keine Sitz- oder Funktionsaufschläge. Zahlen Sie für die Pings und Browser-Läufe, die Sie nutzen.",
 					},
-				},
-			},
-
-			calculator: {
-				title: "Monatliche Kosten schätzen",
-				description:
-					"Schätzen Sie die monatlichen Ping-Kosten anhand der Monitor-Frequenz. Browser-Flow-Läufe werden separat mit {$flowRunPrice} pro 1.000 abgerechnet.",
-
-				add: "Monitor hinzufügen",
-
-				monitor: {
-					label: "Monitor-Frequenz",
-					delete: "Entfernen",
-					frequency: {
-						lower: "1m",
-						upper: "60m",
-					},
-				},
-
-				stats: {
-					pingsPerMonth: "Pings pro Monat:",
-					baseSubscription: "Basis-Abonnement",
-					includes: "Beinhaltet die ersten {$amount} Pings",
-					additionalPings: "Zusätzliche Pings:",
-					additionalPingsCost:
-						"{$blocks} × {$blockPrice} pro {$blockSize} Pings ({$pings} darüber)",
-					totalCost: "Monatliche Gesamtkosten:",
 				},
 			},
 		},

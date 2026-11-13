@@ -87,6 +87,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/docs/code-tabs-sync": () => import("@sdxc/ui/docs/code-tabs-sync"),
 	"@sdxc/ui/docs/copy-button": () => import("@sdxc/ui/docs/copy-button"),
 	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),
+	"@sdxc/ui/landing/usage-estimate": () => import("@sdxc/ui/landing/usage-estimate"),
 	"@sdxc/ui/docs/docs-nav-tools": () => import("@sdxc/ui/docs/docs-nav-tools"),
 	"@sdxc/ui/docs/page-actions": () => import("@sdxc/ui/docs/page-actions"),
 	"@sdxc/ui/docs/table-of-contents": () => import("@sdxc/ui/docs/table-of-contents"),

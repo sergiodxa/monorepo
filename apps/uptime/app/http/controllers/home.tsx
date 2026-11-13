@@ -9,7 +9,7 @@
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
-import { IntlProvider, Trans } from "@sdxc/i18n/ui";
+import { Trans } from "@sdxc/i18n/ui";
 import {
 	AppWindowIcon,
 	ArrowRightIcon,
@@ -66,6 +66,7 @@ import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
 import { productPageSchema, SEO, siteOrganization, siteWebsite } from "~/app/initializers/seo";
 import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
 import { isDevLoginEnabled } from "~/app/services/dev-login";
+import { estimateFromQuery } from "~/app/services/pricing-estimate";
 import { REPORT_MONITOR_TYPES } from "~/app/services/reports/request";
 import { trialTurnstileSiteKey } from "~/app/services/trial/guard";
 import {
@@ -94,9 +95,12 @@ import {
 	MonitorsScene,
 	StatusPageScene,
 } from "~/resources/components/marketing/product-scenes";
-import PricingCalculator from "~/resources/components/pricing-calculator";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
+import PricingEstimateView, {
+	PRICING_BILL_FRAME,
+	PricingBill,
+} from "~/resources/views/marketing/pricing-estimate";
 import routes from "~/routes/web";
 
 /**
@@ -146,6 +150,21 @@ function formatCount(locale: string, value: number): string {
 
 /** GET / — the public marketing homepage. */
 export default createAction(routes.home, async (ctx) => {
+	/**
+	 * The pricing estimate's live bill re-requests this page as a frame while the reader types;
+	 * it gets the bill alone, priced from the same query, and caches apart from the full page.
+	 */
+	if (ctx.request.headers.get("X-Remix-Target") === PRICING_BILL_FRAME) {
+		return ctx.render(
+			<PricingBill
+				estimate={estimateFromQuery(ctx.url.searchParams)}
+				t={ctx.intl.t}
+				locale={ctx.locale}
+			/>,
+			{ headers: { Vary: "X-Remix-Target" } },
+		);
+	}
+
 	let isSignedIn = getViewer() !== null;
 	let chrome = buildMarketingChrome(ctx.intl.t);
 	let t = ctx.intl.t;
@@ -683,9 +702,12 @@ export default createAction(routes.home, async (ctx) => {
 					>
 						{t("landing.pricing.title")}
 					</LandingHeader>
-					<IntlProvider intl={ctx.intl}>
-						<PricingCalculator initialFrequencies={[10]} />
-					</IntlProvider>
+					<PricingEstimateView
+						estimate={estimateFromQuery(ctx.url.searchParams)}
+						t={t}
+						values={pricingCopyValues}
+						action="#pricing"
+					/>
 				</LandingSection>
 
 				<FaqBand
@@ -711,5 +733,6 @@ export default createAction(routes.home, async (ctx) => {
 				/>
 			</MarketingLayout>
 		</DocumentLayout>,
+		{ headers: { Vary: "X-Remix-Target" } },
 	);
 });

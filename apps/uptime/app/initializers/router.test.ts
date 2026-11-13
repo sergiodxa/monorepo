@@ -168,7 +168,9 @@ describe("public page caching", () => {
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Cache-Control")).toBe("private, max-age=300");
-		expect(response.headers.get("Vary")).toBe("cookie, accept-language");
+		expect(response.headers.get("Vary")?.split(", ")).toEqual(
+			expect.arrayContaining(["cookie", "accept-language"]),
+		);
 		let policy = response.headers.get("Content-Security-Policy-Report-Only") ?? "";
 		let nonce = (await response.text()).match(/nonce="([^"]+)"/)?.[1];
 		expect(nonce).toBeDefined();

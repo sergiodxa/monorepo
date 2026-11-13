@@ -19,7 +19,7 @@ import { database } from "@sdxc/database-middleware";
 import { findItem, parse } from "@sdxc/microformats";
 import { representativeCard } from "@sdxc/microformats/vocabulary";
 import { unwrap } from "@sdxc/result";
-import { renderToString } from "remix/component/server";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -59,10 +59,26 @@ vi.doMock("~/app/services/trial/guard", () => ({ trialTurnstileSiteKey }));
 
 let { default: home } = await import("./home");
 
-/** Renders through `renderToString`, sufficient since this page emits a plain node tree. */
-function createTestRenderer(): Renderer<RemixNode> {
+/** What the renderer resolves the bill frame through: the test's own router. */
+interface FrameRouter {
+	fetch(request: Request): Promise<Response>;
+}
+
+/**
+ * Renders through `renderToStream`, resolving the pricing bill's blocking frame through
+ * `router` with its `X-Remix-Target`, the request a browser's frame runtime makes.
+ */
+function createTestRenderer(router: FrameRouter): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(node);
+		let html = renderToStream(node, {
+			resolveFrame: async (src: string, target?: string) => {
+				let headers = new Headers(target ? { "X-Remix-Target": target } : {});
+				let response = await router.fetch(
+					new Request(new URL(src, "https://uptime.test"), { headers }),
+				);
+				return await response.text();
+			},
+		});
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -83,9 +99,11 @@ function seedAuth(viewer: Viewer | null): Middleware {
  * real `i18n` middleware since `home.tsx` renders through `ctx.intl.t()`, and
  * an empty database whose only bearing is a saved locale, defaulting to English.
  */
-async function getHome(viewer: Viewer | null) {
+async function getHome(viewer: Viewer | null, search = "") {
 	let { db } = createTestDatabase();
 
+	/** Filled once the router exists, since the renderer inside it fetches through it. */
+	let frames: FrameRouter = { fetch: () => Promise.reject(new Error("router not ready")) };
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
@@ -95,12 +113,13 @@ async function getHome(viewer: Viewer | null) {
 			i18n as Middleware,
 			testHoneypot(),
 			testAssets(),
-			renderWith(createTestRenderer) as Middleware,
+			renderWith(() => createTestRenderer(frames)) as Middleware,
 		],
 	});
 	router.map(routes.home, home);
+	frames = { fetch: (request) => router.fetch(request) };
 
-	let request = new Request(`https://uptime.test${routes.home.href()}`);
+	let request = new Request(`https://uptime.test${routes.home.href()}${search}`);
 	return router.fetch(request);
 }
 
@@ -388,17 +407,37 @@ describe("GET /", () => {
 	 * 4,032 is 28 days of checks at a 10-minute interval, the default the pricing
 	 * calculator opens with, fully covered by the base subscription.
 	 */
-	test("server-renders the pricing calculator's initial estimate", async () => {
+	test("server-renders the pricing estimate as a GET form beside its bill", async () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
 		expect(body).toContain("Estimate your monthly bill");
-		expect(body).toContain('type="range"');
+		expect(body).toMatch(/<form[^>]*method="get"[^>]*action="#pricing"/);
+		expect(body).toContain('name="m"');
 		expect(body).toContain('min="1"');
 		expect(body).toContain('max="60"');
-		expect(body).toContain("4,032");
-		expect(body).toContain("Total monthly cost:");
+		expect(body).toContain("4,032 pings a month");
+		expect(body).toContain("Per month");
 		expect(body).toContain("How pricing works");
+	});
+
+	/** The estimate is a link: the same query prints the same bill for anyone who opens it. */
+	test("prints the bill a shared estimate URL describes, extra blocks included", async () => {
+		let body = await (await getHome(null, "?m=1&m=1&m=1")).text();
+
+		expect(body).toContain("120,960 pings a month");
+		expect(body).toContain("20,960 over → 3 blocks × $1");
+		expect(body).toContain("$8");
+	});
+
+	test("adds and removes monitors through the form's submit buttons, without script", async () => {
+		let added = await (await getHome(null, "?m=30&add=1")).text();
+		let removed = await (await getHome(null, "?m=30&m=5&remove=0")).text();
+
+		expect(added.match(/name="m"/g)).toHaveLength(2);
+		expect(added).toContain('name="remove"');
+		expect(removed.match(/name="m"/g)).toHaveLength(1);
+		expect(removed).toContain('value="5"');
 	});
 
 	test("renders every FAQ entry across two accordion columns", async () => {

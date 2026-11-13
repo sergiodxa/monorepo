@@ -415,6 +415,26 @@ export default {
 		},
 
 		pricing: {
+			estimate: {
+				title: "Stimi la sua fattura mensile",
+				description:
+					"Stimi il costo mensile dei ping in base alla frequenza. Le esecuzioni di flussi browser sono fatturate a parte a {$flowRunPrice} ogni 1.000.",
+				monitor: "Il monitor {$index} controlla ogni",
+				minutes: "min",
+				remove: "Rimuovi il monitor {$index}",
+				add: "Aggiungi monitor",
+				submit: "Aggiorna la stima",
+				bill: "Fattura mensile stimata",
+				subscription: "Abbonamento",
+				subscriptionDetail: "{$included} ping inclusi",
+				extra: "Ping aggiuntivi",
+				extraNone: "{$pings} ping al mese, tutti inclusi",
+				extraDetail:
+					".input {$blocks :number}\n.match $blocks\none {{{$over} in più → 1 blocco × {$blockPrice}}}\n* {{{$over} in più → {$blocks} blocchi × {$blockPrice}}}",
+				total: "Al mese",
+				totalDetail: "{$pings} ping al mese",
+				footnote: "Un mese conta 28 giorni, quindi questo è il minimo che pagherebbe.",
+			},
 			badge: "Prezzi",
 			title: "Prezzo per ping, non per monitor",
 			description:
@@ -446,32 +466,6 @@ export default {
 						description:
 							"Nessun costo aggiuntivo per posti o funzionalità. Paghi per i ping e le esecuzioni browser che utilizza.",
 					},
-				},
-			},
-
-			calculator: {
-				title: "Stimi la sua fattura mensile",
-				description:
-					"Stimi il costo mensile dei ping in base alla frequenza. Le esecuzioni di flussi browser sono fatturate a parte a {$flowRunPrice} ogni 1.000.",
-
-				add: "Aggiungi monitor",
-
-				monitor: {
-					label: "Frequenza monitor",
-					delete: "Rimuovi",
-					frequency: {
-						lower: "1m",
-						upper: "60m",
-					},
-				},
-
-				stats: {
-					pingsPerMonth: "Ping al mese:",
-					baseSubscription: "Abbonamento base",
-					includes: "Include i primi {$amount} ping",
-					additionalPings: "Ping aggiuntivi:",
-					additionalPingsCost: "{$blocks} × {$blockPrice} ogni {$blockSize} ping ({$pings} in più)",
-					totalCost: "Costo mensile totale:",
 				},
 			},
 		},

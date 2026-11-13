@@ -418,6 +418,26 @@ export default {
 		},
 
 		pricing: {
+			estimate: {
+				title: "Estime su factura mensual",
+				description:
+					"Estime el costo mensual de pings según la frecuencia. Las ejecuciones de flujos en navegador se facturan aparte a {$flowRunPrice} por cada 1.000.",
+				monitor: "El monitor {$index} comprueba cada",
+				minutes: "min",
+				remove: "Quitar el monitor {$index}",
+				add: "Añadir monitor",
+				submit: "Actualizar estimación",
+				bill: "Factura mensual estimada",
+				subscription: "Suscripción",
+				subscriptionDetail: "{$included} pings incluidos",
+				extra: "Pings adicionales",
+				extraNone: "{$pings} pings al mes, todos incluidos",
+				extraDetail:
+					".input {$blocks :number}\n.match $blocks\none {{{$over} de más → 1 bloque × {$blockPrice}}}\n* {{{$over} de más → {$blocks} bloques × {$blockPrice}}}",
+				total: "Al mes",
+				totalDetail: "{$pings} pings al mes",
+				footnote: "Un mes cuenta como 28 días, así que esto es lo mínimo que pagaría.",
+			},
 			badge: "Precios",
 			title: "Precio por ping, no por monitor",
 			description:
@@ -449,32 +469,6 @@ export default {
 						description:
 							"Sin cargos por asientos ni funciones. Pague por los pings y las ejecuciones en navegador que use.",
 					},
-				},
-			},
-
-			calculator: {
-				title: "Estime su factura mensual",
-				description:
-					"Estime el costo mensual de pings según la frecuencia. Las ejecuciones de flujos en navegador se facturan aparte a {$flowRunPrice} por cada 1.000.",
-
-				add: "Agregar monitor",
-
-				monitor: {
-					label: "Frecuencia del monitor",
-					delete: "Eliminar",
-					frequency: {
-						lower: "1m",
-						upper: "60m",
-					},
-				},
-
-				stats: {
-					pingsPerMonth: "Pings por mes:",
-					baseSubscription: "Suscripción base",
-					includes: "Incluye los primeros {$amount} pings",
-					additionalPings: "Pings adicionales:",
-					additionalPingsCost: "{$blocks} × {$blockPrice} por {$blockSize} pings ({$pings} de más)",
-					totalCost: "Costo mensual total:",
 				},
 			},
 		},

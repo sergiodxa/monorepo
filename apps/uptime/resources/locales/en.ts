@@ -481,6 +481,26 @@ export default {
 		},
 
 		pricing: {
+			estimate: {
+				title: "Estimate your monthly bill",
+				description:
+					"Estimate monthly ping cost from monitor frequency. Browser flow runs bill separately at {$flowRunPrice} per 1,000.",
+				monitor: "Monitor {$index} checks every",
+				minutes: "min",
+				remove: "Remove monitor {$index}",
+				add: "Add monitor",
+				submit: "Update estimate",
+				bill: "Estimated monthly bill",
+				subscription: "Subscription",
+				subscriptionDetail: "{$included} pings included",
+				extra: "Extra pings",
+				extraNone: "{$pings} pings a month, all included",
+				extraDetail:
+					".input {$blocks :number}\n.match $blocks\none {{{$over} over → 1 block × {$blockPrice}}}\n* {{{$over} over → {$blocks} blocks × {$blockPrice}}}",
+				total: "Per month",
+				totalDetail: "{$pings} pings a month",
+				footnote: "A month is counted as 28 days, so this is the least you would pay.",
+			},
 			badge: "Pricing",
 			title: "Priced per ping, not per monitor",
 			description:
@@ -510,32 +530,6 @@ export default {
 						title: "No hidden fees",
 						description: "No seat or feature add-ons. Pay for the pings and browser runs you use.",
 					},
-				},
-			},
-
-			calculator: {
-				title: "Estimate your monthly bill",
-				description:
-					"Estimate monthly ping cost from monitor frequency. Browser flow runs bill separately at {$flowRunPrice} per 1,000.",
-
-				add: "Add monitor",
-
-				monitor: {
-					label: "Monitor frequency",
-					delete: "Remove",
-					frequency: {
-						lower: "1m",
-						upper: "60m",
-					},
-				},
-
-				stats: {
-					pingsPerMonth: "Pings per month:",
-					baseSubscription: "Base subscription",
-					includes: "Includes first {$amount} pings",
-					additionalPings: "Additional pings:",
-					additionalPingsCost: "{$blocks} × {$blockPrice} per {$blockSize} pings ({$pings} over)",
-					totalCost: "Total monthly cost:",
 				},
 			},
 		},
