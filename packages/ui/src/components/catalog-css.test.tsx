@@ -51,7 +51,19 @@ const PROBE_PROPS = {
 	values: [],
 	rows: [],
 	packages: [],
-	labels: { copy: "a", copied: "a", name: "a", type: "a", default: "a", required: "a" },
+	runs: [],
+	groups: [],
+	days: [],
+	labels: {
+		copy: "a",
+		copied: "a",
+		name: "a",
+		type: "a",
+		default: "a",
+		required: "a",
+		status: {},
+		methods: {},
+	},
 	"aria-label": "a",
 	series: [],
 	source: { title: "a" },
@@ -72,6 +84,24 @@ const PROBE_PROPS = {
 	href: "/a",
 	children: "probe",
 };
+
+/**
+ * Props a component reads under a name another component's probe already claims with a
+ * different shape, keyed by the component's export name and spread over {@link PROBE_PROPS}.
+ */
+const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
+	ContributionGraph: {
+		start: "2026-01-01",
+		end: "2026-01-14",
+		href: () => "/a",
+		labels: { caption: "a", day: () => "a", less: "a", more: "a" },
+	},
+};
+
+/** The probe props for the component exported as `name`. */
+function probeProps(name: string): Record<string, unknown> {
+	return { ...PROBE_PROPS, ...PROBE_OVERRIDES[name] };
+}
 
 /**
  * Anything exported under a PascalCase name is a component; the catalog also
@@ -112,7 +142,7 @@ describe("component catalog CSS", () => {
 		);
 
 		test(`${name} emits no stringified style block`, async () => {
-			let css = await styleOf(jsx(root as never, { ...PROBE_PROPS }));
+			let css = await styleOf(jsx(root as never, probeProps(name)));
 
 			expect(css).not.toBeNull();
 			expect(css).not.toContain(FINGERPRINT);
@@ -127,17 +157,17 @@ describe("component catalog CSS", () => {
 				 */
 				let wrappers = [
 					jsx(root as never, {
-						...PROBE_PROPS,
-						children: jsx(member as never, { ...PROBE_PROPS }),
+						...probeProps(name),
+						children: jsx(member as never, probeProps(name)),
 					}),
 					...members
 						.filter(([siblingKey]) => siblingKey !== key)
 						.map(([, sibling]) =>
 							jsx(root as never, {
-								...PROBE_PROPS,
+								...probeProps(name),
 								children: jsx(sibling as never, {
-									...PROBE_PROPS,
-									children: jsx(member as never, { ...PROBE_PROPS }),
+									...probeProps(name),
+									children: jsx(member as never, probeProps(name)),
 								}),
 							}),
 						),
