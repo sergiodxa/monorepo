@@ -28,11 +28,12 @@ import { DEMO_APP_TOAST_PARAM, readToastParam } from "~/resources/views/demo-app
 
 import { MAIN_FRAME, MainFrame, MainScreen, mainSource } from "../main-frame";
 
+import type { PatchSource } from "./diffs";
 import type { ShellSection } from "./shell";
 
 import { ciScreen, ciStream } from "./ci";
 import { buildTree, isHeadRef, listFolder, parsePage, shortSha } from "./data";
-import { commitSource, readDiff, readDiffFile, readView, LazyHunks } from "./diffs";
+import { commitSource, pullSource, readDiff, readDiffFile, readView, LazyHunks } from "./diffs";
 import { INBOX_TOASTS, inboxScreen, submitInbox } from "./inbox";
 import { COPY } from "./labels";
 import { dashboardScreen } from "./overview";
@@ -161,6 +162,9 @@ const SCREENS = [
 	"delta/pulls?q=is%3Aopen+review%3Aapproved",
 	"delta/pull/57",
 	"delta/pull/56",
+	"delta/pull/57/files",
+	"delta/pull/57/files?diff=split",
+	"delta/pull/58/files",
 	"delta/actions",
 	"delta/actions?status=failure",
 	"delta/actions/runs/812",
@@ -348,25 +352,32 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 	}
 }
 
+/** The patch a lazy diff frame reads: a commit's, or a pull request's range. */
+async function diffSource(scope: string | undefined, id: string): Promise<PatchSource | undefined> {
+	if (scope === "pull" && /^\d{1,5}$/.test(id)) return pullSource(Number(id));
+	if (scope !== "commit") return undefined;
+	let commit = await findCommit(id);
+	return commit === undefined || !isFullCommit(commit) ? undefined : commitSource(commit);
+}
+
 /**
- * Answers one of Delta's frames: a large file's lines in a commit, once the reader opens it.
+ * Answers one of Delta's frames: a large file's lines in a commit or a pull request, once the reader opens it.
  * The frame's query carries the page's address and its view, so expand links inside it lead
  * back to the page.
  */
 async function framePart(part: string, request: DemoAppRequest): Promise<RemixNode | null> {
 	let [kind, scope, id, ...rest] = part.split("/");
-	if (kind !== "diff" || scope !== "commit" || id === undefined || rest.length > 0) return null;
+	if (kind !== "diff" || id === undefined || rest.length > 0) return null;
 	let path = request.url.searchParams.get("path");
-	let commit = await findCommit(id);
-	if (path === null || commit === undefined || !isFullCommit(commit)) return null;
-	let file = commit.files.find((candidate) => candidate.path === path);
-	if (file === undefined) return null;
+	let source = await diffSource(scope, id);
+	let file = source?.files.find((candidate) => candidate.path === path);
+	if (source === undefined || file === undefined) return null;
 	let page = new URL(request.url.searchParams.get("page") ?? "/", request.url);
 	for (let [name, value] of request.url.searchParams) {
 		if (name === "diff" || name === "expand" || name === "load")
 			page.searchParams.append(name, value);
 	}
-	let view = await readDiffFile(await commitSource(commit), file, page, true);
+	let view = await readDiffFile(source, file, page, true);
 	return <LazyHunks file={view} view={readView(page)} />;
 }
 

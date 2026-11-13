@@ -20,6 +20,7 @@ import {
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 import { listFolder } from "~/resources/views/demo-apps/delta/data";
+import { fileId } from "~/resources/views/demo-apps/delta/diffs";
 
 /** Delta's screen addresses. */
 const href = demoAppHref("delta");
@@ -444,6 +445,63 @@ describe("Delta's pull request conversation", () => {
 
 	test("a number no pull request has answers the app's 404", async () => {
 		expect((await page("delta/pull/9999")).status).toBe(404);
+	});
+});
+
+describe("Delta's pull request files", () => {
+	test("draws the range's real diff beside a tree of the changed files", async () => {
+		let range = await readRange(57);
+		let { body, status } = await page("delta/pull/57/files");
+
+		expect(status).toBe(200);
+		if (range?.status !== "resolved") return;
+		for (let file of range.files) {
+			expect(body).toContain(`data-slot="diff-file" data-path="${escaped(file.path)}"`);
+			expect(body).toContain(`href="#${fileId(file.path)}"`);
+		}
+		expect(body).toContain('data-thread-id="t-57-large"');
+		expect(body).toContain("0 / 11 files viewed".replace("11", String(range.files.length)));
+	});
+
+	test("without script, a line's + draws the comment form under that line", async () => {
+		let { body } = await page(`delta/pull/57/files?comment=${encodeURIComponent("diffs.tsx:R34")}`);
+
+		expect(body).toContain('id="comment-form"');
+		expect(body).toContain('name="side" value="R"');
+	});
+
+	test("Viewed collapses the file and counts it", async () => {
+		let response = await post("delta/pull/57/files?do=viewed", { path: "data.ts", viewed: "true" });
+
+		expect(response.headers.get("Location")).toMatch(/files#diff-data-ts$/);
+		let body = await pageWith("delta/pull/57/files", cookiesOf(response));
+		expect(body).toMatch(/data-path="data\.ts" data-status="modified" data-viewed=""/);
+		expect(body).toMatch(/1 \/ \d+ files viewed/);
+	});
+
+	test("a review comment waits as pending until the review is submitted", async () => {
+		let draft = await post("delta/pull/57/files?do=line-comment", {
+			path: "diffs.tsx",
+			side: "R",
+			start: "34",
+			end: "34",
+			body: "Make it 500.",
+			mode: "review",
+		});
+		let cookie = cookiesOf(draft);
+		let pending = await pageWith("delta/pull/57/files", cookie);
+		expect(pending).toContain("Make it 500.");
+		expect(pending).toContain("Finish your review (1)");
+
+		let review = await post(
+			"delta/pull/57/files?do=review",
+			{ kind: "comment", body: "One note." },
+			cookie,
+		);
+		expect(review.headers.get("Location")).toMatch(/toast=reviewed/);
+		let conversation = await pageWith("delta/pull/57", cookiesOf(review));
+		expect(conversation).toContain("One note.");
+		expect(conversation).toContain("Make it 500.");
 	});
 });
 

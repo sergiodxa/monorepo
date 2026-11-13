@@ -23,6 +23,19 @@ let apps = await Promise.all(
 	listDemoAppSlugs().map(async (slug) => ({ slug, app: (await findDemoApp(slug))! })),
 );
 
+/**
+ * How many links of one shape the crawl fetches: enough to cover every filter and tab, few
+ * enough that a page of diffs, whose every line links to the comment form, stays quick.
+ */
+const LINKS_PER_SHAPE = 24;
+
+/** What a link asks of its page: its path and the names of its query parameters. */
+function linkShape(path: string): string {
+	let url = new URL(path, "http://localhost");
+	let names = [...new Set(url.searchParams.keys())].sort().join("&");
+	return `${url.pathname}?${names}`;
+}
+
 /** Counts the `<h1>` elements a rendered page holds. */
 function countH1(body: string): number {
 	return [...body.matchAll(/<h1[\s>]/g)].length;
@@ -53,18 +66,22 @@ describe("GET /demo/apps/:app", () => {
 
 	test.each(apps)("every $slug link inside the app answers", async ({ slug, app }) => {
 		let root = demoAppHref(slug)();
-		let links = new Set<string>();
+		let links = new Map<string, Set<string>>();
 		for (let screen of app.screens) {
 			let body = await (await fetchApp(demoAppHref(slug)(screen))).text();
 			for (let [, href] of body.matchAll(/(?<![\w-])href="([^"#]+)/g)) {
 				let path = href!.replaceAll("&amp;", "&");
 				if (path === root || path.startsWith(`${root}/`) || path.startsWith(`${root}?`)) {
-					links.add(path);
+					let shaped = links.get(linkShape(path)) ?? new Set<string>();
+					if (shaped.size < LINKS_PER_SHAPE) shaped.add(path);
+					links.set(linkShape(path), shaped);
 				}
 			}
 		}
 
-		for (let link of links) expect((await fetchApp(link)).status, link).toBe(200);
+		for (let shaped of links.values()) {
+			for (let link of shaped) expect((await fetchApp(link)).status, link).toBe(200);
+		}
 	});
 
 	test.each(apps)("a missing $slug screen answers the app's own 404", async ({ slug }) => {

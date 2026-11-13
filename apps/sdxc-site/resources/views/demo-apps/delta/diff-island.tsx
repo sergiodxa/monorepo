@@ -32,7 +32,7 @@ function markInPlace(event: Event): void {
 
 /**
  * Opens the inline comment form under the lines a `DIFF_COMMENT_EVENT` names: a copy of the
- * page's template placed in a full-width row after the last line, its hidden fields set to the
+ * page's template (its parsed content, or its children when drawn by the client) placed in a full-width row after the last line, its hidden fields set to the
  * file, the side and the range, and its text box focused. A second gesture moves the form.
  */
 function openCommentForm(event: Event): void {
@@ -48,7 +48,8 @@ function openCommentForm(event: Event): void {
 	row.setAttribute("data-thread", "");
 	let cell = document.createElement("td");
 	cell.colSpan = anchor.children.length;
-	cell.appendChild(template.content.cloneNode(true));
+	let source: Node = template.content.hasChildNodes() ? template.content : template;
+	for (let child of source.childNodes) cell.appendChild(child.cloneNode(true));
 	row.appendChild(cell);
 	anchor.insertAdjacentElement("afterend", row);
 	let set = (name: string, value: string) => {

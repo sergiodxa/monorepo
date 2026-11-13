@@ -766,3 +766,76 @@ describe("Delta's pull request", () => {
 		}
 	});
 });
+
+describe("Delta's pull request files", () => {
+	test("Viewed posts through main, collapses the file and counts it, adding no history entry", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57/files");
+		let entries = navigation.entries().length;
+		let card = () =>
+			root.querySelector<HTMLElement>('[data-slot="diff-file"][data-path="data.ts"]')!;
+		expect(card().querySelector("details")!.open).toBe(true);
+		card().querySelector<HTMLButtonElement>("button[data-delta-viewed]")!.click();
+		await settle(() => card().hasAttribute("data-viewed"));
+
+		expect(posted).toEqual(["delta/pull/57/files"]);
+		expect(card().querySelector("details")!.open).toBe(false);
+		expect(root.querySelector('[data-slot="diff-progress"]')?.textContent).toMatch(/^1 \/ \d+/);
+		expect(navigation.entries().length).toBe(entries);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("a line's + opens the comment form under it, and the comment lands as pending in place", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57/files");
+		let entries = navigation.entries().length;
+		let diff = root.querySelector<HTMLElement>('[data-slot="diff"]')!;
+		await settle(() => diff.hasAttribute("data-diff-live"));
+		let plus = root.querySelector<HTMLAnchorElement>(
+			'[data-slot="diff-file"][data-path="diffs.tsx"] a[data-comment="R34"]',
+		)!;
+		plus.click();
+		await settle(() => root.querySelector("tr[data-delta-draft]") !== null);
+		let draft = root.querySelector<HTMLElement>("tr[data-delta-draft]")!;
+
+		expect(draft.querySelector<HTMLInputElement>('input[name="path"]')!.value).toBe("diffs.tsx");
+		expect(draft.querySelector<HTMLInputElement>('input[name="end"]')!.value).toBe("34");
+		draft.querySelector("textarea")!.value = "Make it 500.";
+		draft.querySelector<HTMLButtonElement>('button[value="review"]')!.click();
+		await settle(() => root.textContent?.includes("Finish your review (1)") ?? false);
+
+		expect(root.textContent).toContain("Make it 500.");
+		expect(navigation.entries().length).toBe(entries);
+	});
+
+	test("without script, every + links to the comment form on its own page", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57/files");
+		let plus = root.querySelector<HTMLAnchorElement>(
+			'[data-slot="diff-file"][data-path="diffs.tsx"] a[data-comment="R34"]',
+		)!;
+		let target = new URL(plus.href);
+
+		expect(target.pathname).toBe(`${ROOT}/delta/pull/57/files`);
+		expect(target.searchParams.get("comment")).toBe("diffs.tsx:R34");
+	});
+
+	test("Finish your review opens its dialog, and submitting it posts in place", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57/files");
+		let entries = navigation.entries().length;
+		let dialog = root.querySelector<HTMLDialogElement>("#delta-review-dialog")!;
+		root.querySelector<HTMLButtonElement>('button[commandfor="delta-review-dialog"]')!.click();
+		await settle(() => dialog.open);
+
+		expect(dialog.open).toBe(true);
+		dialog.querySelector("textarea")!.value = "Looks good.";
+		dialog.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+		await settle(
+			() => posted.length > 0 && root.querySelector("template[data-main-toast]") !== null,
+		);
+
+		expect(posted).toEqual(["delta/pull/57/files"]);
+		expect(navigation.entries().length).toBe(entries);
+	});
+});

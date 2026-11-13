@@ -22,7 +22,10 @@ import {
 	fileHunks,
 	fileLinesAt,
 	languageOf,
+	rangeFiles,
+	rangeHunks,
 	readPatch,
+	readRange,
 } from "~/app/services/delta/source";
 import { demoAppFrameHref } from "~/resources/views/demo-apps";
 
@@ -72,6 +75,24 @@ export async function commitSource(commit: DeltaCommit): Promise<PatchSource> {
 function guessStatus(file: DeltaChangedFile): FileStatus {
 	if (file.oldPath !== undefined) return "renamed";
 	return file.deletions === 0 ? "added" : "modified";
+}
+
+/**
+ * A pull request's range as a page of diffs reads it, each file's lines on the new side
+ * rebuilt at the range's last commit; `undefined` when the build holds no such range.
+ */
+export async function pullSource(pull: number): Promise<PatchSource | undefined> {
+	let range = await readRange(pull);
+	if (range?.status !== "resolved") return undefined;
+	let head = range.head;
+	return {
+		part: `diff/pull/${pull}`,
+		files: range.files,
+		headers: (await rangeFiles(pull)) ?? [],
+		dropped: range.patch.dropped,
+		hunks: (path) => rangeHunks(pull, path),
+		lines: (path) => fileLinesAt(head, path),
+	};
 }
 
 /** One file as the page draws it. */

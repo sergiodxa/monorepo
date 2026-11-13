@@ -14,18 +14,21 @@ import { generateUUID } from "@sdxc/uuid/v4";
 
 import type { DemoAppRedirect, DemoAppRequest } from "~/resources/views/demo-apps";
 
-import { readAnchors, readHistory, readTree } from "~/app/services/delta/source";
+import { readAnchors, readHistory, readRange, readTree } from "~/app/services/delta/source";
 
 import type { DeltaRoute } from "./data";
 import type { CiteContext } from "./markup";
 
 import { issueHref, issuesHref, parsePage, pullHref, pullsHref } from "./data";
+import { fileId } from "./diffs";
+import { readDiff, pullSource } from "./diffs";
 import { COPY } from "./labels";
 import { allPulls, findPull } from "./pull-records";
 import { allIssues, findIssue, seedBase } from "./records";
 import { IssueScreen } from "./screens/issue";
 import { IssuesScreen } from "./screens/issues";
 import { PullScreen } from "./screens/pull";
+import { PullFilesScreen } from "./screens/pull-files";
 import { PullsScreen } from "./screens/pulls";
 import { LABELS, MILESTONES } from "./seed/issues";
 import { ME, PEOPLE } from "./seed/people";
@@ -41,6 +44,7 @@ export const TRACKER_TOASTS: Record<string, Omit<Toast.Flash, "id">> = {
 	"issues-reopen": { title: "Issues reopened" },
 	"issues-assign-me": { title: "Issues assigned to you" },
 	merged: { title: "Pull request merged" },
+	reviewed: { title: "Review submitted" },
 };
 
 /** A screen as Delta's router draws it. */
@@ -145,6 +149,27 @@ export async function trackerScreen(
 			),
 		};
 	}
+	if (target.screen === "pull" && target.tab === "files") {
+		let pull = await findPull(target.number, state, shared.now);
+		if (pull === undefined) return null;
+		let source = await pullSource(pull.number);
+		return {
+			title: `${COPY.pull.filesChanged} · ${COPY.pull.title(pull.title, pull.number)}`,
+			nav: "repo",
+			crumb: `${REPO_NAME} › #${pull.number}`,
+			body: (
+				<PullFilesScreen
+					pull={pull}
+					diff={source === undefined ? undefined : await readDiff(source, request.url)}
+					context={await citeContext()}
+					url={request.url}
+					now={shared.now}
+					commits={shared.commits}
+					listHref={pullsHref()}
+				/>
+			),
+		};
+	}
 	if (target.screen === "pull" && target.tab === "conversation") {
 		let pull = await findPull(target.number, state, shared.now);
 		if (pull === undefined) return null;
@@ -159,6 +184,7 @@ export async function trackerScreen(
 					now={shared.now}
 					commits={shared.commits}
 					listHref={pullsHref()}
+					filesHref={pullHref(pull.number, "files")}
 				/>
 			),
 		};
@@ -282,6 +308,76 @@ function submitPull(
 	return { page: back, hash, cookies: [commentsCookie(state, comment)] };
 }
 
+/** A line number a form posted, or `undefined` for anything else. */
+function lineOf(form: FormData, name: string): number | undefined {
+	let value = Number(field(form, name));
+	return Number.isSafeInteger(value) && value > 0 ? value : undefined;
+}
+
+/**
+ * Answers a pull request's Files changed: a file marked viewed or not (the page comes back on
+ * that file), a comment on lines posted alone or added to the pending review, and the review
+ * submitted with every pending comment.
+ */
+async function submitFiles(
+	number: number,
+	form: FormData,
+	request: DemoAppRequest,
+): Promise<DemoAppRedirect | null> {
+	let seed = PULLS.find((pull) => pull.number === number);
+	let range = await readRange(number);
+	if (seed === undefined || range?.status !== "resolved") return null;
+	let state = readState(request.cookie);
+	let edit = editOf(state, number);
+	let back = backTo(`delta/pull/${number}/files`, request.url);
+	let verb = request.url.searchParams.get("do");
+	let path = field(form, "path");
+	let changed = range.files.some((file) => file.path === path);
+	if (verb === "viewed") {
+		if (!changed) return null;
+		let others = (edit.viewed ?? []).filter((entry) => entry !== path);
+		edit.viewed = field(form, "viewed") === "true" ? [...others, path] : others;
+		return { page: back, hash: fileId(path), cookies: [recordCookie(number, edit)] };
+	}
+	if (verb === "line-comment") {
+		let side = field(form, "side");
+		let start = lineOf(form, "start");
+		let end = lineOf(form, "end") ?? start;
+		let body = field(form, "body").trim().slice(0, 600);
+		if (!changed || (side !== "L" && side !== "R") || start === undefined || end === undefined) {
+			return null;
+		}
+		if (body === "") return { page: back };
+		let comment = {
+			id: `v-${generateUUID().slice(0, 8)}`,
+			path,
+			side: side as "L" | "R",
+			start: Math.min(start, end),
+			end: Math.max(start, end),
+			body,
+			at: Date.now(),
+		};
+		if (field(form, "mode") === "single") edit.posted = [...(edit.posted ?? []), comment];
+		else edit.pending = [...(edit.pending ?? []), comment];
+		return { page: back, hash: `thread-${comment.id}`, cookies: [recordCookie(number, edit)] };
+	}
+	if (verb === "review") {
+		let kind = field(form, "kind");
+		let body = field(form, "body").trim().slice(0, 600);
+		if (kind !== "comment" && kind !== "approve" && kind !== "changes") return null;
+		if (seed.author === ME && kind !== "comment") return null;
+		let at = Date.now();
+		edit.posted = [
+			...(edit.posted ?? []),
+			...(edit.pending ?? []).map((comment) => ({ ...comment, at })),
+		];
+		edit.pending = [];
+		edit.review = { kind, body, at };
+		return { page: back, toast: "reviewed", cookies: [recordCookie(number, edit)] };
+	}
+	return null;
+}
+
 /**
  * Answers an issue's forms: a comment joins the visitor's comments and the page lands on it;
  * Close and Reopen change the state, closing with the typed text as a comment when there is
@@ -349,14 +445,17 @@ function submitBulk(form: FormData, request: DemoAppRequest): DemoAppRedirect | 
  * @param form The form's fields.
  * @param request The request, whose address and cookie the answer reads.
  */
-export function submitTracker(
+export async function submitTracker(
 	page: string,
 	form: FormData,
 	request: DemoAppRequest,
-): DemoAppRedirect | null {
+): Promise<DemoAppRedirect | null> {
 	if (page === "reset") return { page: "", toast: "reset", cookies: clearCookies(request.cookie) };
 	let target = parsePage(page);
 	if (target?.screen === "issue") return submitIssue(target.number, form, request);
+	if (target?.screen === "pull" && target.tab === "files") {
+		return submitFiles(target.number, form, request);
+	}
 	if (target?.screen === "pull") return submitPull(target.number, form, request);
 	if (target?.screen === "issues" && form.has("bulk")) return submitBulk(form, request);
 	return null;
