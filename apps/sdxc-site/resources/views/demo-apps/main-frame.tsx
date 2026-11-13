@@ -13,14 +13,14 @@ import type { Handle, RemixNode } from "remix/component";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { Frame } from "remix/component";
 
-import { DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
+import { DEMO_APP_ANCHOR_PARAM, DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
 
 /** The name every demo app gives the frame holding a screen's main area. */
 export const MAIN_FRAME = "main";
 
 /**
- * The address the main frame loads: the page's own, without its one-time toast, so the frame
- * caches per screen state and a reload never raises the toast again.
+ * The address the main frame loads: the page's own, without its one-time toast and anchor, so
+ * the frame caches per screen state and a reload never raises the toast or scrolls again.
  *
  * @param url The page's address.
  * @returns Its path and query.
@@ -28,6 +28,7 @@ export const MAIN_FRAME = "main";
 export function mainSource(url: URL): string {
 	let clean = new URL(url);
 	clean.searchParams.delete(DEMO_APP_TOAST_PARAM);
+	clean.searchParams.delete(DEMO_APP_ANCHOR_PARAM);
 	return `${clean.pathname}${clean.search}`;
 }
 
@@ -82,10 +83,30 @@ export function MainScreen(handle: Handle<MainScreen.Props>) {
 				data-url={mainSource(url)}
 			>
 				{children}
+				<MainAnchor url={url} />
 				{toast === undefined ? null : (
 					<template data-main-toast={generateUUID()} data-toast={JSON.stringify(toast)} />
 				)}
 			</div>
 		);
+	};
+}
+
+namespace MainAnchor {
+	export interface Props {
+		/** The address a frame request answered, whose anchor parameter names the element. */
+		url: URL;
+	}
+}
+
+/**
+ * Carries the `#hash` a post's redirect named into a frame's content, so the browser scrolls
+ * the new post, message or comment into view after the swap. `MainScreen` includes it; a
+ * named frame a post answers renders it itself.
+ */
+export function MainAnchor(handle: Handle<MainAnchor.Props>) {
+	return () => {
+		let anchor = handle.props.url.searchParams.get(DEMO_APP_ANCHOR_PARAM);
+		return anchor === null || anchor === "" ? null : <template data-main-anchor={anchor} />;
 	};
 }

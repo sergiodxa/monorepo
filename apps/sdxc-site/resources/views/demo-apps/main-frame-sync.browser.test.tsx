@@ -148,6 +148,26 @@ describe("MainFrameSync after a swap", () => {
 		});
 	});
 
+	test("scrolls to the element a post's redirect named and puts its hash in the address", async () => {
+		let screen = document.querySelector<HTMLElement>("[data-main-screen]")!;
+		let spacer = document.createElement("div");
+		spacer.style.blockSize = "3000px";
+		let post = document.createElement("article");
+		post.id = "post-n-1";
+		post.textContent = "New post";
+		let marker = document.createElement("template");
+		marker.setAttribute("data-main-anchor", "post-n-1");
+		for (let node of [spacer, post, marker]) screen.appendChild(node);
+
+		await vi.waitFor(() => expect(location.hash).toBe("#post-n-1"));
+		await vi.waitFor(() => {
+			let box = post.getBoundingClientRect();
+			expect(box.top).toBeGreaterThanOrEqual(0);
+			expect(box.bottom).toBeLessThanOrEqual(innerHeight);
+		});
+		history.replaceState(history.state, "", location.pathname);
+	});
+
 	test("raises a toast the swapped screen carries, once", async () => {
 		let marker = document.createElement("template");
 		marker.setAttribute("data-main-toast", "toast-1");

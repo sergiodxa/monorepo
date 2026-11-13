@@ -17,6 +17,11 @@ describe("mainSource", () => {
 		let url = new URL("https://sdxc.test/demo/apps/pulse/services?status=down&toast=x.1a2b3c4d");
 		expect(mainSource(url)).toBe("/demo/apps/pulse/services?status=down");
 	});
+
+	test("drops the anchor a framed post's redirect carried", () => {
+		let url = new URL("https://sdxc.test/demo/apps/chorus?toast=posted.1a2b3c4d&at=post-n-1");
+		expect(mainSource(url)).toBe("/demo/apps/chorus");
+	});
 });
 
 describe("MainScreen", () => {
@@ -37,6 +42,17 @@ describe("MainScreen", () => {
 		expect(html).toContain('data-crumb="Services"');
 		expect(html).toContain('data-url="/demo/apps/pulse/services"');
 		expect(html).not.toContain("data-main-toast");
+	});
+
+	test("carries the anchor a framed post's redirect named as a marker", async () => {
+		let html = await renderToString(
+			<MainScreen title="Home" url={new URL("https://sdxc.test/demo/apps/chorus?at=post-n-1")}>
+				<h1>Home</h1>
+			</MainScreen>,
+		);
+
+		expect(html).toContain('data-main-anchor="post-n-1"');
+		expect(html).toContain('data-url="/demo/apps/chorus"');
 	});
 
 	test("carries the post's toast as a marker with a fresh id each render", async () => {

@@ -37,6 +37,7 @@ export const MainFrameSync = clientEntry(
 	import.meta.url,
 	function MainFrameSync(handle: Handle<MainFrameSync.Props>) {
 		let seenToasts = new Set<string>();
+		let seenAnchors = new WeakSet<Element>();
 		let lastUrl = "";
 		let suffix = "";
 		let pendingFocus: string | null = null;
@@ -213,7 +214,8 @@ export const MainFrameSync = clientEntry(
 				item.toggleAttribute("data-current", current);
 			}
 			if (cause === "action" && url !== "" && url !== `${location.pathname}${location.search}`) {
-				history.replaceState(history.state, "", url);
+				let anchored = screen.querySelector("template[data-main-anchor]") !== null;
+				history.replaceState(history.state, "", `${url}${anchored ? location.hash : ""}`);
 			}
 			for (let marker of screen.querySelectorAll<HTMLTemplateElement>(
 				"template[data-main-toast]",
@@ -225,6 +227,7 @@ export const MainFrameSync = clientEntry(
 				let toast = JSON.parse(marker.dataset.toast ?? "{}") as Omit<Toast.Flash, "id">;
 				pageToaster().add(toast, { duration: toast.duration });
 			}
+			revealAnchors(cause);
 			if (url !== lastUrl) {
 				samePath = url.split("?")[0] === lastUrl.split("?")[0];
 				lastUrl = url;
@@ -241,6 +244,28 @@ export const MainFrameSync = clientEntry(
 				focusHeading(screen);
 			}
 			announce(title ?? "");
+		}
+
+		/**
+		 * Scrolls the element a post's redirect named into view, such as the message just sent,
+		 * and puts its `#hash` in the address, once for each anchor marker a swap brings in.
+		 */
+		function revealAnchors(cause: "swap" | "settled" | "action" | "initial") {
+			for (let marker of document.querySelectorAll<HTMLTemplateElement>(
+				"[data-main-region] template[data-main-anchor]",
+			)) {
+				if (seenAnchors.has(marker)) continue;
+				seenAnchors.add(marker);
+				let id = marker.dataset.mainAnchor ?? "";
+				let target = document.getElementById(id);
+				if (cause === "initial" || target === null) continue;
+				let hash = `#${encodeURIComponent(id)}`;
+				if (location.hash !== hash) {
+					history.replaceState(history.state, "", `${location.pathname}${location.search}${hash}`);
+				}
+				let still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+				target.scrollIntoView({ block: "center", behavior: still ? "auto" : "smooth" });
+			}
 		}
 
 		/**

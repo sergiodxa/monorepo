@@ -12,7 +12,12 @@ import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { DEMO_APP_TOAST_PARAM, demoAppHref, findDemoApp } from "~/resources/views/demo-apps";
+import {
+	DEMO_APP_ANCHOR_PARAM,
+	DEMO_APP_TOAST_PARAM,
+	demoAppHref,
+	findDemoApp,
+} from "~/resources/views/demo-apps";
 import DemoAppDocument from "~/resources/views/demo-apps/document";
 import routes from "~/routes/web";
 
@@ -63,7 +68,9 @@ export default createAction(routes.demoApps.action, async (ctx) => {
 	if (next.toast !== undefined) {
 		target.searchParams.set(DEMO_APP_TOAST_PARAM, `${next.toast}.${generateUUID().slice(0, 8)}`);
 	}
-	let hash = next.hash === undefined ? "" : `#${encodeURIComponent(next.hash)}`;
+	let framed = ctx.request.headers.has("X-Remix-Target");
+	if (framed && next.hash !== undefined) target.searchParams.set(DEMO_APP_ANCHOR_PARAM, next.hash);
+	let hash = next.hash === undefined || framed ? "" : `#${encodeURIComponent(next.hash)}`;
 	headers.set("Location", `${target.pathname}${target.search}${hash}`);
 	return new Response(null, { status: 303, headers });
 });

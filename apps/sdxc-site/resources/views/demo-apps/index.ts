@@ -18,6 +18,12 @@ import routes from "~/routes/web";
 export const DEMO_APP_TOAST_PARAM = "toast";
 
 /**
+ * The query parameter a redirect answering a frame request carries in place of its `#hash`,
+ * which a fetch drops; the browser turns it back into the hash and scrolls to that element.
+ */
+export const DEMO_APP_ANCHOR_PARAM = "at";
+
+/**
  * Splits a `toast` parameter into the app's toast key and the redirect's one-time suffix
  * (`archived-2041.9f3a1c2e`), so a reload of the same address keeps one toast id and shows
  * nothing new, while each post mints a new one.

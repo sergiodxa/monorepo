@@ -457,7 +457,7 @@ describe("Chorus frames", () => {
 		let poll = await (await targeted(href(), pollFrame("p-friday-poll"), cookie)).text();
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(`${href()}#post-p-friday-poll`);
+		expect(response.headers.get("location")).toBe(`${href()}?at=post-p-friday-poll`);
 		expect(poll).toContain('aria-label="Your vote"');
 		expect(poll).toContain("1,404 votes");
 		expect(poll).not.toContain('id="post-');
