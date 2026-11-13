@@ -3,7 +3,7 @@
  * one per line: a `+` press or a drag across line numbers names the lines a comment covers,
  * a file's copy button writes its path, and the arrow keys walk a table's line links from its
  * one Tab stop. Why JS: ranges, roving focus and the clipboard need script.
- * No-JS baseline: each `+` links to the app's comment form, and numbers link to their line.
+ * No-JS baseline: each `+` is a Tab stop linking to the comment form; numbers link to lines.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,6 +41,22 @@ export const DIFF_SELECTED_ATTRIBUTE = "data-selected";
 
 /** Selector for anything a comment gesture starts or lands on: a number or a `+` link. */
 const LINE_SELECTOR = "a[data-line-number], a[data-comment]";
+
+/**
+ * Takes the comment links the server left in the Tab order out of it, so each table is one
+ * Tab stop the arrow keys walk; a table with no line number keeps its first comment link as
+ * that stop. Runs again whenever rows arrive, such as a file loaded later.
+ */
+function rove(root: HTMLElement): void {
+	let fresh = root.querySelectorAll<HTMLAnchorElement>("a[data-comment]:not([tabindex])");
+	if (fresh.length === 0) return;
+	for (let link of fresh) link.tabIndex = -1;
+	for (let table of root.querySelectorAll("table")) {
+		if (table.querySelector('a[tabindex="0"]') !== null) continue;
+		let first = table.querySelector<HTMLAnchorElement>("a[data-comment]");
+		if (first !== null) first.tabIndex = 0;
+	}
+}
 
 /**
  * The line link a key moves focus to from `link`: up or down its own column (the same side's
@@ -192,6 +208,11 @@ export const diffInteractions: MixinFactory<
 
 		root.setAttribute(DIFF_LIVE_ATTRIBUTE, "");
 		signal.addEventListener("abort", () => root.removeAttribute(DIFF_LIVE_ATTRIBUTE));
+
+		rove(root);
+		let added = new MutationObserver(() => rove(root));
+		added.observe(root, { childList: true, subtree: true });
+		signal.addEventListener("abort", () => added.disconnect());
 
 		root.addEventListener(
 			"pointerdown",

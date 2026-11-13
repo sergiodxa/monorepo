@@ -307,6 +307,7 @@ describe("Diff markup", () => {
 			'href="/comment?path=a.ts&amp;line=L11" data-comment="L11" aria-label="Comment on line L11"',
 		);
 		expect(html).toContain('data-comment="R12"');
+		expect(html).not.toMatch(/data-comment="[^"]*"[^>]*tabindex/);
 	});
 
 	test("says why a binary, dropped or empty file has no lines", async () => {

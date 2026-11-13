@@ -354,6 +354,19 @@ describe("Diff file card", () => {
 });
 
 describe("Diff comments", () => {
+	test("takes the comment links out of the Tab order once live, rows added later too", async () => {
+		let card = mount();
+		let comments = () => [...card.querySelectorAll<HTMLAnchorElement>("a[data-comment]")];
+		expect(comments().length).toBeGreaterThan(0);
+		expect(comments().every((link) => link.tabIndex === -1)).toBe(true);
+
+		let row = card.querySelector("tbody tr:has(a[data-comment])")!.cloneNode(true) as Element;
+		row.querySelectorAll("[tabindex]").forEach((link) => link.removeAttribute("tabindex"));
+		card.querySelector("tbody")!.appendChild(row);
+		await new Promise((resolve) => setTimeout(resolve));
+		expect(row.querySelector<HTMLAnchorElement>("a[data-comment]")!.tabIndex).toBe(-1);
+	});
+
 	test("puts a table's line links in one Tab stop the arrow keys walk", async () => {
 		let card = mount();
 		let links = () => [

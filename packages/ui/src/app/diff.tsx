@@ -956,8 +956,9 @@ function splitRow(hunk: Hunk, pair: SplitRow, runs: CodeToken[][], scope: RowSco
 }
 
 /**
- * A line link's `tabindex`: the first one a table draws is its one Tab stop, and the arrow keys
- * move it from there, so a long diff costs one Tab rather than two or three per line.
+ * A line number's `tabindex`: the first one a table draws is its one Tab stop, and the arrow
+ * keys move it from there. Comment links stay in the Tab order until script takes them out,
+ * so a keyboard reaches every line's comment form without script.
  */
 function tabStop(scope: RowScope): 0 | -1 {
 	if (!scope.stop.open) return -1;
@@ -1005,7 +1006,6 @@ function codeCell(
 				href={scope.commentHref(scope.path, side, line)}
 				data-comment={`${side}${line}`}
 				aria-label={scope.labels.addComment?.(side, line)}
-				tabIndex={tabStop(scope)}
 			/>
 		) : null;
 	return (
