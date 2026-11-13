@@ -158,14 +158,15 @@ export const MainFrameSync = clientEntry(
 			if (frame === undefined) return;
 			event.preventDefault();
 			let body = new FormData(form, submitter instanceof HTMLElement ? submitter : null);
-			void frame
-				.reload({ src: action, method: "post", encType: form.enctype, body })
-				.then(() => {
-					posted = { form, submitter: submitter instanceof HTMLElement ? submitter : null };
+			void frame.reload({ src: action, method: "post", encType: form.enctype, body }).then(
+				() => {
+					let used = submitter instanceof HTMLElement ? submitter : null;
 					sync("action");
-					restoreFocus(form, posted.submitter);
-				})
-				.catch(() => form.submit());
+					posted = { form, submitter: used };
+					restoreFocus(form, used);
+				},
+				() => form.submit(),
+			);
 		}
 
 		/**
