@@ -30,6 +30,7 @@ const APP: Foundations = {
 		"Metrics with context: StatCard, Sparkline, StatusStrip, RangePicker, Chart.",
 		"Pickers that filter as you type: FilterMenu for a branch, labels or an assignee, as links or a form posted when it closes.",
 		"Code and the work around it: CodeView with line links and blame, LogViewer, CheckRuns, MergeBox, ContributionGraph, and Tree with file rows.",
+		"Reviewing a change: Diff for files drawn unified or split with word marks, and ReviewThread for the conversation on a line.",
 	],
 	ideas: [
 		{
@@ -362,6 +363,17 @@ const APP: Foundations = {
 					name: "--graph-level-0, --graph-level-1, --graph-level-2, --graph-level-3, --graph-level-4",
 					default: "neutral tint to brand solid",
 					controls: "Fill of each `ContributionGraph` level, from an empty day to the busiest.",
+				},
+				{
+					name: "--diff-font-size, --diff-line-height",
+					default: "0.75rem, 1.25rem",
+					controls:
+						"Size of a `Diff`'s code, and the height an off-screen chunk reserves per line.",
+				},
+				{
+					name: "--diff-add-bg, --diff-add-word-bg, --diff-del-bg, --diff-del-word-bg",
+					default: "success and danger tints",
+					controls: "Fill of an added or deleted line in a `Diff`, and of its changed words.",
 				},
 				{
 					name: "--ui-table-body-intrinsic-size",
