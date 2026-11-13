@@ -175,7 +175,7 @@ machine. Absolute times vary between machines; the ratio is what holds.
 | ------------------------------------- | -----------: | -------: | --------: |
 | 10,000 lines, a few edits             |      0.81 ms |  1.26 ms |      1.5× |
 | 10,000 lines, every 50th line edited  |      4.17 ms |  8.04 ms |      1.9× |
-| 10,000 lines, a 500-line block moved  |      0.91 ms |  35.9 ms |       39× |
+| 10,000 lines, a 500-line block moved  |      1.32 ms |  57.0 ms |       43× |
 | 3,000 lines, full rewrite             |      0.76 ms |   550 ms |      720× |
 | 200 kB minified one-line file         |    0.0095 ms | 0.053 ms |      5.5× |
 | 1.28 MB, 150-file patch, full parse   |      2.05 ms |  2.80 ms |      1.4× |
