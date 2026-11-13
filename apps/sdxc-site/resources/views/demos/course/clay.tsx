@@ -143,6 +143,51 @@ function Hands(handle: Handle<{ clay: ClayState }>) {
 	};
 }
 
+/**
+ * The second camera, straight down over the wheel: the splash pan and wheel head as
+ * rings, the centered clay as a disc with its throwing rings, one still finger at its edge,
+ * the angle that shows whether the clay runs true.
+ *
+ * @param handle Runtime handle carrying the id seed.
+ * @returns The render function producing the frame.
+ */
+export function OverheadFrame(handle: Handle<{ id: string }>) {
+	return () => {
+		let lamp = `${handle.props.id}-lamp`;
+		let body = `${handle.props.id}-clay`;
+		return (
+			<svg
+				viewBox="0 0 320 180"
+				preserveAspectRatio="xMidYMid slice"
+				aria-hidden="true"
+				mix={[raw({ display: "block", inlineSize: "100%", blockSize: "100%" })]}
+			>
+				<defs>
+					<radialGradient id={lamp} cx="0.5" cy="0.5" r="0.7">
+						<stop offset="0" stop-color="oklch(0.36 0.04 60)" />
+						<stop offset="1" stop-color="oklch(0.12 0.01 40)" />
+					</radialGradient>
+					<radialGradient id={body} cx="0.4" cy="0.4" r="0.7">
+						<stop offset="0" stop-color={CLAY.light} />
+						<stop offset="1" stop-color={CLAY.shade} />
+					</radialGradient>
+				</defs>
+				<rect width="320" height="180" fill={`url(#${lamp})`} />
+				<circle cx="160" cy="90" r="84" fill="oklch(0.2 0.012 50)" />
+				<circle cx="160" cy="90" r="70" fill="oklch(0.15 0.01 50)" />
+				<circle cx="160" cy="90" r="52" fill="oklch(0.4 0.008 60)" />
+				<circle cx="160" cy="90" r="34" fill={`url(#${body})`} />
+				<g fill="none" stroke="white" stroke-opacity="0.18">
+					<circle cx="160" cy="90" r="26" />
+					<circle cx="160" cy="90" r="17" />
+					<circle cx="160" cy="90" r="8" />
+				</g>
+				<rect x="194" y="86" width="40" height="8" rx="4" fill={HAND} />
+			</svg>
+		);
+	};
+}
+
 /** The profile of each module's piece, standing on y = 90 of a 100×100 box. */
 const POT_PATHS: Record<PotShape, string> = {
 	ball: "M30 90C24 84 26 56 50 50C74 56 76 84 70 90Z",

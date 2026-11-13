@@ -24,7 +24,7 @@ import {
 	TRANSCRIPT,
 } from "~/resources/views/demos/course/data";
 import course from "~/resources/views/demos/course/index";
-import { LessonPlayer } from "~/resources/views/demos/course/lesson-player";
+import { LESSON_CLIP, LessonPlayer } from "~/resources/views/demos/course/lesson-player";
 
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
@@ -53,15 +53,18 @@ function once(target: EventTarget, type: string): Promise<void> {
 }
 
 describe("the lesson player", () => {
-	test("plays a clip exactly as long as the lesson it previews", async () => {
+	test("plays the hosted lesson clip, with every time linking into it", () => {
 		mounted = render(<LessonPlayer />);
-		let video = mounted.container.querySelector("video")!;
-		expect(video.controls).toBe(true);
-		video.preload = "metadata";
-		let loaded = once(video, "loadedmetadata");
-		video.load();
-		await loaded;
-		expect(Math.round(video.duration)).toBe(PREVIEW.seconds);
+		let source = mounted.container.querySelector("video source")!;
+		expect(source.getAttribute("src")).toBe(LESSON_CLIP);
+		let links = [
+			...mounted.container.querySelectorAll<HTMLAnchorElement>(
+				'[data-slot="video-player-chapters"] a',
+			),
+		];
+		expect(links.map((link) => link.getAttribute("href"))).toEqual(
+			CHAPTERS.map((chapter) => `${LESSON_CLIP}#t=${chapter.start}`),
+		);
 	});
 
 	test("hands the chapters and transcript to the native player as tracks", async () => {
@@ -84,18 +87,36 @@ describe("the lesson player", () => {
 
 	test("marks the chapter and the transcript line playing at the rendered moment", () => {
 		mounted = render(<LessonPlayer />);
-		let chapter = mounted.container.querySelector('[data-slot="course-chapters"] [aria-current]');
-		let expected = CHAPTERS.filter((entry) => entry.start <= NOW).at(-1)!;
-		expect(chapter?.textContent).toContain(expected.title);
-		let line = mounted.container.querySelector('[data-slot="course-transcript"] [aria-current]');
+		let chapter = mounted.container.querySelector(
+			'[data-slot="video-player-chapters"] [aria-current]',
+		);
+		expect(chapter?.textContent).toContain(
+			CHAPTERS.filter((entry) => entry.start <= NOW).at(-1)!.title,
+		);
+		let line = mounted.container.querySelector('[data-slot="video-player-cue"][aria-current]');
 		expect(line?.textContent).toContain(
 			TRANSCRIPT.filter((entry) => entry.start <= NOW).at(-1)!.text,
 		);
 	});
 
-	test("keeps light ink on its dark stage in a light page", () => {
+	test("shows the overhead camera once it is picked in the settings", () => {
 		mounted = render(<LessonPlayer />);
-		let stage = mounted.container.querySelector<HTMLElement>('[data-slot="course-player"]')!;
+		let side = mounted.container.querySelector<HTMLElement>('[data-camera="side"]')!;
+		let overhead = mounted.container.querySelector<HTMLElement>('[data-camera="overhead"]')!;
+		expect(getComputedStyle(side).visibility).toBe("visible");
+		expect(getComputedStyle(overhead).visibility).toBe("hidden");
+
+		let option = mounted.container.querySelector<HTMLInputElement>(
+			'input[name="course-camera"][value="overhead"]',
+		)!;
+		option.checked = true;
+		expect(getComputedStyle(side).visibility).toBe("hidden");
+		expect(getComputedStyle(overhead).visibility).toBe("visible");
+	});
+
+	test("keeps its dark theater in a light page", () => {
+		mounted = render(<LessonPlayer />);
+		let stage = mounted.container.querySelector<HTMLElement>('[data-course="player"]')!;
 		expect(getComputedStyle(stage).colorScheme).toBe("dark");
 	});
 });
