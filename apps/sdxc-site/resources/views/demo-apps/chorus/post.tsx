@@ -284,6 +284,12 @@ export function PostActions(handle: Handle<PostActions.Props>) {
 	};
 }
 
+/**
+ * Pixels the share icon is drawn larger than its neighbours: its open tray and one-line arrow
+ * leave most of the box empty, so at the same size it reads smaller than the solid icons.
+ */
+const SHARE_OPTICAL_BOOST = 2;
+
 /** Share: copy the link, quote the post, or send it in a message, from a native popover menu. */
 function ShareMenu(handle: Handle<{ post: PostView; size: number }>) {
 	return () => {
@@ -301,7 +307,10 @@ function ShareMenu(handle: Handle<{ post: PostView; size: number }>) {
 					aria-label="Share"
 					title="Share"
 				>
-					<Reaction icon={<ShareIcon size={size} aria-hidden="true" />} count={-1} />
+					<Reaction
+						icon={<ShareIcon size={size + SHARE_OPTICAL_BOOST} aria-hidden="true" />}
+						count={-1}
+					/>
 				</Button>
 				<Menu id={id} placement="bottom-end" aria-label="Share post">
 					<CopyLink

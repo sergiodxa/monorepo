@@ -436,7 +436,7 @@ describe("Chorus's message box", () => {
 
 describe("Chorus's action rows", () => {
 	test.each([375, 1280])(
-		"a post page's row spaces five controls evenly, icons one size, counts shown, at %ipx",
+		"a post page's row spaces five controls evenly, icons matched in weight, counts shown, at %ipx",
 		async (width) => {
 			await page.viewport(width, 860);
 			let root = await mountScreen("post/p-leonids");
@@ -453,7 +453,8 @@ describe("Chorus's action rows", () => {
 			);
 
 			expect(items.length).toBe(5);
-			expect(new Set(icons.map(Math.round)).size).toBe(1);
+			expect(new Set(icons.slice(0, 4).map(Math.round)).size).toBe(1);
+			expect(Math.round(icons[4]!) - Math.round(icons[0]!)).toBe(2);
 			expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(2);
 			expect(row.textContent).toContain("3.8K");
 			expect(row.textContent).toContain("412");
