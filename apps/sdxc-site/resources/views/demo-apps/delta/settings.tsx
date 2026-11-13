@@ -131,7 +131,6 @@ export async function redrawSettings(
 		body: (
 			<DeltaFrame
 				current="repo"
-				crumb={`${REPO_NAME} › ${COPY.settings.title}`}
 				collapsed={readAppShellCookie(request.cookie, SHELL_COOKIE)}
 				tree={buildTree(tree.files)}
 				paths={tree.files.map((file) => file.path)}

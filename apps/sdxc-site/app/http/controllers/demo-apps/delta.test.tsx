@@ -113,6 +113,14 @@ describe("Delta's file view", () => {
 		expect(body).not.toContain(`id="L${file.lines + 1}"`);
 	});
 
+	test("names where it is once, in a trail whose organization and repository link", async () => {
+		let { body } = await page("delta/blob/main/anchors.ts");
+
+		expect(body).not.toContain('data-main-crumb=""');
+		expect(body).toMatch(new RegExp(`<a[^>]*href="${href()}"[^>]*>sdxc</a>`));
+		expect(body).toMatch(new RegExp(`<a[^>]*href="${href("delta")}"[^>]*>delta</a>`));
+	});
+
 	test("paints the lines `?L=` cites without script", async () => {
 		let { body } = await page("delta/blob/main/shell.tsx?L=12-18");
 

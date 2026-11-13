@@ -23,11 +23,9 @@ import {
 	RotateCwIcon,
 	SettingsIcon,
 } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { grow } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { font, text, truncate, weight } from "@sdxc/u/typography";
 import { Button, Menu } from "@sdxc/ui";
 import { AppShell } from "@sdxc/ui/app/app-shell";
 import { CommandPalette } from "@sdxc/ui/app/command-palette";
@@ -290,8 +288,6 @@ namespace DeltaFrame {
 		current: ShellSection;
 		/** The remembered collapsed sidebar, from {@link SHELL_COOKIE}. */
 		collapsed: boolean;
-		/** Where the person is on the first screen, shown in the top bar. */
-		crumb: string;
 		/** The repository's files as a tree, for the pane beside code screens. */
 		tree: readonly TreeNode[];
 		/** Every file's path, for the finder. */
@@ -314,7 +310,7 @@ const WITH_PANE = "(min-width: 64rem)";
  */
 export function DeltaFrame(handle: Handle<DeltaFrame.Props>) {
 	return () => {
-		let { children, collapsed, crumb, current, file, paths, tree } = handle.props;
+		let { children, collapsed, current, file, paths, tree } = handle.props;
 
 		return (
 			<AppShell
@@ -374,20 +370,7 @@ export function DeltaFrame(handle: Handle<DeltaFrame.Props>) {
 				}
 				topbar={
 					<>
-						<span
-							data-main-crumb=""
-							mix={[
-								grow(),
-								truncate(),
-								text("sm"),
-								weight("medium"),
-								fg("neutral.muted"),
-								font("mono"),
-								media("(max-width: 40rem)", raw({ visibility: "hidden" })),
-							]}
-						>
-							{crumb}
-						</span>
+						<span mix={[grow()]} />
 						<CommandPalette.Trigger for={PALETTE_ID}>Search or jump to…</CommandPalette.Trigger>
 						<Button
 							type="button"
@@ -546,7 +529,7 @@ export function RepoHeader(handle: Handle<RepoHeader.Props>) {
 				title={title}
 				crumbsLabel={COPY.crumbs}
 				crumbs={[
-					{ label: COPY.org },
+					{ label: COPY.org, href: href() },
 					{ label: COPY.repo, href: trail.length === 0 ? undefined : repoHref() },
 					...trail,
 				]}

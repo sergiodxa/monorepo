@@ -431,7 +431,6 @@ export default {
 			body: (
 				<DeltaFrame
 					current={screen.nav}
-					crumb={screen.crumb}
 					collapsed={readAppShellCookie(request.cookie, SHELL_COOKIE)}
 					tree={buildTree(tree.files)}
 					paths={tree.files.map((file) => file.path)}
