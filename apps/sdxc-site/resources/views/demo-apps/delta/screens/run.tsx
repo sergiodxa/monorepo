@@ -28,6 +28,7 @@ import { SLUG, actionsHref, commitHref, linesHref, runHref, shortSha } from "../
 import { InitialsTile } from "../glyphs";
 import { COPY, LOG_LABELS } from "../labels";
 import { LIVE, formatDuration } from "../seed/actions";
+import { nameOf } from "../seed/people";
 import { RepoHeader } from "../shell";
 
 import { BranchPill, StateIcon } from "./ci-parts";
@@ -114,7 +115,7 @@ function SummaryStats(handle: Handle<{ run: Run; now: number }>) {
 								}),
 							]}
 						>
-							<InitialsTile name={run.actor} size={16} />
+							<InitialsTile name={nameOf(run.actor)} size={16} />
 							<span mix={[weight("medium"), fg("neutral.emphasis")]}>{run.actor}</span>
 							<a
 								href={commitHref(run.sha)}

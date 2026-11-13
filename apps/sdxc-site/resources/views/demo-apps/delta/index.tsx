@@ -35,6 +35,7 @@ import { buildTree, isHeadRef, listFolder, parsePage, shortSha } from "./data";
 import { commitSource, readDiff, readDiffFile, readView, LazyHunks } from "./diffs";
 import { INBOX_TOASTS, inboxScreen, submitInbox } from "./inbox";
 import { COPY } from "./labels";
+import { peopleScreen } from "./people";
 import { BlobScreen, NotInBuild } from "./screens/blob";
 import { CommitScreen, CommitsScreen } from "./screens/commits";
 import { DashboardScreen, NotFoundScreen } from "./screens/dashboard";
@@ -161,6 +162,11 @@ const SCREENS = [
 	"notifications",
 	"notifications?filter=done",
 	"notifications?group=repo&reason=mention",
+	"sdxc",
+	"u/sergiodxa",
+	"u/sergiodxa?year=2026",
+	"u/mara",
+	"u/kenji?year=2025",
 ];
 
 /** One screen as both the whole page and the `main` frame draw it. */
@@ -305,6 +311,9 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 				crumb: `${REPO_NAME} › ${COPY.commits.title}`,
 				body: <CommitsScreen history={history} now={now} />,
 			};
+		case "org":
+		case "user":
+			return (await peopleScreen(target, request, now)) ?? notFound();
 		case "notifications":
 			return await inboxScreen(request, now);
 		case "actions":

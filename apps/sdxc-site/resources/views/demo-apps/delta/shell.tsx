@@ -11,6 +11,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import {
 	BookOpenIcon,
+	BuildingIcon,
 	CircleDotIcon,
 	CirclePlayIcon,
 	CodeIcon,
@@ -39,7 +40,7 @@ import { MainFrameSync } from "../main-frame-sync";
 
 import type { TreeNode } from "./data";
 
-import { REPO, actionHref, fileHref, href, repoHref } from "./data";
+import { ORG, REPO, actionHref, fileHref, href, repoHref } from "./data";
 import { FilesPane, PANE_ID } from "./files";
 import { DeltaMark, InitialsTile } from "./glyphs";
 import { COPY, HELP_LABELS, PALETTE_LABELS, SHELL_LABELS } from "./labels";
@@ -89,6 +90,18 @@ const NAV: Array<{ title?: string; rows: NavEntry[] }> = [
 				label: COPY.nav.notifications,
 				icon: <InboxIcon />,
 				shortcut: "g n",
+			},
+		],
+	},
+	{
+		title: COPY.nav.organization,
+		rows: [
+			{
+				section: "org",
+				page: ORG,
+				label: COPY.org,
+				icon: <BuildingIcon />,
+				shortcut: "g o",
 			},
 		],
 	},
@@ -326,6 +339,7 @@ export function DeltaFrame(handle: Handle<DeltaFrame.Props>) {
 							id="delta-user-menu"
 							label="Account"
 							helpId={HELP_ID}
+							profileHref={href(`u/${COPY.handle}`)}
 							extra={
 								<Menu.Item type="submit" form="delta-reset">
 									<RotateCwIcon />

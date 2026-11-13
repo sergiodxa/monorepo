@@ -133,7 +133,9 @@ export type DeltaRoute =
 	| { screen: "commit"; sha: string }
 	| { screen: "actions" }
 	| { screen: "run"; id: number; job?: number }
-	| { screen: "notifications" };
+	| { screen: "notifications" }
+	| { screen: "org" }
+	| { screen: "user"; handle: string };
 
 /**
  * Reads which screen a page path names. Paths are matched by shape only; whether the file,
@@ -157,6 +159,9 @@ export function parsePage(page: string): DeltaRoute | null {
 	let [first, second, third, ...rest] = segments;
 	if (first === undefined) return { screen: "dashboard" };
 	if (first === "notifications") return second === undefined ? { screen: "notifications" } : null;
+	if (first === ORG) return second === undefined ? { screen: "org" } : null;
+	if (first === "u")
+		return second !== undefined && third === undefined ? { screen: "user", handle: second } : null;
 	if (first !== REPO) return null;
 	if (second === undefined) return { screen: "home" };
 	if (second === "actions") return parseActions(third, rest);

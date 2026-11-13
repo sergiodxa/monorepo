@@ -38,6 +38,7 @@ import { InitialsTile } from "../glyphs";
 import { InboxKeys } from "../inbox-keys";
 import { COPY, INBOX_FILTER_LABELS, INBOX_SELECTION_LABELS } from "../labels";
 import { REASONS } from "../seed/notifications";
+import { nameOf } from "../seed/people";
 
 import { StateIcon } from "./ci-parts";
 
@@ -274,7 +275,7 @@ export function InboxRow(handle: Handle<InboxRow.Props>) {
 							raw({ display: "flex", gap: "0.375rem", minInlineSize: 0 }),
 						]}
 					>
-						<InitialsTile name={item.actor} size={16} />
+						<InitialsTile name={nameOf(item.actor)} size={16} />
 						<span
 							mix={[
 								raw({

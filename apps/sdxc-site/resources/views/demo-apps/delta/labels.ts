@@ -15,9 +15,9 @@ import type { Diff } from "@sdxc/ui/app/diff";
 import type { FilterBar } from "@sdxc/ui/app/filter-bar";
 import type { FilterMenu } from "@sdxc/ui/app/filter-menu";
 import type { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
+import type { LogViewer } from "@sdxc/ui/app/log-viewer";
 import type { SaveStatusProps } from "@sdxc/ui/app/save-status";
 import type { SelectionBar } from "@sdxc/ui/app/selection-bar";
-import type { LogViewer } from "@sdxc/ui/app/log-viewer";
 import type { Tree } from "@sdxc/ui/app/tree";
 
 /** The shell's landmark, skip link, phone menu and collapse toggle. */
@@ -260,6 +260,7 @@ export const COPY = {
 	nav: {
 		dashboard: "Dashboard",
 		notifications: "Notifications",
+		organization: "Organization",
 		repositories: "Repositories",
 	},
 	tabs: {
@@ -452,6 +453,35 @@ export const COPY = {
 		all: "View all commits",
 		files: (count: number) => `${count} ${count === 1 ? "file" : "files"}`,
 		updated: "Updated",
+	},
+	people: {
+		orgBio: "Packages, the kit and the demos behind sdxc.dev, built in the open.",
+		members: (count: number) => `${count} ${count === 1 ? "member" : "members"}`,
+		membersTitle: "Members",
+		pinned: "Pinned",
+		activity: "Recent activity",
+		noActivity: (name: string) => `${name} has no public activity in this repository yet.`,
+		noOrgActivity: "Nothing has happened in the org's repositories yet.",
+		pushed: "pushed to sdxc/delta",
+		ran: (run: string) => `ran ${run}`,
+		commented: "commented on a commit",
+		docsHint: "Documented on sdxc.dev; only sdxc/delta is hosted here",
+		stars: (count: number) => `${count.toLocaleString("en")} stars`,
+		forks: (count: number) => `${count} forks`,
+		compact: (count: number) =>
+			count >= 1000 ? `${(count / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(count),
+		contributions: (count: number, year: number | null) =>
+			`${count.toLocaleString("en")} ${count === 1 ? "contribution" : "contributions"} ${year === null ? "in the last year" : `in ${year}`}`,
+		day: (count: number, date: string) =>
+			`${count === 0 ? "No" : count} ${count === 1 ? "contribution" : "contributions"} on ${date}`,
+		less: "Less",
+		more: "More",
+		contributionsTitle: "Contributions",
+		years: "Contribution years",
+		lastYear: "Last year",
+		about: (name: string) => `About ${name}`,
+		roleIn: (role: string) => `${role} of`,
+		joined: (date: string) => `Joined ${date}`,
 	},
 	inbox: {
 		title: "Notifications",
