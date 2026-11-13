@@ -11,10 +11,9 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { at } from "@sdxc/u/responsive";
-import { LandingHeader, LandingSection } from "@sdxc/ui/landing";
+import { LandingHeader, LandingSection, ScrollScene, sceneMotion } from "@sdxc/ui/landing";
 
 import { KEYBOARD_VIEW, KEYS } from "~/resources/views/demos/hardware/keyboard";
-import { ScrollScene, sceneMotion } from "~/resources/views/demos/hardware/scroll-scene";
 import { stage, STAGE_CLASS } from "~/resources/views/demos/hardware/stage";
 
 /** The scene's timeline name. */

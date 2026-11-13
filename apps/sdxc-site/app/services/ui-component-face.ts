@@ -312,6 +312,7 @@ const CATALOGUE = [
 	{ slug: "save-bar", module: "app" },
 	{ slug: "save-status", module: "app" },
 	{ slug: "scroll-area", module: "components" },
+	{ slug: "scroll-scene", module: "landing" },
 	{ slug: "search-field", module: "components" },
 	{ slug: "section", module: "components" },
 	{ slug: "segmented-stage", module: "landing" },

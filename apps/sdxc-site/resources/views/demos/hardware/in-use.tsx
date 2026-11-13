@@ -11,10 +11,9 @@ import { animationHost, keyframes } from "@sdxc/u/animation";
 import { combine, raw } from "@sdxc/u/general";
 import { at, media, supports } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
-import { LandingHeader, LandingSection } from "@sdxc/ui/landing";
+import { LandingHeader, LandingSection, ScrollScene, sceneMotion } from "@sdxc/ui/landing";
 
 import { Keyboard } from "~/resources/views/demos/hardware/keyboard";
-import { ScrollScene, sceneMotion } from "~/resources/views/demos/hardware/scroll-scene";
 import { stage, STAGE_CLASS } from "~/resources/views/demos/hardware/stage";
 
 /** The scene's timeline name. */

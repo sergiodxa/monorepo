@@ -11,9 +11,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { at } from "@sdxc/u/responsive";
-import { LandingHeader, LandingSection } from "@sdxc/ui/landing";
-
-import { ScrollScene, sceneMotion } from "~/resources/views/demos/hardware/scroll-scene";
+import { LandingHeader, LandingSection, ScrollScene, sceneMotion } from "@sdxc/ui/landing";
 
 /** The scene's timeline name. */
 const TIMELINE = "strata-materials";

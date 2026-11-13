@@ -173,6 +173,7 @@ export const FACE_KIND = {
 	"save-bar": "save-bar",
 	"save-status": "status-strip",
 	"scroll-area": "scroll-area",
+	"scroll-scene": "landing-stage",
 	"search-field": "search",
 	section: "card",
 	"segmented-stage": "landing-stage",
