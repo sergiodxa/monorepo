@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
+
 import { SearchIcon } from "@sdxc/icons";
 import { LinkButton } from "@sdxc/ui";
 import { APP_SHELL_COOKIE } from "@sdxc/ui/app/app-shell";
@@ -17,7 +19,15 @@ import * as f from "remix/data-schema/form-data";
 
 import type { DemoApp, DemoAppRedirect, DemoAppRequest } from "~/resources/views/demo-apps";
 
-import type { PulseSettingsSection } from "./shell";
+import { DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
+import {
+	MAIN_FRAME,
+	MainFrame,
+	mainSource,
+	MainScreen,
+} from "~/resources/views/demo-apps/main-frame";
+
+import type { PulseSection, PulseSettingsSection } from "./shell";
 
 import { actionHref, findService, href, SERVICES } from "./data";
 import { Deployments, StatusPages } from "./deployments";
@@ -190,94 +200,124 @@ function NotFound() {
 	);
 }
 
+/** One Pulse screen: its title and status, the nav it marks, and its main area's content. */
+interface PulseScreen {
+	title: string;
+	status?: number;
+	section?: PulseSection;
+	settings?: PulseSettingsSection;
+	content: RemixNode;
+}
+
 /**
  * Picks the screen a page path names; every path Pulse lacks gets its own 404 inside the
  * frame, so a mistyped address still shows where the visitor is.
  */
-function route(request: DemoAppRequest) {
+function route(request: DemoAppRequest): PulseScreen {
 	let [first = "", second, third] = request.page.split("/");
 	if (first === "" && second === undefined) {
 		return {
 			title: COPY.overview.title,
-			body: (
-				<PulseShell request={request} section="overview">
-					<Overview request={request} />
-				</PulseShell>
-			),
+			section: "overview",
+			content: <Overview request={request} />,
 		};
 	}
 	if (first === "services" && second === undefined) {
 		return {
 			title: COPY.services.title,
-			body: (
-				<PulseShell request={request} section="services">
-					<Services request={request} />
-				</PulseShell>
-			),
+			section: "services",
+			content: <Services request={request} />,
 		};
 	}
 	let service = first === "services" && third === undefined ? findService(second ?? "") : undefined;
 	if (service !== undefined) {
 		return {
 			title: service.name,
-			body: (
-				<PulseShell request={request} section="services">
-					<ServicePage request={request} service={service} />
-				</PulseShell>
-			),
+			section: "services",
+			content: <ServicePage request={request} service={service} />,
 		};
 	}
 	if (first === "deployments" && second === undefined) {
 		return {
 			title: COPY.deployments.title,
-			body: (
-				<PulseShell request={request} section="deployments">
-					<Deployments />
-				</PulseShell>
-			),
+			section: "deployments",
+			content: <Deployments />,
 		};
 	}
 	if (first === "incidents" && second === undefined) {
 		return {
 			title: COPY.incidents.title,
-			body: (
-				<PulseShell request={request} section="incidents">
-					<Incidents request={request} />
-				</PulseShell>
-			),
+			section: "incidents",
+			content: <Incidents request={request} />,
 		};
 	}
 	if (first === "status-pages" && second === undefined) {
 		return {
 			title: COPY.statusPages.title,
-			body: (
-				<PulseShell request={request} section="status-pages">
-					<StatusPages />
-				</PulseShell>
-			),
+			section: "status-pages",
+			content: <StatusPages />,
 		};
 	}
 	let settings = first === "settings" && third === undefined ? settingsSection(second) : undefined;
 	if (settings !== undefined) {
 		return {
 			title: COPY.settings[settings].title,
-			body: (
-				<PulseShell request={request} settings={settings}>
-					<Settings request={request} section={settings} />
-				</PulseShell>
-			),
+			settings,
+			content: <Settings request={request} section={settings} />,
 		};
 	}
 	return {
 		title: COPY.notFound.title,
 		status: 404,
-		body: (
-			<PulseShell request={request}>
-				<NotFound />
-			</PulseShell>
-		),
+		content: <NotFound />,
 	};
 }
+
+/** Every toast a Pulse redirect can name, keyed by what the redirect carries. */
+const TOASTS: DemoApp["toasts"] = {
+	"services-paused": { color: "neutral", title: "Services paused" },
+	"services-resumed": { color: "success", title: "Services resumed" },
+	"services-deleted": {
+		color: "neutral",
+		title: "Services deleted",
+		action: { label: "Undo", form: { action: actionHref("services/restore") } },
+	},
+	"services-restored": { color: "success", title: "Services restored" },
+	"service-paused": { color: "neutral", title: "Service paused" },
+	"service-resumed": { color: "success", title: "Service resumed" },
+	"service-deleted": {
+		color: "neutral",
+		title: "Service deleted",
+		action: { label: "Undo", form: { action: actionHref("services/restore") } },
+	},
+	"service-restored": { color: "success", title: "Service restored" },
+	"service-saved": { color: "success", title: "Service saved" },
+	"check-started": { color: "brand", title: "Check started" },
+	"settings-saved": { color: "success", title: "Settings saved" },
+	"alerts-saved": { color: "success", title: "Alerts saved" },
+	"escalation-saved": { color: "success", title: "Escalation saved" },
+	"ownership-transferred": { color: "success", title: "Ownership transferred" },
+	"workspace-deleted": {
+		color: "neutral",
+		title: "Workspace deleted",
+		description: "A demo keeps nothing, so Northwind is back.",
+	},
+	"not-saved": {
+		color: "danger",
+		title: "Changes not saved",
+		description: "Fill in every field and try again.",
+	},
+	"not-deleted": {
+		color: "danger",
+		title: "Workspace not deleted",
+		description: `Type "${WORKSPACE_SLUG}" exactly to confirm.`,
+	},
+	"status-page-created": {
+		color: "success",
+		title: "Status page created",
+		description: "A demo keeps nothing, so the list stays empty.",
+	},
+};
 
 /** The settings section a path segment names, or `undefined` for one Pulse lacks. */
 function settingsSection(segment: string | undefined): PulseSettingsSection | undefined {
@@ -328,52 +368,35 @@ export default {
 		"settings/billing",
 	],
 	cookies: [APP_SHELL_COOKIE],
-	toasts: {
-		"services-paused": { color: "neutral", title: "Services paused" },
-		"services-resumed": { color: "success", title: "Services resumed" },
-		"services-deleted": {
-			color: "neutral",
-			title: "Services deleted",
-			action: { label: "Undo", form: { action: actionHref("services/restore") } },
-		},
-		"services-restored": { color: "success", title: "Services restored" },
-		"service-paused": { color: "neutral", title: "Service paused" },
-		"service-resumed": { color: "success", title: "Service resumed" },
-		"service-deleted": {
-			color: "neutral",
-			title: "Service deleted",
-			action: { label: "Undo", form: { action: actionHref("services/restore") } },
-		},
-		"service-restored": { color: "success", title: "Service restored" },
-		"service-saved": { color: "success", title: "Service saved" },
-		"check-started": { color: "brand", title: "Check started" },
-		"settings-saved": { color: "success", title: "Settings saved" },
-		"alerts-saved": { color: "success", title: "Alerts saved" },
-		"escalation-saved": { color: "success", title: "Escalation saved" },
-		"ownership-transferred": { color: "success", title: "Ownership transferred" },
-		"workspace-deleted": {
-			color: "neutral",
-			title: "Workspace deleted",
-			description: "A demo keeps nothing, so Northwind is back.",
-		},
-		"not-saved": {
-			color: "danger",
-			title: "Changes not saved",
-			description: "Fill in every field and try again.",
-		},
-		"not-deleted": {
-			color: "danger",
-			title: "Workspace not deleted",
-			description: `Type "${WORKSPACE_SLUG}" exactly to confirm.`,
-		},
-		"status-page-created": {
-			color: "success",
-			title: "Status page created",
-			description: "A demo keeps nothing, so the list stays empty.",
-		},
-	},
+	toasts: TOASTS,
 	frame: (part, request) => pulseFrame(part, request),
-	render: (request) => route(request),
+	render(request) {
+		let screen = route(request);
+		return {
+			title: screen.title,
+			status: screen.status,
+			body: (
+				<PulseShell request={request} section={screen.section} settings={screen.settings}>
+					<MainFrame src={mainSource(request.url)} />
+				</PulseShell>
+			),
+		};
+	},
+	target(name, request) {
+		if (name !== MAIN_FRAME) return null;
+		let screen = route(request);
+		let key = request.url.searchParams.get(DEMO_APP_TOAST_PARAM);
+		return (
+			<MainScreen
+				title={screen.title}
+				nav={screen.settings ?? screen.section}
+				url={request.url}
+				toast={key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined}
+			>
+				{screen.content}
+			</MainScreen>
+		);
+	},
 	submit(page, form) {
 		let [first, second, third, extra] = page.split("/");
 		if (extra !== undefined) return null;

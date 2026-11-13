@@ -31,6 +31,7 @@ import type { DemoAppRequest } from "~/resources/views/demo-apps";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
+import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 
 import { href, INCIDENTS, SERVICES } from "./data";
 import { COPY, SHELL } from "./labels";
@@ -81,6 +82,9 @@ namespace PulseShell {
 	}
 }
 
+/** The path sections whose screens swap the sidebar for their own panel. */
+const PULSE_SHELLS = ["settings"];
+
 /** A 24px square of initials, standing in for the workspace logo or a person's avatar. */
 function Initials(handle: Handle<{ letters: string; tone: "brand" | "neutral" }>) {
 	return () => (
@@ -122,6 +126,7 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 						href={href()}
 						icon={<LayoutDashboardIcon />}
 						label={COPY.nav.overview}
+						data-main-nav="overview"
 						current={section === "overview"}
 					/>
 					<AppShell.Item
@@ -132,6 +137,7 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 						count={down}
 						countTone="danger"
 						countLabel={COPY.nav.servicesDown(down)}
+						data-main-nav="services"
 						current={section === "services"}
 					/>
 					<AppShell.Item
@@ -139,6 +145,7 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 						href={href("deployments")}
 						icon={<RocketIcon />}
 						label={COPY.nav.deployments}
+						data-main-nav="deployments"
 						current={section === "deployments"}
 					/>
 					<AppShell.Item
@@ -149,6 +156,7 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 						count={open}
 						countTone="warning"
 						countLabel={COPY.nav.incidentsOpen(open)}
+						data-main-nav="incidents"
 						current={section === "incidents"}
 					/>
 					<AppShell.Item
@@ -156,6 +164,7 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 						href={href("status-pages")}
 						icon={<GlobeIcon />}
 						label={COPY.nav.statusPages}
+						data-main-nav="status-pages"
 						current={section === "status-pages"}
 					/>
 				</AppShell.Group>
@@ -185,6 +194,7 @@ function SettingsNav(handle: Handle<{ section: PulseSettingsSection }>) {
 						href={href("settings")}
 						icon={<SettingsIcon />}
 						label={COPY.nav.general}
+						data-main-nav="general"
 						current={section === "general"}
 					/>
 					<AppShell.Item
@@ -192,6 +202,7 @@ function SettingsNav(handle: Handle<{ section: PulseSettingsSection }>) {
 						href={href("settings/notifications")}
 						icon={<BellIcon />}
 						label={COPY.nav.notifications}
+						data-main-nav="notifications"
 						current={section === "notifications"}
 					/>
 					<AppShell.Item
@@ -199,6 +210,7 @@ function SettingsNav(handle: Handle<{ section: PulseSettingsSection }>) {
 						href={href("settings/billing")}
 						icon={<CreditCardIcon />}
 						label={COPY.nav.billing}
+						data-main-nav="billing"
 						current={section === "billing"}
 					/>
 				</AppShell.Group>
@@ -288,6 +300,7 @@ export default function PulseShell(handle: Handle<PulseShell.Props>) {
 				}
 			>
 				{children}
+				<MainFrameSync root={href()} shells={PULSE_SHELLS} />
 				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</AppShell>
 		);
