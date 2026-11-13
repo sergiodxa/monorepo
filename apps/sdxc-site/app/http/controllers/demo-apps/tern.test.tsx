@@ -229,10 +229,10 @@ describe("Tern's screens and frames", () => {
 	});
 });
 
-describe("Tern's main frame", () => {
-	/** The headers the browser runtime sends for a navigation aimed at the main frame. */
-	const TO_MAIN = { "X-Remix-Frame": "true", "X-Remix-Target": "main" };
+/** The headers the browser runtime sends for a navigation aimed at the main frame. */
+const TO_MAIN = { "X-Remix-Frame": "true", "X-Remix-Target": "main" };
 
+describe("Tern's main frame", () => {
 	test("a page inlines its pane in the main frame, so it reads without scripts", async () => {
 		let body = await (await fetchApp(href("c/flaky-test"))).text();
 

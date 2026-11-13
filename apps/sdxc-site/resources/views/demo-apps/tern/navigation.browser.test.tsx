@@ -132,11 +132,12 @@ async function open(path: string): Promise<FrameRequest[]> {
 	let requests: FrameRequest[] = [];
 	app = run({
 		async loadModule(moduleUrl, exportName) {
-			let load = moduleUrl.endsWith("/main-frame-sync.tsx")
-				? () => import("~/resources/views/demo-apps/main-frame-sync")
-				: moduleUrl.endsWith("/emoji-textarea.tsx")
-					? () => import("~/resources/views/demo-apps/emoji-textarea")
-					: MODULES[moduleUrl];
+			let load = MODULES[moduleUrl];
+			if (moduleUrl.endsWith("/main-frame-sync.tsx")) {
+				load = () => import("~/resources/views/demo-apps/main-frame-sync");
+			} else if (moduleUrl.endsWith("/emoji-textarea.tsx")) {
+				load = () => import("~/resources/views/demo-apps/emoji-textarea");
+			}
 			if (load === undefined) throw new Error(`No island module for ${moduleUrl}`);
 			return Reflect.get(await load(), exportName);
 		},
