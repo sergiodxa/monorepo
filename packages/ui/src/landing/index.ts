@@ -58,3 +58,4 @@ export * from "./tabbed-stage.js";
 export * from "./testimonial-band.js";
 export * from "./typed-terminal.js";
 export * from "./usage-estimate.js";
+export * from "./case-study.js";
