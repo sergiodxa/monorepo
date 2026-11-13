@@ -170,6 +170,8 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 										position: "sticky",
 										insetBlockStart: "var(--ui-app-sticky-top, 0px)",
 										zIndex: "2",
+										boxSizing: "border-box",
+										inlineSize: "calc(100% + 2 * var(--ui-app-gutter, 0px))",
 										marginInline: "calc(-1 * var(--ui-app-gutter, 0px))",
 										paddingInline: "var(--ui-app-gutter, 0px)",
 									}),

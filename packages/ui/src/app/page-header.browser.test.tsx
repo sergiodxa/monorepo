@@ -249,6 +249,26 @@ describe("PageHeader", () => {
 		expect(getComputedStyle(title).fontSize).toBe("24px");
 	});
 
+	test("the sticky variant covers the gutter on both sides under a border-box reset", async () => {
+		await page.viewport(375, 600);
+		mounted = render(
+			<div
+				id="scroller"
+				style="box-sizing: border-box; block-size: 600px; overflow-y: auto; --ui-app-gutter: 16px; padding: 0 16px"
+			>
+				<style>{"#scroller * { box-sizing: border-box; }"}</style>
+				<PageHeader sticky title="api.acme.dev" description="HTTPS check every 30 seconds." />
+				<div style="block-size: 2000px">Body</div>
+			</div>,
+		);
+		let scroller = document.getElementById("scroller")!.getBoundingClientRect();
+		let header = document.querySelector<HTMLElement>('[data-slot="page-header"]')!;
+		let box = header.getBoundingClientRect();
+
+		expect(Math.round(box.left)).toBe(Math.round(scroller.left));
+		expect(Math.round(box.right)).toBe(Math.round(scroller.right));
+	});
+
 	test("under reduced motion the sticky header sticks at full size", async () => {
 		await cdp().send("Emulation.setEmulatedMedia", {
 			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
