@@ -61,7 +61,8 @@ export const expression: Rule[] = [
 
 	{ type: "constant", match: /\b[A-Z][A-Z\d]*(?:_[A-Z\d]+)+\b/y },
 	{ type: "class-name", match: /\b[A-Z][\w$]*\b/y },
-	{ type: "function", match: /#?\b[A-Za-z_$][\w$]*(?=\s*(?:\?\.)?\s*\()/y },
+	/** One blank run on each side of an optional `?.`, so blanks before a non-call are read once. */
+	{ type: "function", match: /#?\b[A-Za-z_$][\w$]*(?=\s*(?:\?\.\s*)?\()/y },
 	{ type: "variable", match: /#[A-Za-z_$][\w$]*/y },
 
 	{

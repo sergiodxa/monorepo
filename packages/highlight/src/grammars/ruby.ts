@@ -29,10 +29,13 @@ const EXPRESSION: Rule[] = [
 	{ type: "string", match: /"/y, push: "string" },
 	{ type: "string", match: /'(?:\\[\s\S]|[^'\\])*'?/y },
 
-	/** A word or symbol list, which carries no interpolation to paint. */
+	/**
+	 * A word or symbol list, which carries no interpolation to paint. An unclosed
+	 * list runs to the end of the source, as an unclosed single-quoted string does.
+	 */
 	{
 		type: "string",
-		match: /%[wWiI](?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|<[^>]*>)/y,
+		match: /%[wWiI](?:\[[^\]]*\]?|\([^)]*\)?|\{[^}]*\}?|<[^>]*>?)/y,
 	},
 
 	{ type: "constant", match: /:[A-Za-z_]\w*[?!=]?/y },

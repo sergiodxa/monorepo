@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Grammar, Token } from "./lexer.js";
+import type { Grammar, Line, ScanOptions, Token } from "./lexer.js";
 
 import { bash } from "./grammars/bash.js";
 import { css } from "./grammars/css.js";
@@ -25,10 +25,10 @@ import { sql } from "./grammars/sql.js";
 import { tsx } from "./grammars/tsx.js";
 import { typescript } from "./grammars/typescript.js";
 import { yaml } from "./grammars/yaml.js";
-import { scan } from "./lexer.js";
+import { scan, scanLines } from "./lexer.js";
 
-export type { Grammar, Rule, Token } from "./lexer.js";
-export { compose, scan } from "./lexer.js";
+export type { Grammar, Line, Rule, ScanOptions, Token } from "./lexer.js";
+export { compose, scan, scanLines } from "./lexer.js";
 
 /**
  * Every language a fence can name, by the name it registers under.
@@ -111,12 +111,35 @@ export function normalizeLanguage(language: string): string {
  *
  * @param code - Source to highlight
  * @param language - Language name or alias, as written on a fence
+ * @param options - The line length cap and the state to start in
  * @returns The tokens, in source order, covering the input exactly once
  */
-export function tokenize(code: string, language: string): Token[] {
+export function tokenize(code: string, language: string, options?: ScanOptions): Token[] {
 	let grammar = languages[normalizeLanguage(language)];
 	if (!grammar) return code.length > 0 ? [{ type: "plain", value: code }] : [];
-	return scan(code, grammar);
+	return scan(code, grammar, options);
+}
+
+/**
+ * Tokenizes source as a language into lines, each carrying the mode stack it
+ * ends in, so a later chunk of the same file resumes from that state.
+ *
+ * A language with no grammar yields each line as one `plain` token, every one
+ * ending in the initial state.
+ *
+ * @param code - Source to highlight
+ * @param language - Language name or alias, as written on a fence
+ * @param options - The line length cap and the state to start in
+ * @returns One entry per line: a source with `n` newlines has `n + 1`
+ * @example let lines = tokenizeLines(file, "ts"); tokenizeLines(hunk, "ts", { state: lines[41]?.state })
+ */
+export function tokenizeLines(code: string, language: string, options?: ScanOptions): Line[] {
+	let grammar = languages[normalizeLanguage(language)];
+	if (grammar) return scanLines(code, grammar, options);
+	return code.split("\n").map((line) => ({
+		tokens: line.length > 0 ? [{ type: "plain", value: line }] : [],
+		state: options?.state ?? ["main"],
+	}));
 }
 
 /**
@@ -128,10 +151,11 @@ export function tokenize(code: string, language: string): Token[] {
  *
  * @param code - Source to highlight
  * @param language - Language name or alias, as written on a fence
+ * @param options - The line length cap and the state to start in
  * @returns Markup safe to place inside a `<pre><code>`
  */
-export function highlight(code: string, language: string): string {
-	return tokenize(code, language)
+export function highlight(code: string, language: string, options?: ScanOptions): string {
+	return tokenize(code, language, options)
 		.map((token) => {
 			let value = escapeMarkup(token.value);
 			if (token.type === "plain") return value;

@@ -74,7 +74,11 @@ export const markdown: Grammar = {
 	code: [
 		{ type: "punctuation", match: /(?<=^[ \t]*)(?:`{3,}|~{3,})[ \t]*$/my, pop: true },
 		{ type: "keyword", match: /(?<=^[ \t]*(?:`{3,}|~{3,}))[A-Za-z][\w#+.-]*/my },
-		{ type: "attr-value", match: /(?<=^[ \t]*(?:`{3,}|~{3,})[A-Za-z][\w#+.-]*)[^\n]+/my },
+		/** The rest of the line after the info string, which ends where its word does. */
+		{
+			type: "attr-value",
+			match: /(?![\w#+.-])(?<=^[ \t]*(?:`{3,}|~{3,})[A-Za-z][\w#+.-]*)[^\n]+/my,
+		},
 	],
 
 	/** Inside a heading, which ends where its line does. */

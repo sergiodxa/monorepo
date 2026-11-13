@@ -63,6 +63,17 @@ describe("ruby", () => {
 		]);
 	});
 
+	/**
+	 * Requiring the closer made every unclosed `%w(` scan to the end of the
+	 * source, once per opener: quadratic in a file full of them.
+	 */
+	test("paints an unclosed word list as a string to the end", () => {
+		expect(painted("x = %w(a b\ny")).toEqual([
+			["operator", "="],
+			["string", "%w(a b\ny"],
+		]);
+	});
+
 	test("paints a symbol, in both spellings", () => {
 		expect(painted("build(:up, status: :down)")).toEqual([
 			["function", "build"],

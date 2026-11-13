@@ -14,5 +14,9 @@
 	},
 	"dependencies": {
 		"@sdxc/markdown": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/prismjs": "1.26.6",
+		"prismjs": "1.30.0"
 	}
 }

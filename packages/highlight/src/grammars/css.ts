@@ -55,9 +55,20 @@ const RULESET: Rule[] = [
 
 /**
  * A custom property being declared. The `--` says so on its own, which is why
- * this holds wherever a declaration can appear.
+ * this holds wherever a declaration can appear. The name starts where a word
+ * does, so a long run of dashes is read once rather than from every dash.
  */
-const CUSTOM: Rule = { type: "property", match: /--[\w-]+(?=\s*:)/y, push: "value" };
+const CUSTOM: Rule = { type: "property", match: /(?<![\w-])--[\w-]+(?=\s*:)/y, push: "value" };
+
+/**
+ * A word followed by a colon. A word a `-` earlier in the same run already
+ * failed to start is skipped, since it ends at the same place, so a run of
+ * dashes and underscores costs one read.
+ */
+const PROPERTY = /(?<!-[\d_]*)[A-Za-z-][\w-]*(?=\s*:)/y;
+
+/** A name called with `(`, starting where a word does, so a run no call follows is read once. */
+const FUNCTION = /(?<![\w-])[\w-]+(?=\()/y;
 
 /**
  * Highlights CSS, including nested rule sets, at-rule preludes, and the custom
@@ -76,7 +87,7 @@ export const css: Grammar = {
 		CUSTOM,
 		{
 			type: "property",
-			match: /[A-Za-z-][\w-]*(?=\s*:[^{}]*(?:[;}]|$))/y,
+			match: /(?<!-[\d_]*)[A-Za-z-][\w-]*(?=\s*:[^{}]*(?:[;}]|$))/y,
 			push: "value",
 		},
 		...SELECTOR,
@@ -86,12 +97,7 @@ export const css: Grammar = {
 	 * Inside `{ … }`, where a word followed by a colon is a property name. A
 	 * nested rule set is reached through the `&` its selector starts with.
 	 */
-	block: [
-		...RULESET,
-		CUSTOM,
-		{ type: "property", match: /[A-Za-z-][\w-]*(?=\s*:)/y, push: "value" },
-		...SELECTOR,
-	],
+	block: [...RULESET, CUSTOM, { type: "property", match: PROPERTY, push: "value" }, ...SELECTOR],
 
 	/**
 	 * A declaration's value, entered on its property name so the colon between
@@ -106,7 +112,7 @@ export const css: Grammar = {
 		{ type: "keyword", match: /!\s*important\b/iy },
 		/** The custom property a `var()` reads, named the same way it was declared. */
 		{ type: "property", match: /--[\w-]+/y },
-		{ type: "function", match: /[\w-]+(?=\()/y },
+		{ type: "function", match: FUNCTION },
 		{ type: "number", match: /#[\da-fA-F]{3,8}\b/y },
 		NUMBER,
 		/** A keyword arrives whole, so the digits inside `preserve-3d` stay part of it. */
@@ -130,8 +136,8 @@ export const css: Grammar = {
 		{ type: "punctuation", match: /\{/y, pop: true },
 		...STRING,
 		{ type: "property", match: /--[\w-]+/y },
-		{ type: "property", match: /[A-Za-z-][\w-]*(?=\s*:)/y },
-		{ type: "function", match: /[\w-]+(?=\()/y },
+		{ type: "property", match: PROPERTY },
+		{ type: "function", match: FUNCTION },
 		{ type: "keyword", match: /\b(?:and|not|only|or)\b/y },
 		NUMBER,
 		/** A media type, a layer name, a supports value: named, and nothing more. */

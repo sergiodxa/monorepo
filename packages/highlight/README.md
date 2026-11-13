@@ -121,13 +121,30 @@ The walk is synchronous, so painting inside a render path needs no `await`.
 
 ## API
 
-### `tokenize(code: string, language: string): Token[]`
+### `tokenize(code: string, language: string, options?: ScanOptions): Token[]`
 
 Tokenizes source as a language, resolving aliases first. The tokens arrive in source order and
 cover the input exactly once; a language with no grammar yields one `plain` token, and empty
 source an empty list.
 
-### `highlight(code: string, language: string): string`
+### `tokenizeLines(code: string, language: string, options?: ScanOptions): Line[]`
+
+Tokenizes source into one entry per line, each holding the line's tokens (without its newline)
+and the mode stack the line ends in. Pass a line's `state` back to scan the lines after it on
+their own, such as a diff hunk or the context expanded around one:
+
+```typescript
+import { tokenizeLines } from "@sdxc/highlight";
+
+let lines = tokenizeLines(file, "ts");
+// Later, only lines 42–60, from the state line 41 ended in:
+let chunk = tokenizeLines(lines42to60, "ts", { state: lines[40]?.state });
+```
+
+A chunk is scanned as its own text, so a pattern that looks behind its first line sees nothing
+there: a key on the line after a `{` can paint as plain text.
+
+### `highlight(code: string, language: string, options?: ScanOptions): string`
 
 Highlights source into `<span class="token …">` markup, escaping every value it writes. `plain`
 runs are written as escaped text without a span.
@@ -152,10 +169,18 @@ Aliases: `js`, `ts`, `py`, `rb`, `sh`, `shell`, `yml`, `gql`, `md`, `mdx`, `rest
 Every bundled grammar by name: `bash`, `css`, `diff`, `graphql`, `html`, `http`, `javascript`,
 `json`, `jsx`, `markdown`, `plain`, `python`, `ruby`, `sql`, `tsx`, `typescript`, `yaml`.
 
-### `scan(code: string, grammar: Grammar): Token[]`
+### `scan(code: string, grammar: Grammar, options?: ScanOptions): Token[]`
 
 Scans source with a grammar directly, skipping the registry and aliases. Characters no rule
 claims accumulate into `plain` runs, and adjacent runs of the same type arrive merged.
+
+Each position tries only the rules whose pattern can start with the character there, in the
+mode's order, and a run of characters no rule can start is taken in one step, so a scan costs
+what the source is long rather than its length times the grammar's size.
+
+### `scanLines(code: string, grammar: Grammar, options?: ScanOptions): Line[]`
+
+`tokenizeLines` for a grammar you hold.
 
 ### `compose(...parts: Array<Record<string, Rule[]>>): Grammar`
 
@@ -195,6 +220,28 @@ The closed set of twenty run kinds: `attr-name`, `attr-value`, `boolean`, `built
 `builtin` covers names the language provides, `class-name` types and classes, `property` keys
 of any kind, `tag` markup tag names and CSS selectors, `variable` sigil-marked names, and
 `inserted`/`deleted` the sides of a diff.
+
+#### `ScanOptions`
+
+```typescript
+interface ScanOptions {
+	maxLineLength?: number; // default 2000
+	state?: Line.State; // default ["main"]
+}
+```
+
+`maxLineLength` is how many characters of a line the grammar reads; the rest of a longer line is
+one `plain` run, so a minified file paints at once and the next line reads normally. Pass
+`Infinity` to read every line in full. `state` is the mode stack to start in.
+
+#### `Line`
+
+```typescript
+interface Line {
+	tokens: Token[];
+	state: Line.State; // readonly string[], innermost mode last
+}
+```
 
 #### `Rule`
 
@@ -343,7 +390,9 @@ function highlightAny(code: string, language: string) {
 
 Rule order is priority, so a comment rule goes above an operator rule that would claim its first
 character. Keep patterns linear, with no nested quantifiers over the same characters, so
-highlighting costs what the block is long.
+highlighting costs what the block is long. A pattern that reads a word and then looks ahead,
+like `[\w-]+(?=\()`, gets a `(?<![\w-])` lookbehind so a long word with no match after it is
+read once, from its start.
 
 ## Pattern: Nested Modes And Composed Grammars
 

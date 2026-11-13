@@ -1,11 +1,15 @@
 /**
  * The token model every grammar produces and the scanner that produces it: a
- * single left-to-right pass that tries the current mode's rules at the cursor
- * and takes the first one that matches.
+ * single left-to-right pass that tries the current mode's rules that can start
+ * at the cursor's character, and takes the first one that matches.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Dispatch } from "./dispatch.js";
+
+import { dispatchFor } from "./dispatch.js";
 
 export namespace Token {
 	/**
@@ -107,67 +111,234 @@ export function compose(...parts: Array<Record<string, Rule[]>>): Grammar {
 	return { main: [], ...merged };
 }
 
+export namespace Line {
+	/**
+	 * The mode stack where a line ends, innermost mode last: what a scan of the
+	 * line after it starts from. It is frozen, and lines that end in the same
+	 * modes share one array.
+	 */
+	export type State = readonly string[];
+}
+
 /**
- * Scans source into tokens with a grammar, appending each character no rule
- * claimed to a `plain` run.
+ * One line of source as tokens, and the modes the scanner was in when it
+ * crossed the line's newline.
+ */
+export interface Line {
+	/** The line's runs, without its newline; an empty line has none. */
+	tokens: Token[];
+	state: Line.State;
+}
+
+/**
+ * How a scan runs. Both fields are optional, and the defaults reproduce the
+ * tokens of an ordinary file exactly.
+ */
+export interface ScanOptions {
+	/**
+	 * How many characters of a line the grammar reads. The rest of a longer line,
+	 * up to its newline, is one `plain` run, so a minified file paints at once;
+	 * the next line is read normally. `Infinity` reads every line in full.
+	 *
+	 * @default 2000
+	 */
+	maxLineLength?: number;
+	/**
+	 * The mode stack to start in, as a {@link Line}'s `state` left it, so a chunk
+	 * of a file scans on its own from where the line before it ended.
+	 *
+	 * @default ["main"]
+	 */
+	state?: Line.State;
+}
+
+/** The tokens of a scan, and the state at each newline followed by the state at the end. */
+interface Scanned {
+	tokens: Token[];
+	states: Line.State[];
+}
+
+const DEFAULT_MAX_LINE_LENGTH = 2_000;
+const INITIAL_STATE: Line.State = Object.freeze(["main"]);
+const NO_RULES: Rule[] = [];
+
+/**
+ * Scans source into tokens with a grammar. At each position only the rules
+ * that can start with the character there are tried, in the mode's order, and
+ * a run of characters none of them can start is `plain` in one step.
  *
  * Adjacent runs of the same type arrive merged, so the output is the same
  * whether a grammar spells a construct as one rule or several.
  *
  * @param code - Source to scan
  * @param grammar - The language to scan it as
+ * @param options - The line length cap and the state to start in
  * @returns The tokens, in source order, covering the input exactly once
  */
-export function scan(code: string, grammar: Grammar): Token[] {
-	let tokens: Token[] = [];
-	let modes: string[] = ["main"];
-	let plain = "";
-	let position = 0;
-
-	/** Ends the `plain` run being accumulated, if there is one. */
-	function flush() {
-		if (plain.length > 0) push({ type: "plain", value: plain });
-		plain = "";
-	}
-
-	/** Adds a token, extending the previous one when they share a type. */
-	function push(token: Token) {
-		let previous = tokens.at(-1);
-		if (previous?.type === token.type) previous.value += token.value;
-		else tokens.push(token);
-	}
-
-	while (position < code.length) {
-		let mode = modes.at(-1) ?? "main";
-		let matched = matchRule(code, position, grammar[mode] ?? []);
-
-		if (!matched) {
-			plain += code[position];
-			position += 1;
-			continue;
-		}
-
-		flush();
-		push({ type: matched.rule.type, value: matched.value });
-		position += matched.value.length;
-
-		if (matched.rule.push) modes.push(matched.rule.push);
-		else if (matched.rule.pop && modes.length > 1) modes.pop();
-	}
-
-	flush();
-
-	return tokens;
+export function scan(code: string, grammar: Grammar, options: ScanOptions = {}): Token[] {
+	return run(code, grammar, options, false).tokens;
 }
 
 /**
- * Finds the first rule that matches at a position.
+ * Scans source into lines of tokens, each with the mode stack it ends in.
+ *
+ * A line's `state` passed back as `options.state` resumes the scan at the next
+ * line, so a range of a file — a diff hunk, more context around it — scans
+ * without the lines above it. A pattern that looks behind the start of the
+ * chunk sees nothing there, so a key on the first line after a `{` may paint
+ * as plain text.
+ *
+ * @param code - Source to scan
+ * @param grammar - The language to scan it as
+ * @param options - The line length cap and the state to start in
+ * @returns One entry per line: a source with `n` newlines has `n + 1`
+ * @example let lines = scanLines(file, typescript); scanLines(hunk, typescript, { state: lines[41]?.state })
  */
-function matchRule(code: string, position: number, rules: Rule[]) {
-	for (let rule of rules) {
+export function scanLines(code: string, grammar: Grammar, options: ScanOptions = {}): Line[] {
+	let { tokens, states } = run(code, grammar, options, true);
+	let lines: Line[] = [];
+	let current: Token[] = [];
+
+	for (let token of tokens) {
+		let from = 0;
+		let newline = token.value.indexOf("\n");
+
+		while (newline !== -1) {
+			if (newline > from)
+				current.push({ type: token.type, value: token.value.slice(from, newline) });
+			lines.push({ tokens: current, state: states[lines.length] ?? INITIAL_STATE });
+			current = [];
+			from = newline + 1;
+			newline = token.value.indexOf("\n", from);
+		}
+
+		if (from === 0) current.push(token);
+		else if (from < token.value.length)
+			current.push({ type: token.type, value: token.value.slice(from) });
+	}
+
+	lines.push({ tokens: current, state: states[lines.length] ?? INITIAL_STATE });
+	return lines;
+}
+
+/**
+ * The scan both entry points share. Newlines are followed only when a state is
+ * wanted at each one or some line can reach the length cap, so a short input
+ * pays for neither.
+ */
+function run(code: string, grammar: Grammar, options: ScanOptions, trackStates: boolean): Scanned {
+	let maxLineLength = options.maxLineLength ?? DEFAULT_MAX_LINE_LENGTH;
+	let modes = options.state && options.state.length > 0 ? [...options.state] : [...INITIAL_STATE];
+	let length = code.length;
+	let tracking = trackStates || length > maxLineLength;
+
+	let tokens: Token[] = [];
+	let states: Line.State[] = [];
+	let snapshot: Line.State | undefined;
+	let dispatch = dispatchOf(grammar, modes);
+
+	let type: Token.Type | undefined;
+	let start = 0;
+	let position = 0;
+	let lineStart = 0;
+	let nextNewline = tracking ? newlineFrom(code, 0) : length;
+
+	/** Claims the source up to `end` as a run of `next`, extending the open run when it shares the type. */
+	function emit(next: Token.Type, end: number) {
+		if (type !== next) {
+			if (type !== undefined) tokens.push({ type, value: code.slice(start, position) });
+			type = next;
+			start = position;
+		}
+		position = end;
+	}
+
+	/** Records the state at each newline before `limit` and moves the line start past it. */
+	function crossNewlines(limit: number) {
+		while (nextNewline < limit) {
+			if (trackStates) {
+				snapshot ??= Object.freeze([...modes]);
+				states.push(snapshot);
+			}
+			lineStart = nextNewline + 1;
+			nextNewline = newlineFrom(code, lineStart);
+		}
+	}
+
+	while (position < length) {
+		if (position - lineStart >= maxLineLength && position < nextNewline) {
+			emit("plain", nextNewline);
+			continue;
+		}
+
+		let character = code.charCodeAt(position);
+		let candidates = character < 128 ? (dispatch.ascii[character] ?? NO_RULES) : dispatch.other;
+
+		if (candidates.length === 0) {
+			let end = plainRunEnd(code, position + 1, dispatch);
+			crossNewlines(end);
+			emit("plain", end);
+			continue;
+		}
+
+		let rule = matchAt(code, position, candidates);
+
+		if (!rule) {
+			crossNewlines(position + 1);
+			emit("plain", position + 1);
+			continue;
+		}
+
+		let end = rule.match.lastIndex;
+		crossNewlines(end - 1);
+		emit(rule.type, end);
+
+		if (rule.push || (rule.pop && modes.length > 1)) {
+			if (rule.push) modes.push(rule.push);
+			else modes.pop();
+			snapshot = undefined;
+			dispatch = dispatchOf(grammar, modes);
+		}
+
+		crossNewlines(end);
+	}
+
+	if (type !== undefined) tokens.push({ type, value: code.slice(start, position) });
+	if (trackStates) states.push(snapshot ?? Object.freeze([...modes]));
+
+	return { tokens, states };
+}
+
+/** The dispatch table of the mode on top of the stack; a mode the grammar lacks has no rules. */
+function dispatchOf(grammar: Grammar, modes: string[]): Dispatch {
+	return dispatchFor(grammar[modes.at(-1) ?? "main"] ?? NO_RULES);
+}
+
+/** The index of the next newline at or after `from`, or the length of the source when none follows. */
+function newlineFrom(code: string, from: number): number {
+	let index = code.indexOf("\n", from);
+	return index === -1 ? code.length : index;
+}
+
+/** Where a run of characters no rule of the mode can start ends. */
+function plainRunEnd(code: string, from: number, dispatch: Dispatch): number {
+	let end = from;
+	while (end < code.length) {
+		let character = code.charCodeAt(end);
+		if (character < 128 ? dispatch.plain[character] === 0 : !dispatch.otherPlain) break;
+		end += 1;
+	}
+	return end;
+}
+
+/**
+ * Finds the first candidate that matches at least one character at a position,
+ * leaving its pattern's `lastIndex` at the end of the match.
+ */
+function matchAt(code: string, position: number, candidates: Rule[]): Rule | undefined {
+	for (let rule of candidates) {
 		rule.match.lastIndex = position;
-		let match = rule.match.exec(code);
-		if (match && match[0].length > 0) return { rule, value: match[0] };
+		if (rule.match.test(code) && rule.match.lastIndex > position) return rule;
 	}
 
 	return undefined;
