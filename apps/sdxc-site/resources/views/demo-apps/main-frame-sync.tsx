@@ -16,6 +16,14 @@ import { clientEntry } from "remix/component";
 /** The frame name the shell mounts the main area under. */
 const MAIN = "main";
 
+/**
+ * A form's method read from its attribute, `get` when it has none. The `method` property is
+ * shadowed by a control named `method` (a merge box's method radios), so it is never read.
+ */
+function formMethod(form: HTMLFormElement): string {
+	return (form.getAttribute("method") ?? "get").toLowerCase();
+}
+
 namespace MainFrameSync {
 	export interface Props {
 		/** The app's root address; only links and forms under it stay inside the app's shell. */
@@ -129,7 +137,7 @@ export const MainFrameSync = clientEntry(
 				!element.hasAttribute("data-rmx-document") &&
 				(element instanceof HTMLAnchorElement
 					? element.target !== "_blank" && !element.getAttribute("href")?.startsWith("#")
-					: element.method.toLowerCase() === "get");
+					: formMethod(element) === "get");
 			element.toggleAttribute("data-main-target", eligible);
 			if (eligible) {
 				element.setAttribute("data-rmx-target", MAIN);
@@ -150,7 +158,7 @@ export const MainFrameSync = clientEntry(
 			let form = event.target;
 			if (!(form instanceof HTMLFormElement) || event.defaultPrevented) return;
 			let submitter = event.submitter;
-			let method = (submitter?.getAttribute("formmethod") ?? form.method).toLowerCase();
+			let method = (submitter?.getAttribute("formmethod") ?? formMethod(form)).toLowerCase();
 			let action = submitter?.getAttribute("formaction") ?? form.action;
 			if (method !== "post" || !inApp(action) || shellOf(action) !== shellOf(location.href)) return;
 			if (form.closest("[data-main-shell]") || form.hasAttribute("data-rmx-document")) return;

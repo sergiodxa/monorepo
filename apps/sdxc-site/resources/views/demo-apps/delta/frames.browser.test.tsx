@@ -98,6 +98,7 @@ async function resolveDeltaFrame(
 				else jar.set(name, pair);
 			}
 			url = new URL(`${ROOT}/${answer.page}`, location.origin);
+			if (answer.toast !== undefined) url.searchParams.set("toast", `${answer.toast}.test`);
 		}
 	}
 	let node = await delta.target(target, { page: pageOf(url), url, cookie: jarHeader() });
@@ -624,6 +625,59 @@ describe("Delta's issue", () => {
 		expect(forms.length).toBeGreaterThan(3);
 		for (let form of forms) {
 			expect(new URL(form.action).pathname).toBe(`${ROOT}/delta/issues/42`);
+		}
+	});
+});
+
+describe("Delta's pull request", () => {
+	test("merging posts through main and redraws it in place: the pill, a merged event and a toast", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57");
+		let sidebar = root.querySelector("#delta-sidebar")!;
+		let entries = navigation.entries().length;
+		let path = location.pathname;
+		root.querySelector<HTMLButtonElement>('#delta-merge button[type="submit"]')!.click();
+		await settle(
+			() => root.querySelector('[data-slot="delta-state-pill"][data-state="merged"]') !== null,
+		);
+
+		expect(posted).toEqual(["delta/pull/57"]);
+		expect(root.querySelector("#merged")?.textContent).toContain("merged commit");
+		expect(root.querySelector("template[data-main-toast]")?.getAttribute("data-toast")).toContain(
+			"Pull request merged",
+		);
+		expect(location.pathname).toBe(path);
+		expect(navigation.entries().length).toBe(entries);
+		expect(root.querySelector("#delta-sidebar")).toBe(sidebar);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("resolving a thread folds it in place, adding no history entry", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57");
+		let entries = navigation.entries().length;
+		let thread = () => root.querySelector<HTMLElement>('[data-thread-id="t-57-large"]')!;
+		thread()
+			.querySelector<HTMLButtonElement>(
+				'button[name="resolved"], form[action*="do=resolve"] button',
+			)!
+			.click();
+		await settle(
+			() => thread().textContent?.includes("marked this conversation as resolved") ?? false,
+		);
+
+		expect(posted).toEqual(["delta/pull/57"]);
+		expect(navigation.entries().length).toBe(entries);
+	});
+
+	test("its merge box and thread forms post to the pull request's page, so they work without script", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/pull/57");
+		let forms = [...root.querySelectorAll<HTMLFormElement>("[data-main-screen] form[method=post]")];
+
+		expect(forms.length).toBeGreaterThan(4);
+		for (let form of forms) {
+			expect(new URL(form.action).pathname).toBe(`${ROOT}/delta/pull/57`);
 		}
 	});
 });

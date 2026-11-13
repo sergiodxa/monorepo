@@ -9,6 +9,7 @@
 
 import type { AppShell } from "@sdxc/ui/app/app-shell";
 import type { AutoRefresh } from "@sdxc/ui/app/auto-refresh";
+import type { CheckRuns } from "@sdxc/ui/app/check-runs";
 import type { CodeView } from "@sdxc/ui/app/code-view";
 import type { CommandPalette } from "@sdxc/ui/app/command-palette";
 import type { Diff } from "@sdxc/ui/app/diff";
@@ -16,6 +17,8 @@ import type { FilterBar } from "@sdxc/ui/app/filter-bar";
 import type { FilterMenu } from "@sdxc/ui/app/filter-menu";
 import type { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 import type { LogViewer } from "@sdxc/ui/app/log-viewer";
+import type { MergeBox } from "@sdxc/ui/app/merge-box";
+import type { ReviewThread } from "@sdxc/ui/app/review-thread";
 import type { SaveStatusProps } from "@sdxc/ui/app/save-status";
 import type { SelectionBar } from "@sdxc/ui/app/selection-bar";
 import type { Tree } from "@sdxc/ui/app/tree";
@@ -247,6 +250,63 @@ export const SAVE_LABELS: SaveStatusProps["labels"] = {
 	edited: "Edited {time}",
 };
 
+/** A review thread's buttons, badges and hidden column names. */
+export const THREAD_LABELS: ReviewThread.Labels = {
+	reply: "Reply",
+	replyPlaceholder: "Reply…",
+	resolve: "Resolve conversation",
+	unresolve: "Unresolve conversation",
+	outdated: "Outdated",
+	pending: "Pending",
+	suggestion: "Suggested change",
+	applySuggestion: "Commit suggestion",
+	columns: {
+		oldNumber: "Original file line number",
+		newNumber: "Diff line number",
+		oldText: "Original file line",
+		change: "Diff line change",
+	},
+};
+
+/** The merge box's methods and the sentence each state says. */
+export const MERGE_LABELS: MergeBox.Labels = {
+	methods: { merge: "Merge pull request", squash: "Squash and merge", rebase: "Rebase and merge" },
+	methodDetails: {
+		merge: "All commits will be added to the base branch with a merge commit.",
+		squash: "The commits will be combined into one commit on the base branch.",
+		rebase: "The commits will be rebased and added to the base branch.",
+	},
+	chooseMethod: "Choose a merge method",
+	status: {
+		ready: "This branch has no conflicts with the base branch.",
+		blocked: "Merging is blocked until every required check passes.",
+		conflicts: "This branch has conflicts that must be resolved.",
+		merged: "Pull request successfully merged and closed.",
+		closed: "This pull request was closed without merging.",
+	},
+};
+
+/** The checks' summary sentence, icons and links. */
+export const CHECK_LABELS: CheckRuns.Labels = {
+	counts: {
+		failure: (count) => `${count} failing`,
+		pending: (count) => `${count} pending`,
+		success: (count) => `${count} successful`,
+		skipped: (count) => `${count} skipped`,
+		cancelled: (count) => `${count} cancelled`,
+	},
+	summary: (list, total) => `${list} ${total === 1 ? "check" : "checks"}`,
+	states: {
+		failure: "Failed",
+		pending: "In progress",
+		success: "Passed",
+		skipped: "Skipped",
+		cancelled: "Cancelled",
+	},
+	details: "Details",
+	empty: "No checks",
+};
+
 /** The app's own words, by screen. */
 export const COPY = {
 	app: "Delta",
@@ -267,6 +327,7 @@ export const COPY = {
 		label: "Repository",
 		code: "Code",
 		issues: "Issues",
+		pulls: "Pull requests",
 		commits: "Commits",
 		actions: "Actions",
 		more: "More",
@@ -432,6 +493,94 @@ export const COPY = {
 			mentioned: "mentioned this issue in",
 			renamed: "changed the title",
 		},
+	},
+	pulls: {
+		title: "Pull requests",
+		search: "Search all pull requests",
+		placeholder: "is:open review:approved author:sergiodxa",
+		open: "Open",
+		closed: "Closed",
+		list: "Pull requests",
+		select: (number: number) => `Select pull request #${number}`,
+		opened: "opened",
+		draft: "Draft",
+		approved: "Approved",
+		changes: "Changes requested",
+		required: "Review required",
+		checks: {
+			success: "All checks passed",
+			failure: "Some checks failed",
+			pending: "Checks in progress",
+		},
+		shown: (count: number) => `${count} ${count === 1 ? "pull request" : "pull requests"}`,
+		noneTitle: "No pull requests match",
+		noneHint: "Try fewer filters, or search for a word in a title like diff.",
+		emptyOpenTitle: "No open pull requests",
+		emptyClosedTitle: "No closed pull requests",
+		emptyHint: "Pull requests that land in this state show up here.",
+		keys: {
+			group: "Pull requests",
+			next: "Next pull request",
+			previous: "Previous pull request",
+			open: "Open pull request",
+			toggle: "Select pull request",
+			selected: "Pull request selected",
+			deselected: "Pull request deselected",
+			search: "Search pull requests",
+		},
+	},
+	pull: {
+		title: (title: string, number: number) => `${title} · Pull request #${number}`,
+		open: "Open",
+		merged: "Merged",
+		closed: "Closed",
+		draft: "Draft",
+		wantsToMerge: (count: number) =>
+			`wants to merge ${count} ${count === 1 ? "commit" : "commits"} into`,
+		mergedInto: (count: number) => `merged ${count} ${count === 1 ? "commit" : "commits"} into`,
+		from: "from",
+		conversation: "Conversation",
+		filesChanged: "Files changed",
+		tabs: "Pull request",
+		reviewers: "Reviewers",
+		noReviewers: "No reviews",
+		editReviewers: "Request reviewers",
+		development: "Development",
+		closes: "Successfully merging this pull request may close these issues.",
+		added: (count: number) => `added ${count} ${count === 1 ? "commit" : "commits"}`,
+		approved: "approved these changes",
+		requestedChanges: "requested changes",
+		reviewed: "reviewed",
+		mergedCommit: "merged commit",
+		into: "into",
+		reviewStates: {
+			approved: "Approved",
+			changes: "Requested changes",
+			commented: "Left review comments",
+			requested: "Awaiting review",
+		},
+		reviewsRow: {
+			approved: (count: number) => `${count} approving ${count === 1 ? "review" : "reviews"}`,
+			approvedDetail: "Changes were approved by reviewers with write access.",
+			changes: "Changes requested",
+			changesDetail: "A reviewer asked for changes before this can merge.",
+			required: "Review required",
+			requiredDetail: "At least one approving review is required to merge.",
+		},
+		checksRow: {
+			success: "All checks have passed",
+			failure: "Some checks were not successful",
+			pending: "Some checks haven't completed yet",
+		},
+		conflictsRow: "No conflicts with base branch",
+		conflictsDetail: "Merging can be performed automatically.",
+		reasons: {
+			failing: "Merging is blocked: a required check is failing.",
+			review: "Merging is blocked: at least one approving review is required.",
+		},
+		commentLabel: "Add a comment",
+		commentPlaceholder: "Leave a comment",
+		comment: "Comment",
 	},
 	cite: {
 		line: (line: number) => `Line ${line}`,

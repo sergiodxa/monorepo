@@ -153,6 +153,8 @@ const SCREENS = [
 	"delta/issues?q=is%3Aopen+label%3Abug&sort=comments",
 	"delta/issues?q=zzz",
 	"delta/issues/42",
+	"delta/pull/57",
+	"delta/pull/56",
 	"delta/actions",
 	"delta/actions?status=failure",
 	"delta/actions/runs/812",
@@ -319,6 +321,8 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 		case "actions":
 		case "run":
 			return (await ciScreen(target, request, { commits: count, now })) ?? notFound();
+		case "pulls":
+		case "pull":
 		case "issues":
 		case "issue":
 			return (await trackerScreen(target, request, { commits: count, now })) ?? notFound();

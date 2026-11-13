@@ -242,7 +242,7 @@ export function Body(handle: Handle<Body.Props>) {
 						color: "var(--ui-neutral-fg)",
 						overflowWrap: "anywhere",
 						"& p, & ul": { margin: 0 },
-						"& ul": { paddingInlineStart: "1.25rem" },
+						"& ul": { paddingInlineStart: "1.25rem", listStyle: "disc" },
 						"& a": { color: "var(--ui-brand-fg, inherit)" },
 					}),
 				]}

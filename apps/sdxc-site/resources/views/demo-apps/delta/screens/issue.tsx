@@ -48,7 +48,7 @@ import { SAVED_WINDOW_MS } from "../state";
 import { Avatar, StatePill, nameOf } from "../states";
 
 /** The id of the side panel's save status, which its pickers report to. */
-const SAVE_STATUS_ID = "delta-issue-saved";
+export const SAVE_STATUS_ID = "delta-issue-saved";
 
 /** A timeline event's glyph and tone. */
 function eventIcon(event: TimelineEvent): { icon: RemixNode; tone?: Timeline.Tone } {
@@ -64,7 +64,7 @@ function eventIcon(event: TimelineEvent): { icon: RemixNode; tone?: Timeline.Ton
 }
 
 /** A label as a chip, inline in an event's sentence or a side panel row. */
-function chip(id: string): RemixNode {
+export function chip(id: string): RemixNode {
 	let label = findLabel(id);
 	return label === undefined ? id : <LabelChip color={label.color}>{label.name}</LabelChip>;
 }
@@ -77,7 +77,7 @@ namespace EventText {
 }
 
 /** What an event says after its actor, in GitHub's words. */
-function EventText(handle: Handle<EventText.Props>) {
+export function EventText(handle: Handle<EventText.Props>) {
 	return () => {
 		let { context, event } = handle.props;
 		let words = COPY.issue.events;
@@ -153,7 +153,7 @@ namespace Entry {
 }
 
 /** One timeline entry: a comment as a card, an event as a line on the rail. */
-function Entry(handle: Handle<Entry.Props>) {
+export function Entry(handle: Handle<Entry.Props>) {
 	return () => {
 		let { context, entry, now } = handle.props;
 		let time = <RelativeTime date={entry.at} now={now} locale="en" />;
@@ -185,15 +185,25 @@ function Entry(handle: Handle<Entry.Props>) {
 	};
 }
 
-/** Where a side panel's picker posts: the issue's page, naming the field it sets. */
-function pickerAction(number: number, field: string): string {
-	return `${actionHref(`delta/issues/${number}`)}?set=${field}`;
+/** Where a side panel's picker posts: the record's page, naming the field it sets. */
+function pickerAction(page: string, field: string): string {
+	return `${actionHref(page)}?set=${field}`;
 }
 
 namespace SidePanel {
 	export interface Props {
-		issue: IssueView;
-		now: number;
+		/** The record's page, which every picker posts to. */
+		page: string;
+		assignees: readonly string[];
+		labels: readonly string[];
+		milestone?: string;
+		editedAt?: number;
+		/** Everyone who took part, the author first. */
+		participants: readonly string[];
+		/** Rows above the assignees, such as a pull request's reviewers. */
+		before?: RemixNode;
+		/** Rows under the milestone, such as the issues a pull request closes. */
+		after?: RemixNode;
 	}
 }
 
@@ -202,19 +212,11 @@ namespace SidePanel {
  * picker that saves once it closes changed, with a quiet save status over them, then everyone
  * who took part.
  */
-function SidePanel(handle: Handle<SidePanel.Props>) {
+export function SidePanel(handle: Handle<SidePanel.Props>) {
 	return () => {
-		let { issue } = handle.props;
-		let recent = issue.editedAt !== undefined && Date.now() - issue.editedAt < SAVED_WINDOW_MS;
-		let participants = [
-			...new Set([
-				issue.author,
-				...issue.timeline.flatMap((entry) =>
-					entry.type === "comment" ? [entry.author] : [entry.actor],
-				),
-			]),
-		];
-		let milestone = findMilestone(issue.milestone);
+		let { after, assignees, before, editedAt, labels, page, participants } = handle.props;
+		let recent = editedAt !== undefined && Date.now() - editedAt < SAVED_WINDOW_MS;
+		let milestone = findMilestone(handle.props.milestone);
 		let saves = { [SAVES_ATTRIBUTE]: SAVE_STATUS_ID };
 		return (
 			<aside
@@ -249,9 +251,7 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 						<SaveStatus
 							id={SAVE_STATUS_ID}
 							state={recent ? "saved" : "idle"}
-							editedAt={
-								issue.editedAt === undefined ? undefined : new Date(issue.editedAt).toISOString()
-							}
+							editedAt={editedAt === undefined ? undefined : new Date(editedAt).toISOString()}
 							locale="en"
 							labels={SAVE_LABELS}
 						/>
@@ -259,6 +259,7 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 				</div>
 				<SavingSignal />
 				<PropertyList>
+					{before}
 					<PropertyList.Item
 						label={COPY.issue.assignees}
 						empty={COPY.issue.noAssignees}
@@ -270,7 +271,7 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 									id="delta-issue-assignees"
 									mode="multiple"
 									name="assignee"
-									action={pickerAction(issue.number, "assignees")}
+									action={pickerAction(page, "assignees")}
 									groups={[
 										{
 											label: COPY.issue.suggestions,
@@ -278,7 +279,7 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 												value: person.handle,
 												label: person.name,
 												description: `@${person.handle}`,
-												selected: issue.assignees.includes(person.handle),
+												selected: assignees.includes(person.handle),
 											})),
 										},
 									]}
@@ -288,9 +289,9 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 							),
 						}}
 					>
-						{issue.assignees.length === 0 ? null : (
+						{assignees.length === 0 ? null : (
 							<span mix={[raw({ display: "grid", gap: "0.375rem" })]}>
-								{issue.assignees.map((person) => (
+								{assignees.map((person) => (
 									<span
 										mix={[raw({ display: "inline-flex", alignItems: "center", gap: "0.375rem" })]}
 									>
@@ -312,7 +313,7 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 									id="delta-issue-labels"
 									mode="multiple"
 									name="label"
-									action={pickerAction(issue.number, "labels")}
+									action={pickerAction(page, "labels")}
 									groups={[
 										{
 											label: COPY.issue.repoLabels,
@@ -321,7 +322,7 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 												label: label.name,
 												color: label.color,
 												description: label.description,
-												selected: issue.labels.includes(label.id),
+												selected: labels.includes(label.id),
 											})),
 										},
 									]}
@@ -331,9 +332,9 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 							),
 						}}
 					>
-						{issue.labels.length === 0 ? null : (
+						{labels.length === 0 ? null : (
 							<span mix={[raw({ display: "flex", flexWrap: "wrap", gap: "0.25rem" })]}>
-								{issue.labels.map((id) => chip(id))}
+								{labels.map((id) => chip(id))}
 							</span>
 						)}
 					</PropertyList.Item>
@@ -348,7 +349,7 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 									id="delta-issue-milestone"
 									mode="single"
 									name="milestone"
-									action={pickerAction(issue.number, "milestone")}
+									action={pickerAction(page, "milestone")}
 									groups={[
 										{
 											label: COPY.issue.milestones,
@@ -380,6 +381,7 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 							</span>
 						)}
 					</PropertyList.Item>
+					{after}
 					<PropertyList.Item label={COPY.issue.participants}>
 						<span mix={[raw({ display: "flex", flexWrap: "wrap", gap: "0.25rem" })]}>
 							{participants.map((person) => (
@@ -394,6 +396,16 @@ function SidePanel(handle: Handle<SidePanel.Props>) {
 			</aside>
 		);
 	};
+}
+
+/** Everyone who took part in a conversation, its author first, each once. */
+export function participantsOf(author: string, timeline: readonly TimelineEntry[]): string[] {
+	return [
+		...new Set([
+			author,
+			...timeline.flatMap((entry) => (entry.type === "comment" ? [entry.author] : [entry.actor])),
+		]),
+	];
 }
 
 namespace CommentForm {
@@ -562,7 +574,14 @@ export function IssueScreen(handle: Handle<IssueScreen.Props>) {
 								</Timeline>
 								<CommentForm issue={issue} />
 							</section>
-							<SidePanel issue={issue} now={now} />
+							<SidePanel
+								page={`delta/issues/${issue.number}`}
+								assignees={issue.assignees}
+								labels={issue.labels}
+								milestone={issue.milestone}
+								editedAt={issue.editedAt}
+								participants={participantsOf(issue.author, issue.timeline)}
+							/>
 						</HeadingScope>
 					</div>
 				</div>

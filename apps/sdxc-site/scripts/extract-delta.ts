@@ -21,6 +21,7 @@ import type {
 	DeltaFile,
 	DeltaHistory,
 	DeltaPatch,
+	DeltaRange,
 	DeltaTree,
 } from "~/app/services/delta/source";
 
@@ -31,6 +32,7 @@ import {
 	DELTA_ROOT,
 } from "~/config/delta";
 import { ANCHORS } from "~/resources/views/demo-apps/delta/anchors";
+import { RANGES } from "~/resources/views/demo-apps/delta/seed/ranges";
 import {
 	LOG_FORMAT,
 	capPatch,
@@ -74,6 +76,7 @@ function main(): void {
 
 	let patches = shallow ? {} : readPatches(top, history.commits);
 	let anchors = readAnchors(top, files, history.commits);
+	let ranges = shallow ? {} : readRanges(top, history.commits);
 
 	let documents: DeltaDocuments = {
 		tree: { head, files, lastCommits } satisfies DeltaTree,
@@ -81,6 +84,7 @@ function main(): void {
 		patches,
 		blame,
 		anchors,
+		ranges,
 	};
 	let serialized = Object.fromEntries(
 		Object.entries(documents).map(([name, value]) => [name, JSON.stringify(value)]),
@@ -183,6 +187,46 @@ function readPatches(top: string, commits: DeltaCommit[]): Record<string, DeltaP
 		patches[commit.sha] = capPatch(output, DELTA_ROOT, DELTA_PATCH_FILE_LIMIT);
 	}
 	return patches;
+}
+
+/**
+ * Every seeded pull request's range found in the history by its first and last subjects: the
+ * diff from the first commit's parent to the last, limited to Delta's files, and the commits
+ * between. A subject the history no longer holds leaves its range missing.
+ */
+function readRanges(top: string, commits: DeltaCommit[]): Record<string, DeltaRange> {
+	let ranges: Record<string, DeltaRange> = {};
+	let bySubject = (subject: string) => commits.find((commit) => commit.subject === subject);
+	for (let seed of RANGES) {
+		let from = bySubject(seed.from);
+		let to = bySubject(seed.to);
+		let base = from?.parents[0];
+		if (from === undefined || to === undefined || base === undefined) {
+			ranges[seed.pull] = { pull: seed.pull, status: "missing" };
+			continue;
+		}
+		let listed = git(["rev-list", "--reverse", `${base}..${to.sha}`, "--", DELTA_ROOT], top)
+			.split("\n")
+			.filter((sha) => commits.some((commit) => commit.sha === sha));
+		let numstat = git(
+			["diff", "--no-color", "-M", "--numstat", base, to.sha, "--", DELTA_ROOT],
+			top,
+		);
+		let patch = git(
+			["diff", "--no-color", "-M", "--histogram", base, to.sha, "--", DELTA_ROOT],
+			top,
+		);
+		ranges[seed.pull] = {
+			pull: seed.pull,
+			status: "resolved",
+			base,
+			head: to.sha,
+			commits: listed,
+			files: parseNumstat(numstat, DELTA_ROOT),
+			patch: capPatch(patch, DELTA_ROOT, DELTA_PATCH_FILE_LIMIT),
+		};
+	}
+	return ranges;
 }
 
 /** The newest commit touching each file and folder, the root included as `""`. */

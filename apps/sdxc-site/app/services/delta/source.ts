@@ -119,6 +119,29 @@ export type DeltaAnchor =
 			excerpt?: string[];
 	  };
 
+/** A seeded pull request's commits, named by the subjects of the first and the last. */
+export interface DeltaRangeSeed {
+	pull: number;
+	from: string;
+	to: string;
+}
+
+/** A pull request's range as the build resolved it in the history it read. */
+export type DeltaRange =
+	| {
+			pull: number;
+			status: "resolved";
+			/** The parent of the first commit, which the diff is taken against. */
+			base: string;
+			/** The last commit, the pull request's head. */
+			head: string;
+			/** Every commit in the range that touches Delta, oldest first. */
+			commits: string[];
+			files: DeltaChangedFile[];
+			patch: DeltaPatch;
+	  }
+	| { pull: number; status: "missing" };
+
 /** Every document the build writes, by file name. */
 export interface DeltaDocuments {
 	tree: DeltaTree;
@@ -126,6 +149,7 @@ export interface DeltaDocuments {
 	patches: Record<string, DeltaPatch>;
 	blame: Record<string, DeltaBlameRange[]>;
 	anchors: Record<string, DeltaAnchor>;
+	ranges: Record<string, DeltaRange>;
 }
 
 /**
@@ -176,6 +200,40 @@ export function readBlame(): Promise<Record<string, DeltaBlameRange[]>> {
 /** Every seeded anchor as resolved at build time, by id. */
 export function readAnchors(): Promise<Record<string, DeltaAnchor>> {
 	return load("anchors", {});
+}
+
+/** A pull request's range as the build resolved it, or `undefined` for one it has no seed for. */
+export async function readRange(pull: number): Promise<DeltaRange | undefined> {
+	let ranges = await load("ranges", {});
+	return Object.hasOwn(ranges, String(pull)) ? ranges[String(pull)] : undefined;
+}
+
+/** Parsed range patches by pull request, read once per isolate. */
+let parsedRanges = new Map<number, { text: string; files: FilePatch[] }>();
+
+/** The file headers of a pull request's range patch, parsed once per isolate. */
+export async function rangeFiles(pull: number): Promise<FilePatch[] | undefined> {
+	let cached = parsedRanges.get(pull);
+	if (cached !== undefined) return cached.files;
+	let range = await readRange(pull);
+	if (range?.status !== "resolved") return undefined;
+	let parsed = { text: range.patch.text, files: parsePatch(range.patch.text) };
+	parsedRanges.set(pull, parsed);
+	return parsed.files;
+}
+
+/** One file's hunks across a pull request's range, parsed once per `(pull, path)` per isolate. */
+export async function rangeHunks(pull: number, path: string): Promise<Hunk[] | undefined> {
+	let key = `pull-${pull}:${path}`;
+	let cached = parsedHunks.get(key);
+	if (cached !== undefined) return cached;
+	await rangeFiles(pull);
+	let parsed = parsedRanges.get(pull);
+	let file = parsed?.files.find((candidate) => candidate.newPath === path);
+	if (parsed === undefined || file === undefined) return undefined;
+	let hunks = parseHunks(parsed.text, file);
+	parsedHunks.set(key, hunks);
+	return hunks;
 }
 
 /** One commit's patch, or `undefined` for a commit outside the history cap. */

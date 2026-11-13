@@ -25,10 +25,14 @@ import {
 	readAnchors,
 	readBlame,
 	readHistory,
+	rangeFiles,
+	rangeHunks,
 	readPatch,
+	readRange,
 	readTree,
 } from "~/app/services/delta/source";
 import { DELTA_BUDGET_BYTES, DELTA_HISTORY_LIMIT } from "~/config/delta";
+import { RANGES } from "~/resources/views/demo-apps/delta/seed/ranges";
 
 /** Where the extractor writes, relative to this file. */
 const GENERATED = join(import.meta.dirname, "../../../resources/generated/delta");
@@ -154,6 +158,34 @@ describe("patches", () => {
 		let first = await fileHunks(commit.sha, file.newPath);
 		expect(first).toBeDefined();
 		expect(await fileHunks(commit.sha, file.newPath)).toBe(first);
+	});
+});
+
+describe("readRange", () => {
+	test("resolves every seeded pull request to a real range of the history", async () => {
+		let history = await readHistory();
+		if (history.shallow) return;
+		for (let seed of RANGES) {
+			let range = await readRange(seed.pull);
+			expect(range?.status, `#${seed.pull}`).toBe("resolved");
+			if (range?.status !== "resolved") continue;
+			let subjects = range.commits.map(
+				(sha) => history.commits.find((commit) => commit.sha === sha)?.subject,
+			);
+			expect(subjects[0], `#${seed.pull}`).toBe(seed.from);
+			expect(subjects.at(-1), `#${seed.pull}`).toBe(seed.to);
+			expect(range.files.length, `#${seed.pull}`).toBeGreaterThan(0);
+		}
+	});
+
+	test("parses a range's patch into files and hunks", async () => {
+		let seed = RANGES[0];
+		if (seed === undefined) return;
+		let files = await rangeFiles(seed.pull);
+		let file = files?.find((candidate) => !candidate.binary);
+		if (file === undefined) return;
+
+		expect((await rangeHunks(seed.pull, file.newPath))?.length).toBeGreaterThan(0);
 	});
 });
 

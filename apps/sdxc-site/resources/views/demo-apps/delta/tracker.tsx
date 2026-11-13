@@ -19,14 +19,20 @@ import { readAnchors, readHistory, readTree } from "~/app/services/delta/source"
 import type { DeltaRoute } from "./data";
 import type { CiteContext } from "./markup";
 
-import { issueHref, issuesHref, parsePage } from "./data";
+import { issueHref, issuesHref, parsePage, pullHref } from "./data";
 import { COPY } from "./labels";
+import { allPulls, findPull } from "./pull-records";
 import { allIssues, findIssue, seedBase } from "./records";
 import { IssueScreen } from "./screens/issue";
 import { IssuesScreen } from "./screens/issues";
+import { PullScreen } from "./screens/pull";
 import { LABELS, MILESTONES } from "./seed/issues";
 import { ME, PEOPLE } from "./seed/people";
+import { PULLS } from "./seed/pulls";
 import { clearCookies, commentsCookie, editOf, readState, recordCookie } from "./state";
+
+/** Whether pull requests have pages a `#number` may link to. */
+const PULLS_LINKED = false;
 
 /** The repository's name as titles and the top bar write it. */
 const REPO_NAME = `${COPY.org}/${COPY.repo}`;
@@ -36,6 +42,7 @@ export const TRACKER_TOASTS: Record<string, Omit<Toast.Flash, "id">> = {
 	"issues-close": { title: "Issues closed" },
 	"issues-reopen": { title: "Issues reopened" },
 	"issues-assign-me": { title: "Issues assigned to you" },
+	merged: { title: "Pull request merged" },
 };
 
 /** A screen as Delta's router draws it. */
@@ -71,10 +78,14 @@ async function citeContext(): Promise<CiteContext> {
 	let issues = new Set(
 		allIssues({ records: new Map(), comments: [] }, 0).map((issue) => issue.number),
 	);
+	let pulls = new Set(PULLS.map((pull) => pull.number));
 	return {
 		anchors,
 		lines: (path) => files.get(path),
-		refHref: (number) => (issues.has(number) ? issueHref(number) : undefined),
+		refHref: (number) => {
+			if (issues.has(number)) return issueHref(number);
+			return pulls.has(number) && PULLS_LINKED ? pullHref(number) : undefined;
+		},
 	};
 }
 
@@ -85,7 +96,11 @@ async function citeContext(): Promise<CiteContext> {
 export async function repoCounts(cookie: string | null): Promise<Record<string, number>> {
 	let state = readState(cookie);
 	let base = await readBase(Date.now());
-	return { issues: allIssues(state, base).filter((issue) => issue.state === "open").length };
+	let pulls = await allPulls(state, Date.now());
+	return {
+		issues: allIssues(state, base).filter((issue) => issue.state === "open").length,
+		pulls: pulls.filter((pull) => pull.state === "open").length,
+	};
 }
 
 /**
@@ -111,6 +126,23 @@ export async function trackerScreen(
 				<IssuesScreen
 					issues={allIssues(state, base)}
 					url={request.url}
+					now={shared.now}
+					commits={shared.commits}
+				/>
+			),
+		};
+	}
+	if (target.screen === "pull" && target.tab === "conversation") {
+		let pull = await findPull(target.number, state, shared.now);
+		if (pull === undefined) return null;
+		return {
+			title: COPY.pull.title(pull.title, pull.number),
+			nav: "repo",
+			crumb: `${REPO_NAME} › #${pull.number}`,
+			body: (
+				<PullScreen
+					pull={pull}
+					context={await citeContext()}
 					now={shared.now}
 					commits={shared.commits}
 				/>
@@ -152,9 +184,88 @@ function fields(form: FormData, name: string): string[] {
 /** The page a post on `page` returns to, keeping its query and dropping what only the post used. */
 function backTo(page: string, url: URL): string {
 	let params = new URLSearchParams(url.search);
-	for (let name of ["toast", "set", "at"]) params.delete(name);
+	for (let name of ["toast", "set", "at", "do", "thread"]) params.delete(name);
 	let search = params.toString();
 	return search === "" ? page : `${page}?${search}`;
+}
+
+/** Whether a handle names a member of the org. */
+function isMember(handle: string): boolean {
+	return PEOPLE.some((person) => person.handle === handle);
+}
+
+/**
+ * Answers a side panel picker on an issue or pull request: the field it names is replaced
+ * whole by what the picker posted, so unchecking everything clears it.
+ */
+function submitPicker(
+	number: number,
+	set: string,
+	form: FormData,
+	back: string,
+	request: DemoAppRequest,
+): DemoAppRedirect | null {
+	let edit = editOf(readState(request.cookie), number);
+	if (set === "labels") {
+		edit.labels = fields(form, "label").filter((id) => LABELS.some((label) => label.id === id));
+	} else if (set === "assignees") {
+		edit.assignees = fields(form, "assignee").filter(isMember).slice(0, 10);
+	} else if (set === "reviewers") {
+		edit.reviewers = fields(form, "reviewer").filter(isMember).slice(0, 15);
+	} else if (set === "milestone") {
+		let milestone = field(form, "milestone");
+		if (milestone !== "" && !MILESTONES.some((entry) => entry.id === milestone)) return null;
+		edit.milestone = milestone === "" ? null : milestone;
+	} else {
+		return null;
+	}
+	return { page: back, cookies: [recordCookie(number, edit)] };
+}
+
+/**
+ * Answers a pull request's conversation: a comment, a reply in a thread (landing on it), a
+ * thread resolved or reopened, a picker, and a merge, which redraws the page with its toast.
+ */
+function submitPull(
+	number: number,
+	form: FormData,
+	request: DemoAppRequest,
+): DemoAppRedirect | null {
+	let seed = PULLS.find((pull) => pull.number === number);
+	if (seed === undefined) return null;
+	let state = readState(request.cookie);
+	let back = backTo(`delta/pull/${number}`, request.url);
+	let params = request.url.searchParams;
+	let set = params.get("set");
+	if (set !== null) return submitPicker(number, set, form, back, request);
+	let verb = params.get("do");
+	let thread = params.get("thread");
+	let edit = editOf(state, number);
+	if (verb === "merge") {
+		if (edit.merged !== undefined || seed.state !== "open") return { page: back };
+		let method = field(form, "method");
+		edit.merged = {
+			at: Date.now(),
+			method: method === "squash" || method === "rebase" ? method : "merge",
+		};
+		return { page: back, hash: "merged", toast: "merged", cookies: [recordCookie(number, edit)] };
+	}
+	if (thread !== null && verb === "resolve") {
+		edit.resolved = { ...edit.resolved, [thread]: field(form, "resolved") === "true" };
+		return { page: back, hash: `thread-${thread}`, cookies: [recordCookie(number, edit)] };
+	}
+	let body = field(form, "body").trim().slice(0, 600);
+	if (body === "") return { page: back };
+	let comment = {
+		id: `v-${generateUUID().slice(0, 8)}`,
+		number,
+		thread: thread !== null && verb === "reply" ? thread : undefined,
+		body,
+		at: Date.now(),
+	};
+	if (comment.thread === undefined && field(form, "intent") !== "comment") return null;
+	let hash = comment.thread === undefined ? `comment-${comment.id}` : `discussion-${comment.id}`;
+	return { page: back, hash, cookies: [commentsCookie(state, comment)] };
 }
 
 /**
@@ -173,22 +284,7 @@ function submitIssue(
 	let back = backTo(`delta/issues/${number}`, request.url);
 	let set = request.url.searchParams.get("set");
 	let edit = editOf(state, number);
-	if (set === "labels") {
-		edit.labels = fields(form, "label").filter((id) => LABELS.some((label) => label.id === id));
-		return { page: back, cookies: [recordCookie(number, edit)] };
-	}
-	if (set === "assignees") {
-		edit.assignees = fields(form, "assignee")
-			.filter((handle) => PEOPLE.some((person) => person.handle === handle))
-			.slice(0, 10);
-		return { page: back, cookies: [recordCookie(number, edit)] };
-	}
-	if (set === "milestone") {
-		let milestone = field(form, "milestone");
-		if (milestone !== "" && !MILESTONES.some((entry) => entry.id === milestone)) return null;
-		edit.milestone = milestone === "" ? null : milestone;
-		return { page: back, cookies: [recordCookie(number, edit)] };
-	}
+	if (set !== null) return submitPicker(number, set, form, back, request);
 	let intent = field(form, "intent");
 	let body = field(form, "body").trim().slice(0, 600);
 	let cookies: string[] = [];
@@ -247,6 +343,7 @@ export function submitTracker(
 	if (page === "reset") return { page: "", toast: "reset", cookies: clearCookies(request.cookie) };
 	let target = parsePage(page);
 	if (target?.screen === "issue") return submitIssue(target.number, form, request);
+	if (target?.screen === "pull") return submitPull(target.number, form, request);
 	if (target?.screen === "issues" && form.has("bulk")) return submitBulk(form, request);
 	return null;
 }

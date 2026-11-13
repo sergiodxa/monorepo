@@ -10,7 +10,13 @@
 import { describe, expect, test } from "vitest";
 
 import { hasHiddenLines } from "~/app/services/delta/hunks";
-import { fileHunks, fileLinesAt, readHistory, readTree } from "~/app/services/delta/source";
+import {
+	fileHunks,
+	fileLinesAt,
+	readHistory,
+	readRange,
+	readTree,
+} from "~/app/services/delta/source";
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 import { listFolder } from "~/resources/views/demo-apps/delta/data";
@@ -346,6 +352,62 @@ describe("Delta's issue", () => {
 
 	test("a number no issue has answers the app's 404", async () => {
 		expect((await page("delta/issues/9999")).status).toBe(404);
+	});
+});
+
+describe("Delta's pull request conversation", () => {
+	test("places each thread on its real line, and one written on older code reads outdated", async () => {
+		let { body, status } = await page("delta/pull/57");
+
+		expect(status).toBe(200);
+		for (let id of ["t-57-large", "t-57-wrap", "t-57-history", "t-57-outdated"]) {
+			expect(body).toContain(`data-thread-id="${id}"`);
+		}
+		expect(body).toContain("Outdated");
+		expect(body).toContain("Suggested change");
+	});
+
+	test("lists the range's real commits with their checks", async () => {
+		let { body } = await page("delta/pull/57");
+		let range = await readRange(57);
+		if (range?.status !== "resolved") return;
+
+		for (let sha of range.commits) expect(body).toContain(href(`delta/commit/${sha}`));
+	});
+
+	test("a failing check blocks the merge and says why", async () => {
+		let { body } = await page("delta/pull/58");
+
+		expect(body).toContain("Some checks were not successful");
+		expect(body).toContain("Merging is blocked: a required check is failing.");
+	});
+
+	test("merging lands back on the conversation with its toast, merged", async () => {
+		let response = await post("delta/pull/57?do=merge", { method: "squash" });
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toMatch(/pull\/57\?toast=merged\.[^#]*#merged$/);
+		let body = await pageWith("delta/pull/57", cookiesOf(response));
+		expect(body).toContain('data-slot="delta-state-pill" data-state="merged"');
+		expect(body).toContain("merged commit");
+	});
+
+	test("a reply joins its thread, and Resolve folds it", async () => {
+		let reply = await post("delta/pull/57?thread=t-57-large&do=reply", { body: "500 it is." });
+		let cookie = cookiesOf(reply);
+		expect(await pageWith("delta/pull/57", cookie)).toContain("500 it is.");
+
+		let resolve = await post(
+			"delta/pull/57?thread=t-57-large&do=resolve",
+			{ resolved: "true" },
+			cookie,
+		);
+		let body = await pageWith("delta/pull/57", `${cookie}; ${cookiesOf(resolve)}`);
+		expect(body).toMatch(/Sergio Xalambrí marked this conversation as resolved/);
+	});
+
+	test("a number no pull request has answers the app's 404", async () => {
+		expect((await page("delta/pull/9999")).status).toBe(404);
 	});
 });
 
