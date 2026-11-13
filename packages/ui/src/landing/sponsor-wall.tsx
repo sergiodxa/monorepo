@@ -121,7 +121,7 @@ export namespace SponsorWall {
 		href: string;
 		/** The backer's name, which is the link's accessible name and its tooltip. */
 		name: string;
-		/** Picture URL; without one the circle shows the name's initials. */
+		/** Picture URL, drawn over the name's initials, which show while it loads or if it fails. */
 		src?: string;
 		/**
 		 * Circle diameter: 2rem, 2.75rem or 3.5rem.
@@ -376,9 +376,9 @@ function initials(name: string): string {
 }
 
 /**
- * One backer's circle in one rule: grayscale until a pointer rests on it or it takes
- * keyboard focus, so a wall of mixed photos reads as one band, and a hit area at least
- * 44px across around even the smallest circle.
+ * One backer's circle in one rule: grayscale until hovered or focused, so mixed photos read
+ * as one band, a 44px hit area around even the smallest circle, and the picture stacked over
+ * the initials, which show while it loads; a failed picture paints them over its broken icon.
  */
 function personCircle(diameter: string) {
 	return combine([
@@ -408,6 +408,7 @@ function personCircle(diameter: string) {
 				borderRadius: "9999px",
 			}),
 		),
+		when("& > *", raw({ gridArea: "1 / 1" })),
 		when(
 			"& > img",
 			raw({
@@ -415,8 +416,23 @@ function personCircle(diameter: string) {
 				blockSize: "100%",
 				borderRadius: "9999px",
 				objectFit: "cover",
+				position: "relative",
 				outline: "1px solid var(--ui-image-outline, rgb(0 0 0 / 0.1))",
 				outlineOffset: "-1px",
+			}),
+		),
+		when(
+			"& > img::before",
+			raw({
+				content: "attr(data-initials)",
+				position: "absolute",
+				inset: "0",
+				zIndex: "1",
+				display: "grid",
+				placeItems: "center",
+				borderRadius: "9999px",
+				backgroundColor:
+					"color-mix(in oklch, var(--ui-neutral-fg-emphasis, CanvasText) 10%, Canvas)",
 			}),
 		),
 		motionSafe(raw({ transition: "filter 200ms" })),
@@ -445,7 +461,7 @@ function personName() {
 }
 
 /**
- * One individual backer: a linked circle with their picture, or their initials, named by
+ * One individual backer: a linked circle with their picture over their initials, named by
  * `name` for assistive technology and as a tooltip.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
@@ -483,11 +499,8 @@ SponsorWall.Person = function SponsorWallPerson(handle: Handle<SponsorWall.Perso
 					data-size={resolvedSize}
 					mix={mergeMix(personCircle(PERSON_SIZES[resolvedSize]), mix)}
 				>
-					{src ? (
-						<img src={src} alt="" loading="lazy" />
-					) : (
-						<span aria-hidden="true">{initials(name)}</span>
-					)}
+					<span aria-hidden="true">{initials(name)}</span>
+					{src ? <img src={src} alt="" loading="lazy" data-initials={initials(name)} /> : null}
 				</a>
 				{showName ? (
 					<a

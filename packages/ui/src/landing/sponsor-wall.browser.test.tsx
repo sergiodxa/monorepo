@@ -1,7 +1,8 @@
 /**
  * Lays a {@link SponsorWall} out in a real browser at phone and desktop widths: each tier's
  * column count, rows that always fill the grid's width, no horizontal overflow, and backer
- * circles that stay grayscale until hovered or focused, with a 44px hit area.
+ * circles that stay grayscale until hovered or focused, with a 44px hit area, and initials
+ * under every picture for when it fails.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -218,5 +219,62 @@ describe("SponsorWall", () => {
 		let action = host.querySelector('a[href="/sponsor"]')!;
 		expect(person.getBoundingClientRect().left).toBe(left);
 		expect(action.getBoundingClientRect().left).toBe(left);
+	});
+
+	test("keeps the initials under a picture and paints them over it when it fails to load", async () => {
+		let host = document.createElement("div");
+		host.style.inlineSize = "375px";
+		document.body.appendChild(host);
+		render(
+			<SponsorWall>
+				<SponsorWall.Individuals>
+					<SponsorWall.Person
+						href="https://example.com/ana"
+						name="Ana Souza"
+						src="/missing-avatar.png"
+						size="lg"
+					/>
+					<SponsorWall.Person
+						href="https://example.com/bo"
+						name="Bo Lindqvist"
+						src={`data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8"/></svg>')}`}
+						size="lg"
+					/>
+				</SponsorWall.Individuals>
+			</SponsorWall>,
+			{ container: host },
+		);
+
+		let [failed, loaded] = host.querySelectorAll<HTMLAnchorElement>(
+			'[data-slot="sponsor-wall-person"] a',
+		);
+		let images = [failed!, loaded!].map((link) => link.querySelector("img")!);
+		await Promise.all(
+			images.map(
+				(image) =>
+					new Promise<void>((resolve) => {
+						image.loading = "eager";
+						if (image.complete) return resolve();
+						image.addEventListener("load", () => resolve(), { once: true });
+						image.addEventListener("error", () => resolve(), { once: true });
+					}),
+			),
+		);
+
+		expect(images[0]!.naturalWidth).toBe(0);
+		expect(images[1]!.naturalWidth).toBeGreaterThan(0);
+		for (let link of [failed!, loaded!]) {
+			let circle = link.getBoundingClientRect();
+			let initials = link.querySelector("span")!.getBoundingClientRect();
+			let picture = link.querySelector("img")!.getBoundingClientRect();
+			expect(initials.width).toBeGreaterThan(0);
+			expect(initials.left + initials.width / 2).toBeCloseTo(circle.left + circle.width / 2, 0);
+			expect(picture.toJSON()).toEqual(circle.toJSON());
+		}
+		expect(failed!.querySelector("span")!.textContent).toBe("AS");
+		let cover = getComputedStyle(images[0]!, "::before");
+		expect(cover.content).toBe('"AS"');
+		expect(cover.position).toBe("absolute");
+		expect(cover.backgroundColor).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
 	});
 });
