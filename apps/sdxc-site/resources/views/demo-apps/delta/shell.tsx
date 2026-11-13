@@ -10,14 +10,9 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import {
-	BellIcon,
 	BookOpenIcon,
-	BuildingIcon,
-	CircleDotIcon,
-	CirclePlayIcon,
 	CodeIcon,
 	GitCommitHorizontalIcon,
-	GitPullRequestIcon,
 	KeyboardIcon,
 	LayoutDashboardIcon,
 	RotateCwIcon,
@@ -33,6 +28,7 @@ import { CommandPalette } from "@sdxc/ui/app/command-palette";
 import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 import { PageHeader } from "@sdxc/ui/app/page-header";
 
+import { DELTA_BRANCH } from "~/config/delta";
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 
 import { UserMenu, WorkspaceMenu } from "../account-menus";
@@ -40,7 +36,7 @@ import { MainFrameSync } from "../main-frame-sync";
 
 import type { TreeNode } from "./data";
 
-import { ORG, actionHref, commitsHref, fileHref, href, repoHref } from "./data";
+import { REPO, actionHref, fileHref, href, repoHref } from "./data";
 import { FilesPane, PANE_ID } from "./files";
 import { DeltaMark, InitialsTile } from "./glyphs";
 import { COPY, HELP_LABELS, PALETTE_LABELS, SHELL_LABELS } from "./labels";
@@ -51,11 +47,81 @@ export const SHELL_COOKIE = "delta-sidebar";
 /** The command menu's id. */
 const PALETTE_ID = "delta-palette";
 
+/**
+ * Stands in for the finder's `{path}` while the address is built, since the router would
+ * encode the braces; it is swapped for `{path}` once the address is whole.
+ */
+const FINDER_SLOT = "delta-finder-path";
+
 /** The keyboard help sheet's id. */
 export const HELP_ID = "delta-keys";
 
-/** Which sidebar row a screen marks as the one shown. */
-export type ShellSection = "dashboard" | "notifications" | "repo" | "org" | "none";
+/** One sidebar row: the section it marks, where it goes, and its `g` key when it has one. */
+interface NavEntry {
+	section: string;
+	/** A page path under the app; `""` is the dashboard. */
+	page: string;
+	label: string;
+	icon: RemixNode;
+	shortcut?: string;
+}
+
+/**
+ * The sidebar, group by group. A finished screen joins it with one line here, in the commit
+ * that ships the screen; nothing links to a screen before it exists.
+ */
+const NAV: Array<{ title?: string; rows: NavEntry[] }> = [
+	{
+		rows: [
+			{
+				section: "dashboard",
+				page: "",
+				label: COPY.nav.dashboard,
+				icon: <LayoutDashboardIcon />,
+				shortcut: "g d",
+			},
+		],
+	},
+	{
+		title: COPY.nav.repositories,
+		rows: [
+			{
+				section: "repo",
+				page: REPO,
+				label: `${COPY.org}/${COPY.repo}`,
+				icon: <BookOpenIcon />,
+			},
+		],
+	},
+];
+
+/** Which sidebar row a screen marks as the one shown; `"none"` marks none. */
+export type ShellSection = string;
+
+/** One repository tab: where it goes, and its `g` key in the command menu. */
+interface RepoTabEntry {
+	tab: string;
+	/** A page path under the repository; `""` is its home. */
+	page: string;
+	label: string;
+	icon: RemixNode;
+	shortcut: string;
+}
+
+/**
+ * The repository's tabs, in order. A finished screen joins them with one line here, in the
+ * commit that ships it; the command menu and the help sheet list the same entries.
+ */
+const REPO_TABS: RepoTabEntry[] = [
+	{ tab: "code", page: "", label: COPY.tabs.code, icon: <CodeIcon />, shortcut: "g c" },
+	{
+		tab: "commits",
+		page: `commits/${DELTA_BRANCH}`,
+		label: COPY.tabs.commits,
+		icon: <GitCommitHorizontalIcon />,
+		shortcut: "g m",
+	},
+];
 
 /** The keys the help sheet lists beside the ones the page declares with `data-shortcut`. */
 const HELP_GROUPS: KeyboardHelp.Group[] = [
@@ -70,12 +136,10 @@ const HELP_GROUPS: KeyboardHelp.Group[] = [
 	{
 		title: "Navigation",
 		shortcuts: [
-			{ keys: "g d", label: COPY.keys.goDashboard },
-			{ keys: "g c", label: COPY.keys.goCode },
-			{ keys: "g m", label: COPY.keys.goCommits },
-			{ keys: "g i", label: COPY.keys.goIssues },
-			{ keys: "g p", label: COPY.keys.goPulls },
-			{ keys: "g a", label: COPY.keys.goActions },
+			...NAV.flatMap((group) => group.rows).flatMap((row) =>
+				row.shortcut === undefined ? [] : [{ keys: row.shortcut, label: `Go to ${row.label}` }],
+			),
+			...REPO_TABS.map((entry) => ({ keys: entry.shortcut, label: `Go to ${entry.label}` })),
 		],
 	},
 	{
@@ -87,85 +151,37 @@ const HELP_GROUPS: KeyboardHelp.Group[] = [
 	},
 ];
 
-/** One sidebar row. */
-function NavRow(
-	handle: Handle<{
-		section: ShellSection;
-		current: ShellSection;
-		href: string;
-		label: string;
-		icon: RemixNode;
-		shortcut?: string;
-	}>,
-) {
-	return () => {
-		let { current, href: to, icon, label, section, shortcut } = handle.props;
-		return (
-			<AppShell.Item
-				data-rmx-prefetch="intent"
-				href={to}
-				icon={icon}
-				label={label}
-				current={current === section}
-				data-main-nav={section}
-				data-shortcut={shortcut}
-				data-shortcut-label={shortcut ? `Go to ${label}` : undefined}
-				data-shortcut-group={shortcut ? "Navigation" : undefined}
-			/>
-		);
-	};
-}
-
-/** The sidebar's rows: the person's places, then the repository, then its org. */
+/** The sidebar's rows, from {@link NAV}. */
 function DeltaNav(handle: Handle<{ current: ShellSection }>) {
 	return () => {
 		let { current } = handle.props;
 		return (
 			<>
-				<AppShell.Group>
-					<NavRow
-						section="dashboard"
-						current={current}
-						href={href()}
-						label={COPY.nav.dashboard}
-						icon={<LayoutDashboardIcon />}
-						shortcut="g d"
-					/>
-					<NavRow
-						section="notifications"
-						current={current}
-						href={href("notifications")}
-						label={COPY.nav.notifications}
-						icon={<BellIcon />}
-						shortcut="g n"
-					/>
-				</AppShell.Group>
-				<AppShell.Group title={COPY.nav.repositories}>
-					<NavRow
-						section="repo"
-						current={current}
-						href={repoHref()}
-						label={`${COPY.org}/${COPY.repo}`}
-						icon={<BookOpenIcon />}
-					/>
-				</AppShell.Group>
-				<AppShell.Group title={COPY.nav.organization}>
-					<NavRow
-						section="org"
-						current={current}
-						href={href(ORG)}
-						label={COPY.org}
-						icon={<BuildingIcon />}
-					/>
-				</AppShell.Group>
+				{NAV.map((group) => (
+					<AppShell.Group title={group.title}>
+						{group.rows.map((row) => (
+							<AppShell.Item
+								data-rmx-prefetch="intent"
+								href={href(row.page)}
+								icon={row.icon}
+								label={row.label}
+								current={current === row.section}
+								data-main-nav={row.section}
+								data-shortcut={row.shortcut}
+								data-shortcut-label={row.shortcut ? `Go to ${row.label}` : undefined}
+								data-shortcut-group={row.shortcut ? "Navigation" : undefined}
+							/>
+						))}
+					</AppShell.Group>
+				))}
 			</>
 		);
 	};
 }
 
 /**
- * The command menu: every repository section by its `g` key, and the file finder on `t`,
- * which ranks every path as the visitor types and opens the file in `main`.
+ * The command menu: the file finder on `t`, which ranks every path as the visitor types and
+ * opens the file in `main`, then every repository tab and sidebar row by its `g` key.
  */
 function DeltaPalette(handle: Handle<{ paths: readonly string[] }>) {
 	return () => (
@@ -183,55 +199,25 @@ function DeltaPalette(handle: Handle<{ paths: readonly string[] }>) {
 					page="files"
 					shortcut="t"
 				/>
-				<CommandPalette.Item
-					id="go-code"
-					title={COPY.keys.goCode}
-					icon={<CodeIcon />}
-					href={repoHref()}
-					shortcut="g c"
-				/>
-				<CommandPalette.Item
-					id="go-commits"
-					title={COPY.keys.goCommits}
-					icon={<GitCommitHorizontalIcon />}
-					href={commitsHref()}
-					shortcut="g m"
-				/>
-				<CommandPalette.Item
-					id="go-issues"
-					title={COPY.keys.goIssues}
-					icon={<CircleDotIcon />}
-					href={repoHref("issues")}
-					shortcut="g i"
-				/>
-				<CommandPalette.Item
-					id="go-pulls"
-					title={COPY.keys.goPulls}
-					icon={<GitPullRequestIcon />}
-					href={repoHref("pulls")}
-					shortcut="g p"
-				/>
-				<CommandPalette.Item
-					id="go-actions"
-					title={COPY.keys.goActions}
-					icon={<CirclePlayIcon />}
-					href={repoHref("actions")}
-					shortcut="g a"
-				/>
+				{REPO_TABS.map((entry) => (
+					<CommandPalette.Item
+						id={`go-${entry.tab}`}
+						title={`Go to ${entry.label}`}
+						icon={entry.icon}
+						href={repoHref(entry.page)}
+						shortcut={entry.shortcut}
+					/>
+				))}
 			</CommandPalette.Group>
 			<CommandPalette.Group heading="Go to">
-				<CommandPalette.Item
-					id="go-dashboard"
-					title={COPY.keys.goDashboard}
-					icon={<LayoutDashboardIcon />}
-					href={href()}
-				/>
-				<CommandPalette.Item
-					id="go-notifications"
-					title={`Go to ${COPY.nav.notifications}`}
-					icon={<BellIcon />}
-					href={href("notifications")}
-				/>
+				{NAV.flatMap((group) => group.rows).map((row) => (
+					<CommandPalette.Item
+						id={`nav-${row.section}`}
+						title={`Go to ${row.label}`}
+						icon={row.icon}
+						href={href(row.page)}
+					/>
+				))}
 			</CommandPalette.Group>
 			<CommandPalette.Finder
 				id="files"
@@ -239,7 +225,7 @@ function DeltaPalette(handle: Handle<{ paths: readonly string[] }>) {
 				placeholder={COPY.find.placeholder}
 				shortcut="t"
 				paths={handle.props.paths}
-				href={fileHref("{path}").replace("%7Bpath%7D", "{path}")}
+				href={fileHref(FINDER_SLOT).replace(FINDER_SLOT, "{path}")}
 			/>
 		</CommandPalette>
 	);
@@ -416,8 +402,8 @@ export function DeltaFrame(handle: Handle<DeltaFrame.Props>) {
 	};
 }
 
-/** The repository's sections, as its header's tabs. */
-export type RepoTab = "code" | "commits" | "issues" | "pulls" | "actions" | "settings";
+/** A repository tab's key, as {@link REPO_TABS} names it. */
+export type RepoTab = string;
 
 namespace RepoHeader {
 	export interface Props {
@@ -444,25 +430,18 @@ namespace RepoHeader {
 export function RepoHeader(handle: Handle<RepoHeader.Props>) {
 	return () => {
 		let { actions, commits, description, parent, tab, title, trail = [] } = handle.props;
-		let tabs: PageHeader.Tab[] = [
-			{ href: repoHref(), label: COPY.tabs.code, current: tab === "code" },
-			{
-				href: commitsHref(),
-				label: COPY.tabs.commits,
-				count: commits > 0 ? commits : undefined,
-				current: tab === "commits",
-			},
-			{ href: repoHref("issues"), label: COPY.tabs.issues, current: tab === "issues" },
-			{ href: repoHref("pulls"), label: COPY.tabs.pulls, current: tab === "pulls" },
-			{ href: repoHref("actions"), label: COPY.tabs.actions, current: tab === "actions" },
-			{ href: repoHref("settings"), label: COPY.tabs.settings, current: tab === "settings" },
-		];
+		let tabs: PageHeader.Tab[] = REPO_TABS.map((entry) => ({
+			href: repoHref(entry.page),
+			label: entry.label,
+			count: entry.tab === "commits" && commits > 0 ? commits : undefined,
+			current: entry.tab === tab,
+		}));
 		return (
 			<PageHeader
 				title={title}
 				crumbsLabel={COPY.crumbs}
 				crumbs={[
-					{ label: COPY.org, href: href(ORG) },
+					{ label: COPY.org },
 					{ label: COPY.repo, href: trail.length === 0 ? undefined : repoHref() },
 					...trail,
 				]}

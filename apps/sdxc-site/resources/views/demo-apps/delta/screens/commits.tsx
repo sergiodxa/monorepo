@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 import { GitCommitHorizontalIcon, GitBranchIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { font, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
+import { font, tabularNums, text, weight } from "@sdxc/u/typography";
 import { HeadingScope, LinkButton, RelativeTime } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 import { CopyButton } from "@sdxc/ui/docs/copy-button";
@@ -142,7 +142,7 @@ export function CommitRow(handle: Handle<CommitRow.Props>) {
 								</span>
 							))}
 						</span>
-						<span mix={[truncate()]}>
+						<span mix={[raw({ minInlineSize: 0, overflowWrap: "anywhere" })]}>
 							<span mix={[weight("medium"), fg("neutral.emphasis")]}>{people}</span>{" "}
 							{COPY.commits.authored} <RelativeTime date={commit.date} now={now} locale="en" />
 						</span>
@@ -394,10 +394,6 @@ export function CommitScreen(handle: Handle<CommitScreen.Props>) {
 										))}
 									</CommitList>
 								</section>
-								<Empty size="compact" icon={<GitCommitHorizontalIcon />}>
-									<Empty.Title>{COPY.commit.comingTitle}</Empty.Title>
-									<Empty.Description>{COPY.commit.comingHint}</Empty.Description>
-								</Empty>
 							</>
 						)}
 					</div>

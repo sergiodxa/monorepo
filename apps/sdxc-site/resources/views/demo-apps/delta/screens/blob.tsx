@@ -283,6 +283,13 @@ export function BlobScreen(handle: Handle<BlobScreen.Props>) {
 						blame={hunks}
 						permalink={fileHref(file.path, { ref: head, view })}
 						labels={CODE_LABELS}
+						mix={[
+							raw({
+								"& a[data-line-number]": {
+									scrollMarginBlockStart: "calc(var(--ui-app-sticky-top, 3.5rem) + 2rem)",
+								},
+							}),
+						]}
 						now={now}
 						locale="en"
 					>
@@ -336,7 +343,11 @@ export function NotInBuild(handle: Handle<NotInBuild.Props>) {
 						<Empty.Title>{COPY.notInBuild.title}</Empty.Title>
 						<Empty.Description>{COPY.notInBuild.hint}</Empty.Description>
 						<Empty.Action>
-							<LinkButton href={path === "" ? folderHref("") : fileHref(path)} size="sm">
+							<LinkButton
+								href={path === "" ? folderHref("") : fileHref(path)}
+								size="sm"
+								color="brand"
+							>
 								{COPY.notInBuild.action}
 							</LinkButton>
 						</Empty.Action>

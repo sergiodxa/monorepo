@@ -1,7 +1,7 @@
 /**
- * Delta's dashboard, the screens still on their way, and its own 404. The dashboard lists the
- * one repository and its newest real commits; a section a later step builds says so and leads
- * back to the code, so every link in the shell already lands somewhere honest.
+ * Delta's dashboard and its own 404. The dashboard lists the one repository and its newest
+ * real commits; the 404 sits inside the shell and leads back to the code, so a mistyped
+ * address still leaves the visitor one click from somewhere real.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { BookOpenIcon, CompassIcon, HammerIcon } from "@sdxc/icons";
+import { BookOpenIcon, CompassIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { font, tabularNums, text, weight } from "@sdxc/u/typography";
@@ -19,11 +19,8 @@ import { PageHeader } from "@sdxc/ui/app/page-header";
 
 import type { DeltaCommit, DeltaCommitMeta, DeltaHistory } from "~/app/services/delta/source";
 
-import type { ComingSection } from "../data";
-
 import { commitsHref, repoHref } from "../data";
 import { COPY } from "../labels";
-import { RepoHeader } from "../shell";
 
 import { CommitList, CommitRow } from "./commits";
 
@@ -131,52 +128,6 @@ export function DashboardScreen(handle: Handle<DashboardScreen.Props>) {
 	};
 }
 
-namespace ComingScreen {
-	export interface Props {
-		/** A repository section, or a place outside the repository. */
-		section: ComingSection | "notifications" | "org";
-		commitCount: number;
-	}
-}
-
-/**
- * Renders a section a later step builds: its title, and an empty state that says the screen
- * is on its way and leads to the code. A repository section keeps the repository's header.
- */
-export function ComingScreen(handle: Handle<ComingScreen.Props>) {
-	return () => {
-		let { commitCount, section } = handle.props;
-		let title = COPY.coming[section];
-		let empty = (
-			<HeadingScope level={2}>
-				<Empty kind="first-run" icon={<HammerIcon />}>
-					<Empty.Title>{COPY.coming.title}</Empty.Title>
-					<Empty.Description>{COPY.coming.hint}</Empty.Description>
-					<Empty.Action>
-						<LinkButton href={repoHref()} size="sm">
-							{COPY.coming.action}
-						</LinkButton>
-					</Empty.Action>
-				</Empty>
-			</HeadingScope>
-		);
-		if (section === "notifications" || section === "org") {
-			return (
-				<>
-					<PageHeader title={title} />
-					{empty}
-				</>
-			);
-		}
-		return (
-			<>
-				<RepoHeader title={title} trail={[{ label: title }]} tab={section} commits={commitCount} />
-				<div mix={[raw({ paddingBlockStart: "1rem" })]}>{empty}</div>
-			</>
-		);
-	};
-}
-
 /** Renders the app's own 404 inside the shell, so the sidebar still leads somewhere. */
 export function NotFoundScreen() {
 	return () => (
@@ -186,7 +137,9 @@ export function NotFoundScreen() {
 				<Empty icon={<CompassIcon />}>
 					<Empty.Description>{COPY.notFound.hint}</Empty.Description>
 					<Empty.Action>
-						<LinkButton href={repoHref()}>{COPY.notFound.action}</LinkButton>
+						<LinkButton href={repoHref()} color="brand">
+							{COPY.notFound.action}
+						</LinkButton>
 					</Empty.Action>
 				</Empty>
 			</HeadingScope>

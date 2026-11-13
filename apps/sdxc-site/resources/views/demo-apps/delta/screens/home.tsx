@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { BookOpenIcon, FileIcon, FolderIcon, GitBranchIcon, ClockArrowUpIcon } from "@sdxc/icons";
 import { Markdown } from "@sdxc/markdown";
@@ -273,6 +273,27 @@ function FileList(handle: Handle<FileList.Props>) {
 	};
 }
 
+namespace ReadmeHeading {
+	export interface Props {
+		/** The heading's level as the README writes it, from 1. */
+		level?: number;
+		id?: string;
+		children?: RemixNode;
+	}
+}
+
+/**
+ * Draws a README heading one level down, so the README's own title sits under the page's
+ * `h1` and the card's "README" heading instead of competing with them.
+ */
+function ReadmeHeading(handle: Handle<ReadmeHeading.Props>) {
+	return () => {
+		let { children, id, level = 1 } = handle.props;
+		let Tag = `h${Math.min(6, level + 1)}` as "h2";
+		return <Tag id={id}>{children}</Tag>;
+	};
+}
+
 namespace Readme {
 	export interface Props {
 		file: DeltaFile;
@@ -319,7 +340,9 @@ function Readme(handle: Handle<Readme.Props>) {
 				<div
 					mix={[raw({ padding: "1rem 1.5rem 1.5rem", minInlineSize: 0, overflowWrap: "anywhere" })]}
 				>
-					<Typeset preset="docs">{toRemix(parsed.data.document)}</Typeset>
+					<Typeset preset="docs">
+						{toRemix(parsed.data.document, { components: { heading: ReadmeHeading } })}
+					</Typeset>
 				</div>
 			</section>
 		);

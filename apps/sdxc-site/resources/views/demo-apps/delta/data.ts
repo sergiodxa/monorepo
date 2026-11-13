@@ -86,24 +86,15 @@ export function shortSha(sha: string): string {
 	return sha.slice(0, 7);
 }
 
-/** The repository sections a later screen fills; each renders its own coming state for now. */
-export type ComingSection = "issues" | "pulls" | "actions" | "settings";
-
 /** The screen a page path names, with what it reads from the path. */
 export type DeltaRoute =
 	| { screen: "dashboard" }
-	| { screen: "notifications" }
-	| { screen: "org" }
 	| { screen: "home" }
 	| { screen: "tree"; ref: string; path: string }
 	| { screen: "blob"; view: "blob" | "blame"; ref: string; path: string }
 	| { screen: "find"; ref: string }
 	| { screen: "commits"; ref: string }
-	| { screen: "commit"; sha: string }
-	| { screen: "coming"; section: ComingSection };
-
-/** The repository sections that render their coming state, by their path segment. */
-const COMING: readonly ComingSection[] = ["issues", "pulls", "actions", "settings"];
+	| { screen: "commit"; sha: string };
 
 /**
  * Reads which screen a page path names. Paths are matched by shape only; whether the file,
@@ -126,13 +117,8 @@ export function parsePage(page: string): DeltaRoute | null {
 	if (segments.some((segment) => segment === "\u0000" || segment === "..")) return null;
 	let [first, second, third, ...rest] = segments;
 	if (first === undefined) return { screen: "dashboard" };
-	if (first === "notifications" && second === undefined) return { screen: "notifications" };
-	if (first === ORG && second === undefined) return { screen: "org" };
 	if (first !== REPO) return null;
 	if (second === undefined) return { screen: "home" };
-	if (COMING.includes(second as ComingSection) && third === undefined) {
-		return { screen: "coming", section: second as ComingSection };
-	}
 	if (third === undefined) return null;
 	if (second === "tree") return { screen: "tree", ref: third, path: rest.join("/") };
 	if ((second === "blob" || second === "blame") && rest.length > 0) {

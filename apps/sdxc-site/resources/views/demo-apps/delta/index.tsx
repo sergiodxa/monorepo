@@ -32,8 +32,8 @@ import type { ShellSection } from "./shell";
 import { buildTree, isHeadRef, listFolder, parsePage, shortSha } from "./data";
 import { COPY } from "./labels";
 import { BlobScreen, NotInBuild } from "./screens/blob";
-import { ComingScreen, DashboardScreen, NotFoundScreen } from "./screens/coming";
 import { CommitScreen, CommitsScreen } from "./screens/commits";
+import { DashboardScreen, NotFoundScreen } from "./screens/dashboard";
 import { FindScreen } from "./screens/find";
 import { HomeScreen } from "./screens/home";
 import { DeltaFrame, SHELL_COOKIE } from "./shell";
@@ -139,12 +139,6 @@ const SCREENS = [
 	"delta/find/main",
 	"delta/find/main?q=shell",
 	"delta/commits/main",
-	"delta/issues",
-	"delta/pulls",
-	"delta/actions",
-	"delta/settings",
-	"notifications",
-	"sdxc",
 ];
 
 /** One screen as both the whole page and the `main` frame draw it. */
@@ -194,21 +188,6 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 				body: (
 					<DashboardScreen history={history} files={tree.files.length} latest={latest} now={now} />
 				),
-			};
-		case "notifications":
-		case "org":
-			return {
-				title: COPY.coming[target.screen],
-				nav: target.screen,
-				crumb: COPY.coming[target.screen],
-				body: <ComingScreen section={target.screen} commitCount={count} />,
-			};
-		case "coming":
-			return {
-				title: `${COPY.coming[target.section]} · ${REPO_NAME}`,
-				nav: "repo",
-				crumb: `${REPO_NAME} › ${COPY.coming[target.section]}`,
-				body: <ComingScreen section={target.section} commitCount={count} />,
 			};
 		case "home":
 		case "tree": {

@@ -89,18 +89,12 @@ export const COPY = {
 	topics: ["remix", "code-host", "sdxc-ui", "demo"],
 	nav: {
 		dashboard: "Dashboard",
-		notifications: "Notifications",
 		repositories: "Repositories",
-		organization: "Organization",
 	},
 	tabs: {
 		label: "Repository",
 		code: "Code",
 		commits: "Commits",
-		issues: "Issues",
-		pulls: "Pull requests",
-		actions: "Actions",
-		settings: "Settings",
 		more: "More",
 	},
 	crumbs: "Breadcrumb",
@@ -163,9 +157,6 @@ export const COPY = {
 	},
 	commit: {
 		title: (sha: string) => `Commit ${sha}`,
-		comingTitle: "The diff view lands next",
-		comingHint:
-			"This commit is real, and so is its patch in the build. Its line-by-line diff is the next screen Delta adds.",
 		backToCommits: "Back to commits",
 		files: "Changed files",
 		filesChanged: (count: number) => `${count} ${count === 1 ? "file" : "files"} changed`,
@@ -178,17 +169,6 @@ export const COPY = {
 		title: "Files at this commit aren't in the build",
 		hint: "Delta carries its files at the deployed commit only. Open the same path on main instead.",
 		action: "View on main",
-	},
-	coming: {
-		issues: "Issues",
-		pulls: "Pull requests",
-		actions: "Actions",
-		settings: "Repository settings",
-		notifications: "Notifications",
-		org: "sdxc",
-		title: "This screen is on its way",
-		hint: "Delta grows one screen at a time. The code, the file view and the commits are ready to browse now.",
-		action: "Browse the code",
 	},
 	dashboard: {
 		title: "Dashboard",
@@ -208,9 +188,6 @@ export const COPY = {
 	keys: {
 		goCode: "Go to Code",
 		goCommits: "Go to Commits",
-		goIssues: "Go to Issues",
-		goPulls: "Go to Pull requests",
-		goActions: "Go to Actions",
 		goDashboard: "Go to Dashboard",
 		goToFile: "Go to file",
 		blame: "Switch to blame",
