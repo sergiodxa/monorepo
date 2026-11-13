@@ -273,7 +273,13 @@ export function Pricing() {
  */
 export function Questions() {
 	return () => (
-		<FaqBand id="faq" columns={2} eyebrow="Questions" title="Before you switch">
+		<FaqBand
+			id="faq"
+			columns={2}
+			eyebrow="Questions"
+			title="Before you switch"
+			mix={[raw({ "--ui-landing-faq-gap": "0.75rem" })]}
+		>
 			{QUESTIONS.map((column, index) => (
 				<Accordion
 					key={index}
@@ -282,7 +288,7 @@ export function Questions() {
 							"--ui-neutral-border": "transparent",
 							display: "flex",
 							flexDirection: "column",
-							gap: "0.75rem",
+							gap: "var(--ui-landing-faq-gap)",
 						}),
 					]}
 				>

@@ -181,8 +181,8 @@ export function Neighbours() {
 
 /**
  * The questions band: six answers in two accordion columns whose items share a name per
- * column, so opening one closes the one before it, with no script. The first column keeps
- * the cards' own gap below it, so the stacked columns on a phone read as one even list.
+ * column, so opening one closes the one before it, with no script. One gap token spaces the
+ * cards and the stacked columns alike, so a phone reads one even list.
  *
  * @returns The render function producing the band.
  */
@@ -190,7 +190,7 @@ export function Questions() {
 	return () => (
 		<FaqBand
 			id="questions"
-			mix={[renderNearView(560, 900)]}
+			mix={[raw({ "--ui-landing-faq-gap": "0.75rem" }), renderNearView(560, 900)]}
 			tone="tinted"
 			columns={2}
 			eyebrow="Questions"
@@ -204,8 +204,7 @@ export function Questions() {
 							"--ui-neutral-border": "transparent",
 							display: "flex",
 							flexDirection: "column",
-							gap: "0.75rem",
-							paddingBlockEnd: index === 0 ? "0.75rem" : "0",
+							gap: "var(--ui-landing-faq-gap)",
 						}),
 					]}
 				>
