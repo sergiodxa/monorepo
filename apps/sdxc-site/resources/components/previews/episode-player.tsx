@@ -17,6 +17,9 @@ const CODE = `<EpisodePlayer
 	captions={{ src: "/demos/newsletter/episode-63.vtt", srclang: "en", label: "English" }}
 	title="The pressure at the top of the hill"
 	meta="Episode 63 · 14:20"
+	chaptersLabel="Chapters"
+	transcriptLabel="Read the transcript"
+	fallback={<a href="/demos/newsletter/episode-63.mp3">Download the episode</a>}
 	chapters={[
 		{ start: 0, title: "The shower on the ninth floor" },
 		{ start: 112, title: "What pressure means at a tap" },
@@ -40,6 +43,9 @@ export default {
 				captions={{ src: "/demos/newsletter/episode-63.vtt", srclang: "en", label: "English" }}
 				title="The pressure at the top of the hill"
 				meta="Episode 63 · 14:20"
+				chaptersLabel="Chapters"
+				transcriptLabel="Read the transcript"
+				fallback={<a href="/demos/newsletter/episode-63.mp3">Download the episode</a>}
 				chapters={[
 					{ start: 0, title: "The shower on the ninth floor" },
 					{ start: 112, title: "What pressure means at a tap" },

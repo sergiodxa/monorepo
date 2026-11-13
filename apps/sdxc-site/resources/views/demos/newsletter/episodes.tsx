@@ -120,7 +120,9 @@ export default function NewsletterEpisodes() {
 				}
 				chapters={LATEST_CHAPTERS}
 				transcript={LATEST_TRANSCRIPT}
+				chaptersLabel="Chapters"
 				transcriptLabel="Read the transcript"
+				fallback={<a href={LATEST_AUDIO}>Download the episode</a>}
 				note={
 					<span mix={[text("sm")]}>
 						This demo’s audio is a placeholder: a chime where each chapter starts, and quiet
