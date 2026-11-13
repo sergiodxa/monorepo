@@ -116,6 +116,8 @@ export namespace AutoRefresh {
 		/** That time as the server wrote it. */
 		text: string;
 		locale?: string;
+		/** The zone the time is written in; the reader's own once hydrated when unset. */
+		timeZone?: string;
 	};
 }
 
@@ -173,6 +175,7 @@ export function AutoRefresh(handle: Handle<AutoRefresh.Props>) {
 				refreshedAt={time.toISOString()}
 				text={new Intl.DateTimeFormat(locale, { timeStyle: "medium", timeZone }).format(time)}
 				locale={locale}
+				timeZone={timeZone}
 			/>
 		);
 
@@ -301,12 +304,12 @@ export const AutoRefreshStatus: EntryComponent<AutoRefresh.StatusProps> = client
 		};
 
 		return () => {
-			let { every, label, refreshedAt, text: written, locale } = handle.props;
+			let { every, label, refreshedAt, text: written, locale, timeZone } = handle.props;
 			let [before, after] = aroundTime(label);
 			return (
 				<span data-slot="auto-refresh-status" mix={[fg("neutral.muted"), nowrap(), tabularNums()]}>
 					{before}
-					<time dateTime={refreshedAt} mix={[autoRefresh({ every, reload, locale })]}>
+					<time dateTime={refreshedAt} mix={[autoRefresh({ every, reload, locale, timeZone })]}>
 						{written}
 					</time>
 					{after}

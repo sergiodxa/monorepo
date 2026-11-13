@@ -23,13 +23,16 @@ export namespace AutoRefreshTimer {
 		reload: () => Promise<unknown>;
 		/** Locale the refreshed time is written in. Defaults to the runtime's. */
 		locale?: string;
+		/** Time zone the time is written in. Defaults to the reader's own. */
+		timeZone?: string;
 	}
 }
 
 /**
  * Runs a {@link RefreshSchedule} while the host `<time>` is in the document, counted from the
- * host's own `datetime`. It pauses while the page is hidden, catches up with one reload when
- * shown, sets `data-paused` meanwhile, and rewrites the host's `datetime` and text after each reload.
+ * host's own `datetime`, which it first rewrites in the reader's time zone. It pauses while the
+ * page is hidden, catches up with one reload when shown, sets `data-paused` meanwhile, and
+ * rewrites the host's `datetime` and text after each reload.
  *
  * @example <time dateTime={iso} mix={[autoRefresh({ every: 30_000, reload: () => handle.frames.top.reload() })]}>{text}</time>
  */
@@ -73,7 +76,11 @@ function follow(
 		reload: options.reload,
 		refreshedAt: Number.isNaN(initial.getTime()) ? undefined : initial,
 	});
-	let format = new Intl.DateTimeFormat(options.locale, { timeStyle: "medium" });
+	let format = new Intl.DateTimeFormat(options.locale, {
+		timeStyle: "medium",
+		timeZone: options.timeZone,
+	});
+	if (!Number.isNaN(initial.getTime())) host.textContent = format.format(initial);
 
 	schedule.addEventListener(
 		"refresh",

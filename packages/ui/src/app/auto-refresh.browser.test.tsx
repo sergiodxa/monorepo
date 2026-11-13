@@ -201,6 +201,16 @@ describe(autoRefresh.name, () => {
 		return { time: mounted.container.querySelector("time")!, reloads: () => count };
 	}
 
+	test("rewrites the server's time in the reader's own time zone once hydrated", () => {
+		vi.useFakeTimers({ now: new Date("2026-11-01T10:00:00Z") });
+		let { time } = mountTime(0);
+		let local = new Intl.DateTimeFormat("en-US", { timeStyle: "medium" }).format(
+			new Date("2026-11-01T10:00:00Z"),
+		);
+
+		expect(time.textContent).toBe(local);
+	});
+
 	test("reloads on the chosen interval and rewrites the time", async () => {
 		vi.useFakeTimers({ now: new Date("2026-11-01T10:00:00Z") });
 		let { time, reloads } = mountTime(30_000);
