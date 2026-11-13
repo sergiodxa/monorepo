@@ -149,6 +149,7 @@ export const FACE_KIND = {
 	"phone-frame": "phone-frame",
 	"plan-notice": "alert",
 	popover: "popover",
+	"price-list": "landing-pricing",
 	"pricing-band": "landing-pricing",
 	"product-frame": "product-frame",
 	"progress-bar": "meter",

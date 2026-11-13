@@ -288,6 +288,7 @@ const CATALOGUE = [
 	{ slug: "phone-frame", module: "landing" },
 	{ slug: "plan-notice", module: "docs" },
 	{ slug: "popover", module: "components" },
+	{ slug: "price-list", module: "landing" },
 	{ slug: "pricing-band", module: "landing" },
 	{ slug: "product-frame", module: "landing" },
 	{ slug: "progress-bar", module: "components" },
