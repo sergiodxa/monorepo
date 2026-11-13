@@ -80,6 +80,7 @@ export const PACKAGES_WITHOUT_COMMAND_LINES: readonly string[] = [
 	"diff",
 	"digest-fields",
 	"duration",
+	"emoji",
 	"expression",
 	"feed",
 	"file-storage-r2",
