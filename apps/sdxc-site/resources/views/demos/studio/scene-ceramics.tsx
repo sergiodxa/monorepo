@@ -9,8 +9,12 @@
 
 import { DIDONE, GROTESK, MONO } from "~/resources/views/demos/studio/type";
 
-/** The three fields the checkout kept, out of the eleven it had. */
-const FIELDS = ["Email", "Delivery address", "Postcode"];
+/** The three fields the checkout kept, out of the eleven it had, filled in as a buyer would. */
+const FIELDS = [
+	{ label: "Email", value: "an.peeters@example.be" },
+	{ label: "Delivery address", value: "Kloosterstraat 12, Antwerpen" },
+	{ label: "Postcode", value: "2000" },
+];
 
 /** The payment methods, in the order buyers chose them in the first month. */
 const METHODS = ["Bancontact", "iDEAL", "Card"];
@@ -62,9 +66,12 @@ export default function CeramicsScene() {
 				</text>
 				<line x1="36" x2="564" y1="96" y2="96" stroke={INK} stroke-opacity="0.2" stroke-width="2" />
 				{FIELDS.map((field, index) => (
-					<g key={field} transform={`translate(36 ${136 + index * 92})`}>
+					<g key={field.label} transform={`translate(36 ${136 + index * 92})`}>
 						<text font-family={MONO} font-size="14" fill={INK} letter-spacing="1.5">
-							{field.toUpperCase()}
+							{field.label.toUpperCase()}
+						</text>
+						<text x="16" y="48" font-family={GROTESK} font-size="20" fill={INK}>
+							{field.value}
 						</text>
 						<rect
 							y="14"
