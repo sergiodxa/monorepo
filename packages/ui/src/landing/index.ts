@@ -45,6 +45,7 @@ export * from "./product-frame.js";
 export * from "./proof-strip.js";
 export * from "./rails.js";
 export * from "./rotating-text.js";
+export * from "./scroll-scene.js";
 export * from "./segmented-stage.js";
 export * from "./sequence-diagram.js";
 export * from "./site-footer.js";
