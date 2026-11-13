@@ -110,6 +110,44 @@ describe("Strata Two scroll scenes", () => {
 	});
 });
 
+describe("Strata Two typing scene", () => {
+	test("holds the board still while the line types itself", async () => {
+		await page.viewport(1440, 900);
+		renderPage();
+		let scene = document.querySelector<HTMLElement>("#in-use [data-slot=scroll-scene]")!;
+		let board = scene.querySelector<SVGElement>('[data-slot="strata-keyboard"]')!;
+		let start = scene.getBoundingClientRect().top + scrollY;
+		let tops = new Set<number>();
+		for (let step = 0; step <= 20; step++) {
+			scrollTo(0, start + ((scene.offsetHeight - innerHeight) * step) / 20);
+			await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+			let stage = scene.querySelector<HTMLElement>("[data-slot=scroll-scene-stage]")!;
+			tops.add(
+				Math.round((board.getBoundingClientRect().top - stage.getBoundingClientRect().top) * 10),
+			);
+		}
+		expect([...tops]).toHaveLength(1);
+	});
+
+	test("types the line without changing the stage's layout", async () => {
+		await page.viewport(1440, 900);
+		renderPage();
+		let scene = document.querySelector<HTMLElement>("#in-use [data-slot=scroll-scene]")!;
+		let line = scene.querySelector<HTMLElement>("[role=img] > div")!;
+		let start = scene.getBoundingClientRect().top + scrollY;
+		let widths = new Set<string>();
+		let clips = new Set<string>();
+		for (let step = 0; step <= 20; step++) {
+			scrollTo(0, start + ((scene.offsetHeight - innerHeight) * step) / 20);
+			await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+			widths.add([...line.children].map((child) => (child as HTMLElement).offsetWidth).join());
+			clips.add(getComputedStyle(line.children[1]!).clipPath);
+		}
+		expect([...widths]).toHaveLength(1);
+		expect(clips.size).toBeGreaterThan(3);
+	});
+});
+
 describe("Strata Two preorder", () => {
 	test("confirms the reservation the URL carries", () => {
 		renderPage("?finish=bronze&layout=iso&switch=notch&reserve=1");

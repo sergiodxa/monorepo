@@ -29,6 +29,13 @@ const STROKES = LINE.split("").map((character) => (character === " " ? "space" :
 const TYPE_START = 10;
 const STROKE = 9;
 
+/**
+ * The stretch of the scene the screen line types over: from the first key's press to the
+ * last's. The text is revealed by clipping and the caret moves by translation, so typing
+ * never changes the stage's layout while the reader scrolls it.
+ */
+const TYPED_RANGE = `contain ${TYPE_START + STROKE * 0.4}% contain ${TYPE_START + STROKES.length * STROKE - STROKE * 0.6}%`;
+
 /** The one dip every key in the scene runs through: down at the middle, up at the end. */
 const PRESS = "strata-in-use-press";
 
@@ -78,7 +85,6 @@ const READINGS = [
  * @returns The render function producing the band.
  */
 export default function InUseScene() {
-	let typedEnd = TYPE_START + STROKES.length * STROKE;
 	return () => (
 		<LandingSection id="in-use" class={STAGE_CLASS} tone="plain" spacing="normal" mix={[stage()]}>
 			<LandingHeader
@@ -130,35 +136,42 @@ export default function InUseScene() {
 						</span>
 						<span
 							mix={[
-								raw({
-									display: "inline-block",
-									verticalAlign: "bottom",
-									overflow: "hidden",
-									inlineSize: `${LINE.length}ch`,
-								}),
+								raw({ display: "inline-block", clipPath: "inset(0 0 0 0)" }),
 								sceneMotion(
 									TIMELINE,
-									{ from: { inlineSize: "0ch" }, to: { inlineSize: `${LINE.length}ch` } },
-									`contain ${TYPE_START + STROKE * 0.4}% contain ${typedEnd - STROKE * 0.6}%`,
+									{ from: { clipPath: "inset(0 100% 0 0)" }, to: { clipPath: "inset(0 0 0 0)" } },
+									TYPED_RANGE,
 									`steps(${LINE.length}, end)`,
 								),
 							]}
 						>
 							{LINE}
 						</span>
-						<span>"</span>
 						<span
 							mix={[
-								raw({
-									display: "inline-block",
-									inlineSize: "0.5ch",
-									blockSize: "1.1em",
-									marginInlineStart: "1px",
-									verticalAlign: "text-bottom",
-									backgroundColor: "var(--ui-color-brand-500)",
-								}),
+								raw({ display: "inline-block", translate: "0 0" }),
+								sceneMotion(
+									TIMELINE,
+									{ from: { translate: `-${LINE.length}ch 0` }, to: { translate: "0 0" } },
+									TYPED_RANGE,
+									`steps(${LINE.length}, end)`,
+								),
 							]}
-						/>
+						>
+							"
+							<span
+								mix={[
+									raw({
+										display: "inline-block",
+										inlineSize: "0.5ch",
+										blockSize: "1.1em",
+										marginInlineStart: "1px",
+										verticalAlign: "text-bottom",
+										backgroundColor: "var(--ui-color-brand-500)",
+									}),
+								]}
+							/>
+						</span>
 					</div>
 					<div mix={[typing(), raw({ inlineSize: "100%" })]}>
 						<Keyboard id="in-use" pressable />
