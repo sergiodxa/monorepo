@@ -421,6 +421,19 @@ describe("Chorus's New post dialog", () => {
 	});
 });
 
+describe("Chorus's message box", () => {
+	test("a shared post's message box comes back empty once the thread redraws without it", async () => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("messages/kofibuilds?share=p-leonids");
+		let box = () => root.querySelector<HTMLTextAreaElement>("textarea[name='text']")!;
+		expect(box().value).toBe(href("post/p-leonids"));
+
+		await mountedFrame(MAIN_FRAME).reload({ src: href("messages/kofibuilds") });
+
+		expect(box().value).toBe("");
+	});
+});
+
 describe("Chorus from the keyboard", () => {
 	test("j and k walk the timeline's posts, k stopping at the first", async () => {
 		await page.viewport(1280, 860);

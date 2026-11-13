@@ -24,9 +24,11 @@ import {
 	actionHref,
 	findPerson,
 	href,
+	postLinks,
 } from "~/resources/views/demo-apps/chorus/data";
-import { TitleBar } from "~/resources/views/demo-apps/chorus/feed";
+import { TitleBar, postById } from "~/resources/views/demo-apps/chorus/feed";
 import { PersonAvatar, fullDate, shortAge } from "~/resources/views/demo-apps/chorus/parts";
+import { QuotedPost } from "~/resources/views/demo-apps/chorus/post";
 import { ChorusColumn } from "~/resources/views/demo-apps/chorus/shell";
 
 /**
@@ -44,6 +46,16 @@ export function messagesWith(conversation: Conversation, state: VisitorState): M
 			at: new Date(message.at).toISOString(),
 		}));
 	return [...conversation.messages, ...sent];
+}
+
+/**
+ * A message as the conversations list previews it: its text without post links, or "Sent a
+ * post" for a message that is only a link to one.
+ */
+function preview(text: string): string {
+	let linked = postLinks(text);
+	if (linked.text !== "" || linked.ids.length === 0) return linked.text;
+	return "Sent a post";
 }
 
 /** The address a shared post adds to a conversation link, so its box opens with the post. */
@@ -169,7 +181,7 @@ export function MessagesScreen(handle: Handle<MessagesScreen.Props>) {
 												}),
 											]}
 										>
-											{last ? `${last.from === ME.handle ? "You: " : ""}${last.text}` : ""}
+											{last ? `${last.from === ME.handle ? "You: " : ""}${preview(last.text)}` : ""}
 										</span>
 									</span>
 								</a>
@@ -198,14 +210,16 @@ namespace ConversationScreen {
 	}
 }
 
-/** One conversation: the messages as bubbles, the visitor's on the end side, and the reply box. */
+/**
+ * One conversation: the messages as bubbles, the visitor's on the end side, a linked post as a
+ * card that opens it, and the reply box, keyed on the messages and the shared post so a send
+ * redraws it empty.
+ */
 export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 	return () => {
 		let { conversation, now, person, share, state } = handle.props;
 		let messages = messagesWith(conversation, state);
-		let draft = share
-			? `${share.person.name}: “${share.text.slice(0, 120)}” ${href(`post/${share.id}`)}`
-			: "";
+		let draft = share ? href(`post/${share.id}`) : "";
 		return (
 			<ChorusColumn
 				current="messages"
@@ -229,6 +243,22 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 				>
 					{messages.map((message, index) => {
 						let mine = message.from === ME.handle;
+						let linked = postLinks(message.text);
+						let posts = linked.ids.flatMap((id) => postById(id, state) ?? []);
+						let sender = (
+							<span
+								mix={[
+									raw({
+										position: "absolute",
+										inlineSize: "1px",
+										overflow: "hidden",
+										clipPath: "inset(50%)",
+									}),
+								]}
+							>
+								{mine ? "You" : person.name}:{" "}
+							</span>
+						);
 						return (
 							<li
 								id={index === messages.length - 1 ? "latest" : undefined}
@@ -243,41 +273,38 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 									when("&[data-mine]", raw({ justifyItems: "end" })),
 								]}
 							>
-								<p
-									mix={[
-										raw({
-											margin: "0",
-											maxInlineSize: "min(80%, 26rem)",
-											padding: "0.625rem 0.875rem",
-											borderRadius: "1.25rem 1.25rem 1.25rem 0.375rem",
-											backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-											lineHeight: "1.4",
-											overflowWrap: "anywhere",
-										}),
-										when(
-											"[data-mine] > &",
-											raw({
-												borderRadius: "1.25rem 1.25rem 0.375rem 1.25rem",
-												backgroundColor: "var(--ui-brand-bg-solid)",
-												color: "white",
-											}),
-										),
-									]}
-								>
-									<span
+								{linked.text === "" ? sender : null}
+								{linked.text === "" ? null : (
+									<p
 										mix={[
 											raw({
-												position: "absolute",
-												inlineSize: "1px",
-												overflow: "hidden",
-												clipPath: "inset(50%)",
+												margin: "0",
+												maxInlineSize: "min(80%, 26rem)",
+												padding: "0.625rem 0.875rem",
+												borderRadius: "1.25rem 1.25rem 1.25rem 0.375rem",
+												backgroundColor: "var(--ui-neutral-bg-tint-hover)",
+												lineHeight: "1.4",
+												overflowWrap: "anywhere",
 											}),
+											when(
+												"[data-mine] > &",
+												raw({
+													borderRadius: "1.25rem 1.25rem 0.375rem 1.25rem",
+													backgroundColor: "var(--ui-brand-bg-solid)",
+													color: "white",
+												}),
+											),
 										]}
 									>
-										{mine ? "You" : person.name}:{" "}
+										{sender}
+										{linked.text}
+									</p>
+								)}
+								{posts.map((post) => (
+									<span mix={[raw({ inlineSize: "min(80%, 26rem)" })]}>
+										<QuotedPost quoted={post} now={now} />
 									</span>
-									{message.text}
-								</p>
+								))}
 								<time
 									datetime={message.at}
 									title={fullDate(message.at)}
@@ -292,6 +319,7 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 				<form
 					method="post"
 					action={actionHref(`messages/${person.handle}`)}
+					data-rmx-key={`reply-${messages.length}-${share?.id ?? ""}`}
 					mix={[
 						raw({
 							position: "sticky",

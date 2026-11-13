@@ -17,6 +17,7 @@ import {
 	NOW,
 	POSTS,
 	findPerson,
+	postLinks,
 } from "~/resources/views/demo-apps/chorus/data";
 
 /** Every Chorus cookie starts with this, which is how a request is known to be personal. */
@@ -370,8 +371,8 @@ export function followingCount(state: VisitorState): number {
 }
 
 /**
- * The visitor's view of a post: their toggles applied to its flags and counts, and the
- * replies they wrote to it counted.
+ * The visitor's view of a post: their toggles applied to its flags and counts, the replies
+ * they wrote to it counted, and a link to another post turned into a quote of it.
  *
  * @param post The post.
  * @param state The visitor's state.
@@ -383,8 +384,11 @@ export function viewPost(post: Post, state: VisitorState): PostView {
 	let saved = isOn(state, "save", post.id, post.saved ?? false);
 	let voted = state.votes.get(post.id) ?? post.voted;
 	let replies = state.posts.filter((entry) => entry.replyTo === post.id).length;
+	let linked = post.quote ? undefined : postLinks(post.text);
+	let quoted = linked?.ids.find((id) => id !== post.id && lookupPost(id, state) !== undefined);
 	return {
 		...post,
+		...(linked && quoted ? { text: linked.text, quote: quoted } : {}),
 		liked,
 		reposted,
 		saved,

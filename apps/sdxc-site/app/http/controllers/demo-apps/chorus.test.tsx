@@ -394,6 +394,37 @@ describe("Chorus timeline and screens", () => {
 		expect(await page("messages", cookie)).toContain("You: Sending it Monday");
 	});
 
+	test("a message that links a post shows the post as a card that opens it", async () => {
+		let share = await page("messages/kofibuilds?share=p-leonids");
+		let response = await post("messages/kofibuilds", {
+			text: `https://sdxc.dev${href("post/p-leonids")}`,
+		});
+		let cookie = cookiesFrom(response);
+		let thread = await page("messages/kofibuilds", cookie);
+		let list = await page("messages", cookie);
+
+		expect(share).toContain(`>${href("post/p-leonids")}</textarea>`);
+		expect(thread).toContain('aria-label="Quoted post by Mei Lin"');
+		expect(thread).toContain(`href="${href("post/p-leonids")}"`);
+		expect(thread).not.toContain(`sdxc.dev${href("post/p-leonids")}`);
+		expect(list).toContain("You: Sent a post");
+	});
+
+	test("a post that links another shows it quoted, and a link to nothing stays text", async () => {
+		let cookie = cookiesFrom(
+			await post("", { intent: "compose", text: `Look at this ${href("post/p-book")}` }),
+		);
+		cookie = cookiesFrom(
+			await post("", { intent: "compose", text: `Gone ${href("post/p-nope")}` }, cookie),
+			cookie,
+		);
+		let body = await page("", cookie);
+
+		expect(body).toContain('aria-label="Quoted post by Elif Kaya"');
+		expect(body).not.toContain(`Look at this ${href("post/p-book")}`);
+		expect(body).toContain(href("post/p-nope"));
+	});
+
 	test("the rail's frames answer, and an unknown part does not", async () => {
 		let trends = await fetchApp(frame("rail/trends"));
 		let follow = await fetchApp(frame("rail/follow"));

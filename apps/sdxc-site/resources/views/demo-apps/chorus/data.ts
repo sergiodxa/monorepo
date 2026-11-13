@@ -30,6 +30,28 @@ export function pollFrame(id: string): string {
 	return `${POLL_FRAME_PREFIX}${id}`;
 }
 
+/** A link to a Chorus post, with or without its origin, capturing the post's id. */
+const POST_LINK = new RegExp(String.raw`(?:https?://[^\s/]+)?${href("post")}/([\w-]+)`, "g");
+
+/**
+ * The Chorus posts a text links to, and the text without those links, so a post or a message
+ * can show each linked post as a card instead of its address.
+ *
+ * @param text The text as written.
+ * @returns The linked post ids in order, and the text with the links removed and trimmed.
+ */
+export function postLinks(text: string): { text: string; ids: string[] } {
+	let ids = [...text.matchAll(POST_LINK)].map((match) => match[1]!);
+	if (ids.length === 0) return { text, ids };
+	return {
+		text: text
+			.replace(POST_LINK, "")
+			.replace(/[ \t]+\n/g, "\n")
+			.trim(),
+		ids,
+	};
+}
+
 /** The moment fixture times read against, so "2h" never drifts. */
 export const NOW = "2026-11-12T15:00:00Z";
 
