@@ -16,6 +16,7 @@ import { bg, borderEdge, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor, mergeMix, raw } from "@sdxc/u/general";
 import { center, flexWrap, hstack, shrink, vstack } from "@sdxc/u/layout";
+import { motionSafe } from "@sdxc/u/responsive";
 import { bs, is, minIs, p, pb, pi } from "@sdxc/u/size";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { font, tabularNums, text, weight } from "@sdxc/u/typography";
@@ -539,7 +540,8 @@ Diff.File = function DiffFile(handle: Handle<Diff.FileProps>) {
 							mix={[
 								shrink(0),
 								fg("neutral.muted"),
-								raw({ rotate: "-90deg", transition: "rotate 150ms ease" }),
+								raw({ rotate: "-90deg" }),
+								motionSafe(raw({ transition: "rotate 150ms ease" })),
 								when(":is(details[open] > summary) > &", raw({ rotate: "0deg" })),
 							]}
 						/>

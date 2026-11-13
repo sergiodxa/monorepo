@@ -25,6 +25,7 @@ import {
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg, outline } from "@sdxc/u/color";
 import { mergeMix, raw } from "@sdxc/u/general";
+import { motionSafe } from "@sdxc/u/responsive";
 import { data, focusVisible, hover, when } from "@sdxc/u/state";
 import { font, tabularNums, text, weight } from "@sdxc/u/typography";
 import { attrs, clientEntry } from "remix/component";
@@ -430,7 +431,8 @@ function LogStep(handle: Handle<LogStepProps>) {
 						aria-hidden="true"
 						data-slot="log-step-chevron"
 						mix={[
-							raw({ flexShrink: "0", transition: "transform 150ms ease" }),
+							raw({ flexShrink: "0" }),
+							motionSafe(raw({ transition: "transform 150ms ease" })),
 							fg("neutral.muted"),
 						]}
 					/>

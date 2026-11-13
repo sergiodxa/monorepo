@@ -12,8 +12,8 @@ import type { RenderResult } from "remix/component/test";
 
 import { diffLines } from "@sdxc/diff";
 import { render } from "remix/component/test";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { afterEach, beforeEach, describe, expect, onTestFinished, test } from "vitest";
+import { cdp, page, userEvent } from "vitest/browser";
 
 import { ReviewThread } from "./review-thread.js";
 
@@ -166,6 +166,19 @@ describe("ReviewThread open", () => {
 });
 
 describe("ReviewThread folded", () => {
+	test("turns its chevron without motion under reduced motion", async () => {
+		await cdp().send("Emulation.setEmulatedMedia", {
+			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+		});
+		onTestFinished(() => cdp().send("Emulation.setEmulatedMedia", { features: [] }));
+		let root = mount({
+			resolved: true,
+			resolvedSummary: "ana marked this conversation as resolved",
+		});
+		let chevron = root.querySelector<SVGElement>("summary svg")!;
+		expect(getComputedStyle(chevron).transitionDuration).toBe("0s");
+	});
+
 	test("folds a resolved thread to one line that opens on a click, offering Unresolve", async () => {
 		let root = mount({
 			resolved: true,

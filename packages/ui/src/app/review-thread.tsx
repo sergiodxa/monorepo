@@ -15,6 +15,7 @@ import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor, mergeMix, raw } from "@sdxc/u/general";
 import { flexWrap, hstack, shrink, vstack } from "@sdxc/u/layout";
+import { motionSafe } from "@sdxc/u/responsive";
 import { minIs, p, pb, pi } from "@sdxc/u/size";
 import { focusVisible, when } from "@sdxc/u/state";
 import { font, text, weight } from "@sdxc/u/typography";
@@ -325,7 +326,8 @@ export function ReviewThread(handle: Handle<ReviewThread.Props>) {
 								aria-hidden="true"
 								mix={[
 									shrink(0),
-									raw({ rotate: "-90deg", transition: "rotate 150ms ease" }),
+									raw({ rotate: "-90deg" }),
+									motionSafe(raw({ transition: "rotate 150ms ease" })),
 									when(":is(details[open] > summary) > &", raw({ rotate: "0deg" })),
 								]}
 							/>

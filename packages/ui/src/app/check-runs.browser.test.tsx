@@ -131,6 +131,15 @@ afterEach(async () => {
 });
 
 describe("CheckRuns", () => {
+	test("turns its chevron without motion under reduced motion", async () => {
+		await cdp().send("Emulation.setEmulatedMedia", {
+			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+		});
+		let host = mount(<CheckRuns runs={RUNS} labels={LABELS} />);
+		let chevron = host.querySelector<SVGElement>("summary > svg:last-child")!;
+		expect(getComputedStyle(chevron).transitionDuration).toBe("0s");
+	});
+
 	test("counts the runs by state in one sentence, joined in the locale", () => {
 		let host = mount(<CheckRuns runs={RUNS} labels={LABELS} locale="en-GB" />);
 		let summary = host.querySelector("summary")!;

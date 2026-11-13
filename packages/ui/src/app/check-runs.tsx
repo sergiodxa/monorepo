@@ -220,7 +220,7 @@ export function CheckRuns(handle: Handle<CheckRuns.Props>) {
 							mix={[
 								shrink(0),
 								fg("neutral.muted"),
-								raw({ transition: "rotate 150ms ease" }),
+								motionSafe(raw({ transition: "rotate 150ms ease" })),
 								when(":is(details[open] > summary) > &", raw({ rotate: "180deg" })),
 							]}
 						/>

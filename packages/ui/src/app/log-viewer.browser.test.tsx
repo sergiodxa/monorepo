@@ -13,8 +13,17 @@ import type { RenderResult } from "remix/component/test";
 import { http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";
 import { render } from "remix/component/test";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	onTestFinished,
+	test,
+} from "vitest";
+import { cdp, page, userEvent } from "vitest/browser";
 
 import type { LogLine } from "./utils/log-lines.js";
 
@@ -185,6 +194,16 @@ function nodesPerLine(scope: Element): number {
 }
 
 describe("LogViewer", () => {
+	test("turns a step's chevron without motion under reduced motion", async () => {
+		await cdp().send("Emulation.setEmulatedMedia", {
+			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+		});
+		onTestFinished(() => cdp().send("Emulation.setEmulatedMedia", { features: [] }));
+		let root = await mount({ steps: bigJob() });
+		let chevron = root.querySelector<SVGElement>('[data-slot="log-step-chevron"]')!;
+		expect(getComputedStyle(chevron).transitionDuration).toBe("0s");
+	});
+
 	test("draws every character as typed, with no ligatures", async () => {
 		let root = await mount({ steps: bigJob() });
 		let body = root.querySelector<HTMLElement>('[data-slot="log-viewer-body"]')!;

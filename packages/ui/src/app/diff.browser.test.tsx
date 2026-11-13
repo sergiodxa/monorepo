@@ -12,8 +12,8 @@ import type { RenderResult } from "remix/component/test";
 
 import { diffLines } from "@sdxc/diff";
 import { render } from "remix/component/test";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { afterEach, beforeEach, describe, expect, onTestFinished, test } from "vitest";
+import { cdp, page, userEvent } from "vitest/browser";
 
 import { DIFF_COMMENT_EVENT, Diff } from "./diff.js";
 
@@ -302,6 +302,16 @@ describe("Diff toolbar", () => {
 });
 
 describe("Diff file card", () => {
+	test("turns its chevron without motion under reduced motion", async () => {
+		await cdp().send("Emulation.setEmulatedMedia", {
+			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+		});
+		onTestFinished(() => cdp().send("Emulation.setEmulatedMedia", { features: [] }));
+		let card = mount();
+		let chevron = card.querySelector<SVGElement>("summary svg")!;
+		expect(getComputedStyle(chevron).transitionDuration).toBe("0s");
+	});
+
 	test("reaches the header's actions by Tab before the file's lines, and draws them on top", () => {
 		let card = mount();
 		let actions = card.querySelector<HTMLElement>('[data-slot="diff-file-actions"]')!;
