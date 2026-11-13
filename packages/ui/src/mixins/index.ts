@@ -31,6 +31,7 @@ export * from "./keymap.js";
 export * from "./listbox-keys.js";
 export * from "./live-frame.js";
 export * from "./long-press.js";
+export * from "./media-sync.js";
 export * from "./menu-keys.js";
 export * from "./mirror-selected-option.js";
 export * from "./otp-slots.js";

@@ -11,11 +11,29 @@ import type { ElementProps, MixinFactory } from "remix/component";
 
 import { createMixin } from "remix/component";
 
+import { installMediaSync, markPlaying } from "../../mixins/media-sync.js";
 import { installMenuKeys } from "../../mixins/menu-keys.js";
-import { SEEK_SLACK, formatVideoTime, playedShare } from "../utils/timeline.js";
+import { formatVideoTime, playedShare } from "../utils/timeline.js";
 
 /** Items the top level of a settings menu walks: its rows, and none inside a submenu. */
 const MENU_ITEMS = '[data-video-item]:not([data-slot="video-player-submenu-panel"] *)';
+
+/** The playing-order lists a video player marks: its chapter links and transcript lines. */
+const MARKS = ['[data-slot="video-player-chapters"] a', '[data-slot="video-player-cue"]'];
+
+/**
+ * Fills each scrubber segment to its played share at `time`, and scrolls a newly current
+ * transcript line into view inside the transcript alone.
+ */
+function paintTimeline(root: HTMLElement, time: number, changed: readonly HTMLElement[]): void {
+	for (let bar of root.querySelectorAll<HTMLElement>('[data-slot="video-player-segment"]')) {
+		let share = playedShare(Number(bar.dataset.start), Number(bar.dataset.end), time);
+		bar.style.setProperty("--ui-video-player-played", `${share * 100}%`);
+	}
+	let line = changed.find((item) => item.dataset.slot === "video-player-cue");
+	let region = root.querySelector<HTMLElement>('[data-slot="video-player-transcript"]');
+	if (line && region) region.scrollTop = line.offsetTop - region.clientHeight / 3;
+}
 
 /**
  * Brings a player's marks to `time`: the chapter link and transcript line playing then
@@ -26,36 +44,10 @@ const MENU_ITEMS = '[data-video-item]:not([data-slot="video-player-submenu-panel
  * @param time The video's current time in seconds.
  */
 export function syncVideo(root: HTMLElement, time: number): void {
-	mark(root.querySelectorAll<HTMLElement>('[data-slot="video-player-chapters"] a'), time);
-	let line = mark(root.querySelectorAll<HTMLElement>('[data-slot="video-player-cue"]'), time);
-	for (let bar of root.querySelectorAll<HTMLElement>('[data-slot="video-player-segment"]')) {
-		let share = playedShare(Number(bar.dataset.start), Number(bar.dataset.end), time);
-		bar.style.setProperty("--ui-video-player-played", `${share * 100}%`);
-	}
-	let region = root.querySelector<HTMLElement>('[data-slot="video-player-transcript"]');
-	if (line && region) region.scrollTop = line.offsetTop - region.clientHeight / 3;
-}
-
-/**
- * Sets `aria-current` on the last element of a playing-order list that has started.
- *
- * @returns The element that newly became current, or `undefined` when none changed.
- */
-function mark(items: NodeListOf<HTMLElement>, time: number): HTMLElement | undefined {
-	let current: HTMLElement | undefined;
-	for (let item of items) {
-		if (Number(item.dataset.start ?? item.dataset.cue) <= time + SEEK_SLACK) current = item;
-	}
-	let changed: HTMLElement | undefined;
-	for (let item of items) {
-		let isCurrent = item === current;
-		if (isCurrent === item.hasAttribute("aria-current")) continue;
-		if (isCurrent) {
-			item.setAttribute("aria-current", "true");
-			changed = item;
-		} else item.removeAttribute("aria-current");
-	}
-	return changed;
+	let changed = MARKS.map((selector) =>
+		markPlaying(root.querySelectorAll<HTMLElement>(selector), time),
+	).filter((item) => item !== undefined);
+	paintTimeline(root, time, changed);
 }
 
 /**
@@ -413,21 +405,10 @@ class VideoControls {
  * video, and a control bar, when the player has one, replaces the native controls.
  */
 function wirePlayer(root: HTMLElement, video: HTMLVideoElement, signal: AbortSignal): void {
-	root.addEventListener(
-		"click",
-		(click) => {
-			if (click.defaultPrevented || click.button !== 0) return;
-			if (click.metaKey || click.ctrlKey || click.shiftKey || click.altKey) return;
-			let link = (click.target as Element | null)?.closest<HTMLElement>("a[data-start]");
-			if (!link) return;
-			click.preventDefault();
-			video.currentTime = Number(link.dataset.start);
-			void video.play().catch(() => undefined);
-			syncVideo(root, video.currentTime);
-		},
-		{ signal },
-	);
-	video.addEventListener("timeupdate", () => syncVideo(root, video.currentTime), { signal });
+	installMediaSync(root, video, signal, {
+		marks: MARKS,
+		onTime: (time, changed) => paintTimeline(root, time, changed),
+	});
 	let bar = root.querySelector<HTMLElement>('[data-slot="video-player-controls"]');
 	if (bar) new VideoControls(root, video, signal).install(bar);
 }

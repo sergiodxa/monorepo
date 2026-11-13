@@ -208,6 +208,15 @@ describe("VideoPlayer", () => {
 		expect(chapterLinks(root).filter((link) => link.hasAttribute("aria-current"))).toHaveLength(1);
 	});
 
+	test("a modified click on a time link still opens the file", () => {
+		let root = mount(1024);
+		let link = chapterLinks(root)[1]!;
+		let click = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey: true });
+		link.dispatchEvent(click);
+		expect(click.defaultPrevented).toBe(false);
+		expect(link.hasAttribute("aria-current")).toBe(false);
+	});
+
 	test("as the video plays, the scrubber fills and the started line is current", () => {
 		let root = mount(1024);
 		let video = get<HTMLVideoElement>(root, "video");
