@@ -15,7 +15,6 @@ import { LinkButton } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 import { countCharacters } from "@sdxc/ui/character-count";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { Frame } from "remix/component";
 
 import type {
 	DemoApp,
@@ -29,10 +28,9 @@ import type { ProfileTab } from "~/resources/views/demo-apps/chorus/profile";
 import type { Destination } from "~/resources/views/demo-apps/chorus/shell";
 import type { ToggleKind, VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
-import { DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
+import { DEMO_APP_TOAST_PARAM, readToastParam } from "~/resources/views/demo-apps";
 import {
 	ARRIVALS,
-	COLUMN_FRAME,
 	CONVERSATIONS,
 	EVERYONE,
 	FOR_YOU,
@@ -67,6 +65,12 @@ import {
 	voteCookie,
 } from "~/resources/views/demo-apps/chorus/state";
 import { ChorusThumbnail } from "~/resources/views/demo-apps/chorus/thumbnail";
+import {
+	MAIN_FRAME,
+	MainFrame,
+	MainScreen,
+	mainSource,
+} from "~/resources/views/demo-apps/main-frame";
 
 /** Coral at hue 32: warm and loud enough for a Post button, its 600 step dark enough for white text. */
 const BRAND = [
@@ -187,28 +191,33 @@ function destinationOf(page: string): Destination {
 }
 
 /**
- * The app around a page's column, marking the page's destination; Explore drops the rail's
- * search box for its own.
+ * The app around a page's column, marking the page's destination on first paint.
  *
  * @param page The page path.
- * @param column The column: its frame on a page load, or drawn in place for a refused post.
+ * @param column The column: the `main` frame on a page load, or drawn in place for a refused post.
  */
 function inShell(page: string, column: RemixNode): RemixNode {
-	return (
-		<ChorusShell current={destinationOf(page)} railSearch={!page.startsWith("explore")}>
-			{column}
-		</ChorusShell>
-	);
+	return <ChorusShell current={destinationOf(page)}>{column}</ChorusShell>;
 }
 
 /**
- * The address a page's frames load from: the page's own, without its one-time toast, so a
- * frame caches with the page and a reload of the column never repeats the toast.
+ * A screen's column as the `main` frame answers it, with the title, nav item and address the
+ * shell takes up after a swap, and the toast the post that led here named.
  */
-function frameSource(url: URL): string {
-	let source = new URL(url);
-	source.searchParams.delete(DEMO_APP_TOAST_PARAM);
-	return `${source.pathname}${source.search}`;
+function inMain(request: DemoAppRequest, screen: DemoAppScreen): RemixNode {
+	let param = request.url.searchParams.get(DEMO_APP_TOAST_PARAM);
+	let key = param === null ? null : readToastParam(param).key;
+	let toast = key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined;
+	return (
+		<MainScreen
+			title={screen.title}
+			nav={destinationOf(request.page)}
+			url={request.url}
+			toast={toast}
+		>
+			{screen.body}
+		</MainScreen>
+	);
 }
 
 /**
@@ -353,12 +362,12 @@ function framePart(part: string, request: DemoAppRequest): RemixNode | null {
 }
 
 /**
- * Answers a named frame on a page: the page's column, or one post's poll. Any other name
+ * Answers a named frame on a page: the page's column as `main`, or one post's poll. Any other name
  * answers `null`, and the request gets the whole page.
  */
 function targetPart(name: string, request: DemoAppRequest): RemixNode | null {
 	let state = readState(request.cookie);
-	if (name === COLUMN_FRAME) return (route(request, state) ?? notFound()).body;
+	if (name === MAIN_FRAME) return inMain(request, route(request, state) ?? notFound());
 	if (name.startsWith(POLL_FRAME_PREFIX)) {
 		let post = postById(name.slice(POLL_FRAME_PREFIX.length), state);
 		if (!post?.poll) return null;
@@ -432,7 +441,7 @@ function submitCompose(
 		return {
 			...screen,
 			body: inShell(request.page, screen.body),
-			frames: { [COLUMN_FRAME]: screen.body },
+			frames: { [MAIN_FRAME]: inMain(request, screen) },
 			status: 400,
 		};
 	}
@@ -494,7 +503,7 @@ export default {
 		let screen = route(request, readState(request.cookie)) ?? notFound();
 		return {
 			...screen,
-			body: inShell(request.page, <Frame name={COLUMN_FRAME} src={frameSource(request.url)} />),
+			body: inShell(request.page, <MainFrame src={mainSource(request.url)} />),
 		};
 	},
 	submit(page, form, request) {

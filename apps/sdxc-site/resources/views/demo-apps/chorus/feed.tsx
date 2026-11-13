@@ -17,7 +17,7 @@ import { when } from "@sdxc/u/state";
 import type { Person } from "~/resources/views/demo-apps/chorus/data";
 import type { PostView, VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
-import { COLUMN_FRAME, POSTS, findPerson } from "~/resources/views/demo-apps/chorus/data";
+import { POSTS, findPerson } from "~/resources/views/demo-apps/chorus/data";
 import { FeedKeys } from "~/resources/views/demo-apps/chorus/feed-keys";
 import { PostCard } from "~/resources/views/demo-apps/chorus/post";
 import { lookupPost, viewPost } from "~/resources/views/demo-apps/chorus/state";
@@ -117,8 +117,6 @@ namespace TitleBar {
 		subtitle?: string;
 		/** Where the back arrow leads; no arrow when omitted. */
 		back?: string;
-		/** Loads the back arrow's page into the column's frame, for a page on the same destination. */
-		backInColumn?: boolean;
 		/** Controls at the row's end. */
 		actions?: RemixNode;
 	}
@@ -127,7 +125,7 @@ namespace TitleBar {
 /** The column's title row: an optional back arrow, the screen's `h1` and a quiet second line. */
 export function TitleBar(handle: Handle<TitleBar.Props>) {
 	return () => {
-		let { actions, back, backInColumn, subtitle, title } = handle.props;
+		let { actions, back, subtitle, title } = handle.props;
 		return (
 			<div
 				mix={[
@@ -144,7 +142,6 @@ export function TitleBar(handle: Handle<TitleBar.Props>) {
 					<a
 						href={back}
 						aria-label="Back"
-						data-rmx-target={backInColumn ? COLUMN_FRAME : undefined}
 						data-rmx-prefetch="intent"
 						mix={[
 							raw({
@@ -205,18 +202,16 @@ namespace FeedTabs {
 		/** The landmark's name, such as "Timelines". */
 		label: string;
 		tabs: Array<{ label: string; href: string; current: boolean }>;
-		/** Keeps the page where it is, for tabs that sit below a profile's header. */
-		keepScroll?: boolean;
 	}
 }
 
 /**
- * Equal-width tabs that are links, each its own address, loading into the column's frame so
- * the nav and rail stay put; the current one wears a short brand bar under its label.
+ * Equal-width tabs that are links, each its own address, so a tab is a screen to send and
+ * Back returns to the last one; the current one wears a short brand bar under its label.
  */
 export function FeedTabs(handle: Handle<FeedTabs.Props>) {
 	return () => {
-		let { keepScroll, label, tabs } = handle.props;
+		let { label, tabs } = handle.props;
 		return (
 			<nav aria-label={label}>
 				<ul
@@ -236,8 +231,6 @@ export function FeedTabs(handle: Handle<FeedTabs.Props>) {
 							<a
 								href={tab.href}
 								aria-current={tab.current ? "page" : undefined}
-								data-rmx-target={COLUMN_FRAME}
-								data-rmx-reset-scroll={keepScroll ? "manual" : undefined}
 								data-rmx-prefetch="intent"
 								mix={[
 									raw({

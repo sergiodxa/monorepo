@@ -19,13 +19,7 @@ import { Skeleton } from "@sdxc/ui/app/skeleton";
 import type { Person } from "~/resources/views/demo-apps/chorus/data";
 import type { VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
-import {
-	COLUMN_FRAME,
-	PEOPLE,
-	TRENDS,
-	actionHref,
-	href,
-} from "~/resources/views/demo-apps/chorus/data";
+import { PEOPLE, TRENDS, actionHref, href } from "~/resources/views/demo-apps/chorus/data";
 import { PersonAvatar, compact } from "~/resources/views/demo-apps/chorus/parts";
 import { follows } from "~/resources/views/demo-apps/chorus/state";
 
@@ -45,20 +39,13 @@ function Text(handle: Handle<{ ghost?: boolean; children: RemixNode }>) {
 		);
 }
 
-/**
- * The search box: a GET form to Explore, so a search is an address to send. On Explore it
- * loads the results into the column's frame and keeps the field focused.
- */
-export function SearchBox(
-	handle: Handle<{ query?: string; autofocus?: boolean; inColumn?: boolean }>,
-) {
+/** The search box: a GET form to Explore, so a search is an address to send. */
+export function SearchBox(handle: Handle<{ query?: string; autofocus?: boolean }>) {
 	return () => (
 		<search>
 			<form
 				method="get"
 				action={href("explore")}
-				data-rmx-target={handle.props.inColumn ? COLUMN_FRAME : undefined}
-				data-rmx-reset-focus={handle.props.inColumn ? "manual" : undefined}
 				mix={[
 					raw({
 						position: "relative",
@@ -267,9 +254,28 @@ export function FollowButton(handle: Handle<FollowButton.Props>) {
 					pressed: `Unfollow ${person.name}`,
 					failed: "Couldn't follow",
 				}}
-				pressedContent="Following"
-				unpressedContent="Follow"
+				pressedContent={<FollowLabel shown="Following" />}
+				unpressedContent={<FollowLabel shown="Follow" />}
 			/>
+		);
+	};
+}
+
+/**
+ * One of the follow pill's labels, laid over the other one kept invisible, so the pill is as
+ * wide in both states and pressing it never reflows the row around it.
+ */
+function FollowLabel(handle: Handle<{ shown: "Follow" | "Following" }>) {
+	return () => {
+		let { shown } = handle.props;
+		let other = shown === "Follow" ? "Following" : "Follow";
+		return (
+			<span mix={[raw({ display: "inline-grid", "& > *": { gridArea: "1 / 1" } })]}>
+				<span>{shown}</span>
+				<span aria-hidden="true" mix={[raw({ visibility: "hidden" })]}>
+					{other}
+				</span>
+			</span>
 		);
 	};
 }

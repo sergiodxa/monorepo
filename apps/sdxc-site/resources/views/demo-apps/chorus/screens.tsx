@@ -114,7 +114,6 @@ export function PostScreen(handle: Handle<PostScreen.Props>) {
 					<ChorusComposer
 						id="reply"
 						from={page}
-						inColumn
 						revision={state.posts.length}
 						placeholder={`Reply to ${post.person.name}`}
 						submit="Reply"

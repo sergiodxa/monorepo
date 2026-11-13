@@ -13,19 +13,22 @@ import { raw } from "@sdxc/u/general";
 import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
 import { CharacterCount } from "@sdxc/ui/character-count";
 import { themeScope } from "@sdxc/ui/styles";
+import { http, HttpResponse } from "msw";
+import { setupWorker } from "msw/browser";
 import { renderToStream } from "remix/component/server";
 import { render } from "remix/component/test";
-import { afterAll, describe, expect, onTestFinished, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import { page } from "vitest/browser";
 
 import { blockSize } from "~/app/test/frame-size";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import chorus from "~/resources/views/demo-apps/chorus";
 import { CopyLink } from "~/resources/views/demo-apps/chorus/copy-link";
-import { COLUMN_FRAME, href, pollFrame } from "~/resources/views/demo-apps/chorus/data";
+import { href, pollFrame } from "~/resources/views/demo-apps/chorus/data";
 import { FeedKeys } from "~/resources/views/demo-apps/chorus/feed-keys";
 import { FollowCard, TrendsCard } from "~/resources/views/demo-apps/chorus/rail";
 import { readState } from "~/resources/views/demo-apps/chorus/state";
+import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
 
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
@@ -135,9 +138,46 @@ function mountedFrame(name: string): FrameHandle {
 	return frame!;
 }
 
+/**
+ * The server a toggle posts to in the background: every post answers `204`, as the app's
+ * action does for a request carrying `X-Optimistic-Toggle`, and is kept for the test to read.
+ */
+const WORKER = setupWorker(
+	http.post(/\/demo\/apps\/chorus\//, ({ request }) => {
+		posted.push({
+			url: new URL(request.url).pathname,
+			toggle: request.headers.has("x-optimistic-toggle"),
+		});
+		return new HttpResponse(null, { status: 204 });
+	}),
+);
+
+/** Every background post the toggles sent, oldest first. */
+let posted: Array<{ url: string; toggle: boolean }> = [];
+
+beforeAll(async () => {
+	await WORKER.start({ quiet: true, onUnhandledRequest: "bypass" });
+});
+
 afterAll(async () => {
+	WORKER.stop();
 	await page.viewport(414, 896);
 });
+
+/**
+ * Records whether each submit on the page was taken over by script, and stops any that was
+ * not, so a form that would load a document fails the test instead of leaving it.
+ */
+function watchSubmits(): Array<{ form: HTMLFormElement; handled: boolean }> {
+	let submits: Array<{ form: HTMLFormElement; handled: boolean }> = [];
+	let watch = (event: Event) => {
+		submits.push({ form: event.target as HTMLFormElement, handled: event.defaultPrevented });
+		event.preventDefault();
+	};
+	window.addEventListener("submit", watch);
+	onTestFinished(() => window.removeEventListener("submit", watch));
+	return submits;
+}
 
 describe("Chorus rail cards keep their placeholder's size", () => {
 	describe.each(RAIL_WIDTHS)("at %ipx", (width) => {
@@ -269,31 +309,33 @@ describe("Chorus's Copy link", () => {
 	});
 });
 
-describe("Chorus's frame targets", () => {
-	test.each(["", "u/noorhaddad", "notifications", "explore", "messages", "messages/kofibuilds"])(
-		"every link and form aimed at a frame on %j reloads that frame alone",
+describe("Chorus keeps its shell across screens", () => {
+	test.each(["", "explore", "notifications", "messages", "u/noorhaddad", "post/p-leonids"])(
+		"links in the column on %j load into main and leave the nav and rail as they are",
 		async (screen) => {
 			await page.viewport(1280, 860);
 			let root = await mountScreen(screen);
-			let nav = root.querySelector('[data-slot="chorus"] > header');
-			let aimed = [...root.querySelectorAll<HTMLElement>("[data-rmx-target]")];
-			expect(aimed.length).toBeGreaterThan(0);
+			let nav = root.querySelector('[data-slot="chorus"] > header')!;
+			let rail = root.querySelector('[data-slot="chorus"] > aside')!;
+			Object.assign(nav, { marker: screen });
+			let addresses = [
+				...new Set(
+					[...root.querySelectorAll<HTMLAnchorElement>("#chorus-main a[href^='/demo/apps/chorus']")]
+						.map((link) => link.getAttribute("href")!)
+						.filter((address) => !address.includes("#")),
+				),
+			].slice(0, 5);
+			expect(addresses.length).toBeGreaterThan(0);
 
-			let seen = new Set<string>();
-			for (let element of aimed) {
-				let target = element.dataset.rmxTarget!;
-				let frame = mountedFrame(target);
-				let src = element.getAttribute("href") ?? element.getAttribute("action")!;
-				if (element instanceof HTMLFormElement && element.method === "get") continue;
-				if (element instanceof HTMLFormElement || seen.has(`${target} ${src}`)) continue;
-				seen.add(`${target} ${src}`);
-
+			for (let src of addresses) {
 				requests = [];
-				await frame.reload({ src });
+				await mountedFrame(MAIN_FRAME).reload({ src });
 
-				expect(requests, src).toEqual([{ src, target }]);
-				expect(nav?.isConnected, src).toBe(true);
+				expect(requests, src).toEqual([{ src, target: MAIN_FRAME }]);
 				expect(root.querySelector('[data-slot="chorus"] > header'), src).toBe(nav);
+				expect(Reflect.get(nav, "marker"), src).toBe(screen);
+				expect(root.querySelector('[data-slot="chorus"] > aside'), src).toBe(rail);
+				expect(root.querySelector("[data-main-screen]")?.getAttribute("data-url"), src).toBe(src);
 			}
 		},
 	);
@@ -307,7 +349,7 @@ describe("Chorus's frame targets", () => {
 			'nav[aria-label="Timelines"] a[href$="feed=following"]',
 		)!;
 
-		await mountedFrame(COLUMN_FRAME).reload({ src: following.getAttribute("href")! });
+		await mountedFrame(MAIN_FRAME).reload({ src: following.getAttribute("href")! });
 
 		expect(root.querySelector("h1")?.textContent).toBe("Home: Following");
 		expect(
@@ -317,23 +359,81 @@ describe("Chorus's frame targets", () => {
 		expect(root.querySelector('[data-slot="chorus"] > aside')).toBe(rail);
 	});
 
-	test("a vote is aimed at its own poll, so the posts around it stay the same nodes", async () => {
+	test("Explore in main hides the rail's search box, which returns on the next screen", async () => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("");
+		let search = () => getComputedStyle(root.querySelector("[data-rail-search]")!).display;
+		expect(search()).not.toBe("none");
+
+		await mountedFrame(MAIN_FRAME).reload({ src: href("explore") });
+		expect(search()).toBe("none");
+
+		await mountedFrame(MAIN_FRAME).reload({ src: href("notifications") });
+		expect(search()).not.toBe("none");
+	});
+});
+
+describe("Chorus's reactions never leave the page", () => {
+	test.each([
+		["", "article[data-post]"],
+		["post/p-leonids", "article"],
+		["u/meilin", "#chorus-main"],
+		["explore?tab=people", "#chorus-main"],
+		["notifications?tab=mentions", "#chorus-main"],
+	])(
+		"every like, repost, save and follow on %j posts in the background and keeps scroll and focus",
+		async (screen, within) => {
+			await page.viewport(375, 812);
+			let root = await mountScreen(screen);
+			let submits = watchSubmits();
+			let marker = Symbol("page");
+			Object.assign(window, { chorusMarker: marker });
+			let toggles = [
+				...root.querySelectorAll<HTMLButtonElement>(
+					`${within} form[data-slot="optimistic-toggle"] button[type="submit"]`,
+				),
+			].slice(0, 8);
+			expect(toggles.length).toBeGreaterThan(0);
+			window.scrollTo(0, 200);
+			await new Promise((resolve) => requestAnimationFrame(resolve));
+
+			for (let button of toggles) {
+				button.focus();
+				let y = window.scrollY;
+				let pressed = button.getAttribute("aria-pressed");
+				requests = [];
+				posted = [];
+				button.click();
+				await until(() => posted.length > 0);
+
+				expect(submits.at(-1)?.handled, button.title).toBe(true);
+				expect(posted, button.title).toEqual([{ url: expect.any(String), toggle: true }]);
+				expect(button.getAttribute("aria-pressed"), button.title).not.toBe(pressed);
+				expect(requests, button.title).toEqual([]);
+				expect(window.scrollY, button.title).toBe(y);
+				expect(document.activeElement, button.title).toBe(button);
+				expect(Reflect.get(window, "chorusMarker")).toBe(marker);
+			}
+		},
+	);
+
+	test("a vote reloads its own poll alone, keeping the post around it and the scroll", async () => {
 		await page.viewport(1280, 860);
 		let root = await mountScreen("post/p-friday-poll");
-		let form = root.querySelector<HTMLFormElement>(
-			`form[data-rmx-target="${pollFrame("p-friday-poll")}"]`,
-		)!;
+		let submits = watchSubmits();
+		let name = pollFrame("p-friday-poll");
+		let form = root.querySelector<HTMLFormElement>(`form[data-rmx-target="${name}"]`)!;
 		let article = root.querySelector("article");
-
+		window.scrollTo(0, 120);
+		let y = window.scrollY;
 		requests = [];
-		await mountedFrame(pollFrame("p-friday-poll")).reload({ src: form.getAttribute("action")! });
 
-		expect(requests).toEqual([
-			{ src: href("post/p-friday-poll"), target: pollFrame("p-friday-poll") },
-		]);
+		form.querySelector<HTMLButtonElement>("button[name='option']")!.click();
+		await until(() => requests.length > 0);
+
+		expect(submits.map((submit) => submit.handled)).toEqual([true]);
+		expect(requests).toEqual([{ src: form.action, target: name }]);
 		expect(root.querySelector("article")).toBe(article);
-		expect(
-			root.querySelector(`form[data-rmx-target="${pollFrame("p-friday-poll")}"]`),
-		).not.toBeNull();
+		expect(window.scrollY).toBe(y);
 	});
 });

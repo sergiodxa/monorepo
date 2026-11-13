@@ -30,6 +30,7 @@ import { HELP_LABELS } from "~/resources/views/demo-apps/chorus/labels";
 import { ChorusMark, PersonAvatar } from "~/resources/views/demo-apps/chorus/parts";
 import { FollowCard, SearchBox, TrendsCard } from "~/resources/views/demo-apps/chorus/rail";
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
+import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 import routes from "~/routes/web";
 
 /** The id of the keyboard help sheet. */
@@ -136,23 +137,35 @@ function LeftNav(handle: Handle<{ current: Destination }>) {
 						{DESTINATIONS.map((destination) => {
 							let Icon = destination.icon;
 							let here = destination.id === current;
-							let count = destination.id === "notifications" && !here ? UNREAD : 0;
+							let count = destination.id === "notifications" ? UNREAD : 0;
 							return (
 								<li>
 									<a
 										href={href(destination.page)}
 										aria-current={here ? "page" : undefined}
+										data-main-nav={destination.id}
 										title={destination.label}
 										data-rmx-prefetch="intent"
 										data-shortcut={destination.key}
 										data-shortcut-label={`Go to ${destination.label}`}
 										data-shortcut-group="Navigation"
-										mix={[navRow(), when("&[aria-current='page']", raw({ fontWeight: "800" }))]}
+										mix={[
+											navRow(),
+											when(
+												"&[aria-current='page']",
+												raw({
+													fontWeight: "800",
+													"& svg": { strokeWidth: "2.6" },
+													"& [data-unread]": { display: "none" },
+												}),
+											),
+										]}
 									>
 										<span mix={[raw({ position: "relative", display: "inline-flex" })]}>
-											<Icon size={26} strokeWidth={here ? 2.6 : 1.9} aria-hidden="true" />
+											<Icon size={26} strokeWidth={1.9} aria-hidden="true" />
 											{count > 0 ? (
 												<span
+													data-unread=""
 													mix={[
 														raw({
 															position: "absolute",
@@ -179,7 +192,11 @@ function LeftNav(handle: Handle<{ current: Destination }>) {
 										</span>
 										<span data-nav-label="">
 											{destination.label}
-											{count > 0 ? <span mix={[srOnly()]}>, {count} unread</span> : null}
+											{count > 0 ? (
+												<span data-unread="" mix={[srOnly()]}>
+													, {count} unread
+												</span>
+											) : null}
 										</span>
 									</a>
 								</li>
@@ -324,7 +341,12 @@ function AccountMenu() {
 				Keyboard shortcuts
 			</Menu.Item>
 			<Menu.Separator />
-			<form method="post" action={actionHref("reset")} mix={[raw({ display: "contents" })]}>
+			<form
+				method="post"
+				action={actionHref("reset")}
+				data-rmx-document=""
+				mix={[raw({ display: "contents" })]}
+			>
 				<Menu.Item type="submit">Reset the demo</Menu.Item>
 			</form>
 			<Menu.Item href={routes.demos.href()}>Sign out</Menu.Item>
@@ -332,8 +354,11 @@ function AccountMenu() {
 	);
 }
 
-/** The right rail: search, then trends and people to follow as frames over their placeholders. */
-function RightRail(handle: Handle<{ search: boolean }>) {
+/**
+ * The right rail: search, then trends and people to follow as frames over their placeholders.
+ * The search box steps aside while Explore, which has its own, is in the main frame.
+ */
+function RightRail() {
 	return () => (
 		<aside
 			aria-label="Trends and people"
@@ -349,7 +374,9 @@ function RightRail(handle: Handle<{ search: boolean }>) {
 				}),
 			]}
 		>
-			{handle.props.search ? <SearchBox /> : null}
+			<div data-rail-search="">
+				<SearchBox />
+			</div>
 			<DemoAppFrame app="chorus" part="rail/trends" fallback={<TrendsCard ghost />} />
 			<DemoAppFrame app="chorus" part="rail/follow" fallback={<FollowCard ghost />} />
 			<p
@@ -421,10 +448,9 @@ function PhoneBar() {
 
 namespace ChorusShell {
 	export interface Props {
+		/** The destination the nav marks on first paint; the sync island keeps it current after. */
 		current: Destination;
-		/** Shows the rail's search box; Explore has its own. @default true */
-		railSearch?: boolean;
-		/** The column: a `chorus-column` frame, or a column drawn in place. */
+		/** The column: the `main` frame, or a column drawn in place for a refused post. */
 		children: RemixNode;
 	}
 }
@@ -447,8 +473,8 @@ namespace ChorusColumn {
 
 /**
  * One screen's column: the phone's top bar, the sticky header, the screen, and the phone's tab
- * bar and compose button. It is the content of the `chorus-column` frame, so a tab, a thread
- * or a post swaps the column while the nav and the rail stay as they are.
+ * bar and compose button. It is the content of the `main` frame, so every screen swaps the
+ * column while the nav and the rail stay as they are.
  */
 export function ChorusColumn(handle: Handle<ChorusColumn.Props>) {
 	return () => {
@@ -551,7 +577,7 @@ export function ChorusColumn(handle: Handle<ChorusColumn.Props>) {
  */
 export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 	return () => {
-		let { children, current, railSearch = true } = handle.props;
+		let { children, current } = handle.props;
 		return (
 			<div
 				data-slot="chorus"
@@ -565,6 +591,9 @@ export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 						color: "var(--ui-neutral-fg-emphasis)",
 						fontFamily: "var(--ui-font-sans)",
 						"--chorus-hairline": "var(--ui-neutral-border)",
+						"&:has([data-main-screen][data-nav='explore']) [data-rail-search]": {
+							display: "none",
+						},
 						[`@media ${TABLET}`]: {
 							gridTemplateColumns: "4.5rem minmax(0, 37.5rem)",
 							columnGap: "0.5rem",
@@ -619,7 +648,8 @@ export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 				>
 					{children}
 				</main>
-				<RightRail search={railSearch} />
+				<RightRail />
+				<MainFrameSync root={href()} />
 				<AccountMenu />
 				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</div>

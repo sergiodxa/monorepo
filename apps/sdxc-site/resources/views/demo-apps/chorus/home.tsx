@@ -1,8 +1,7 @@
 /**
  * Chorus's home: the For you and Following timelines, a composer on top, and the "Show N new
- * posts" pill that rises while the visitor reads. The pill is plain CSS and a link into the
- * column's frame, so new posts arrive with or without script, and without motion when motion
- * is reduced.
+ * posts" pill that rises while the visitor reads. The pill is plain CSS and a link, so new
+ * posts arrive with or without script, and it appears without motion when motion is reduced.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,7 +22,6 @@ import type { VisitorState } from "~/resources/views/demo-apps/chorus/state";
 import { ChorusComposer } from "~/resources/views/demo-apps/chorus/composer";
 import {
 	ARRIVALS,
-	COLUMN_FRAME,
 	FOR_YOU,
 	ME,
 	POSTS,
@@ -151,7 +149,6 @@ function NewPostsPill(handle: Handle<{ feed: FeedKind; arrived: number }>) {
 				<a
 					href={homeHref(feed, arrived + 1)}
 					data-slot="chorus-new-posts"
-					data-rmx-target={COLUMN_FRAME}
 					data-rmx-prefetch="intent"
 					mix={[
 						raw({
@@ -250,7 +247,6 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 					<ChorusComposer
 						id="home"
 						from={homePage(feed, arrived)}
-						inColumn
 						revision={state.posts.length}
 						placeholder="Share something with your circle"
 						value={draft?.value}

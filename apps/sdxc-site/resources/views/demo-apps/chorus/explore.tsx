@@ -19,7 +19,6 @@ import type { PostView, VisitorState } from "~/resources/views/demo-apps/chorus/
 
 import {
 	ARRIVED_POSTS,
-	COLUMN_FRAME,
 	PEOPLE,
 	POSTS,
 	TRENDS,
@@ -110,7 +109,7 @@ export function ExploreScreen(handle: Handle<ExploreScreen.Props>) {
 							{query === "" ? "Explore" : `Search: ${query}`}
 						</h1>
 						<div mix={[raw({ padding: "0.5rem 1rem" })]}>
-							<SearchBox query={query} inColumn />
+							<SearchBox query={query} />
 						</div>
 						<FeedTabs
 							label="Explore sections"
@@ -200,7 +199,6 @@ function TrendList() {
 				<li>
 					<a
 						href={href(`explore?q=${encodeURIComponent(trend.query)}`)}
-						data-rmx-target={COLUMN_FRAME}
 						data-rmx-prefetch="intent"
 						mix={[
 							trendRow(),

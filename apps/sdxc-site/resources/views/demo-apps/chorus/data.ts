@@ -18,12 +18,6 @@ export const actionHref = demoAppActionHref("chorus");
 /** Chorus's frame addresses. */
 export const frameHref = demoAppFrameHref("chorus");
 
-/**
- * The frame holding a screen's column: links and forms that stay on one destination (a
- * timeline's tabs, a thread, a post's replies) load into it, and the nav and rail stay put.
- */
-export const COLUMN_FRAME = "chorus-column";
-
 /** The prefix of a poll's own frame, which a vote reloads alone. */
 export const POLL_FRAME_PREFIX = "chorus-poll-";
 

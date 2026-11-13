@@ -15,8 +15,9 @@ import { withoutToastNonce } from "~/app/test/demo-apps";
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppFrameHref, demoAppHref } from "~/resources/views/demo-apps";
 import chorus from "~/resources/views/demo-apps/chorus";
-import { COLUMN_FRAME, NOTIFICATIONS, pollFrame } from "~/resources/views/demo-apps/chorus/data";
+import { NOTIFICATIONS, pollFrame } from "~/resources/views/demo-apps/chorus/data";
 import { groupSentence } from "~/resources/views/demo-apps/chorus/notifications";
+import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
 
 /** Chorus's addresses. */
 const href = demoAppHref("chorus");
@@ -401,13 +402,13 @@ describe("Chorus frames", () => {
 				aimed += 1;
 			}
 		}
-		expect(aimed).toBeGreaterThan(chorus.screens.length);
+		expect(aimed).toBeGreaterThan(0);
 	});
 
 	test("a page mounts its column as a frame loading the page's own address", async () => {
 		let body = await page("?feed=following&toast=posted");
 
-		expect(body).toContain(`"name":"${COLUMN_FRAME}","src":"${href("?feed=following")}"`);
+		expect(body).toContain(`"name":"${MAIN_FRAME}","src":"${href("?feed=following")}"`);
 	});
 
 	test("a request aimed at the column answers the column alone", async () => {
@@ -419,7 +420,7 @@ describe("Chorus frames", () => {
 			["explore?tab=people", "Explore"],
 			["messages/kofibuilds", "Kofi"],
 		] as const) {
-			let response = await targeted(href(path), COLUMN_FRAME);
+			let response = await targeted(href(path), MAIN_FRAME);
 			let body = await response.text();
 
 			expect(response.status, path).toBe(200);
@@ -427,6 +428,19 @@ describe("Chorus frames", () => {
 			expect(body, path).toContain('data-slot="chorus-header"');
 			expect(body, path).toMatch(new RegExp(`<h1[^>]*>[^<]*${heading}`));
 		}
+	});
+
+	test("the main frame tells the shell its screen's title, nav item, address and toast", async () => {
+		let home = await (await targeted(href("?toast=posted.1a2b3c4d"), MAIN_FRAME)).text();
+		let thread = await (await targeted(href("messages/kofibuilds"), MAIN_FRAME)).text();
+		let post = await (await targeted(href("post/p-leonids"), MAIN_FRAME)).text();
+
+		expect(home).toMatch(
+			/data-main-screen="" data-title="Home" data-nav="home" data-url="[^"]*\/chorus"/,
+		);
+		expect(home).toContain("Your post is live");
+		expect(thread).toContain('data-title="Messages with Kofi Mensah" data-nav="messages"');
+		expect(post).toContain('data-nav="none"');
 	});
 
 	test("a request aimed at a frame the page lacks answers the whole page", async () => {
@@ -453,11 +467,11 @@ describe("Chorus frames", () => {
 		let response = await fetchApp(href("?feed=following"), {
 			method: "POST",
 			body: new URLSearchParams({ intent: "compose", text: "Framed hello" }),
-			headers: { "x-remix-target": COLUMN_FRAME },
+			headers: { "x-remix-target": MAIN_FRAME },
 		});
 		let cookie = cookiesFrom(response);
 		let location = response.headers.get("location") ?? "";
-		let column = await (await targeted(location, COLUMN_FRAME, cookie)).text();
+		let column = await (await targeted(location, MAIN_FRAME, cookie)).text();
 
 		expect(location.startsWith(`${href("?feed=following")}&toast=posted.`)).toBe(true);
 		expect(column).toContain("Framed hello");
@@ -470,7 +484,7 @@ describe("Chorus frames", () => {
 		let response = await fetchApp(href(), {
 			method: "POST",
 			body: new URLSearchParams({ intent: "compose", text: "   " }),
-			headers: { "x-remix-target": COLUMN_FRAME },
+			headers: { "x-remix-target": MAIN_FRAME },
 		});
 		let body = await response.text();
 
@@ -481,11 +495,11 @@ describe("Chorus frames", () => {
 
 	test("a message sent into the thread comes back as the thread with it", async () => {
 		let response = await post("messages/kofibuilds", { text: "Framed message" }, "", {
-			"x-remix-target": COLUMN_FRAME,
+			"x-remix-target": MAIN_FRAME,
 		});
 		let cookie = cookiesFrom(response);
 		let location = response.headers.get("location") ?? "";
-		let thread = await (await targeted(location, COLUMN_FRAME, cookie)).text();
+		let thread = await (await targeted(location, MAIN_FRAME, cookie)).text();
 
 		expect(thread).toContain("Framed message");
 		expect(thread).toContain('data-rmx-key="reply-');

@@ -1,8 +1,8 @@
 /**
  * The post composer: the writer's avatar, a field that grows with its text, and a footer with
- * the character ring and the Post button. It posts to the page it sits on; with script it can
- * load the answer into the column's frame, where a fresh, empty box replaces it, and the ring
- * counts as you type while Post waits until there is something within the limit to send.
+ * the character ring and the Post button. It posts to the page it sits on; with script the
+ * answer lands in the main frame, where a fresh, empty box replaces it, and the ring counts as
+ * you type while Post waits until there is something within the limit to send.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,7 @@ import { when } from "@sdxc/u/state";
 import { Button } from "@sdxc/ui";
 import { CharacterCount } from "@sdxc/ui/character-count";
 
-import { COLUMN_FRAME, ME, POST_LIMIT, href } from "~/resources/views/demo-apps/chorus/data";
+import { ME, POST_LIMIT, href } from "~/resources/views/demo-apps/chorus/data";
 import { COUNT_LABELS } from "~/resources/views/demo-apps/chorus/labels";
 import { PersonAvatar } from "~/resources/views/demo-apps/chorus/parts";
 
@@ -25,11 +25,6 @@ namespace Composer {
 		id: string;
 		/** The page the composer sits on and posts to, which a refused post is answered on again. */
 		from: string;
-		/**
-		 * Loads the answer into the column's frame, for a composer whose post lands on the page
-		 * it sits on; without it the post loads a whole document.
-		 */
-		inColumn?: boolean;
 		/**
 		 * Counts the visitor's posts, so the box the column's frame redraws after a post is a new,
 		 * empty one rather than the one holding what was just sent.
@@ -64,7 +59,6 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 			autofocus,
 			from,
 			id,
-			inColumn = false,
 			issue,
 			placeholder,
 			quote,
@@ -83,9 +77,6 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 				action={href(from)}
 				data-slot="chorus-composer"
 				data-rmx-key={`composer-${id}-${revision}`}
-				data-rmx-target={inColumn ? COLUMN_FRAME : undefined}
-				data-rmx-reset-scroll={inColumn ? "manual" : undefined}
-				data-rmx-document={inColumn ? undefined : ""}
 				mix={[
 					raw({
 						display: "grid",

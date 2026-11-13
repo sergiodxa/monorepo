@@ -305,7 +305,6 @@ export function ProfileScreen(handle: Handle<ProfileScreen.Props>) {
 				>
 					<FeedTabs
 						label={`${person.name}'s profile`}
-						keepScroll
 						tabs={PROFILE_TABS.map((entry) => ({
 							label: entry[0]!.toUpperCase() + entry.slice(1),
 							href: href(entry === "posts" ? base : `${base}/${entry}`),

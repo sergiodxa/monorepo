@@ -1,7 +1,6 @@
 /**
  * Messages: the conversations list, and one conversation as bubbles with a box to answer.
- * Each is its own address loaded into the column's frame, so the nav stays put, a phone
- * shows one pane at a time, and the back link leads up.
+ * Each is its own address, so a phone shows one pane at a time and the back link leads up.
  * A post shared from its menu arrives here with the conversation still to pick.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -19,7 +18,6 @@ import type { Conversation, Message, Person } from "~/resources/views/demo-apps/
 import type { PostView, VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
 import {
-	COLUMN_FRAME,
 	CONVERSATIONS,
 	ME,
 	NOW,
@@ -101,7 +99,6 @@ export function MessagesScreen(handle: Handle<MessagesScreen.Props>) {
 							<li>
 								<a
 									href={href(`messages/${person.handle}${shareQuery(share)}`)}
-									data-rmx-target={COLUMN_FRAME}
 									data-rmx-prefetch="intent"
 									mix={[
 										raw({
@@ -215,12 +212,7 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 				compose={false}
 				tabBar={false}
 				header={
-					<TitleBar
-						title={person.name}
-						subtitle={`@${person.handle}`}
-						back={href("messages")}
-						backInColumn
-					/>
+					<TitleBar title={person.name} subtitle={`@${person.handle}`} back={href("messages")} />
 				}
 			>
 				<ol
@@ -301,8 +293,6 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 					method="post"
 					action={actionHref(`messages/${person.handle}`)}
 					data-rmx-key={`reply-${messages.length}`}
-					data-rmx-target={COLUMN_FRAME}
-					data-rmx-reset-scroll="manual"
 					mix={[
 						raw({
 							position: "sticky",
