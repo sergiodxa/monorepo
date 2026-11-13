@@ -198,50 +198,128 @@ tokenize so custom shortcodes become inline image markup or tags the renderer al
 Literal `:name:` in source that must survive is left as Escape-cancelled typing in composers, or
 as content inside code.
 
-### UI: two compounds, one event
+### UI: Remix way (pure compounds + mixins)
 
-Host-agnostic panels; the app places them in `<dialog>`, a popover, or inline.
+Follow the same split `@sdxc/ui` uses for `Command` and friends — not a hydrated mega-widget:
 
-1. **`EmojiPicker`** — browse: search, virtualized grid, category tabs (composed above or below),
-   optional custom category. Recents are a **prop** (`recents: string[]` of shortcodes or emoji
-   keys); how the app persists them (cookie, `localStorage`, DB) is outside the package.
-2. **`EmojiSuggest`** — colon autocomplete list (glyph or `<img>`, `:name:`, match highlighting).
+| Layer | Lives in | Does |
+| ----- | -------- | ---- |
+| **Components** | `@sdxc/emoji/ui` compound parts | Markup + `@sdxc/u` styles + `data-*` contract only. Import `css` / `attrs` from `remix/component`; never `on`, `ref`, or `createMixin`. No `clientEntry` inside the package. |
+| **Mixins** | `@sdxc/emoji/ui` (or `./mixins`) | DOM adapters: filter, keyboard, virtualize, scroll-spy, field trigger, dispatch `ui:emoji-pick`. Each mixin documents why JS is required and the no-JS baseline. |
+| **Behavior class** (if needed) | `@sdxc/emoji` core or `./ui` behaviors | DOM-free search/rank/selection model (same idea as `FilterModel`), unit-tested without a browser; mixins bind it to the `data-*` tree. |
+| **Shell** | The app | `<dialog>`, Popover API (`popover` + `popovertarget`), or inline placement. The package never owns the overlay host. |
+| **Hydration** | The app island | The screen that mounts the field/picker applies the mixins (and optional `clientEntry`); the library stays pure. |
 
-Both accept `mix`, forward it to the host, and ship no user-facing copy: every label and
-placeholder is a required prop. Behavior is mixins; picking dispatches a bubbling, cancelable
-`ui:emoji-pick` (`EmojiPickEvent`) — not an `onPick` callback — carrying a discriminated payload:
+No-JS baseline: the picker markup still renders (search field, category tabs as links/buttons, emoji as buttons in document order). Without mixins there is no as-you-type filter, arrow navigation, or virtualization — find-in-page and Tab still reach cells. Suggest without the field mixin simply does not open.
+
+Host-agnostic panels; compose them inside the app’s dialog/popover:
+
+```tsx
+<dialog id="emoji">
+	<EmojiPicker recents={…} mix={[emojiPicker(), on("ui:emoji-pick", …)]}>
+		<EmojiPicker.Search aria-label={…} placeholder={…} />
+		<EmojiPicker.Categories>{/* tablist; above or below by order */}</EmojiPicker.Categories>
+		<EmojiPicker.Viewport>
+			<EmojiPicker.Category id="recent" label={…} />
+			<EmojiPicker.Category id="smileys-emotion" label={…} />
+			{/* … */}
+		</EmojiPicker.Viewport>
+		<EmojiPicker.Preview />
+		<EmojiPicker.Empty>{/* loading / no results — required copy via children */}</EmojiPicker.Empty>
+		<EmojiPicker.Status /> {/* live region for result counts */}
+	</EmojiPicker>
+</dialog>
+```
+
+#### Compound parts
+
+**`EmojiPicker`**
+
+| Part | Role |
+| ---- | ---- |
+| `EmojiPicker` | Root host; `mix`, optional `recents`, density CSS variables |
+| `EmojiPicker.Search` | Query `<input>`; required `aria-label` / `placeholder` |
+| `EmojiPicker.Categories` | Category **tablist**; each tab’s visible glyph and accessible name are **required props** (or children), typically `@sdxc/icons` chosen by the app — the package does not hardcode tab art |
+| `EmojiPicker.Viewport` | Scrollport; sticky section headers; virtualized rows via mixin |
+| `EmojiPicker.Category` | One section: `id`, required `label`, cells |
+| `EmojiPicker.Cell` | One emoji button (`data-emoji` / `data-name`); Unicode glyph or custom `<img>` |
+| `EmojiPicker.Preview` | Optional footer: hovered/focused entry’s glyph, primary shortcode, label |
+| `EmojiPicker.Empty` | Loading and zero-hit states (children / slots; no built-in English) |
+| `EmojiPicker.Status` | Politely assertive live region for “N matching” announcements |
+
+**`EmojiSuggest`**
+
+| Part | Role |
+| ---- | ---- |
+| `EmojiSuggest` | Listbox root (popover/anchored); `mix` |
+| `EmojiSuggest.Item` | Row: glyph or `<img>`, `:primary:`, match highlight marks |
+| `EmojiSuggest.Empty` | No matches |
+| `EmojiSuggest.Status` | Live region for result counts |
+
+Convenience wrappers that render several hosts may take a `parts` prop (same escape hatch as `@sdxc/ui`). Density is themable without forking styles:
+
+```css
+--emoji-columns: 8;
+--emoji-cell-size: 2rem;
+```
+
+(defaults documented; apps override beside `--ui-*`.)
+
+#### Search, rank, and dedupe
+
+Shared by Picker search and Suggest (behavior class + mixin):
+
+1. One hit per **entry** (never one row per alias).
+2. Rank: primary-shortcode **prefix**, then any-shortcode prefix, then tag/emoticon prefix, then substring on shortcodes/tags.
+3. Ignore surrounding `:` in the query.
+4. UI and `ui:emoji-pick` always expose `shortcodes[0]` as `name` (preferred shortcode).
+5. Suggest lists at most **12** matches by default (option to raise/lower).
+6. Picker search with an empty query shows categories + `recents`; non-empty query flattens to ranked hits (sticky “Search results” header).
+
+#### Suggest open threshold and anchoring
+
+- The field mixin opens Suggest only when the active token is `:xx…` with **at least two characters after the opening colon** (not yet closed). Bare `:` or `:a` does not open the list (avoids dumping the full catalog).
+- While open, further typing filters; Enter picks the active row; a closing `:` that completes a known shortcode inserts that entry (or the first match if ambiguous); Escape closes and leaves the typed text.
+- Anchor Suggest to the **caret** when the platform can measure it; otherwise to the field box. Prefer Popover API / CSS anchor where the shell supports it.
+
+#### Recents, reaction vs insert, keep-open
+
+- `recents` is a prop (`string[]` of preferred shortcodes or emoji keys). Persistence is the app’s (cookie, `localStorage`, DB).
+- **Insert** (default): pick inserts into the bound field (Unicode character or `:name:` for custom) and closes Suggest / leaves dialog close to the app (`command="close"` / popover dismiss).
+- **React**: same panel, no field insert — listener handles `ui:emoji-pick` (e.g. toggle a reaction) and closes. Expressed as mixin/options on the consumer (`purpose: "insert" | "react"`), not a second component.
+- **Keep-open / multi-pick**: `ui:emoji-pick` is cancelable; `preventDefault()` skips the mixin’s default close/insert-once behavior so Shift+click or reaction UIs can pick several. Documented on the event and field/picker mixins.
+
+#### Event
+
+Bubbling, cancelable `ui:emoji-pick` (`EmojiPickEvent`) — never `onPick`:
 
 ```ts
-// Unicode
+// Unicode — name is always shortcodes[0]
 { kind: "unicode"; emoji: string; name: string }
 // Custom
 { kind: "custom"; name: string; src: string; label?: string }
 ```
 
-### Field mixin
+#### Field mixin
 
-`emojiInput({ map / index, … })` applies to text-like `<input>` and `<textarea>` (not
-`password`, `email`, `url`, `number`, and similar). Typing `:` opens Suggest (not the grid at the
-same time). Enter inserts the active match; a second `:` that closes a valid token inserts the
-first match; Escape closes and leaves `:partial` as typed. Inside fenced code in a textarea, `:`
-does not open the picker. A toolbar control may open `EmojiPicker` in a dialog; only one of
-Suggest or Picker is open.
+`emojiInput({ index, … })` on text-like `<input>` / `<textarea>` (not `password`, `email`, `url`, `number`, …):
 
-On pick: Unicode inserts the character; custom inserts `:name:`. Images are never inlined into
-the field. Display paths run tokenize/render (or the markdown visitor) so customs become images.
+- Opens **Suggest** after the 2-character threshold; never opens Suggest and Picker together.
+- A toolbar control may open **Picker** in the app’s `<dialog>` / popover.
+- Fence-aware in textareas: `:` inside `` ``` `` does not open Suggest.
+- On pick: Unicode → character; custom → `:name:`. No images inside the field.
+- Display uses `tokenize` / render or the markdown visitor so customs become `https:` images.
 
-Custom image bytes live wherever the app stores them (DB, R2, CDN). The catalog only holds
-`https:` `src` strings.
+Custom image bytes live wherever the app stores them (DB, R2, CDN). The catalog only holds `https:` `src` strings.
 
-### Accessibility and composition
+#### Accessibility and chrome
 
-Search keeps focus; arrows move `aria-activedescendant` through the grid or list; Enter picks;
-Escape closes; focus returns to the field or trigger. Category controls are a tablist. The grid
-is virtualized. Unsupported / undrawable glyphs may be hidden when the runtime can probe them.
-Styling is `@sdxc/u` + the shared `--ui-*` theme (see package entries above); API shape
-matches `@sdxc/ui` (`mix`, required labels, compound parts, `ui:*` events) so the picker
-sits in a dialog next to catalog controls without a visual seam. Mobile keeps the picker for
-custom emoji even when the OS emoji keyboard covers Unicode.
+- Focus stays in search (Picker) or the field (Suggest); arrows move `aria-activedescendant`; Enter picks; Escape closes; focus returns to field or trigger.
+- Category controls are a tablist with roving focus; **scroll-spy** updates the active tab from the viewport; section headers are **sticky** inside `Viewport`.
+- `Status` live regions announce result counts.
+- Grid is virtualized via mixin; undrawable glyphs may be hidden when the runtime can probe them.
+- Styling is `@sdxc/u` + shared `--ui-*`; Preview/selected states pair color with weight or border (not color alone) for contrast preferences.
+- Mobile: OS emoji keyboard covers Unicode; Picker remains for **custom** (and for desktop parity).
 
 ### First integrations (after the package)
 
@@ -307,7 +385,8 @@ custom emoji even when the OS emoji keyboard covers Unicode.
 
 **Priority:** High
 
-1. `EmojiSuggest`, `EmojiPicker` compounds, `EmojiPickEvent`, field mixin.
+1. Pure compounds (`EmojiPicker.*`, `EmojiSuggest.*`), search/rank behavior, mixins
+   (filter, virtualize, scroll-spy, field, keys), `EmojiPickEvent`.
 2. Wire Chorus, Tern, and Cairn composers; CMS fields on the blog as follow-ups.
 
 ## Alternatives Considered
@@ -370,12 +449,18 @@ data. Keeping UI next to the catalog avoids that split, while requiring `@sdxc/u
 - [ ] Catalog generator and committed data
 - [ ] Core APIs (`merge`, replace, tokenize, render)
 - [ ] Markdown visitor
-- [ ] UI compounds, event, field mixin
+- [ ] UI compounds, mixins, event, field mixin
 - [ ] Blog / Chorus / Tern / Cairn wiring
 
 ## Notes
 
 - Custom `src` must be `https:` only.
 - Suggest and Picker never open together on the same field.
+- Suggest opens only after two characters following `:`.
 - Escape in the field mixin closes UI and preserves the typed `:partial` text.
+- Preferred shortcode is always `shortcodes[0]` in UI and events.
+- Suggest defaults to at most 12 rows.
+- `preventDefault()` on `ui:emoji-pick` opts out of default close/single-insert.
+- Category tab glyphs and all visible/a11y strings are app-supplied props — the package ships none.
 - The generator's conflict log is part of the review surface when refreshing upstream data.
+- Component purity for `./ui` compounds matches `@sdxc/ui`: no behavior imports in component modules.
