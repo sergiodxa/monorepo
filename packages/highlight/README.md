@@ -427,6 +427,29 @@ let templated = compose(
 let tokens = scan("port = ${base + 80}\n", templated);
 ```
 
+## Performance
+
+Mean time to tokenize each input, against [Prism](https://prismjs.com) 1.30 on the same
+input, on one development machine. Absolute times vary between machines; the ratio is what
+holds.
+
+| Input                       | `@sdxc/highlight` | Prism 1.30 | Faster by |
+| --------------------------- | ----------------: | ---------: | --------: |
+| 10,000-line TypeScript file |             42 ms |     431 ms |       10× |
+| 2 MB JSON document          |             40 ms |     166 ms |        4× |
+| 10,000-line Markdown file   |            6.7 ms |      26 ms |        4× |
+| 500 KB minified JS line     |           0.12 ms |      87 ms |      700× |
+
+The minified line is fast because highlighting stops after `maxLineLength` (2,000 characters
+by default). With `{ maxLineLength: Infinity }` the same line takes 16 ms, still 5× faster
+than Prism.
+
+Run the benchmarks from a checkout of the repository:
+
+```sh
+vp test bench --run --project packages packages/highlight/
+```
+
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published,
