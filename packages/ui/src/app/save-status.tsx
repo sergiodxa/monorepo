@@ -99,7 +99,7 @@ export const SaveStatus: EntryComponent<SaveStatusProps> = clientEntry(
 							savedMs: handle.props.savedMs ?? DEFAULT_SAVED_MS,
 							decayMs,
 						}),
-						hstack({ gap: 2, align: "center" }),
+						hstack({ gap: 2, align: "baseline" }),
 						text("sm"),
 						nowrap(),
 						tabularNums(),

@@ -44,6 +44,16 @@ function wait(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Where the text of `element` sits: the top of a zero-height box placed on its baseline. */
+function baseline(element: HTMLElement): number {
+	let probe = document.createElement("span");
+	probe.style.cssText = "display: inline-block; block-size: 0; inline-size: 0";
+	element.appendChild(probe);
+	let top = probe.getBoundingClientRect().top;
+	probe.remove();
+	return top;
+}
+
 /** The text the live region holds. */
 function announced(element: HTMLElement): string {
 	return element.querySelector('[role="status"]')!.textContent ?? "";
@@ -156,6 +166,26 @@ describe("SaveStatus", () => {
 
 		expect(retry.type).toBe("submit");
 		expect(retry.getAttribute("form")).toBe("post-form");
+	});
+
+	test("sits on the baseline of the heading beside it once it shows the edit time", async () => {
+		let row = document.createElement("div");
+		row.style.cssText = "display: flex; align-items: baseline; justify-content: space-between";
+		let heading = document.createElement("h2");
+		heading.style.cssText = "margin: 0; font-size: 14px";
+		heading.textContent = "Details";
+		row.appendChild(heading);
+		document.body.appendChild(row);
+		let mounted = render(
+			<SaveStatus id="aside-status" labels={LABELS} editedAt="2026-11-01T11:58:00Z" />,
+			{ container: row },
+		);
+		cleanups.push(mounted.cleanup);
+		await wait(0);
+		let edited = row.querySelector<HTMLElement>('[data-slot="save-status-edited"]')!;
+
+		expect(baseline(edited)).toBeCloseTo(baseline(heading), 0);
+		row.remove();
 	});
 });
 
