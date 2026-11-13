@@ -1,7 +1,7 @@
 /**
  * A record's activity as an ordered list: a 2px rail threading 16px event icons toned by
- * what happened, one line per event (avatar, bold actor, muted verb, time), an optional
- * comment card, and a native `<details>` folding a run of quiet events into "N more".
+ * what happened, one line per event, comment cards with an author header and reactions,
+ * grouped commits, and a native `<details>` folding a run of quiet events into "N more".
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,9 +14,9 @@ import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor, listStyle, pseudoContent, raw, mergeMix } from "@sdxc/u/general";
 import { flex, gap, grid, inlineFlex, items, justify, relative, vstack } from "@sdxc/u/layout";
-import { bs, is, m, minIs, p } from "@sdxc/u/size";
+import { bs, is, m, minIs, p, pi } from "@sdxc/u/size";
 import { before, data, focusVisible, hover, when } from "@sdxc/u/state";
-import { leading, text, weight } from "@sdxc/u/typography";
+import { font, leading, text, truncate, weight } from "@sdxc/u/typography";
 
 /** The side of the square each event's icon sits centred in; the rail runs through its middle. */
 const ICON_BOX = "var(--ui-timeline-icon-box, 1.5rem)";
@@ -50,6 +50,54 @@ export namespace Timeline {
 		body?: RemixNode;
 		/** What happened, in muted text after the actor: "resolved the incident". */
 		children?: RemixNode;
+	}
+
+	/** Every native `<li>` attribute, plus the comment's parts. */
+	export interface CommentProps extends Omit<TagProps<"li">, "children"> {
+		/** The author's avatar, set on the rail in place of an icon. */
+		avatar: RemixNode;
+		/** The author's name, set in bold at the start of the card's header. */
+		author: RemixNode;
+		/** The muted verb after the name: "commented", "reviewed". */
+		action?: RemixNode;
+		/** When it was written: a `RelativeTime` or plain text. */
+		time?: RemixNode;
+		/** A `⋯` menu trigger, drawn at the end of the header. */
+		menu?: RemixNode;
+		/** Reactions or other controls, drawn in a row under the body. */
+		reactions?: RemixNode;
+		/** The rendered Markdown body. */
+		children: RemixNode;
+	}
+
+	/** Every native `<li>` attribute, plus the summary line and its commits. */
+	export interface CommitsProps extends Omit<TagProps<"li">, "children"> {
+		/** A 16px glyph for the group, such as a commit icon. */
+		icon: RemixNode;
+		/** A small avatar of the pusher, shown before the name. */
+		avatar?: RemixNode;
+		/** Who pushed, set in bold. */
+		actor?: RemixNode;
+		/** What happened, muted: "added 3 commits". */
+		summary?: RemixNode;
+		/** When the push happened. */
+		time?: RemixNode;
+		/** The {@link Timeline.Commit} rows. */
+		children: RemixNode;
+	}
+
+	/** Every native `<li>` attribute, plus the commit's parts. */
+	export interface CommitProps extends Omit<TagProps<"li">, "children"> {
+		/** The commit's short sha, set in monospace at the end of the row. */
+		sha: string;
+		/** The commit's page; links the subject and the sha. */
+		href?: string;
+		/** A small avatar of the author. */
+		avatar?: RemixNode;
+		/** The commit's checks, such as a toned status icon with its accessible name. */
+		check?: RemixNode;
+		/** The commit's subject line. */
+		children: RemixNode;
 	}
 
 	/** Every native `<li>` attribute, plus the folded events. */
@@ -250,6 +298,252 @@ Timeline.More = function TimelineMore(handle: Handle<Timeline.MoreProps>) {
 					</summary>
 					<ol mix={[m(0), p(0), listStyle("none"), vstack({ gap: 3 })]}>{children}</ol>
 				</details>
+			</li>
+		);
+	};
+};
+
+/**
+ * Renders a comment as a card on the rail: the author's avatar sits where an event's icon
+ * would, the header reads "name action time" with a `⋯` slot at its end, and the body and
+ * reactions follow. A conversation reads as cards and housekeeping as single lines.
+ *
+ * @param handle Runtime handle carrying the `<li>`'s props.
+ * @returns The render function producing the comment's markup.
+ * @example
+ * <Timeline.Comment id="comment-12" avatar={<Avatar size="xs" />} author="ana" action="commented" time={<RelativeTime date={at} />} menu={<CommentMenu />} reactions={<Reactions />}>
+ * 	<Markdown source={body} />
+ * </Timeline.Comment>
+ */
+Timeline.Comment = function TimelineComment(handle: Handle<Timeline.CommentProps>) {
+	return () => {
+		let { avatar, author, action, time, menu, reactions, children, mix, ...rest } = handle.props;
+
+		return (
+			<li data-slot="timeline-comment" {...rest} mix={mergeMix(rowTrack(), mix)}>
+				<span
+					data-slot="timeline-avatar"
+					mix={[
+						relative(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						is(ICON_BOX),
+						bs(ICON_BOX),
+						rounded("full"),
+						bg("var(--ui-timeline-surface, var(--ui-bg, Canvas))"),
+					]}
+				>
+					{avatar}
+				</span>
+				<div
+					data-slot="timeline-card"
+					mix={[
+						minIs(0),
+						rounded("md"),
+						border({ color: "neutral.border", width: 1 }),
+						bg("var(--ui-timeline-surface, var(--ui-bg, Canvas))"),
+						raw({ overflow: "clip" }),
+					]}
+				>
+					<header
+						data-slot="timeline-comment-header"
+						mix={[
+							flex(),
+							items("center"),
+							gap(2),
+							pi(3),
+							raw({ minBlockSize: "2.5rem", paddingBlock: "0.375rem" }),
+							bg("neutral.tint"),
+							raw({ borderBlockEnd: "1px solid var(--ui-neutral-border)" }),
+						]}
+					>
+						<p
+							mix={[
+								m(0),
+								flex(),
+								items("baseline"),
+								raw({ flexWrap: "wrap", columnGap: "0.375rem", flex: "1 1 auto" }),
+								minIs(0),
+								leading("1.25rem"),
+							]}
+						>
+							<span data-slot="timeline-actor" mix={[weight("semibold")]}>
+								{author}
+							</span>
+							{action ? (
+								<span data-slot="timeline-description" mix={[fg("neutral.muted")]}>
+									{action}
+								</span>
+							) : null}
+							{time ? (
+								<span data-slot="timeline-time" mix={[fg("neutral.muted")]}>
+									{time}
+								</span>
+							) : null}
+						</p>
+						{menu ? (
+							<span data-slot="timeline-comment-menu" mix={[inlineFlex(), raw({ flexShrink: 0 })]}>
+								{menu}
+							</span>
+						) : null}
+					</header>
+					<div
+						data-slot="timeline-comment-body"
+						mix={[
+							p(3),
+							raw({
+								overflowWrap: "anywhere",
+								"& > :first-child": { marginBlockStart: 0 },
+								"& > :last-child": { marginBlockEnd: 0 },
+							}),
+						]}
+					>
+						{children}
+					</div>
+					{reactions ? (
+						<div
+							data-slot="timeline-reactions"
+							mix={[
+								flex(),
+								items("center"),
+								raw({ flexWrap: "wrap" }),
+								gap(1.5),
+								pi(3),
+								raw({ paddingBlockEnd: "0.75rem" }),
+							]}
+						>
+							{reactions}
+						</div>
+					) : null}
+				</div>
+			</li>
+		);
+	};
+};
+
+/**
+ * Renders a push as one event on the rail with its commits listed under the line: each row
+ * gives the subject, its checks and the short sha, so a run of commits costs one rail stop.
+ *
+ * @param handle Runtime handle carrying the `<li>`'s props.
+ * @returns The render function producing the group's markup.
+ * @example
+ * <Timeline.Commits icon={<GitCommitHorizontalIcon />} actor="ana" summary="added 2 commits" time="3h ago">
+ * 	<Timeline.Commit sha="a1b2c3d" href="/commit/a1b2c3d" check={<CheckIcon aria-label="Checks passed" />}>Fix the parser</Timeline.Commit>
+ * </Timeline.Commits>
+ */
+Timeline.Commits = function TimelineCommits(handle: Handle<Timeline.CommitsProps>) {
+	return () => {
+		let { icon, avatar, actor, summary, time, children, mix, ...rest } = handle.props;
+
+		return (
+			<li
+				data-slot="timeline-commits"
+				data-tone="neutral"
+				{...rest}
+				mix={mergeMix(rowTrack(), mix)}
+			>
+				<TimelineIcon tone="neutral">{icon}</TimelineIcon>
+				<div mix={[vstack({ gap: 1.5 }), minIs(0)]}>
+					<p
+						data-slot="timeline-line"
+						mix={[
+							m(0),
+							flex(),
+							items("center"),
+							raw({ flexWrap: "wrap", minBlockSize: ICON_BOX }),
+							gap(1.5),
+							leading("1.25rem"),
+						]}
+					>
+						{avatar ? <span mix={[inlineFlex()]}>{avatar}</span> : null}
+						{actor ? (
+							<span data-slot="timeline-actor" mix={[weight("semibold")]}>
+								{actor}
+							</span>
+						) : null}
+						{summary ? (
+							<span data-slot="timeline-description" mix={[fg("neutral.muted")]}>
+								{summary}
+							</span>
+						) : null}
+						{time ? (
+							<span data-slot="timeline-time" mix={[fg("neutral.muted"), text("xs")]}>
+								{time}
+							</span>
+						) : null}
+					</p>
+					<ol
+						data-slot="timeline-commit-list"
+						mix={[m(0), p(0), listStyle("none"), vstack({ gap: 0.5 })]}
+					>
+						{children}
+					</ol>
+				</div>
+			</li>
+		);
+	};
+};
+
+/**
+ * Renders one commit of a {@link Timeline.Commits} group: avatar, the subject (truncated to
+ * one line), the check-state slot, then the short sha in monospace at the row's end.
+ *
+ * @param handle Runtime handle carrying the `<li>`'s props.
+ * @returns The render function producing the commit's row.
+ * @example <Timeline.Commit sha="a1b2c3d" href="/commit/a1b2c3d">Fix the parser</Timeline.Commit>
+ */
+Timeline.Commit = function TimelineCommit(handle: Handle<Timeline.CommitProps>) {
+	return () => {
+		let { sha, href, avatar, check, children, mix, ...rest } = handle.props;
+		let linkMix = [
+			fg("inherit"),
+			raw({ textDecoration: "none" }),
+			hover(raw({ textDecoration: "underline" })),
+		];
+
+		return (
+			<li
+				data-slot="timeline-commit"
+				{...rest}
+				mix={mergeMix(
+					[flex(), items("center"), gap(2), minIs(0), raw({ minBlockSize: "1.75rem" })],
+					mix,
+				)}
+			>
+				{avatar ? <span mix={[inlineFlex(), raw({ flexShrink: 0 })]}>{avatar}</span> : null}
+				<span data-slot="timeline-commit-subject" mix={[truncate(), raw({ flex: "0 1 auto" })]}>
+					{href ? (
+						<a href={href} mix={linkMix}>
+							{children}
+						</a>
+					) : (
+						children
+					)}
+				</span>
+				{check ? (
+					<span data-slot="timeline-commit-check" mix={[inlineFlex(), raw({ flexShrink: 0 })]}>
+						{check}
+					</span>
+				) : null}
+				<code
+					data-slot="timeline-commit-sha"
+					mix={[
+						raw({ marginInlineStart: "auto", flexShrink: 0 }),
+						font("mono"),
+						text("xs"),
+						fg("neutral.muted"),
+					]}
+				>
+					{href ? (
+						<a href={href} mix={linkMix}>
+							{sha}
+						</a>
+					) : (
+						sha
+					)}
+				</code>
 			</li>
 		);
 	};

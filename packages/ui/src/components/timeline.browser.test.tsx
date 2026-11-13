@@ -1,7 +1,8 @@
 /**
  * Lays Timeline out in a real browser: an ordered list whose rail runs through the centre
  * of every icon, a line per event, a comment card in the text column, and a "N more"
- * disclosure whose folded events open on the same rail.
+ * disclosure whose folded events open on the same rail, comment cards with an author header and
+ * reactions, and a push's commits listed under one rail stop.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -143,5 +144,110 @@ describe("Timeline", () => {
 		expect(folded[0]!.checkVisibility()).toBe(true);
 		let icon = folded[0]!.querySelector('[data-slot="timeline-icon"]')!;
 		expect(centerX(icon)).toBeCloseTo(centerX(first), 0);
+	});
+
+	test("sets a comment as a card with the author's avatar on the rail", () => {
+		let host = document.createElement("div");
+		host.style.width = "480px";
+		document.body.appendChild(host);
+		render(
+			<Timeline aria-label="Conversation">
+				<Timeline.Event icon={<Glyph />} actor="ana" time="3h ago">
+					opened this pull request
+				</Timeline.Event>
+				<Timeline.Comment
+					id="comment-1"
+					avatar={
+						<span
+							data-avatar
+							style="display:block;width:20px;height:20px;border-radius:50%;background:gray"
+						/>
+					}
+					author="ana"
+					action="commented"
+					time="2h ago"
+					menu={
+						<button type="button" aria-label="Comment actions">
+							⋯
+						</button>
+					}
+					reactions={<button type="button">👍 2</button>}
+				>
+					<p>Looks good to me.</p>
+				</Timeline.Comment>
+			</Timeline>,
+			{ container: host },
+		);
+		let list = host.querySelector("ol")!;
+		let comment = host.querySelector<HTMLElement>('[data-slot="timeline-comment"]')!;
+		let header = comment.querySelector<HTMLElement>('[data-slot="timeline-comment-header"]')!;
+		let card = comment.querySelector<HTMLElement>('[data-slot="timeline-card"]')!;
+		let avatar = comment.querySelector<HTMLElement>('[data-slot="timeline-avatar"]')!;
+		let icon = host.querySelector('[data-slot="timeline-icon"]')!;
+		let menu = header.querySelector("button")!;
+		let rail = getComputedStyle(list, "::before");
+		let railCenter = list.getBoundingClientRect().left + parseFloat(rail.left) + 1;
+
+		expect(comment.id).toBe("comment-1");
+		expect(centerX(avatar)).toBeCloseTo(railCenter, 0);
+		expect(centerX(avatar)).toBeCloseTo(centerX(icon), 0);
+		expect(getComputedStyle(card).borderTopWidth).toBe("1px");
+		expect(header.textContent).toContain("ana");
+		expect(header.textContent).toContain("commented");
+		expect(header.textContent).toContain("2h ago");
+		expect(menu.getBoundingClientRect().right).toBeCloseTo(
+			header.getBoundingClientRect().right - 12,
+			0,
+		);
+		expect(card.querySelector('[data-slot="timeline-comment-body"] p')!.textContent).toBe(
+			"Looks good to me.",
+		);
+		let reactions = card.querySelector<HTMLElement>('[data-slot="timeline-reactions"]')!;
+		expect(reactions.getBoundingClientRect().top).toBeGreaterThan(
+			card.querySelector('[data-slot="timeline-comment-body"]')!.getBoundingClientRect().top,
+		);
+	});
+
+	test("lists a push's commits under one rail stop, each with its check and short sha", () => {
+		let host = document.createElement("div");
+		host.style.width = "480px";
+		document.body.appendChild(host);
+		render(
+			<Timeline aria-label="Conversation">
+				<Timeline.Commits icon={<Glyph />} actor="ana" summary="added 2 commits" time="1h ago">
+					<Timeline.Commit
+						sha="a1b2c3d"
+						href="#a1b2c3d"
+						check={
+							<span role="img" aria-label="Checks passed">
+								✓
+							</span>
+						}
+					>
+						Parse ANSI colours in job logs and keep long subjects to a single truncated line
+					</Timeline.Commit>
+					<Timeline.Commit sha="e4f5a6b">Fix the timestamp toggle</Timeline.Commit>
+				</Timeline.Commits>
+			</Timeline>,
+			{ container: host },
+		);
+		let group = host.querySelector<HTMLElement>('[data-slot="timeline-commits"]')!;
+		let commits = group.querySelectorAll<HTMLElement>('[data-slot="timeline-commit"]');
+		let first = commits[0]!;
+		let sha = first.querySelector<HTMLElement>('[data-slot="timeline-commit-sha"]')!;
+
+		expect(group.querySelectorAll('[data-slot="timeline-icon"]')).toHaveLength(1);
+		expect(commits).toHaveLength(2);
+		expect(first.getBoundingClientRect().height).toBeLessThanOrEqual(32);
+		expect(getComputedStyle(sha).fontFamily).toMatch(/mono/i);
+		expect(sha.textContent).toBe("a1b2c3d");
+		expect(sha.getBoundingClientRect().right).toBeCloseTo(first.getBoundingClientRect().right, 0);
+		expect(first.querySelector('[role="img"]')!.getAttribute("aria-label")).toBe("Checks passed");
+		expect(
+			first
+				.querySelector<HTMLAnchorElement>('[data-slot="timeline-commit-subject"] a')!
+				.getAttribute("href"),
+		).toBe("#a1b2c3d");
+		expect(commits[1]!.querySelector("a")).toBeNull();
 	});
 });
