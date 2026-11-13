@@ -266,6 +266,21 @@ describe("Chorus from a tablet up", () => {
 	});
 });
 
+describe("Chorus fills the screen's height", () => {
+	test.each([
+		[375, 812],
+		[1280, 860],
+	])("a short conversation keeps its reply box at the bottom at %ipx", async (width, height) => {
+		await page.viewport(width, height);
+		let root = await mountScreen("messages/kofibuilds");
+		let form = root.querySelector<HTMLFormElement>("form:has(textarea[name='text'])")!;
+
+		expect(Math.abs(form.getBoundingClientRect().bottom - window.innerHeight)).toBeLessThanOrEqual(
+			1,
+		);
+	});
+});
+
 describe("Chorus from the keyboard", () => {
 	test("j and k walk the timeline's posts, k stopping at the first", async () => {
 		await page.viewport(1280, 860);

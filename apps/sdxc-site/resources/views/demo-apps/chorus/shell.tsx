@@ -573,7 +573,8 @@ export function ChorusColumn(handle: Handle<ChorusColumn.Props>) {
 
 /**
  * Renders the app around one screen's column: the nav, the rail, the account menu and the
- * keyboard help, with `?` and the nav's keys on every page.
+ * keyboard help. The `main` frame's wrappers stretch to the column's height, so a short screen
+ * still puts a conversation's reply box at the bottom.
  */
 export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 	return () => {
@@ -642,6 +643,11 @@ export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 							minBlockSize: "100dvh",
 							display: "flex",
 							flexDirection: "column",
+							"& > [data-main-region], & > [data-main-region] > [data-main-screen]": {
+								flex: "1 0 auto",
+								display: "flex",
+								flexDirection: "column",
+							},
 							[`@media ${TABLET}`]: { borderInline: "1px solid var(--chorus-hairline)" },
 						}),
 					]}
