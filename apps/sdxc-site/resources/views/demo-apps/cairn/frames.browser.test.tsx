@@ -317,6 +317,33 @@ describe("Cairn's board columns", () => {
 	});
 });
 
+describe("Cairn's list under a tall header", () => {
+	test("a cycle's figures and chart roll away as its rows scroll, under a title and toolbar that stay", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("cycles/web-24");
+		let rows = root.querySelector<HTMLElement>("#cairn-rows")!;
+		let header = rows.querySelector<HTMLElement>('[data-slot="cairn-list-header"]')!;
+		let title = root.querySelector("h1")!;
+		let titleTop = title.getBoundingClientRect().top;
+
+		expect(header).not.toBeNull();
+		expect(rows.getBoundingClientRect().top).toBeLessThan(header.getBoundingClientRect().bottom);
+		rows.scrollTop = header.offsetHeight + 40;
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+
+		expect(header.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+			rows.getBoundingClientRect().top,
+		);
+		expect(title.getBoundingClientRect().top).toBe(titleTop);
+		let top = rows.getBoundingClientRect().top;
+		let stuck = [...rows.querySelectorAll("h3")].filter(
+			(heading) => Math.abs(heading.getBoundingClientRect().top - top) <= 1,
+		);
+		expect(stuck).toHaveLength(1);
+		expect(rows.getBoundingClientRect().height).toBeGreaterThan(450);
+	});
+});
+
 describe("Cairn's board", () => {
 	test("fills the window under the top bar, so its own scrollbars stay on screen", async () => {
 		await page.viewport(1280, 600);

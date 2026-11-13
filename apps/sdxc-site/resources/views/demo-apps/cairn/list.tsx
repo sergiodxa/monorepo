@@ -587,7 +587,11 @@ namespace IssueList {
 	}
 }
 
-/** The list pane: the title, the toolbar, the rows and the bulk bar. */
+/**
+ * The list pane: the title, the toolbar, the rows and the bulk bar. The title and toolbar stay
+ * in place; a cycle's or a project's header (its figures, its chart) opens the scrolling rows,
+ * so it rolls away as the person scrolls and the rows take the room.
+ */
 function IssueList(handle: Handle<IssueList.Props>) {
 	return () => {
 		let { scope, url, issues, split } = handle.props;
@@ -706,7 +710,7 @@ function IssueList(handle: Handle<IssueList.Props>) {
 							{`${rows.length} of ${issues.length} issues · ${scope.description}`}
 						</p>
 					</div>
-					{scope.header}
+
 					<HeadingScope level={2}>
 						<FilterBar
 							prefetch="intent"
@@ -777,6 +781,22 @@ function IssueList(handle: Handle<IssueList.Props>) {
 					]}
 				>
 					{split ? null : <ListKeys />}
+					{scope.header === undefined ? null : (
+						<div
+							data-slot="cairn-list-header"
+							mix={[
+								raw({
+									display: "flex",
+									flexDirection: "column",
+									gap: "0.75rem",
+									padding: "0.75rem 1rem",
+									borderBlockEnd: "1px solid var(--ui-neutral-border)",
+								}),
+							]}
+						>
+							{scope.header}
+						</div>
+					)}
 					{groups.length === 0 ? (
 						<HeadingScope level={2} mix={[raw({ padding: "2rem 1rem" })]}>
 							<Empty kind={issues.length === 0 ? "cleared" : "no-results"} size="compact">
