@@ -39,6 +39,8 @@ namespace Composer {
 		quote?: string;
 		/** Drawn under the field, such as the quoted post's preview. */
 		attachment?: RemixNode;
+		/** More fields the form sends, such as the page a dialog's post returns to. */
+		fields?: RemixNode;
 		/** Opens with the field focused, for the compose page. */
 		autofocus?: boolean;
 		/** Grows the field taller from the start, for the compose page. */
@@ -52,6 +54,7 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 		let {
 			attachment,
 			autofocus,
+			fields,
 			from,
 			id,
 			issue,
@@ -80,6 +83,7 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 				]}
 			>
 				<input type="hidden" name="intent" value="compose" />
+				{fields}
 				{replyTo ? <input type="hidden" name="replyTo" value={replyTo} /> : null}
 				{quote ? <input type="hidden" name="quote" value={quote} /> : null}
 				<PersonAvatar person={ME} />

@@ -197,11 +197,15 @@ function destinationOf(page: string): Destination {
 /**
  * The app around a page's column, marking the page's destination on first paint.
  *
- * @param page The page path.
+ * @param request The page and its address.
  * @param column The column: the `main` frame on a page load, or drawn in place for a refused post.
  */
-function inShell(page: string, column: RemixNode): RemixNode {
-	return <ChorusShell current={destinationOf(page)}>{column}</ChorusShell>;
+function inShell(request: DemoAppRequest, column: RemixNode): RemixNode {
+	return (
+		<ChorusShell current={destinationOf(request.page)} page={pageOf(request)}>
+			{column}
+		</ChorusShell>
+	);
 }
 
 /**
@@ -424,10 +428,9 @@ export function draftIssue(text: string): string | null {
 }
 
 /**
- * Answers the composer, which posts to the page it sits on: a post within the limit is added
- * to the visitor's posts and the visitor lands on it, on that page, under the post they
- * replied to, or on the timeline from the compose page; anything else answers the page it
- * was written on again with what was typed and why.
+ * Answers the composer: a post within the limit is added to the visitor's posts and lands on
+ * the page it was written on, under the post it replies to, or, from the compose page and the
+ * New post dialog, on the page `return` names; anything else answers the page again with why.
  */
 function submitCompose(
 	form: FormData,
@@ -445,7 +448,7 @@ function submitCompose(
 		if (!screen) return null;
 		return {
 			...screen,
-			body: inShell(request.page, screen.body),
+			body: inShell(request, screen.body),
 			frames: { [MAIN_FRAME]: inMain(request, screen) },
 			status: 400,
 		};
@@ -455,7 +458,7 @@ function submitCompose(
 	let cookie = postsCookie(state, { id, text, at: Date.now(), replyTo, quote });
 	let hash = `post-${id}`;
 	if (replyTo) return { page: `post/${replyTo}`, hash, toast: "replied", cookies: [cookie] };
-	let page = request.page === "compose" ? "" : pageOf(request);
+	let page = request.page === "compose" ? returnPage(form, "") : pageOf(request);
 	return { page, hash, toast: "posted", cookies: [cookie] };
 }
 
@@ -508,7 +511,7 @@ export default {
 		let screen = route(request, readState(request.cookie)) ?? notFound();
 		return {
 			...screen,
-			body: inShell(request.page, <MainFrame src={mainSource(request.url)} />),
+			body: inShell(request, <MainFrame src={mainSource(request.url)} />),
 		};
 	},
 	submit(page, form, request) {

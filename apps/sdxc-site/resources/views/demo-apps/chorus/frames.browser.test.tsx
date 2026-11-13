@@ -281,6 +281,75 @@ describe("Chorus fills the screen's height", () => {
 	});
 });
 
+describe("Chorus's New post dialog", () => {
+	test.each([
+		[
+			"the nav's Post button",
+			"",
+			1280,
+			"[data-slot='chorus'] > header button[commandfor='chorus-compose']",
+		],
+		[
+			"a profile's New post",
+			"u/noorhaddad",
+			1280,
+			"#chorus-main button[commandfor='chorus-compose']",
+		],
+		["the phone's compose button", "", 375, "[data-slot='chorus-fab']"],
+	])("%s opens it in place with the field focused", async (_, screen, width, trigger) => {
+		await page.viewport(width, 860);
+		let root = await mountScreen(screen);
+		let nav = root.querySelector('[data-slot="chorus"] > header');
+		let dialog = root.querySelector<HTMLDialogElement>("#chorus-compose")!;
+		requests = [];
+
+		root.querySelector<HTMLButtonElement>(trigger)!.click();
+
+		expect(dialog.open).toBe(true);
+		expect(dialog.matches(":modal")).toBe(true);
+		expect(document.activeElement?.id).toBe("chorus-draft-dialog");
+		expect(requests).toEqual([]);
+		expect(root.querySelector('[data-slot="chorus"] > header')).toBe(nav);
+		dialog.close();
+	});
+
+	test("it floats near the top on a desktop and fills a phone", async () => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("");
+		let dialog = root.querySelector<HTMLDialogElement>("#chorus-compose")!;
+		dialog.showModal();
+		let wide = dialog.getBoundingClientRect();
+		dialog.close();
+		await page.viewport(375, 812);
+		dialog.showModal();
+		let narrow = dialog.getBoundingClientRect();
+		dialog.close();
+
+		expect(Math.round(wide.width)).toBe(600);
+		expect(Math.round(wide.top)).toBe(43);
+		expect(wide.height).toBeLessThan(320);
+		expect([narrow.top, narrow.left, narrow.width, narrow.height].map(Math.round)).toEqual([
+			0, 0, 375, 812,
+		]);
+	});
+
+	test("sending closes it", async () => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("");
+		let submits = watchSubmits();
+		let dialog = root.querySelector<HTMLDialogElement>("#chorus-compose")!;
+		dialog.showModal();
+		let field = root.querySelector<HTMLTextAreaElement>("#chorus-draft-dialog")!;
+		field.value = "Hello";
+		field.dispatchEvent(new Event("input", { bubbles: true }));
+
+		field.form!.requestSubmit();
+
+		expect(submits.length).toBe(1);
+		expect(dialog.open).toBe(false);
+	});
+});
+
 describe("Chorus from the keyboard", () => {
 	test("j and k walk the timeline's posts, k stopping at the first", async () => {
 		await page.viewport(1280, 860);

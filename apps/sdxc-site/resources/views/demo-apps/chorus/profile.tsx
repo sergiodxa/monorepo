@@ -20,13 +20,14 @@ import {
 } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
-import { LinkButton } from "@sdxc/ui";
+import { Button, LinkButton } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 
 import type { Person } from "~/resources/views/demo-apps/chorus/data";
 import type { FeedItem } from "~/resources/views/demo-apps/chorus/feed";
 import type { PostView, VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
+import { COMPOSE_DIALOG } from "~/resources/views/demo-apps/chorus/compose-dialog";
 import { ARRIVED_POSTS, FOR_YOU, ME, POSTS, href } from "~/resources/views/demo-apps/chorus/data";
 import {
 	Feed,
@@ -184,15 +185,17 @@ export function ProfileScreen(handle: Handle<ProfileScreen.Props>) {
 							<PersonAvatar person={person} />
 						</span>
 						{mine ? (
-							<LinkButton
-								href={href("compose")}
+							<Button
+								type="button"
+								commandfor={COMPOSE_DIALOG}
+								command="show-modal"
 								variant="outline"
 								color="neutral"
 								size="sm"
 								mix={[raw({ "--ui-button-radius": "999px", fontWeight: "700" })]}
 							>
 								New post
-							</LinkButton>
+							</Button>
 						) : (
 							<span mix={[raw({ display: "inline-flex", gap: "0.5rem", alignItems: "center" })]}>
 								<LinkButton

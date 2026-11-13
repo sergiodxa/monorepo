@@ -25,6 +25,7 @@ import { HeadingScope, Menu } from "@sdxc/ui";
 import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 import { TAB_BAR_BLOCK_SIZE, TabBar } from "@sdxc/ui/app/tab-bar";
 
+import { COMPOSE_DIALOG, ComposeDialog } from "~/resources/views/demo-apps/chorus/compose-dialog";
 import { ME, NOTIFICATIONS, actionHref, href } from "~/resources/views/demo-apps/chorus/data";
 import { HELP_LABELS } from "~/resources/views/demo-apps/chorus/labels";
 import { ChorusMark, PersonAvatar } from "~/resources/views/demo-apps/chorus/parts";
@@ -204,14 +205,19 @@ function LeftNav(handle: Handle<{ current: Destination }>) {
 						})}
 					</ul>
 				</nav>
-				<a
-					href={href("compose")}
+				<button
+					type="button"
+					commandfor={COMPOSE_DIALOG}
+					command="show-modal"
 					aria-label="New post"
 					data-shortcut="n"
 					data-shortcut-label="New post"
 					data-shortcut-group="Posts"
 					mix={[
 						raw({
+							border: "0",
+							font: "inherit",
+							cursor: "pointer",
 							display: "inline-grid",
 							placeItems: "center",
 							inlineSize: "3.25rem",
@@ -241,7 +247,7 @@ function LeftNav(handle: Handle<{ current: Destination }>) {
 					<span mix={[raw({ display: "none", [`@media ${WIDE}`]: { display: "inline" } })]}>
 						Post
 					</span>
-				</a>
+				</button>
 				<span mix={[raw({ flex: "1 1 auto" })]} />
 				<button
 					type="button"
@@ -450,6 +456,8 @@ namespace ChorusShell {
 	export interface Props {
 		/** The destination the nav marks on first paint; the sync island keeps it current after. */
 		current: Destination;
+		/** The page path drawn, with its query, which a New post sent without script returns to. */
+		page: string;
 		/** The column: the `main` frame, or a column drawn in place for a refused post. */
 		children: RemixNode;
 	}
@@ -533,12 +541,16 @@ export function ChorusColumn(handle: Handle<ChorusColumn.Props>) {
 					</TabBar>
 				) : null}
 				{compose ? (
-					<a
-						href={href("compose")}
+					<button
+						type="button"
+						commandfor={COMPOSE_DIALOG}
+						command="show-modal"
 						aria-label="New post"
 						data-slot="chorus-fab"
 						mix={[
 							raw({
+								border: "0",
+								cursor: "pointer",
 								position: "fixed",
 								insetInlineEnd: "1rem",
 								insetBlockEnd: `calc(${TAB_BAR_BLOCK_SIZE} + env(safe-area-inset-bottom, 0px) + 1rem)`,
@@ -564,7 +576,7 @@ export function ChorusColumn(handle: Handle<ChorusColumn.Props>) {
 						]}
 					>
 						<PenLineIcon size={24} aria-hidden="true" />
-					</a>
+					</button>
 				) : null}
 			</>
 		);
@@ -578,7 +590,7 @@ export function ChorusColumn(handle: Handle<ChorusColumn.Props>) {
  */
 export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 	return () => {
-		let { children, current } = handle.props;
+		let { children, current, page } = handle.props;
 		return (
 			<div
 				data-slot="chorus"
@@ -657,6 +669,7 @@ export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 				<RightRail />
 				<MainFrameSync root={href()} />
 				<AccountMenu />
+				<ComposeDialog page={page} />
 				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</div>
 		);

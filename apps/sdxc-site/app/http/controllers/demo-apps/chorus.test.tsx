@@ -259,6 +259,29 @@ describe("Chorus posting", () => {
 		expect(body).toContain("Write something before posting.");
 	});
 
+	test("a post from the New post dialog lands back on the page it was written on", async () => {
+		let response = await post("compose", {
+			intent: "compose",
+			text: "From my profile",
+			return: "u/noorhaddad",
+		});
+		let away = await post("compose", { intent: "compose", text: "Hi", return: "//evil.example" });
+
+		expect(withoutToastNonce(response.headers.get("location"))).toMatch(
+			new RegExp(`^${href("u/noorhaddad")}\\?toast=posted#post-n-`),
+		);
+		expect(withoutToastNonce(away.headers.get("location"))).toMatch(
+			new RegExp(`^${href()}\\?toast=posted#post-n-`),
+		);
+	});
+
+	test("every page's New post dialog returns to that page without script", async () => {
+		let body = await page("u/noorhaddad/media?toast=posted");
+
+		expect(body).toMatch(/<dialog[^>]*id="chorus-compose"/);
+		expect(body).toMatch(/name="return" value="u\/noorhaddad\/media"/);
+	});
+
 	test("a reply to a post that does not exist is refused", async () => {
 		expect((await post("compose", { text: "Hi", replyTo: "nope" })).status).toBe(400);
 	});
