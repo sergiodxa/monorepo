@@ -165,6 +165,37 @@ describe("PropertyList", () => {
 		expect(picker.matches(":popover-open")).toBe(true);
 	});
 
+	test("keeps an editable value's chevron on its first row when the value runs to several", () => {
+		let host = mount(
+			<PropertyList>
+				<PropertyList.Item
+					label="Reviewers"
+					edit={{ id: "edit-reviewers", label: "Edit reviewers", content: <p>Picker</p> }}
+				>
+					<span style={{ display: "grid", gap: "0.5rem" }}>
+						{["Kenji", "Mara", "Tobias", "Inés"].map((name) => (
+							<span key={name} data-slot="reviewer" style={{ blockSize: "1.5rem" }}>
+								{name}
+							</span>
+						))}
+					</span>
+				</PropertyList.Item>
+			</PropertyList>,
+		);
+		let chevron = host.querySelector('[data-slot="property-edit"] svg')!.getBoundingClientRect();
+		let first = host.querySelector('[data-slot="reviewer"]')!.getBoundingClientRect();
+
+		expect(chevron.top + chevron.height / 2).toBeCloseTo(first.top + first.height / 2, 0);
+	});
+
+	test("centres the chevron on a single-row value", () => {
+		let host = mount(<Monitor />);
+		let button = host.querySelector('[data-slot="property-edit"]')!.getBoundingClientRect();
+		let chevron = host.querySelector('[data-slot="property-edit"] svg')!.getBoundingClientRect();
+
+		expect(chevron.top + chevron.height / 2).toBeCloseTo(button.top + button.height / 2, 0);
+	});
+
 	test("sets tiles two to a row only where two fit", () => {
 		let tiles = (
 			<PropertyList variant="tiles">

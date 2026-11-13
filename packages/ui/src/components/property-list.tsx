@@ -275,9 +275,9 @@ interface PropertyEditProps {
 }
 
 /**
- * The editable value: a full-width button naming its action before the current value,
- * and the popover it opens, the row's own or the app's. The button is the popover's
- * invoker, which makes it the popover's implicit anchor, so it opens under its row.
+ * The editable value: a full-width button naming its action before the current value, its
+ * chevron on the value's first row, and the popover it opens, the row's own or the app's. As
+ * the popover's invoker the button is its implicit anchor, so it opens under its row.
  *
  * @param handle Runtime handle carrying the edit description and the rendered value.
  * @returns The render function producing the button and its popover.
@@ -301,7 +301,11 @@ function PropertyEdit(handle: Handle<PropertyEditProps>) {
 						is("full"),
 						minBs("2rem"),
 						pi(2),
-						raw({ marginInline: "-0.5rem", inlineSize: "calc(100% + 1rem)" }),
+						raw({
+							marginInline: "-0.5rem",
+							inlineSize: "calc(100% + 1rem)",
+							paddingBlock: "0.25rem",
+						}),
 						rounded("md"),
 						border({ color: "transparent", width: 0 }),
 						bg("transparent"),
@@ -318,7 +322,17 @@ function PropertyEdit(handle: Handle<PropertyEditProps>) {
 						<span mix={[visuallyHidden()]}>{`${edit.label}: `}</span>
 						{children}
 					</span>
-					<ChevronDownIcon size={14} aria-hidden="true" mix={[shrink(0), fg("neutral.muted")]} />
+					<span
+						aria-hidden="true"
+						mix={[
+							flex(),
+							items("center"),
+							shrink(0),
+							raw({ alignSelf: "flex-start", blockSize: "1.5rem" }),
+						]}
+					>
+						<ChevronDownIcon size={14} mix={[fg("neutral.muted")]} />
+					</span>
 				</button>
 				{edit.popover ?? (
 					<Popover
