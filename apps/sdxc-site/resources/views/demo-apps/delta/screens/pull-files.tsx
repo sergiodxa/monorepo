@@ -537,12 +537,14 @@ export function PullFilesScreen(handle: Handle<PullFilesScreen.Props>) {
 								]}
 							>
 								<details
-									open
 									data-slot="delta-changed-tree"
 									mix={[
 										raw({
 											minInlineSize: 0,
 											"@container delta-files (width >= 56rem)": {
+												"&::details-content": { contentVisibility: "visible", display: "block" },
+												"& > summary": { pointerEvents: "none", listStyle: "none" },
+												"& > summary::-webkit-details-marker": { display: "none" },
 												position: "sticky",
 												insetBlockStart: "calc(var(--ui-app-sticky-top, 3.5rem) + 7rem)",
 												maxBlockSize: "calc(100dvh - var(--ui-app-sticky-top, 3.5rem) - 9rem)",

@@ -351,6 +351,19 @@ describe("Delta on a phone", () => {
 		}
 	});
 
+	test("Files changed folds its file list on a phone and shows it beside the diffs when wide", async () => {
+		await page.viewport(375, 812);
+		let root = await mountScreen("delta/pull/57/files");
+		let tree = root.querySelector<HTMLElement>('[data-slot="delta-changed-tree"] [role="tree"]')!;
+
+		expect(tree.checkVisibility()).toBe(false);
+
+		await page.viewport(1440, 900);
+		await settle();
+		expect(tree.checkVisibility()).toBe(true);
+		expect(tree.getBoundingClientRect().height).toBeGreaterThan(100);
+	});
+
 	test("a folder's listing gives each name the row's width, with its parent row on top", async () => {
 		await page.viewport(375, 812);
 		let root = await mountScreen("delta/tree/main/screens");
