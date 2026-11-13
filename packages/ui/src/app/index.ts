@@ -18,8 +18,11 @@ export * from "./behaviors/shortcuts.js";
 export * from "./behaviors/toaster.js";
 export * from "./board.js";
 export * from "./chart.js";
+export * from "./check-runs.js";
+export * from "./code-view.js";
 export * from "./command-palette.js";
 export * from "./context-menu.js";
+export * from "./contribution-graph.js";
 export * from "./danger-zone.js";
 export * from "./detail-sheet.js";
 export * from "./drop-indicator.js";
@@ -28,21 +31,34 @@ export * from "./editor-layout.js";
 export * from "./empty.js";
 export * from "./file-trigger.js";
 export * from "./filter-bar.js";
+export * from "./filter-menu.js";
 export * from "./grid-list.js";
 export * from "./keyboard-help.js";
+export * from "./log-viewer.js";
 export * from "./menubar.js";
+export * from "./merge-box.js";
 export * from "./mixins/app-shell-controls.js";
 export * from "./mixins/auto-refresh.js";
 export * from "./mixins/chart-tooltip.js";
+export {
+	CODE_VIEW_LIVE_ATTRIBUTE,
+	CODE_VIEW_MENU_ATTRIBUTE,
+	CODE_VIEW_SELECTED_ATTRIBUTE,
+	CODE_VIEW_SELECTOR,
+	codeViewSelection,
+} from "./mixins/code-view-selection.js";
 export * from "./mixins/command-palette.js";
 export * from "./mixins/context-menu.js";
+export * from "./mixins/contribution-graph-keys.js";
 export * from "./mixins/copy-permalink.js";
 export * from "./mixins/detail-sheet-keys.js";
 export * from "./mixins/drag-reorder.js";
 export * from "./mixins/drop-zone.js";
 export * from "./mixins/escape-link.js";
+export * from "./mixins/filter-menu-keys.js";
 export * from "./mixins/grid-list-keys.js";
 export * from "./mixins/keyboard-help.js";
+export * from "./mixins/log-viewer.js";
 export * from "./mixins/menubar-keys.js";
 export * from "./mixins/optimistic-toggle-sync.js";
 export * from "./mixins/range-picker-keys.js";
@@ -56,10 +72,13 @@ export * from "./mixins/selection-bar-sync.js";
 export * from "./mixins/split-view.js";
 export * from "./mixins/status-strip-keys.js";
 export * from "./mixins/submit-on-change.js";
+export * from "./mixins/submit-on-close.js";
 export * from "./mixins/table-selection.js";
 export * from "./mixins/toast-queue.js";
 export * from "./mixins/toast-stack.js";
 export * from "./mixins/tree-keys.js";
+export * from "./mixins/tree-filter.js";
+export { TREE_NAVIGATION_ROW_SELECTOR, treeNavigation } from "./mixins/tree-navigation.js";
 export * from "./optimistic-toggle.js";
 export * from "./page-header.js";
 export * from "./range-picker.js";
