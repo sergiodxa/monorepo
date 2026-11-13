@@ -56,7 +56,7 @@ describe("GET /demo/apps/:app", () => {
 		let links = new Set<string>();
 		for (let screen of app.screens) {
 			let body = await (await fetchApp(demoAppHref(slug)(screen))).text();
-			for (let [, href] of body.matchAll(/href="([^"#]+)/g)) {
+			for (let [, href] of body.matchAll(/(?<![\w-])href="([^"#]+)/g)) {
 				let path = href!.replaceAll("&amp;", "&");
 				if (path === root || path.startsWith(`${root}/`) || path.startsWith(`${root}?`)) {
 					links.add(path);
