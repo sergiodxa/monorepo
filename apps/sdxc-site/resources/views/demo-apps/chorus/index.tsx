@@ -447,9 +447,9 @@ export function draftIssue(text: string): string | null {
 }
 
 /**
- * Answers the composer: a post within the limit is added to the visitor's posts and lands on
- * the page `return` names (the compose dialog's), else under the post it replies to or on the
- * page it was written on; anything else answers the page again with why.
+ * Answers the composer: a post within the limit is added to the visitor's posts. A new post or
+ * quote opens on its own page; a reply lands on the page `return` names (the compose dialog's),
+ * else under the post it answers. Anything else answers the page again with why.
  */
 function submitCompose(
 	form: FormData,
@@ -475,18 +475,10 @@ function submitCompose(
 
 	let id = `n-${generateUUID().slice(0, 8)}`;
 	let cookie = postsCookie(state, { id, text, at: Date.now(), replyTo, quote });
+	if (!replyTo) return { page: `post/${id}`, toast: "posted", cookies: [cookie] };
 	let hash = `post-${id}`;
-	if (form.has("return")) {
-		return {
-			page: returnPage(form, ""),
-			hash,
-			toast: replyTo ? "replied" : "posted",
-			cookies: [cookie],
-		};
-	}
-	if (replyTo) return { page: `post/${replyTo}`, hash, toast: "replied", cookies: [cookie] };
-	let page = request.page === "compose" ? "" : pageOf(request);
-	return { page, hash, toast: "posted", cookies: [cookie] };
+	let page = form.has("return") ? returnPage(form, "") : `post/${replyTo}`;
+	return { page, hash, toast: "replied", cookies: [cookie] };
 }
 
 /**

@@ -13,11 +13,16 @@ import { withoutToastNonce } from "~/app/test/demo-apps";
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 
-/** Posts Chorus's composer, whose redirect names the new post's element. */
+/** Posts a reply from Chorus's compose dialog, whose redirect names the new reply's element. */
 async function compose(headers: Record<string, string> = {}): Promise<Response> {
 	return await fetchApp(demoAppActionHref("chorus")(""), {
 		method: "POST",
-		body: new URLSearchParams({ intent: "compose", text: "Anchored post" }),
+		body: new URLSearchParams({
+			intent: "compose",
+			text: "Anchored reply",
+			replyTo: "p-leonids",
+			return: "",
+		}),
 		headers,
 	});
 }
@@ -27,7 +32,7 @@ describe("demo app form action", () => {
 		let response = await compose();
 
 		expect(withoutToastNonce(response.headers.get("location"))).toMatch(
-			new RegExp(`^${demoAppHref("chorus")()}\\?toast=posted#post-n-[0-9a-f]{8}$`),
+			new RegExp(`^${demoAppHref("chorus")()}\\?toast=replied#post-n-[0-9a-f]{8}$`),
 		);
 	});
 
@@ -36,7 +41,7 @@ describe("demo app form action", () => {
 		let location = withoutToastNonce(response.headers.get("location")) ?? "";
 
 		expect(location).toMatch(
-			new RegExp(`^${demoAppHref("chorus")()}\\?toast=posted&at=post-n-[0-9a-f]{8}$`),
+			new RegExp(`^${demoAppHref("chorus")()}\\?toast=replied&at=post-n-[0-9a-f]{8}$`),
 		);
 		expect(location).not.toContain("#");
 	});

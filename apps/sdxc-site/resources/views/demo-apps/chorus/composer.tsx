@@ -1,8 +1,8 @@
 /**
  * The post composer: the writer's avatar, a field that grows with its text, and a footer with
- * the character ring and the Post button. It posts to the page it sits on; with script the
- * answer lands in the main frame and the box empties, and the ring counts as you type while
- * Post waits until there is something within the limit to send.
+ * the character ring and the Post button. It posts to the page it sits on; with script a new
+ * post opens its own page in the main frame and a reply lands in place, and the ring counts as
+ * you type while Post waits until there is something within the limit to send.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,9 +15,11 @@ import { when } from "@sdxc/u/state";
 import { Button } from "@sdxc/ui";
 import { CharacterCount } from "@sdxc/ui/character-count";
 
+import { ComposeSubmit } from "~/resources/views/demo-apps/chorus/compose-submit";
 import { ME, POST_LIMIT, href } from "~/resources/views/demo-apps/chorus/data";
 import { COUNT_LABELS } from "~/resources/views/demo-apps/chorus/labels";
 import { PersonAvatar } from "~/resources/views/demo-apps/chorus/parts";
+import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
 
 namespace Composer {
 	export interface Props {
@@ -84,6 +86,7 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 			>
 				<input type="hidden" name="intent" value="compose" />
 				{fields}
+				{replyTo ? null : <ComposeSubmit frame={MAIN_FRAME} />}
 				{replyTo ? <input type="hidden" name="replyTo" value={replyTo} /> : null}
 				{quote ? <input type="hidden" name="quote" value={quote} /> : null}
 				<PersonAvatar person={ME} />

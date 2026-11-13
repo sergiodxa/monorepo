@@ -195,15 +195,16 @@ describe("Chorus reactions", () => {
 });
 
 describe("Chorus posting", () => {
-	test("a post lands at the top of the timeline with its toast", async () => {
+	test("a post opens its own page with its toast, and tops the timeline", async () => {
 		let response = await post("", { intent: "compose", text: "Hello from the test suite #demo" });
 		let cookie = cookiesFrom(response);
+		let location = withoutToastNonce(response.headers.get("location")) ?? "";
+		let permalink = await page(location.slice(href().length + 1).split("?")[0]!, cookie);
 		let body = await page("", cookie);
 
 		expect(response.status).toBe(303);
-		expect(withoutToastNonce(response.headers.get("location"))).toMatch(
-			new RegExp(`^${href()}\\?toast=posted#post-n-[0-9a-f]{8}$`),
-		);
+		expect(location).toMatch(new RegExp(`^${href("post")}/n-[0-9a-f]{8}\\?toast=posted$`));
+		expect(permalink).toContain("Hello from the test suite");
 		expect(body.indexOf("Hello from the test suite")).toBeLessThan(
 			body.indexOf('id="post-p-leonids"'),
 		);
@@ -259,20 +260,24 @@ describe("Chorus posting", () => {
 		expect(body).toContain("Write something before posting.");
 	});
 
-	test("a post from the New post dialog lands back on the page it was written on", async () => {
-		let response = await post("compose", {
+	test("a new post or quote from the dialog opens its own page wherever it was written", async () => {
+		let fresh = await post("compose", {
 			intent: "compose",
 			text: "From my profile",
 			return: "u/noorhaddad",
 		});
-		let away = await post("compose", { intent: "compose", text: "Hi", return: "//evil.example" });
+		let quote = await post("compose", {
+			intent: "compose",
+			text: "Worth it",
+			quote: "p-book",
+			return: "explore",
+		});
 
-		expect(withoutToastNonce(response.headers.get("location"))).toMatch(
-			new RegExp(`^${href("u/noorhaddad")}\\?toast=posted#post-n-`),
-		);
-		expect(withoutToastNonce(away.headers.get("location"))).toMatch(
-			new RegExp(`^${href()}\\?toast=posted#post-n-`),
-		);
+		for (let response of [fresh, quote]) {
+			expect(withoutToastNonce(response.headers.get("location"))).toMatch(
+				new RegExp(`^${href("post")}/n-[0-9a-f]{8}\\?toast=posted$`),
+			);
+		}
 	});
 
 	test("a reply from the dialog lands back on the page it was written on", async () => {
@@ -529,7 +534,7 @@ describe("Chorus frames", () => {
 		expect(poll).toContain(`action="${href("?feed=following")}"`);
 	});
 
-	test("a post from the composer comes back as the column it was written in, on top", async () => {
+	test("a post from the composer comes back as its own page in the column", async () => {
 		let response = await fetchApp(href("?feed=following"), {
 			method: "POST",
 			body: new URLSearchParams({ intent: "compose", text: "Framed hello" }),
@@ -539,9 +544,9 @@ describe("Chorus frames", () => {
 		let location = response.headers.get("location") ?? "";
 		let column = await (await targeted(location, MAIN_FRAME, cookie)).text();
 
-		expect(location.startsWith(`${href("?feed=following")}&toast=posted.`)).toBe(true);
+		expect(location).toMatch(new RegExp(`^${href("post")}/n-[0-9a-f]{8}\\?toast=posted\\.`));
 		expect(column).toContain("Framed hello");
-		expect(column).toContain("Home: Following");
+		expect(column).toContain('data-nav="none"');
 		expect(column).not.toContain('data-slot="chorus"');
 	});
 

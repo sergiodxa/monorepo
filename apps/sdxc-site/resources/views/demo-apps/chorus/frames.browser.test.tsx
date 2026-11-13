@@ -24,6 +24,7 @@ import { blockSize } from "~/app/test/frame-size";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import chorus from "~/resources/views/demo-apps/chorus";
 import { ComposeReturn } from "~/resources/views/demo-apps/chorus/compose-return";
+import { ComposeSubmit } from "~/resources/views/demo-apps/chorus/compose-submit";
 import { CopyLink } from "~/resources/views/demo-apps/chorus/copy-link";
 import { href, pollFrame } from "~/resources/views/demo-apps/chorus/data";
 import { FeedKeys } from "~/resources/views/demo-apps/chorus/feed-keys";
@@ -55,6 +56,7 @@ function themed(node: RemixNode): RemixNode {
 const ISLANDS: Record<string, Function> = {
 	CharacterCount,
 	ComposeReturn,
+	ComposeSubmit,
 	CopyLink,
 	FeedKeys,
 	OptimisticToggle,
@@ -368,10 +370,40 @@ describe("Chorus's New post dialog", () => {
 		]);
 	});
 
-	test("sending closes it", async () => {
+	test("sending posts in the background, closes it and opens the new post's page", async () => {
 		await page.viewport(1280, 860);
 		let root = await mountScreen("");
 		let submits = watchSubmits();
+		let permalink = href("post/n-1a2b3c4d");
+		let sent: string[] = [];
+		let opened: string[] = [];
+		WORKER.use(
+			http.post(/\/demo\/apps\/chorus\/compose$/, async ({ request }) => {
+				let text = (await request.formData()).get("text");
+				sent.push(typeof text === "string" ? text : "");
+				return new HttpResponse(null, {
+					status: 303,
+					headers: { Location: `${permalink}?toast=posted` },
+				});
+			}),
+			http.get(/\/demo\/apps\/chorus\/post\//, () => HttpResponse.html("<div></div>")),
+		);
+		let hold = (event: Event) => {
+			opened.push((event as Event & { destination: { url: string } }).destination.url);
+			event.preventDefault();
+		};
+		let aborted = (event: PromiseRejectionEvent) => {
+			if (event.reason instanceof DOMException && event.reason.name === "AbortError") {
+				event.preventDefault();
+			}
+		};
+		globalThis.navigation?.addEventListener("navigate", hold);
+		window.addEventListener("unhandledrejection", aborted);
+		onTestFinished(() => {
+			window.removeEventListener("unhandledrejection", aborted);
+			globalThis.navigation?.removeEventListener("navigate", hold);
+			WORKER.resetHandlers();
+		});
 		let dialog = root.querySelector<HTMLDialogElement>("#chorus-compose")!;
 		dialog.showModal();
 		let field = root.querySelector<HTMLTextAreaElement>("#chorus-draft-dialog")!;
@@ -379,9 +411,13 @@ describe("Chorus's New post dialog", () => {
 		field.dispatchEvent(new Event("input", { bubbles: true }));
 
 		field.form!.requestSubmit();
+		await until(() => opened.length > 0);
 
-		expect(submits.length).toBe(1);
+		expect(submits.map((submit) => submit.handled)).toEqual([true]);
 		expect(dialog.open).toBe(false);
+		expect(sent).toEqual(["Hello"]);
+		expect(opened.map((url) => new URL(url).pathname)).toEqual([permalink]);
+		expect(field.value).toBe("");
 	});
 });
 
