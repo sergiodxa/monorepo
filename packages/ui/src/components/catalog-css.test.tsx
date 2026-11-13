@@ -130,6 +130,21 @@ const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
 			largeDiff: "a",
 		},
 	},
+	ReviewThread: {
+		comments: [{ avatar: "a", author: "a", body: "a", pending: true }],
+		replyAction: "/a",
+		resolveAction: "/a",
+		labels: {
+			reply: "a",
+			resolve: "a",
+			unresolve: "a",
+			outdated: "a",
+			pending: "a",
+			suggestion: "a",
+			applySuggestion: "a",
+			columns: { oldNumber: "a", newNumber: "a", oldText: "a", change: "a" },
+		},
+	},
 };
 
 /** The probe props for the component exported as `name`. */
