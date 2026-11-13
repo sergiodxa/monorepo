@@ -88,6 +88,7 @@ export const FACE_KIND = {
 	"drop-zone": "drop-zone",
 	"editor-layout": "split-view",
 	empty: "empty",
+	"episode-player": "video",
 	"event-ticker": "landing-ticker",
 	"fan-out-diagram": "landing-diagram",
 	"faq-band": "disclosure",

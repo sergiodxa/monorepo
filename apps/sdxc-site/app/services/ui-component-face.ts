@@ -227,6 +227,7 @@ const CATALOGUE = [
 	{ slug: "drop-zone", module: "app" },
 	{ slug: "editor-layout", module: "app" },
 	{ slug: "empty", module: "app" },
+	{ slug: "episode-player", module: "landing" },
 	{ slug: "event-ticker", module: "landing" },
 	{ slug: "fan-out-diagram", module: "landing" },
 	{ slug: "faq-band", module: "landing" },
