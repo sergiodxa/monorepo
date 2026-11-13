@@ -22,14 +22,14 @@ workspace custom emoji that render as images.
 
 ### Consumers
 
-| App / surface                         | Needs                                              |
-| ------------------------------------- | -------------------------------------------------- |
-| Blog post / page markdown walk        | Shortcode → character in `text` nodes              |
-| Blog CMS fields                       | Field mixin + suggest / picker                     |
-| Chorus composers and DMs              | Mixin, suggest, picker, string replace on display  |
-| Tern `Composer.Input`                 | Same                                               |
-| Cairn issue title (`input`), body, comments | Same; titles are where `:bug:` is typed      |
-| ActivityPub custom emoji (later)      | Shortcode → image URL, same custom entry shape     |
+| App / surface                               | Needs                                             |
+| ------------------------------------------- | ------------------------------------------------- |
+| Blog post / page markdown walk              | Shortcode → character in `text` nodes             |
+| Blog CMS fields                             | Field mixin + suggest / picker                    |
+| Chorus composers and DMs                    | Mixin, suggest, picker, string replace on display |
+| Tern `Composer.Input`                       | Same                                              |
+| Cairn issue title (`input`), body, comments | Same; titles are where `:bug:` is typed           |
+| ActivityPub custom emoji (later)            | Shortcode → image URL, same custom entry shape    |
 
 ### What the catalog has to solve
 
@@ -58,12 +58,12 @@ token APIs, a markdown walk visitor, and composable UI — no `createEmoji` bind
 
 ### Package entries
 
-| Entry                   | Role                                                                 |
-| ----------------------- | -------------------------------------------------------------------- |
-| `@sdxc/emoji`           | Types, `merge`, `replaceShortcodes`, `tokenize`, render helpers      |
-| `@sdxc/emoji/catalog`   | Generated `EmojiEntry[]`, derived shortcode index, category list     |
-| `@sdxc/emoji/markdown`  | `Markdown.walk` visitor over `text` (skips code / like typography)   |
-| `@sdxc/emoji/ui`        | `EmojiPicker`, `EmojiSuggest`, field mixin, `ui:emoji-pick` event    |
+| Entry                  | Role                                                               |
+| ---------------------- | ------------------------------------------------------------------ |
+| `@sdxc/emoji`          | Types, `merge`, `replaceShortcodes`, `tokenize`, render helpers    |
+| `@sdxc/emoji/catalog`  | Generated `EmojiEntry[]`, derived shortcode index, category list   |
+| `@sdxc/emoji/markdown` | `Markdown.walk` visitor over `text` (skips code / like typography) |
+| `@sdxc/emoji/ui`       | `EmojiPicker`, `EmojiSuggest`, field mixin, `ui:emoji-pick` event  |
 
 Root never imports the catalog. Apps that want the built-in table load
 `@sdxc/emoji/catalog` (or fetch equivalent JSON) and pass it in.
@@ -132,12 +132,12 @@ replace, suggest, and tokenize. Building that index is the package's job at merg
 
 A package script downloads pinned OSS sources, merges them, and commits the result:
 
-| Priority | Source                                      | Contributes                         |
-| -------- | ------------------------------------------- | ----------------------------------- |
-| 1        | Unicode / Emojibase compact                 | Glyph set, category, sort order     |
-| 2        | gemoji                                      | GitHub aliases and tags             |
-| 3        | Emojibase shortcode presets                 | Extra aliases (`github`, `iamcal`, …) |
-| 4        | iamcal emoji-datasource                     | Remaining `short_names`, emoticons  |
+| Priority | Source                      | Contributes                           |
+| -------- | --------------------------- | ------------------------------------- |
+| 1        | Unicode / Emojibase compact | Glyph set, category, sort order       |
+| 2        | gemoji                      | GitHub aliases and tags               |
+| 3        | Emojibase shortcode presets | Extra aliases (`github`, `iamcal`, …) |
+| 4        | iamcal emoji-datasource     | Remaining `short_names`, emoticons    |
 
 Rules:
 
@@ -202,13 +202,13 @@ as content inside code.
 
 Follow the same split `@sdxc/ui` uses for `Command` and friends — not a hydrated mega-widget:
 
-| Layer | Lives in | Does |
-| ----- | -------- | ---- |
-| **Components** | `@sdxc/emoji/ui` compound parts | Markup + `@sdxc/u` styles + `data-*` contract only. Import `css` / `attrs` from `remix/component`; never `on`, `ref`, or `createMixin`. No `clientEntry` inside the package. |
-| **Mixins** | `@sdxc/emoji/ui` (or `./mixins`) | DOM adapters: filter, keyboard, virtualize, scroll-spy, field trigger, dispatch `ui:emoji-pick`. Each mixin documents why JS is required and the no-JS baseline. |
-| **Behavior class** (if needed) | `@sdxc/emoji` core or `./ui` behaviors | DOM-free search/rank/selection model (same idea as `FilterModel`), unit-tested without a browser; mixins bind it to the `data-*` tree. |
-| **Shell** | The app | `<dialog>`, Popover API (`popover` + `popovertarget`), or inline placement. The package never owns the overlay host. |
-| **Hydration** | The app island | The screen that mounts the field/picker applies the mixins (and optional `clientEntry`); the library stays pure. |
+| Layer                          | Lives in                               | Does                                                                                                                                                                         |
+| ------------------------------ | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Components**                 | `@sdxc/emoji/ui` compound parts        | Markup + `@sdxc/u` styles + `data-*` contract only. Import `css` / `attrs` from `remix/component`; never `on`, `ref`, or `createMixin`. No `clientEntry` inside the package. |
+| **Mixins**                     | `@sdxc/emoji/ui` (or `./mixins`)       | DOM adapters: filter, keyboard, virtualize, scroll-spy, field trigger, dispatch `ui:emoji-pick`. Each mixin documents why JS is required and the no-JS baseline.             |
+| **Behavior class** (if needed) | `@sdxc/emoji` core or `./ui` behaviors | DOM-free search/rank/selection model (same idea as `FilterModel`), unit-tested without a browser; mixins bind it to the `data-*` tree.                                       |
+| **Shell**                      | The app                                | `<dialog>`, Popover API (`popover` + `popovertarget`), or inline placement. The package never owns the overlay host.                                                         |
+| **Hydration**                  | The app island                         | The screen that mounts the field/picker applies the mixins (and optional `clientEntry`); the library stays pure.                                                             |
 
 No-JS baseline: the picker markup still renders (search field, category tabs as links/buttons, emoji as buttons in document order). Without mixins there is no as-you-type filter, arrow navigation, or virtualization — find-in-page and Tab still reach cells. Suggest without the field mixin simply does not open.
 
@@ -235,26 +235,26 @@ Host-agnostic panels; compose them inside the app’s dialog/popover:
 
 **`EmojiPicker`**
 
-| Part | Role |
-| ---- | ---- |
-| `EmojiPicker` | Root host; `mix`, optional `recents`, density CSS variables |
-| `EmojiPicker.Search` | Query `<input>`; required `aria-label` / `placeholder` |
+| Part                     | Role                                                                                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EmojiPicker`            | Root host; `mix`, optional `recents`, density CSS variables                                                                                                                                |
+| `EmojiPicker.Search`     | Query `<input>`; required `aria-label` / `placeholder`                                                                                                                                     |
 | `EmojiPicker.Categories` | Category **tablist**; each tab’s visible glyph and accessible name are **required props** (or children), typically `@sdxc/icons` chosen by the app — the package does not hardcode tab art |
-| `EmojiPicker.Viewport` | Scrollport; sticky section headers; virtualized rows via mixin |
-| `EmojiPicker.Category` | One section: `id`, required `label`, cells |
-| `EmojiPicker.Cell` | One emoji button (`data-emoji` / `data-name`); Unicode glyph or custom `<img>` |
-| `EmojiPicker.Preview` | Optional footer: hovered/focused entry’s glyph, primary shortcode, label |
-| `EmojiPicker.Empty` | Loading and zero-hit states (children / slots; no built-in English) |
-| `EmojiPicker.Status` | Politely assertive live region for “N matching” announcements |
+| `EmojiPicker.Viewport`   | Scrollport; sticky section headers; virtualized rows via mixin                                                                                                                             |
+| `EmojiPicker.Category`   | One section: `id`, required `label`, cells                                                                                                                                                 |
+| `EmojiPicker.Cell`       | One emoji button (`data-emoji` / `data-name`); Unicode glyph or custom `<img>`                                                                                                             |
+| `EmojiPicker.Preview`    | Optional footer: hovered/focused entry’s glyph, primary shortcode, label                                                                                                                   |
+| `EmojiPicker.Empty`      | Loading and zero-hit states (children / slots; no built-in English)                                                                                                                        |
+| `EmojiPicker.Status`     | Politely assertive live region for “N matching” announcements                                                                                                                              |
 
 **`EmojiSuggest`**
 
-| Part | Role |
-| ---- | ---- |
-| `EmojiSuggest` | Listbox root (popover/anchored); `mix` |
-| `EmojiSuggest.Item` | Row: glyph or `<img>`, `:primary:`, match highlight marks |
-| `EmojiSuggest.Empty` | No matches |
-| `EmojiSuggest.Status` | Live region for result counts |
+| Part                  | Role                                                      |
+| --------------------- | --------------------------------------------------------- |
+| `EmojiSuggest`        | Listbox root (popover/anchored); `mix`                    |
+| `EmojiSuggest.Item`   | Row: glyph or `<img>`, `:primary:`, match highlight marks |
+| `EmojiSuggest.Empty`  | No matches                                                |
+| `EmojiSuggest.Status` | Live region for result counts                             |
 
 Convenience wrappers that render several hosts may take a `parts` prop (same escape hatch as `@sdxc/ui`). Density is themable without forking styles:
 
@@ -306,7 +306,7 @@ Bubbling, cancelable `ui:emoji-pick` (`EmojiPickEvent`) — never `onPick`:
 
 - Opens **Suggest** after the 2-character threshold; never opens Suggest and Picker together.
 - A toolbar control may open **Picker** in the app’s `<dialog>` / popover.
-- Fence-aware in textareas: `:` inside `` ``` `` does not open Suggest.
+- Fence-aware in textareas: `:` inside ` ``` ` does not open Suggest.
 - On pick: Unicode → character; custom → `:name:`. No images inside the field.
 - Display uses `tokenize` / render or the markdown visitor so customs become `https:` images.
 
@@ -323,12 +323,12 @@ Custom image bytes live wherever the app stores them (DB, R2, CDN). The catalog 
 
 ### First integrations (after the package)
 
-| Consumer | Integration                                      |
-| -------- | ------------------------------------------------ |
+| Consumer | Integration                                             |
+| -------- | ------------------------------------------------------- |
 | Blog     | Catalog + markdown visitor in existing walks; CMS mixin |
-| Chorus   | Mixin on composers; replace/tokenize on display  |
-| Tern     | Mixin on `Composer.Input`                        |
-| Cairn    | Mixin on title input and description/comment fields |
+| Chorus   | Mixin on composers; replace/tokenize on display         |
+| Tern     | Mixin on `Composer.Input`                               |
+| Cairn    | Mixin on title input and description/comment fields     |
 
 ## Consequences
 
@@ -445,11 +445,11 @@ data. Keeping UI next to the catalog avoids that split, while requiring `@sdxc/u
 ## Current Progress
 
 - [x] Decision recorded
-- [ ] Package scaffold
-- [ ] Catalog generator and committed data
-- [ ] Core APIs (`merge`, replace, tokenize, render)
-- [ ] Markdown visitor
-- [ ] UI compounds, mixins, event, field mixin
+- [x] Package scaffold
+- [x] Catalog generator and committed data
+- [x] Core APIs (`merge`, replace, tokenize, render)
+- [x] Markdown visitor
+- [x] UI compounds, mixins, event, field mixin
 - [ ] Blog / Chorus / Tern / Cairn wiring
 
 ## Notes

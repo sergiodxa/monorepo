@@ -252,6 +252,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/atom](packages/atom)                 | Atom 1.0 feed parser and builder                                                                       |
 | [@sdxc/diagram](packages/diagram)           | Mermaid sequence, class, state and flowchart diagrams to SVG, with a markdown visitor and a component  |
 | [@sdxc/distill](packages/distill)           | Distill the article out of a web page: fetch under bounds, score, sanitize                             |
+| [@sdxc/emoji](packages/emoji)               | Emoji shortcodes, tokenize and render, with a markdown visitor and picker UI                           |
 | [@sdxc/feed](packages/feed)                 | One feed API over RSS, Atom and JSON Feed, with conditional fetching and autodiscovery                 |
 | [@sdxc/highlight](packages/highlight)       | Syntax highlighting as tokens, with a markdown visitor that paints code blocks                         |
 | [@sdxc/html](packages/html)                 | Read a served page: fetch or parse HTML, then query it by role and accessible name                     |
