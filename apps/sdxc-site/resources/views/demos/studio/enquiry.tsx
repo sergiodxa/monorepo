@@ -13,6 +13,7 @@ import { when } from "@sdxc/u/state";
 import { Button, Input, Select, TextArea } from "@sdxc/ui";
 import { LandingSection } from "@sdxc/ui/landing";
 import { landingCtaChrome, landingLead } from "@sdxc/ui/styles";
+import { css } from "remix/component";
 
 import { renderNearView } from "~/resources/views/demos/near-view";
 import StudioAvailability from "~/resources/views/demos/studio/availability";
@@ -39,8 +40,14 @@ const BUDGETS = [
 /** The starts a brief can ask for, from the first open month. */
 const STARTS = ["March 2027", "April 2027", "May or June 2027", "Later in 2027"];
 
-/** Where the form posts: the site's example endpoint, which returns the reader to this page. */
-const ACTION = "/examples/studio/enquiry";
+/** The id of the note that confirms a sent brief. */
+const SENT_ID = "brief-sent";
+
+/**
+ * Where the form posts: the site's example endpoint, which returns the reader to this page.
+ * The redirect keeps the fragment, so the reader lands on the note that confirms the brief.
+ */
+const ACTION = `/examples/studio/enquiry#${SENT_ID}`;
 
 /**
  * Renders the claim and calendar in the first five columns and the form in the last six,
@@ -50,7 +57,7 @@ const ACTION = "/examples/studio/enquiry";
  */
 export default function StudioEnquiry() {
 	return () => (
-		<LandingSection id="start" ruled mix={[renderNearView(1100, 1900)]}>
+		<LandingSection id="start" ruled mix={[renderNearView(799, 1480)]}>
 			<div mix={[pageGrid(), raw({ rowGap: "3rem" })]}>
 				<p mix={[runningHead()]}>
 					<span>06 — Start a project</span>
@@ -72,6 +79,23 @@ export default function StudioEnquiry() {
 					data-slot="studio-enquiry"
 					mix={[span("7 / -1"), form()]}
 				>
+					<p
+						id={SENT_ID}
+						role="status"
+						data-slot="studio-brief-sent"
+						mix={css({
+							display: "none",
+							margin: "0",
+							padding: "1rem 1.25rem",
+							border: "1px solid var(--ui-neutral-fg-emphasis)",
+							color: "var(--ui-neutral-fg-emphasis)",
+							scrollMarginBlock: "6rem",
+							"&:target": { display: "block" },
+						})}
+					>
+						Brief received. Lieve or Tomás replies within two working days. (This is a demo, so
+						nothing was sent.)
+					</p>
 					<div mix={[pair()]}>
 						<StudioField htmlFor="enquiry-name" label="Your name" hint="Tell us who to reply to.">
 							<Input id="enquiry-name" name="name" autoComplete="name" required />

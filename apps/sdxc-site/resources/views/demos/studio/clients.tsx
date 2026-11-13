@@ -48,7 +48,7 @@ const CLIENTS = [
  */
 export default function StudioClients() {
 	return () => (
-		<LandingSection id="clients" mix={[renderNearView(720, 1500)]}>
+		<LandingSection id="clients" mix={[renderNearView(585, 1334)]}>
 			<div mix={[pageGrid(), raw({ rowGap: "3rem" })]}>
 				<p mix={[runningHead()]}>
 					<span>02 — Clients</span>

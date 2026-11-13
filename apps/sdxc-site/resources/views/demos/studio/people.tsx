@@ -43,7 +43,7 @@ const PEOPLE = [
  */
 export default function StudioPeople() {
 	return () => (
-		<LandingSection id="people" mix={[renderNearView(1100, 2000)]}>
+		<LandingSection id="people" mix={[renderNearView(1260, 1729)]}>
 			<div mix={[pageGrid(), raw({ rowGap: "3rem" })]}>
 				<p mix={[runningHead()]}>
 					<span>04 — People</span>

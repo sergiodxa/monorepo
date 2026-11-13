@@ -76,7 +76,7 @@ export default function StudioWork() {
 				scene={<LibraryScene />}
 				sceneLabel="The catalogue answering “books about tidal rivers” with three titles and their shelves, beside the Mercer Sign letterforms and the floor 2 sign they match."
 				plate="#cfdccd"
-				mix={[renderNearView(1240, 1500)]}
+				mix={[renderNearView(1115, 1040)]}
 				problem={
 					<>
 						A search box that only matched exact titles, and shelf marks that meant nothing to
@@ -103,7 +103,7 @@ export default function StudioWork() {
 				scene={<CeramicsScene />}
 				sceneLabel="A one-page checkout for the large Tide bowl at €48 with three fields and Bancontact chosen, beside the ash, tide and iron glaze swatches."
 				plate="#b65f43"
-				mix={[renderNearView(1240, 1500)]}
+				mix={[renderNearView(1115, 978)]}
 				problem={
 					<>
 						Eleven fields over four pages, and no Bancontact, for buyers who were mostly Belgian and

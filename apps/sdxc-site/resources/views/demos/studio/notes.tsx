@@ -81,7 +81,7 @@ const NOTES = [
  */
 export default function StudioNotes() {
 	return () => (
-		<LandingSection id="notes" mix={[renderNearView(820, 1400)]}>
+		<LandingSection id="notes" mix={[renderNearView(467, 694)]}>
 			<div mix={[pageGrid(), raw({ rowGap: "3rem" })]}>
 				<p mix={[runningHead()]}>
 					<span>05 — Notes</span>

@@ -73,7 +73,7 @@ const PHASES = [
  */
 export default function StudioProcess() {
 	return () => (
-		<LandingSection id="process" tone="tinted" mix={[renderNearView(900, 1300)]}>
+		<LandingSection id="process" tone="tinted" mix={[renderNearView(997, 1398)]}>
 			<div mix={[pageGrid(), raw({ rowGap: "3rem" })]}>
 				<p mix={[runningHead()]}>
 					<span>03 — Process</span>
