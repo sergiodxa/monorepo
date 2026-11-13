@@ -149,6 +149,22 @@ describe("PageHeader", () => {
 		expect(description.top).toBeGreaterThanOrEqual(Math.max(title.bottom, actions.bottom) - 1);
 	});
 
+	for (let width of ["60rem", "30rem"]) {
+		test(`leaves 12px between a title row with a status pill and the description at ${width}`, () => {
+			mountHeader(width, {
+				status: <span style="display: inline-block; padding: 0.5rem 1rem">Open</span>,
+				tabs: [],
+			});
+			let row = document
+				.querySelector('[data-slot="page-header-title-row"]')!
+				.getBoundingClientRect();
+			let description = document
+				.querySelector('[data-slot="page-header-description"]')!
+				.getBoundingClientRect();
+			expect(Math.round(description.top - row.bottom)).toBeGreaterThanOrEqual(12);
+		});
+	}
+
 	for (let width of [320, 360, 480]) {
 		test(`never sets the primary action between the title and the description at ${width}px`, () => {
 			mountHeader(`${width}px`, {

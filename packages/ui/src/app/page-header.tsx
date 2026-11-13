@@ -299,7 +299,7 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 										: '"title actions"',
 									alignItems: "center",
 									columnGap: "1rem",
-									rowGap: "0.5rem",
+									rowGap: "0.75rem",
 								}),
 							),
 						]}
@@ -312,7 +312,7 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 									raw({
 										display: "flex",
 										flexDirection: "column",
-										gap: "0.5rem",
+										gap: "0.75rem",
 										flex: "1 1 16rem",
 										minInlineSize: "0",
 									}),
