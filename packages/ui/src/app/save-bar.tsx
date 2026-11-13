@@ -36,6 +36,11 @@ export type SaveBarProps = {
 	labels: {
 		/** The bar's message, such as "Unsaved changes". */
 		message: string;
+		/**
+		 * The question asked before a link the page follows in place would lose the changes,
+		 * such as "Leave without saving your changes?". @default message
+		 */
+		leave?: string;
 		discard: string;
 		save: string;
 		/** The save shortcut as the platform writes it, such as "⌘S", shown on the Save button. */
@@ -65,7 +70,7 @@ export const SaveBar: EntryComponent<SaveBarProps> = clientEntry(
 					data-slot="save-bar"
 					hidden
 					mix={[
-						saveBarSync({ form, message: labels.message }),
+						saveBarSync({ form, message: labels.message, leave: labels.leave }),
 						sticky(),
 						hstack({ gap: 3, align: "center" }),
 						raw({ insetBlockEnd: "1rem", flexWrap: "wrap", zIndex: 10 }),

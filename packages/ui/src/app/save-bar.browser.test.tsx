@@ -9,7 +9,7 @@
 import type {} from "@vitest/browser-playwright";
 
 import { render } from "remix/component/test";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 
 import type { SaveBarProps } from "./save-bar.js";
@@ -141,6 +141,41 @@ describe("SaveBar", () => {
 		await settle();
 		await userEvent.keyboard("{Control>}s{/Control}");
 		expect(submits()).toBe(2);
+	});
+
+	test("asks before an in-page navigation leaves unsaved changes, and stays when declined", async () => {
+		let { form } = await mount();
+		let start = location.href;
+		let stop = new AbortController();
+		navigation.addEventListener(
+			"navigate",
+			(event) => event.intercept({ handler: async () => {} }),
+			{
+				signal: stop.signal,
+			},
+		);
+		let asked: string[] = [];
+		let answer = false;
+		vi.stubGlobal("confirm", (message?: string) => {
+			asked.push(String(message));
+			return answer;
+		});
+
+		await userEvent.type(form.querySelector("input")!, "x");
+		await settle();
+		let declined = navigation.navigate(`${location.pathname}-elsewhere`);
+		await Promise.allSettled([declined.committed, declined.finished]);
+		expect(asked).toEqual(["Unsaved changes"]);
+		expect(location.href).toBe(start);
+
+		answer = true;
+		await navigation.navigate(`${location.pathname}-elsewhere`).finished;
+		expect(asked).toHaveLength(2);
+		expect(location.href).not.toBe(start);
+
+		await navigation.navigate(start, { history: "replace" }).finished;
+		vi.unstubAllGlobals();
+		stop.abort();
 	});
 
 	test("drops the guard when the form is submitted", async () => {

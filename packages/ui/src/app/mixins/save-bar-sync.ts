@@ -1,6 +1,7 @@
 /**
  * Why JS: a form cannot tell when its values differ from how it loaded, so script shows
- * the save bar while it does, binds ⌘S/Ctrl+S to submitting it, and guards leaving the page.
+ * the save bar while it does, binds ⌘S/Ctrl+S to submitting it, and guards leaving the page,
+ * including a navigation the page answers in place.
  * No-JS baseline: the bar stays hidden and the form submits through its own Save button.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -21,6 +22,11 @@ export namespace SaveBarSync {
 		form?: string;
 		/** What the bar's live region announces once the form changes, such as "Unsaved changes". */
 		message: string;
+		/**
+		 * The question asked before an in-page navigation leaves unsaved changes, such as
+		 * "Leave without saving your changes?". @default message
+		 */
+		leave?: string;
 	}
 }
 
@@ -102,8 +108,23 @@ function connect(bar: HTMLElement, options: SaveBarSync.Options, signal: AbortSi
 		dirty = next;
 		bar.hidden = !next;
 		if (status) status.textContent = next ? options.message : "";
-		if (next) view?.addEventListener("beforeunload", guard);
-		else view?.removeEventListener("beforeunload", guard);
+		if (next) {
+			view?.addEventListener("beforeunload", guard);
+			view?.navigation?.addEventListener("navigate", ask);
+		} else {
+			view?.removeEventListener("beforeunload", guard);
+			view?.navigation?.removeEventListener("navigate", ask);
+		}
+	};
+
+	/**
+	 * Asks before a navigation the page handles itself (a frame swap, which fires no
+	 * `beforeunload`) leaves unsaved changes, and cancels it when the visitor stays; a jump
+	 * to an anchor on the same page goes ahead.
+	 */
+	let ask = (event: NavigateEvent) => {
+		if (event.hashChange || !event.cancelable || event.downloadRequest !== null) return;
+		if (!view?.confirm(options.leave ?? options.message)) event.preventDefault();
 	};
 
 	/** Compares the form with its baseline. */
@@ -130,5 +151,8 @@ function connect(bar: HTMLElement, options: SaveBarSync.Options, signal: AbortSi
 		},
 		signal,
 	);
-	signal.addEventListener("abort", () => view?.removeEventListener("beforeunload", guard));
+	signal.addEventListener("abort", () => {
+		view?.removeEventListener("beforeunload", guard);
+		view?.navigation?.removeEventListener("navigate", ask);
+	});
 }
