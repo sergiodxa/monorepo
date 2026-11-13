@@ -146,7 +146,13 @@ function SummaryStats(handle: Handle<{ run: Run; now: number }>) {
 						{formatDuration(run.seconds)}
 					</StatCard.Value>
 					<StatCard.Footer>
-						{run.status === "in_progress" ? COPY.run.runningFor : run.workflow.file}
+						{run.status === "in_progress" ? (
+							COPY.run.runningFor
+						) : (
+							<span mix={[font("mono"), raw({ overflowWrap: "anywhere" })]}>
+								{run.workflow.file}
+							</span>
+						)}
 					</StatCard.Footer>
 				</StatCard>
 				<StatCard>
