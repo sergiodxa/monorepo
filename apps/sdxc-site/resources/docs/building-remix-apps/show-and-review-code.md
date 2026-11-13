@@ -1,6 +1,6 @@
 ---
-title: Show and review code
-description: Render a source file with line links and blame, compute or read a diff with @sdxc/diff, draw it unified or split, and hang review threads off its lines, all working before any script loads.
+title: Diff, show and review code
+description: Compute line and word diffs and read or write git patches with @sdxc/diff, draw them unified or split with Diff, show a whole file with CodeView, and hang review threads off its lines, all working before any script loads.
 section:
     title: Interface
     order: 4.5
@@ -80,24 +80,84 @@ permalink, and `y` swaps the address for the `permalink`. Pass `blame` hunks and
 draws its commit and an age strip in a leading column; `CodeView.AgeLegend` in the header
 explains the strip's colors.
 
-## Compute the change
+## Diff two texts
 
-A diff is hunks of lines, each `context`, `add` or `del`, with its line numbers and the words
-that changed. Get them one of two ways:
+`@sdxc/diff` computes and only computes: it takes strings and returns JSON-ready hunks, so the
+same call runs in a build script, a Worker request or a test. A hunk holds lines, each
+`context`, `add` or `del`, numbered on its sides, and a changed line pairs with the line it
+replaced through `words`, the `[start, end)` spans that changed:
 
 ```typescript {% title="app/services/changes.ts" %}
-import { diffLines, parseHunks, parsePatch } from "@sdxc/diff";
+import { diffLines } from "@sdxc/diff";
 
-/** Two versions you hold yourself, such as a saved draft and the published text. */
-let { hunks, additions, deletions } = diffLines(before, after);
+let diff = diffLines("let a = 1;\nlet b = 2;\n", "let a = 1;\nlet b = 3;\n");
 
-/** A patch from git: list every file in one pass, then read the hunks of those you show. */
-let files = parsePatch(patchText);
-let first = parseHunks(patchText, files[0]!);
+diff.additions; // 1
+diff.deletions; // 1
+diff.hunks[0].lines;
+// [
+//   { kind: "context", text: "let a = 1;", old: 1, new: 1 },
+//   { kind: "del", text: "let b = 2;", old: 2, words: [[8, 9]] },
+//   { kind: "add", text: "let b = 3;", new: 2, words: [[8, 9]] },
+// ]
 ```
 
-`parsePatch` leaves each file's hunks as offsets into the text, so a commit touching three
-hundred files costs one scan, and the page reads hunks only for the files it draws.
+Lines align the way `git diff --histogram` aligns them, on lines rare in the file such as a
+function signature, so the hunks match what git would print. Use it when you hold both
+versions yourself: a saved draft and the published post, or a suggestion and the lines it
+replaces. `diffWords(oldLine, newLine)` gives the spans for one pair of lines on its own.
+
+> [!NOTE]
+> `diffLines` stops aligning after `maxCost` comparison steps (20 million by default) and
+> answers the rest as one replaced block with `approximate: true`. The hunks still turn one
+> text into the other, so a pathological input costs a coarser diff, never a timed-out request.
+
+## Read a patch from git
+
+When git made the change, read its patch. `parsePatch` lists every file in one pass, with its
+paths, status, rename similarity and counts, and leaves the hunks as offsets into the text;
+`parseHunks` reads one file's hunks when the page draws it:
+
+```typescript {% title="app/services/commits.ts" %}
+import { parseHunks, parsePatch } from "@sdxc/diff";
+
+/** The output of `git show --format= -M --patch <sha>`. */
+let files = parsePatch(patchText);
+// [{ oldPath: "src/old.ts", newPath: "src/new.ts", status: "renamed", similarity: 94,
+//    additions: 3, deletions: 1, binary: false, … }]
+
+let hunks = parseHunks(patchText, files[0]!);
+```
+
+The [Delta demo](/demo/apps/delta) reads its own git history this way. A Worker has no git, so
+its build runs `git show --format= -M --patch` for each commit and stores the text. On a
+request the Worker parses a commit's files once, and a file's hunks only when a page asks for
+that file, so a commit touching forty files costs one scan plus the files on screen.
+
+## Write a patch back
+
+`stringifyPatch` writes files and hunks as a git-style unified diff, for a "Download patch"
+link or a suggestion a reader applies with `git apply`. What `parsePatch` and `parseHunks` read
+comes back byte for byte:
+
+```typescript {% title="app/http/controllers/pulls/patch.ts" %}
+import { diffLines, stringifyPatch } from "@sdxc/diff";
+
+let { hunks } = diffLines(original, suggested);
+let patch = stringifyPatch([
+	{
+		oldPath: "notes.txt",
+		newPath: "notes.txt",
+		status: "modified",
+		binary: false,
+		hunks,
+	},
+]);
+
+return new Response(patch, {
+	headers: { "Content-Type": "text/x-diff; charset=utf-8" },
+});
+```
 
 ## Draw it
 
@@ -199,6 +259,38 @@ import { ReviewThread } from "@sdxc/ui/app/review-thread";
 A resolved thread, or an `outdated` one whose lines have changed since, folds to one line
 behind a `<details>`, so a long review keeps open only what still needs an answer. An outdated
 thread passes `excerpt` to show the lines it was about, which the diff no longer draws.
+
+## Test it
+
+The hunks are plain data and the page is server HTML, so a test checks both without a browser:
+that the diff found the change, and that a reader with no script still gets a link to comment:
+
+```tsx {% title="app/services/changes.test.tsx" %}
+import { diffLines } from "@sdxc/diff";
+import { Diff } from "@sdxc/ui/app/diff";
+import { renderToString } from "remix/component/server";
+import { expect, test } from "vitest";
+
+import { fileLabels } from "~/resources/components/diff-labels";
+
+test("a one-word change pairs its lines and links each to a comment form", async () => {
+	let { hunks, additions, deletions } = diffLines("let b = 2;\n", "let b = 3;\n");
+	expect([additions, deletions]).toEqual([1, 1]);
+
+	let html = await renderToString(
+		<Diff.File
+			path="a.ts"
+			status="modified"
+			additions={additions}
+			deletions={deletions}
+			hunks={hunks}
+			commentHref={(path, side, line) => `?comment=${path}:${side}${line}`}
+			labels={fileLabels}
+		/>,
+	);
+	expect(html).toContain('href="?comment=a.ts:R1"');
+});
+```
 
 ## Where to go next
 

@@ -52,8 +52,10 @@ export function estimate(query: URLSearchParams): Estimate {
 }
 ```
 
-Clamp every number you read: the query is the reader's to edit, and an out-of-range value
-should price as the nearest one you sell.
+> [!WARNING]
+> The query is the reader's to edit. Clamp every number you read to what you sell, so a
+> hand-typed `?hours=-5` or `?hours=1e9` prices as the nearest real plan rather than as a
+> negative or absurd bill.
 
 ## Print the bill
 
@@ -167,6 +169,12 @@ Answer that request with the bill alone, and mark the response as varying by the
 cache never serves the fragment for a page load:
 
 ```tsx {% title="app/http/controllers/pricing.tsx" %}
+import { createAction } from "remix/router";
+
+import { Bill } from "~/resources/components/pricing";
+import { PricingPage } from "~/resources/views/pricing";
+import routes from "~/routes/web";
+
 export default createAction(routes.pricing, async (ctx) => {
 	let url = new URL(ctx.request.url);
 	if (ctx.request.headers.get("X-Remix-Target") === "pricing-bill") {
@@ -178,8 +186,27 @@ export default createAction(routes.pricing, async (ctx) => {
 });
 ```
 
+> [!NOTE]
+> Without `Vary: X-Remix-Target`, a browser or a CDN can store the bill fragment under the page's
+> address and serve it later as the whole page.
+
 [Build a search dialog](/docs/building-remix-apps/search-dialog#answer-the-frame-with-a-fragment)
 covers answering a frame in more depth.
+
+## Test it
+
+The prices live in one function, so a test holds it to the plans you advertise:
+
+```typescript {% title="app/services/pricing-estimate.test.ts" %}
+import { expect, test } from "vitest";
+
+import { estimate } from "~/app/services/pricing-estimate";
+
+test("bills the hours past the free ten and clamps what the reader typed", () => {
+	expect(estimate(new URLSearchParams("hours=40")).totalCents).toBe(30 * 36);
+	expect(estimate(new URLSearchParams("hours=-5")).totalCents).toBe(0);
+});
+```
 
 ## Where to go next
 

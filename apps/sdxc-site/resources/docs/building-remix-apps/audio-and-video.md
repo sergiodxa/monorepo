@@ -151,6 +151,33 @@ import { mediaSync } from "@sdxc/ui/mixins";
 />;
 ```
 
+## Test it
+
+The links are the part a reader without script depends on, so a test renders the player on
+the server and checks that each chapter opens the file at its moment:
+
+```tsx {% title="resources/views/episode.test.tsx" %}
+import { EpisodePlayer } from "@sdxc/ui/landing";
+import { renderToString } from "remix/component/server";
+import { expect, test } from "vitest";
+
+test("every chapter links into the audio at its start", async () => {
+	let html = await renderToString(
+		<EpisodePlayer
+			src="/audio/63.mp3"
+			title="No. 63"
+			captions={{ src: "/audio/63.vtt", srclang: "en", label: "English" }}
+			chapters={[{ start: 312, title: "Why we stopped shipping on Fridays" }]}
+			chaptersLabel="Chapters"
+			transcriptLabel="Read the transcript"
+			fallback={<a href="/audio/63.mp3">Download the episode</a>}
+		/>,
+	);
+
+	expect(html).toContain('href="/audio/63.mp3#t=312"');
+});
+```
+
 ## Where to go next
 
 - [`EpisodePlayer`](/api/ui/episode-player) and [`VideoPlayer`](/api/ui/video-player) — every
