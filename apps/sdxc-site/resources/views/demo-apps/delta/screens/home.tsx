@@ -9,14 +9,14 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { BookOpenIcon, FileIcon, FolderIcon, GitBranchIcon, ClockArrowUpIcon } from "@sdxc/icons";
+import { BookOpenIcon, FileIcon, FolderIcon, ClockArrowUpIcon } from "@sdxc/icons";
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { font, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
-import { Badge, LinkButton, RelativeTime, Typeset } from "@sdxc/ui";
+import { Badge, Keyboard, LinkButton, RelativeTime, Typeset } from "@sdxc/ui";
 
 import type {
 	DeltaCommit,
@@ -25,12 +25,16 @@ import type {
 	DeltaHistory,
 } from "~/app/services/delta/source";
 
+import { DELTA_BRANCH } from "~/config/delta";
+
 import type { FolderEntry } from "../data";
 
 import { commitHref, commitsHref, fileHref, findHref, folderHref, parentOf } from "../data";
 import { InitialsTile } from "../glyphs";
 import { COPY } from "../labels";
 import { RepoHeader } from "../shell";
+
+import { RefPicker } from "./blob";
 
 /** The card width below which the file card drops its secondary text: dates, subjects. */
 const NARROW = "@container (max-width: 36rem)";
@@ -496,23 +500,7 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 								raw({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }),
 							]}
 						>
-							<span
-								mix={[
-									raw({
-										display: "inline-flex",
-										alignItems: "center",
-										gap: "0.375rem",
-										paddingInline: "0.625rem",
-										blockSize: "2rem",
-										border: "1px solid var(--ui-neutral-border)",
-										borderRadius: "var(--ui-radius-md)",
-									}),
-									text("sm"),
-								]}
-							>
-								<GitBranchIcon size={14} aria-hidden="true" mix={[fg("neutral.muted")]} />
-								<span mix={[font("mono"), weight("medium")]}>main</span>
-							</span>
+							<RefPicker current={DELTA_BRANCH} branchHref={folderHref(folder)} />
 							<LinkButton
 								href={findHref()}
 								size="sm"
@@ -522,6 +510,7 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 								mix={[raw({ marginInlineStart: "auto" })]}
 							>
 								{COPY.files.filter}
+								<Keyboard>t</Keyboard>
 							</LinkButton>
 						</div>
 						<div

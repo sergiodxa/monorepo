@@ -85,6 +85,18 @@ describe("Delta's repository home", () => {
 		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
 	});
 
+	test("offers the same branch picker and Go to file key as a file does", async () => {
+		for (let path of [
+			"delta",
+			"delta/tree/main/screens",
+			`delta/blob/main/${tree.files[0]!.path}`,
+		]) {
+			let { body } = await page(path);
+			expect(body, path).toContain('id="delta-ref-picker"');
+			expect(body, path).toMatch(/Go to file<kbd[^>]*>t<\/kbd>/);
+		}
+	});
+
 	test("an unknown folder answers the app's 404", async () => {
 		expect((await page("delta/tree/main/no-such-folder")).status).toBe(404);
 	});
