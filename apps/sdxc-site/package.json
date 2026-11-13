@@ -3,10 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "bun scripts/extract-catalogue.ts && vp build",
+		"build": "bun scripts/extract-catalogue.ts && bun scripts/extract-delta.ts && vp build",
 		"catalogue": "bun scripts/extract-catalogue.ts",
 		"cli": "bun ./bootstrap/cli.ts",
-		"dev": "bun scripts/extract-catalogue.ts && vp dev",
+		"delta": "bun scripts/extract-delta.ts",
+		"dev": "bun scripts/extract-catalogue.ts && bun scripts/extract-delta.ts && vp dev",
 		"start": "vp preview",
 		"typecheck": "tsc --noEmit"
 	},
@@ -20,6 +21,7 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/diagram": "workspace:*",
+		"@sdxc/diff": "workspace:*",
 		"@sdxc/file-storage-r2": "workspace:*",
 		"@sdxc/font": "workspace:*",
 		"@sdxc/health": "workspace:*",

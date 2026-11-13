@@ -71,6 +71,8 @@ function browserProject(
 		test: {
 			name: `${name}-browser`,
 			include,
+			/** A workspace whose pages read generated documents runs its extractors first. */
+			globalSetup: base.test?.globalSetup,
 			browser: {
 				enabled: true,
 				headless: true,
@@ -291,6 +293,7 @@ const UPTIME_BROWSER_PROJECT = browserProject("uptime", {
 
 const SDXC_SITE_BROWSER_PROJECT = browserProject("sdxc-site", {
 	root: "apps/sdxc-site",
+	test: { globalSetup: ["scripts/catalogue.setup.ts"] },
 	plugins: [
 		cloudflareWorkersStub() as ReturnType<typeof cloudflareTest>,
 		clientEntryIdentity() as ReturnType<typeof cloudflareTest>,
