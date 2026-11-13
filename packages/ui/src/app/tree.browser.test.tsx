@@ -242,6 +242,27 @@ describe("Tree.Filter", () => {
 		expect(note.checkVisibility()).toBe(false);
 	});
 
+	test("answers through a no-matches line beside the tree, outside its items", async () => {
+		mounted = render(
+			<div>
+				<Tree.Filter tree="side" label="Filter files" action="/files" />
+				<Tree id="side" aria-label="Files">
+					<Tree.Leaf href="/a.ts" name="a.ts" />
+				</Tree>
+				<Tree.NoMatches tree="side">No file matches</Tree.NoMatches>
+			</div>,
+		);
+		let field = document.querySelector<HTMLInputElement>('input[type="search"]')!;
+		let line = document.querySelector<HTMLElement>("[data-tree-no-matches]")!;
+
+		expect(line.closest('[role="tree"]')).toBeNull();
+		expect(line.checkVisibility()).toBe(false);
+		await userEvent.type(field, "zzz");
+		expect(line.checkVisibility()).toBe(true);
+		await userEvent.clear(field);
+		expect(line.checkVisibility()).toBe(false);
+	});
+
 	test("matches every term against the whole path", async () => {
 		let tree = mount();
 		let field = document.querySelector<HTMLInputElement>('input[type="search"]')!;

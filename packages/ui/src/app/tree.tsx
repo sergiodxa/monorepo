@@ -179,8 +179,14 @@ export namespace Tree {
 		placeholder?: string;
 	}
 
-	/** Props accepted by {@link Tree.NoMatches}: every native `<p>` attribute. */
-	export interface NoMatchesProps extends TagProps<"p"> {}
+	/** Props accepted by {@link Tree.NoMatches}: every native `<p>` attribute, plus its tree. */
+	export interface NoMatchesProps extends TagProps<"p"> {
+		/**
+		 * The id of the tree it answers for, when it sits beside the tree rather than inside it,
+		 * which keeps the tree's children to its items.
+		 */
+		tree?: string;
+	}
 
 	/** Props accepted by {@link Tree.Navigation}: the key copy the help sheet lists. */
 	export interface NavigationProps {
@@ -691,22 +697,23 @@ Tree.Filter = function TreeFilterForm(handle: Handle<Tree.FilterProps>) {
 };
 
 /**
- * Renders the line a tree shows while its filter matches no file, such as "No file matches".
- * It stays hidden until {@link treeFilter} narrows the tree to nothing, and is announced then.
+ * Renders the line a tree shows while its filter matches no file, such as "No file matches",
+ * inside the tree or beside it with `tree` naming the tree's id. It stays hidden until
+ * {@link treeFilter} narrows the tree to nothing, and is announced then.
  *
  * @param handle Runtime handle carrying the paragraph's props.
  * @returns The render function producing the hidden message.
- * @example <Tree.NoMatches>{t("files.noMatches")}</Tree.NoMatches>
+ * @example <Tree.NoMatches tree="files">{t("files.noMatches")}</Tree.NoMatches>
  */
 Tree.NoMatches = function TreeNoMatches(handle: Handle<Tree.NoMatchesProps>) {
 	return () => {
-		let { children, mix, ...rest } = handle.props;
+		let { children, mix, tree, ...rest } = handle.props;
 		return (
 			<p
 				{...rest}
 				hidden
 				role="status"
-				data-tree-no-matches=""
+				data-tree-no-matches={tree ?? ""}
 				mix={mergeMix(
 					[
 						raw({ margin: 0 }),

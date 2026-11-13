@@ -78,7 +78,15 @@ export function applyTreeFilter(tree: HTMLElement, query: string): number {
 		folder.open = true;
 	}
 
-	for (let note of tree.querySelectorAll<HTMLElement>("[data-tree-no-matches]")) {
+	let notes = [
+		...tree.querySelectorAll<HTMLElement>("[data-tree-no-matches]"),
+		...(tree.id === ""
+			? []
+			: tree.ownerDocument.querySelectorAll<HTMLElement>(
+					`[data-tree-no-matches="${CSS.escape(tree.id)}"]`,
+				)),
+	];
+	for (let note of notes) {
 		note.hidden = !active || matches > 0;
 	}
 
