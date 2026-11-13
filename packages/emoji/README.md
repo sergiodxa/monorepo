@@ -81,6 +81,12 @@ import { on } from "remix/component";
 | `@sdxc/emoji/markdown` | `emojis(catalog)` walk visitor                                                                  |
 | `@sdxc/emoji/ui`       | `EmojiPicker`, `EmojiSuggest`, `emojiInput`, `ui:emoji-pick`                                    |
 
+## Guides
+
+- [Expand emoji shortcodes in markdown](https://sdxc.dev/docs/content-and-feeds/emoji-markdown)
+- [Add an emoji picker to a composer](https://sdxc.dev/docs/building-remix-apps/emoji-picker)
+- [Ship custom workspace emoji](https://sdxc.dev/docs/content-and-feeds/emoji-custom)
+
 ## Catalog
 
 `bun run generate` in this package downloads pinned OSS sources (see `SOURCES.md`), merges
