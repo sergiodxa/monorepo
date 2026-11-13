@@ -1,7 +1,7 @@
 /**
  * The band where the reader plays Strata Two: the board at the full width of the stage,
  * with a switch toggle above it, sounding every press. The keys still dip under a held
- * pointer before the island loads; the sound arrives with it.
+ * pointer before the island loads, and with scripts off the footnote says the sound needs them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -64,6 +64,10 @@ export default function PlayBand() {
 			>
 				Sounds are synthesised in your browser to show how the two switches differ, not recorded
 				from a board. Turn your volume down before the first press.
+				<noscript>
+					{" "}
+					The sound plays with JavaScript on; with it off, the keys still dip as you press them.
+				</noscript>
 			</p>
 		</LandingSection>
 	);

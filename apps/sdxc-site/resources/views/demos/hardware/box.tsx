@@ -156,7 +156,7 @@ function Tray() {
  */
 export default function InTheBox() {
 	return () => (
-		<LandingSection id="box" tone="tinted" spacing="normal" mix={[renderNearView(760, 1150)]}>
+		<LandingSection id="box" tone="tinted" spacing="normal" mix={[renderNearView(730, 1027)]}>
 			<LandingHeader
 				eyebrow="07 · In the box"
 				description="Nothing to buy on the day it arrives: the cable, the receiver and the tools to change a switch are in the tray."

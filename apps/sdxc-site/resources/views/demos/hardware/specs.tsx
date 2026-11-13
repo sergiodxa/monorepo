@@ -129,7 +129,7 @@ function SpecTable(handle: Handle<SpecTable.Props>) {
  */
 export default function Specs() {
 	return () => (
-		<LandingSection id="specs" tone="plain" spacing="normal" mix={[renderNearView(980, 1900)]}>
+		<LandingSection id="specs" tone="plain" spacing="normal" mix={[renderNearView(757, 1581)]}>
 			<LandingHeader
 				eyebrow="06 · Tech specs"
 				layout="split"

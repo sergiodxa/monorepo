@@ -188,7 +188,7 @@ function ReviewCard(handle: Handle<ReviewCard.Props>) {
  */
 export default function Reviews() {
 	return () => (
-		<LandingSection id="reviews" tone="tinted" spacing="normal" mix={[renderNearView(720, 1700)]}>
+		<LandingSection id="reviews" tone="tinted" spacing="normal" mix={[renderNearView(652, 1529)]}>
 			<LandingHeader
 				eyebrow="09 · Reviews"
 				description="Review units were lent and returned. No outlet was paid, and none saw this page before it went up. We quote what they disliked too."

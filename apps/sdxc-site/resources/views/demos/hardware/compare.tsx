@@ -51,7 +51,7 @@ const VERDICT: Record<Row["favours"], string> = {
  */
 export default function Compare() {
 	return () => (
-		<LandingSection id="compare" tone="plain" spacing="normal" mix={[renderNearView(820, 980)]}>
+		<LandingSection id="compare" tone="plain" spacing="normal" mix={[renderNearView(900, 1074)]}>
 			<LandingHeader
 				eyebrow="08 · Compared"
 				description="What changed since Strata One, and the two rows where the first board is still the better buy."
