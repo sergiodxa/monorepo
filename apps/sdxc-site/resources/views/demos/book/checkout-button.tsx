@@ -1,6 +1,7 @@
 /**
  * A pricing plan's buy button, as a form that posts the chosen package to the example
- * checkout. The endpoint returns the reader to this page, so trying a plan never leaves it.
+ * checkout. The endpoint returns the reader to this page, on the note under the plan's own
+ * button, so trying a plan never leaves it and says what happened.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +11,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { grid } from "@sdxc/u/layout";
 import { Button } from "@sdxc/ui";
+import { css } from "remix/component";
 
 namespace CheckoutButton {
 	/** Which package the button buys, and how prominent it is. */
@@ -34,7 +36,7 @@ export default function CheckoutButton(handle: Handle<CheckoutButton.Props>) {
 		let { children, featured, plan } = handle.props;
 
 		return (
-			<form method="post" action="/examples/book/checkout" mix={[grid()]}>
+			<form method="post" action={`/examples/book/checkout#bought-${plan}`} mix={[grid()]}>
 				<input type="hidden" name="package" value={plan} />
 				<Button
 					type="submit"
@@ -43,6 +45,21 @@ export default function CheckoutButton(handle: Handle<CheckoutButton.Props>) {
 				>
 					{children}
 				</Button>
+				<p
+					id={`bought-${plan}`}
+					role="status"
+					mix={css({
+						display: "none",
+						margin: "0.75rem 0 0",
+						fontSize: "0.875rem",
+						color: "var(--ui-neutral-fg-emphasis)",
+						scrollMarginBlock: "6rem",
+						"&:target": { display: "block" },
+					})}
+				>
+					{plan === "book" ? "The book" : "The book and course"} is in your library. (This is a
+					demo, so nothing was charged.)
+				</p>
 			</form>
 		);
 	};

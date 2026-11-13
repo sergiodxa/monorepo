@@ -1,7 +1,7 @@
 /**
  * The free-chapter band: the offer and an email form beside the chapter's first page, with
  * a direct download for a reader who would rather not leave an address. The form posts to
- * an example endpoint that returns the reader to this page.
+ * an example endpoint that returns the reader to this page, on the note confirming the send.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +17,7 @@ import { text, weight } from "@sdxc/u/typography";
 import { Button, Link, TextField } from "@sdxc/ui";
 import { FeatureBand } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
+import { css } from "remix/component";
 
 import BookSamplePage from "~/resources/views/demos/book/sample-page";
 import { renderNearView } from "~/resources/views/demos/near-view";
@@ -44,7 +45,7 @@ export default function BookSample() {
 			media={<BookSamplePage />}
 		>
 			<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-				<form method="post" action="/examples/book/sample-chapter">
+				<form method="post" action="/examples/book/sample-chapter#chapter-sent">
 					<div
 						mix={[
 							combine([
@@ -67,6 +68,22 @@ export default function BookSample() {
 							Send me chapter 2
 						</Button>
 					</div>
+					<p
+						id="chapter-sent"
+						role="status"
+						mix={css({
+							display: "none",
+							margin: "0.75rem 0 0",
+							padding: "0.75rem 1rem",
+							borderInlineStart: "3px solid var(--ui-brand-fg)",
+							backgroundColor: "var(--ui-neutral-bg-tint)",
+							color: "var(--ui-neutral-fg-emphasis)",
+							scrollMarginBlock: "6rem",
+							"&:target": { display: "block" },
+						})}
+					>
+						Chapter 2 is on its way, with the video lesson. (This is a demo, so no email was sent.)
+					</p>
 				</form>
 				<p mix={[m(0), hstack({ gap: 2, align: "start" }), text("sm"), fg("neutral.muted")]}>
 					<DownloadIcon

@@ -17,6 +17,7 @@ import { text } from "@sdxc/u/typography";
 import { Button, Heading, TextField } from "@sdxc/ui";
 import { SiteFooter } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
+import { css } from "remix/component";
 
 import BookLogo from "~/resources/views/demos/book/logo";
 import { SERIF } from "~/resources/views/demos/book/type";
@@ -59,7 +60,8 @@ const COLUMNS: SiteFooter.Column[] = [
 
 /**
  * The letters sign-up: a heading, one line on what arrives, and the address field beside
- * its button from `sm`, so the address and the action read as one step.
+ * its button from `sm`, so the address and the action read as one step; the sign-up's
+ * redirect lands on the note under them.
  */
 function Letters() {
 	return () => (
@@ -70,7 +72,7 @@ function Letters() {
 					One short letter a month from Odile, on a single detail worth setting well.
 				</p>
 			</div>
-			<form method="post" action="/examples/book/letters">
+			<form method="post" action="/examples/book/letters#letters-signed-up">
 				<div
 					mix={[
 						combine([
@@ -93,6 +95,21 @@ function Letters() {
 						Subscribe
 					</Button>
 				</div>
+				<p
+					id="letters-signed-up"
+					role="status"
+					mix={css({
+						display: "none",
+						margin: "0.75rem 0 0",
+						fontSize: "0.875rem",
+						color: "var(--ui-neutral-fg-emphasis)",
+						scrollMarginBlock: "6rem",
+						"&:target": { display: "block" },
+					})}
+				>
+					Subscribed: the first letter from Odile arrives next month. (This is a demo, so no address
+					was stored.)
+				</p>
 			</form>
 		</div>
 	);
