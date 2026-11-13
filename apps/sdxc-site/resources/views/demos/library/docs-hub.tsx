@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ArrowRightIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { Feature, LandingHeader, LandingSection } from "@sdxc/ui/landing";
 
@@ -94,10 +93,7 @@ export function DocsChapter() {
 						</Feature.Title>
 						<Feature.Description>{doc.body}</Feature.Description>
 						<Feature.Action>
-							<Feature.Link href="#docs">
-								{`Read · ${doc.time}`}
-								<ArrowRightIcon aria-hidden="true" data-slot="icon" />
-							</Feature.Link>
+							<Feature.Link href="#docs">{`Read · ${doc.time}`}</Feature.Link>
 						</Feature.Action>
 					</Feature>
 				))}
