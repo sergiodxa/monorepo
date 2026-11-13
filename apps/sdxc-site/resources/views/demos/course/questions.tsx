@@ -146,7 +146,8 @@ export function CourseRefunds() {
 }
 
 /**
- * The questions band, two columns wide.
+ * The questions band: the six questions in two columns of three, side by side from the
+ * band's wide step and stacked in one list on a phone.
  *
  * @returns The render function producing the band.
  */
@@ -159,19 +160,21 @@ export function CourseFaq() {
 			title="Before your first lump of clay"
 			mix={[renderNearView(485)]}
 		>
-			<Accordion>
-				{QUESTIONS.map(([question, answer]) => (
-					<Accordion.Item key={question} name="course-faq">
-						<Accordion.Trigger>
-							{question}
-							<ChevronDownIcon data-slot="icon" aria-hidden="true" />
-						</Accordion.Trigger>
-						<Accordion.Content>
-							<p>{answer}</p>
-						</Accordion.Content>
-					</Accordion.Item>
-				))}
-			</Accordion>
+			{[QUESTIONS.slice(0, 3), QUESTIONS.slice(3)].map((column) => (
+				<Accordion key={column[0]?.[0]}>
+					{column.map(([question, answer]) => (
+						<Accordion.Item key={question} name="course-faq">
+							<Accordion.Trigger>
+								{question}
+								<ChevronDownIcon data-slot="icon" aria-hidden="true" />
+							</Accordion.Trigger>
+							<Accordion.Content>
+								<p>{answer}</p>
+							</Accordion.Content>
+						</Accordion.Item>
+					))}
+				</Accordion>
+			))}
 		</FaqBand>
 	);
 }

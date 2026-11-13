@@ -153,6 +153,17 @@ describe("the whole page", () => {
 		}
 	});
 
+	test("sets the questions in two columns of three on a wide screen", async () => {
+		await page.viewport(1440, 900);
+		mounted = render(course.render());
+		let triggers = [...document.querySelectorAll<HTMLElement>("#faq summary")];
+		let lefts = new Set(
+			triggers.map((trigger) => Math.round(trigger.getBoundingClientRect().left)),
+		);
+		expect(triggers).toHaveLength(6);
+		expect(lefts.size).toBe(2);
+	});
+
 	test("fits a 375px phone with no sideways scroll", async () => {
 		await page.viewport(375, 812);
 		mounted = render(course.render());
