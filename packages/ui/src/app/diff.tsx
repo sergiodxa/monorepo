@@ -731,6 +731,12 @@ Diff.Hunks = function DiffHunks(handle: Handle<Diff.HunksProps>) {
 		}
 		let digits = Math.max(2, String(widest).length);
 		let entries = hunks.flatMap((hunk, index) => hunkEntries(hunk, index, language, scope));
+		let quote =
+			view === "unified" &&
+			threads === undefined &&
+			hunks.every((hunk) =>
+				hunk.lines.every((line) => line.kind === "context" && line.old === line.new),
+			);
 
 		return (
 			<div
@@ -754,7 +760,7 @@ Diff.Hunks = function DiffHunks(handle: Handle<Diff.HunksProps>) {
 					dir="ltr"
 					mix={[raw({ overflowX: "auto", overscrollBehaviorInline: "contain" })]}
 				>
-					<table aria-label={path} mix={[tableRules(view, digits)]}>
+					<table aria-label={path} mix={[tableRules(view, digits, quote)]}>
 						<thead>
 							<tr>
 								<th scope="col">{labels.columns.oldNumber}</th>
@@ -1032,9 +1038,11 @@ function normalize(runs: readonly CodeToken[]): CodeToken[] {
  *
  * @param view Which layout the rows follow.
  * @param digits Digits the widest line number needs.
+ * @param quote Whether every line is unchanged at the same number, which draws one number column.
  */
-function tableRules(view: Diff.View, digits: number) {
+function tableRules(view: Diff.View, digits: number, quote = false) {
 	let numberWidth = `calc(${digits}ch + 1.25rem)`;
+	let numbers = quote ? numberWidth : `${numberWidth} ${numberWidth}`;
 	let mixWith = (tone: string, amount: number, fallback: string) =>
 		`var(${fallback}, color-mix(in oklab, var(--ui-${tone}-fg) ${amount}%, var(--diff-bg)))`;
 	let add = mixWith("success", 12, "--diff-add-bg");
@@ -1221,11 +1229,15 @@ function tableRules(view: Diff.View, digits: number) {
 				"& > tbody": {
 					display: "grid",
 					contentVisibility: "auto",
-					gridTemplateColumns: `${numberWidth} ${numberWidth} 1fr`,
+					gridTemplateColumns: `${numbers} 1fr`,
 				},
 				[`& > tbody > tr > ${LINE_CELL}:nth-child(-n+2)`]: { position: "sticky", zIndex: 1 },
-				[`& > tbody > tr > ${LINE_CELL}:nth-child(1)`]: { insetInlineStart: 0 },
-				[`& > tbody > tr > ${LINE_CELL}:nth-child(2)`]: { insetInlineStart: numberWidth },
+				[`& > tbody > tr > ${LINE_CELL}:nth-child(1)`]: quote
+					? { display: "none" }
+					: { insetInlineStart: 0 },
+				[`& > tbody > tr > ${LINE_CELL}:nth-child(2)`]: {
+					insetInlineStart: quote ? 0 : numberWidth,
+				},
 				[`& > tbody > tr > ${LINE_CELL}:nth-child(3)`]: codeCellRules("pre"),
 				[`& > tbody > tr[data-kind="add"] > ${LINE_CELL}`]: { backgroundColor: add },
 				[`& > tbody > tr[data-kind="add"] > ${LINE_CELL}:nth-child(-n+2)`]: {
@@ -1241,7 +1253,7 @@ function tableRules(view: Diff.View, digits: number) {
 				'& > tbody > tr[data-kind="del"] mark': { backgroundColor: delWord },
 				[`@container diff (max-width: ${WRAP_WIDTH})`]: {
 					"&": { inlineSize: "100%" },
-					"& > tbody": { gridTemplateColumns: `${numberWidth} ${numberWidth} minmax(0, 1fr)` },
+					"& > tbody": { gridTemplateColumns: `${numbers} minmax(0, 1fr)` },
 					[`& > tbody > tr > ${LINE_CELL}:nth-child(3)`]: {
 						whiteSpace: "pre-wrap",
 						overflowWrap: "anywhere",

@@ -173,6 +173,35 @@ function centre(element: Element): { clientX: number; clientY: number } {
 }
 
 describe("Diff unified view", () => {
+	test("quotes unchanged lines with one number column", () => {
+		mounted = render(
+			<Diff.Hunks
+				path="app/routes.ts"
+				anchored={false}
+				labels={LABELS}
+				hunks={[
+					{
+						oldStart: 40,
+						oldLines: 2,
+						newStart: 40,
+						newLines: 2,
+						lines: [
+							{ kind: "context", old: 40, new: 40, text: "let a = 1;" },
+							{ kind: "context", old: 41, new: 41, text: "let b = 2;" },
+						],
+					},
+				]}
+			/>,
+		);
+		let numbers = [...document.querySelectorAll<HTMLElement>("[data-line-number]")].filter((cell) =>
+			cell.checkVisibility(),
+		);
+		expect(numbers.map((cell) => cell.dataset.lineNumber)).toEqual(["40", "41"]);
+		expect(document.querySelector("tbody td:nth-child(2)")!.getBoundingClientRect().left).toBe(
+			document.querySelector("tbody")!.getBoundingClientRect().left,
+		);
+	});
+
 	test("draws every character as typed, with no ligatures", () => {
 		mount();
 		expect(getComputedStyle(code("R", 5)).fontVariantLigatures).toBe("none");
