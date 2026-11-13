@@ -1,7 +1,6 @@
 /**
- * Quoin's gallery miniature: the studio's claim in its oversized Didone on faint column
- * guides, over the edge of the navy Harbour Line plate, so the card shows the printed
- * portfolio the landing is set as.
+ * Quoin's gallery miniature: the studio's claim in its oversized Didone over the edge of
+ * the navy Harbour Line plate, so the card shows the printed portfolio the landing is set as.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,36 +11,13 @@ import { raw } from "@sdxc/u/general";
 import { DIDONE, MONO } from "~/resources/views/demos/studio/type";
 
 /**
- * Renders the guides, the running head, the claim and the plate's top edge.
+ * Renders the running head, the claim and the plate's top edge.
  *
  * @returns The render function producing the scene.
  */
 export default function StudioThumbnail() {
 	return () => (
 		<>
-			<div
-				mix={[
-					raw({
-						position: "absolute",
-						inset: "0 1.25rem",
-						display: "grid",
-						gridTemplateColumns: "repeat(6, 1fr)",
-						columnGap: "0.5rem",
-					}),
-				]}
-			>
-				{Array.from({ length: 6 }, (_, index) => (
-					<span
-						key={index}
-						mix={[
-							raw({
-								backgroundColor: "color-mix(in oklch, var(--ui-brand-fg) 4%, transparent)",
-								borderInline: "1px solid color-mix(in oklch, var(--ui-brand-fg) 10%, transparent)",
-							}),
-						]}
-					/>
-				))}
-			</div>
 			<div
 				mix={[
 					raw({

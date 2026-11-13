@@ -10,7 +10,7 @@
 import { raw } from "@sdxc/u/general";
 import { at } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
-import { Button, Input, TextArea } from "@sdxc/ui";
+import { Button, Input, Select, TextArea } from "@sdxc/ui";
 import { LandingSection } from "@sdxc/ui/landing";
 import { landingCtaChrome, landingLead } from "@sdxc/ui/styles";
 
@@ -154,14 +154,14 @@ export default function StudioEnquiry() {
 						label="When would you like to start?"
 						hint="Choose a month, or later in 2027."
 					>
-						<select id="enquiry-start" name="start" required mix={[select()]}>
-							<option value="">Choose a start</option>
+						<Select id="enquiry-start" name="start" required>
+							<Select.Option value="">Choose a start</Select.Option>
 							{STARTS.map((start) => (
-								<option key={start} value={start}>
+								<Select.Option key={start} value={start}>
 									{start}
-								</option>
+								</Select.Option>
 							))}
-						</select>
+						</Select>
 					</StudioField>
 					<StudioField
 						htmlFor="enquiry-brief"
@@ -260,25 +260,4 @@ function hiddenInput() {
 		opacity: "0",
 		cursor: "pointer",
 	});
-}
-
-/** The native select, drawn with the inputs' edge, height and type. */
-function select() {
-	return [
-		raw({
-			inlineSize: "100%",
-			minBlockSize: "2.5rem",
-			paddingInline: "0.75rem",
-			font: "inherit",
-			color: "var(--ui-neutral-fg-emphasis)",
-			backgroundColor: "var(--ui-bg)",
-			border: "1px solid var(--ui-neutral-border-strong)",
-			borderRadius: "0",
-		}),
-		when(
-			"&:focus-visible",
-			raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "1px" }),
-		),
-		when("&:user-invalid", raw({ borderColor: "var(--ui-danger-fg)" })),
-	];
 }

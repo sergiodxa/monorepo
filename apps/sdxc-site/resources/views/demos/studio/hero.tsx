@@ -1,6 +1,6 @@
 /**
  * Quoin's opening spread: the studio's claim in an oversized Didone across the whole
- * twelve-column grid, the faint column guides it is set on, a lead in the right-hand half,
+ * twelve-column grid, tick marks at each column's edge, a lead in the right-hand half,
  * and the studio's index of figures as the page's first ruled table.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -39,10 +39,10 @@ const INDEX = [
  */
 export default function StudioHero() {
 	return () => (
-		<LandingSection id="top" spacing="hero" level={1}>
+		<LandingSection id="top" spacing="compact" level={1}>
 			<div mix={[pageGrid(), raw({ position: "relative", rowGap: "2.5rem" })]}>
-				<ColumnGuides />
-				<p mix={[runningHead()]}>
+				<p mix={[runningHead(), raw({ position: "relative" })]}>
+					<ColumnTicks />
 					<span>Design &amp; engineering studio · Antwerp</span>
 					<a href="#availability" mix={[availabilityLink()]}>
 						<span
@@ -104,16 +104,17 @@ export default function StudioHero() {
 }
 
 /**
- * The layout grid drawn faintly behind the spread from `lg`, twelve columns with hairline
- * edges, so the claim is seen sitting on the grid every band below keeps to.
+ * The layout grid marked under the running head's rule from `lg`: a short tick at each of
+ * the twelve columns' edges, like the registration marks on a printed sheet, so the grid
+ * every band keeps to is visible without a line running into the type.
  *
- * @returns The render function producing the guides.
+ * @returns The render function producing the ticks.
  */
-function ColumnGuides() {
+function ColumnTicks() {
 	return () => (
-		<div
+		<span
 			aria-hidden="true"
-			data-slot="studio-guides"
+			data-slot="studio-ticks"
 			mix={[
 				raw({ display: "none" }),
 				at(
@@ -121,8 +122,9 @@ function ColumnGuides() {
 					BAND,
 					raw({
 						position: "absolute",
-						inset: "-2rem 0",
-						zIndex: "-1",
+						insetInline: "0",
+						insetBlockStart: "100%",
+						blockSize: "0.5rem",
 						pointerEvents: "none",
 						display: "grid",
 						gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
@@ -134,15 +136,10 @@ function ColumnGuides() {
 			{Array.from({ length: 12 }, (_, index) => (
 				<span
 					key={index}
-					mix={[
-						raw({
-							backgroundColor: "color-mix(in oklch, var(--ui-brand-fg) 4%, transparent)",
-							borderInline: "1px solid color-mix(in oklch, var(--ui-brand-fg) 10%, transparent)",
-						}),
-					]}
+					mix={[raw({ borderInline: "1px solid var(--ui-neutral-border-strong)" })]}
 				/>
 			))}
-		</div>
+		</span>
 	);
 }
 
