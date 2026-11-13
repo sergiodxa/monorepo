@@ -36,6 +36,7 @@ import {
 } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
 import { AUTHORS, POSTS, PUBLICATION } from "~/resources/views/demo-apps/inkwell/data";
+import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 
 /** The demo's folder name, which every address and island id under it starts from. */
 export const SLUG = "inkwell";
@@ -82,6 +83,11 @@ export interface ShellScreen {
 	body: RemixNode;
 	/** `404` for the not-found screen, `400` for a form answered with its issues. */
 	status?: number;
+	/**
+	 * The address the screen settles on when a form answers it from another one, such as a
+	 * quick edit answered on its list; the request's own address otherwise.
+	 */
+	url?: URL;
 }
 
 /** Every string the shell shows or announces. */
@@ -206,8 +212,9 @@ const DRAFT_COUNT = POSTS.filter((post) => post.status === "draft").length;
 const SCHEDULED_COUNT = POSTS.filter((post) => post.status === "scheduled").length;
 
 /**
- * Inkwell's whole frame around one screen. Writing comes first in the nav, the two queues an
- * editor returns to are saved views, and Settings sits apart at the foot of the list.
+ * Inkwell's whole frame around one screen's main area. Writing comes first in the nav, the two
+ * queues an editor returns to are saved views, and Settings sits apart; every screen shares
+ * this one shell, so moving between them swaps only the main area.
  */
 export function InkwellShell(handle: Handle<InkwellShellProps>) {
 	return () => {
@@ -244,6 +251,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 								href={href()}
 								icon={<HouseIcon />}
 								label="Home"
+								data-main-nav="home"
 								current={current === "home"}
 							/>
 							<AppShell.Item
@@ -251,6 +259,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 								href={href("posts")}
 								icon={<FileTextIcon />}
 								label="Posts"
+								data-main-nav="posts"
 								current={current === "posts"}
 							/>
 							<AppShell.Item
@@ -258,6 +267,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 								href={href("pages")}
 								icon={<FilesIcon />}
 								label="Pages"
+								data-main-nav="pages"
 								current={current === "pages"}
 							/>
 							<AppShell.Item
@@ -265,6 +275,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 								href={href("media")}
 								icon={<ImageIcon />}
 								label="Media"
+								data-main-nav="media"
 								current={current === "media"}
 							/>
 						</AppShell.Group>
@@ -277,6 +288,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 								count={DRAFT_COUNT}
 								countTone="neutral"
 								countLabel={`${DRAFT_COUNT} drafts`}
+								data-main-nav="drafts"
 								current={current === "drafts"}
 							/>
 							<AppShell.Item
@@ -287,6 +299,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 								count={SCHEDULED_COUNT}
 								countTone="brand"
 								countLabel={`${SCHEDULED_COUNT} scheduled`}
+								data-main-nav="scheduled"
 								current={current === "scheduled"}
 							/>
 						</AppShell.Group>
@@ -296,6 +309,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 								href={href("settings")}
 								icon={<SettingsIcon />}
 								label="Settings"
+								data-main-nav="settings"
 								current={current === "settings"}
 							/>
 						</AppShell.Group>
@@ -333,12 +347,14 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 							<span mix={[font("serif"), fg("neutral.emphasis"), weight("semibold")]}>
 								{PUBLICATION.name}
 							</span>
-							{` / ${place}`}
+							{" / "}
+							<span data-main-crumb="">{place}</span>
 						</p>
 					</>
 				}
 			>
 				{children}
+				<MainFrameSync root={href()} />
 				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</AppShell>
 		);

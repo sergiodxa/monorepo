@@ -352,7 +352,9 @@ function PostsTable(handle: Handle<PostsTableProps>) {
 											<Table.Actions overflowLabel={`More actions for ${post.title}`}>
 												<Table.Action href={href(`posts/${post.id}`)}>Edit</Table.Action>
 												<Table.Action href={quickHref(post)}>Quick edit</Table.Action>
-												<Table.Action href={href(`posts/${post.id}/preview`)}>View</Table.Action>
+												<Table.Action href={href(`posts/${post.id}/preview`)} data-rmx-document="">
+													View
+												</Table.Action>
 											</Table.Actions>
 										</Table.Row>
 									);
@@ -499,8 +501,8 @@ interface QuickEditFormProps {
 }
 
 /**
- * The quick-edit fields. It posts as a whole page, so the list behind the sheet and its toast
- * come back with the save; the sheet's footer submits it by its id.
+ * The quick-edit fields. A save answers with the whole list, so the rows behind the sheet and
+ * its toast come back with it; the sheet's footer submits it by its id.
  */
 export function QuickEditForm(handle: Handle<QuickEditFormProps>) {
 	return () => {

@@ -158,6 +158,7 @@ export function EditorScreen(handle: Handle<EditorScreenProps>) {
 						{post === null ? null : (
 							<LinkButton
 								href={href(`posts/${post.id}/preview`)}
+								data-rmx-document=""
 								variant="outline"
 								color="neutral"
 								size="sm"

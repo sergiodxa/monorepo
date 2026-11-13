@@ -104,6 +104,107 @@ describe("Inkwell screens", () => {
 	});
 });
 
+describe("Inkwell's main frame", () => {
+	/**
+	 * Fetches a screen as the `main` frame asks for it.
+	 *
+	 * @param page The page path, with its query string.
+	 * @returns The response, holding the main area alone.
+	 */
+	async function main(page: string): Promise<Response> {
+		return await fetchApp(href(page), { headers: { "X-Remix-Target": "main" } });
+	}
+
+	test("each screen inlines its main area into the shell, which syncs it after a swap", async () => {
+		let body = await screen("posts/the-letterpress-year");
+
+		expect(body).toContain("data-main-region");
+		expect(body).toContain('data-main-crumb="">Posts</span>');
+		expect(body).toMatch(
+			/data-main-nav="posts"[^>]*aria-current="page"|aria-current="page"[^>]*data-main-nav="posts"/,
+		);
+		expect(body).toContain("data-main-frame-sync");
+		expect(body).toContain('id="post-title"');
+	});
+
+	test("a screen answers main with its content, title, nav, place and address", async () => {
+		let response = await main("posts?status=draft&toast=posts-published.1a2b3c4d");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain('data-title="Posts"');
+		expect(body).toContain('data-nav="drafts"');
+		expect(body).toContain('data-crumb="Posts"');
+		expect(body).toContain('data-url="/demo/apps/inkwell/posts?status=draft"');
+		expect(body).toContain("data-main-toast");
+		expect(body).not.toContain("data-main-frame-sync");
+		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
+	});
+
+	test("a saved editor answers main with its status reading Saved", async () => {
+		let body = await (await main("posts/the-letterpress-year?toast=post-updated.1a2b3c4d")).text();
+
+		expect(body).toContain('data-url="/demo/apps/inkwell/posts/the-letterpress-year"');
+		expect(body).toContain("Post updated");
+	});
+
+	test("the preview, which draws no shell, answers main with its whole page", async () => {
+		let body = await (await main("posts/on-slow-reading/preview")).text();
+
+		expect(body).not.toContain("data-main-screen");
+		expect(body).toContain("<html");
+	});
+
+	test("an editor post through main with an empty title answers main alone, keeping what was typed", async () => {
+		let response = await fetchApp(action("posts/the-letterpress-year"), {
+			method: "POST",
+			headers: { "X-Remix-Target": "main" },
+			body: new URLSearchParams([
+				["intent", "update"],
+				["title", ""],
+				["body", "The press arrived in a borrowed van."],
+				["author", "ingrid"],
+			]),
+		});
+		let body = await response.text();
+
+		expect(response.status).toBe(400);
+		expect(body).toContain('data-url="/demo/apps/inkwell/posts/the-letterpress-year"');
+		expect(body).toContain("Give the post a title, then save again.");
+		expect(body).toContain("The press arrived in a borrowed van.");
+		expect(body).toMatch(/value="ingrid"[^>]*checked/);
+		expect(body).not.toContain("data-main-frame-sync");
+	});
+
+	test("a quick edit through main with an empty title settles on its list with the sheet open", async () => {
+		let response = await fetchApp(action("posts/how-we-edit/quick"), {
+			method: "POST",
+			headers: { "X-Remix-Target": "main" },
+			body: new URLSearchParams([
+				["title", ""],
+				["status", "draft"],
+				["author", "priya"],
+				["back", "?tag=Notebook"],
+			]),
+		});
+		let body = await response.text();
+
+		expect(response.status).toBe(400);
+		expect(body).toContain(
+			'data-url="/demo/apps/inkwell/posts?tag=Notebook&amp;quick=how-we-edit"',
+		);
+		expect(body).toContain('id="quick-edit"');
+		expect(body).toContain("Give the post a title, then update it again.");
+	});
+
+	test("the links into the preview, which draws no shell, load the whole document", async () => {
+		expect(await screen("posts/the-letterpress-year")).toMatch(
+			/href="\/demo\/apps\/inkwell\/posts\/the-letterpress-year\/preview"[^>]*data-rmx-document/,
+		);
+		expect(await screen("posts")).toMatch(/\/preview"[^>]*data-rmx-document/);
+	});
+});
+
 describe("Inkwell frames", () => {
 	/**
 	 * Every frame address a page names, from its frames' sources and its Retry link's

@@ -38,6 +38,12 @@ import { SETTINGS_TITLES, SettingsScreen } from "~/resources/views/demo-apps/ink
 import { action, InkwellShell } from "~/resources/views/demo-apps/inkwell/shell";
 import { submitInkwell } from "~/resources/views/demo-apps/inkwell/submit";
 import { inkwellThumbnail } from "~/resources/views/demo-apps/inkwell/thumbnail";
+import {
+	MAIN_FRAME,
+	MainFrame,
+	mainSource,
+	MainScreen,
+} from "~/resources/views/demo-apps/main-frame";
 
 /** An ink-blue ramp at hue 262, deep enough at 600 to read as fountain-pen ink on paper. */
 const BRAND = [
@@ -117,25 +123,62 @@ const SAVE_TOASTS = new Set(["post-updated", "draft-saved", "post-published", "p
 const STATUS_NAV: Partial<Record<StatusTab, NavKey>> = { draft: "drafts", scheduled: "scheduled" };
 
 /**
- * Puts a screen inside Inkwell's shell, with the sidebar as wide as the visitor left it.
+ * Puts a screen's main area inside Inkwell's shell as the `main` frame, with the sidebar as
+ * wide as the visitor left it; the server inlines the frame, so the page reads without scripts.
  *
  * @param screen The screen and the nav row it marks current.
- * @param cookie The request's `Cookie` header.
+ * @param request The request the screen renders for.
  * @returns The whole frame, ready to render.
  */
-function framed(screen: ShellScreen, cookie: string | null): DemoAppScreen {
+function framed(screen: ShellScreen, request: DemoAppRequest): DemoAppScreen {
 	return {
 		title: screen.title,
 		status: screen.status,
 		body: (
 			<InkwellShell
 				current={screen.current}
-				collapsed={readAppShellCookie(cookie)}
+				collapsed={readAppShellCookie(request.cookie)}
+				place={screen.place}
+			>
+				<MainFrame src={mainSource(request.url)} />
+			</InkwellShell>
+		),
+	};
+}
+
+/**
+ * A form answered again with its issues: the whole page for a post that left the document,
+ * and the `main` frame alone for one sent through it, both holding everything typed.
+ *
+ * @param screen The screen the form answers with.
+ * @param request The post's request, whose address the screen settles on unless it names its own.
+ * @returns The page, with its main area as the `main` frame's content.
+ */
+function answered(screen: ShellScreen, request: DemoAppRequest): DemoAppScreen {
+	return {
+		title: screen.title,
+		status: screen.status,
+		body: (
+			<InkwellShell
+				current={screen.current}
+				collapsed={readAppShellCookie(request.cookie)}
 				place={screen.place}
 			>
 				{screen.body}
 			</InkwellShell>
 		),
+		frames: {
+			[MAIN_FRAME]: (
+				<MainScreen
+					title={screen.title}
+					nav={screen.current ?? undefined}
+					crumb={screen.place}
+					url={screen.url ?? request.url}
+				>
+					{screen.body}
+				</MainScreen>
+			),
+		},
 	};
 }
 
@@ -349,10 +392,27 @@ export default {
 	frame: (part, request) => frame(part, request, new Date()),
 	render(request) {
 		let screen = route(request, new Date());
-		return "current" in screen ? framed(screen, request.cookie) : screen;
+		return "current" in screen ? framed(screen, request) : screen;
+	},
+	target(name, request) {
+		if (name !== MAIN_FRAME) return null;
+		let screen = route(request, new Date());
+		if (!("current" in screen)) return null;
+		let key = request.url.searchParams.get(DEMO_APP_TOAST_PARAM);
+		return (
+			<MainScreen
+				title={screen.title}
+				nav={screen.current ?? undefined}
+				crumb={screen.place}
+				url={request.url}
+				toast={key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined}
+			>
+				{screen.body}
+			</MainScreen>
+		);
 	},
 	submit(page, form, request) {
 		let next = submitInkwell(page, form, request, new Date());
-		return next !== null && "current" in next ? framed(next, request.cookie) : next;
+		return next !== null && "current" in next ? answered(next, request) : next;
 	},
 } satisfies DemoApp;

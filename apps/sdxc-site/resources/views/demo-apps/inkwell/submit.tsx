@@ -65,6 +65,9 @@ const INVITE_FORM = f.object({
 	role: f.field(s.enum_(["contributor", "editor"])),
 });
 
+/** The top bar's place for a new document's editor, as its own screen shows it. */
+const NEW_PLACE = { posts: "Posts / New post", pages: "Pages / New page" } as const;
+
 /** The toast each bulk action ends with, echoing its button's verb. */
 const BULK_TOAST = {
 	publish: "posts-published",
@@ -139,11 +142,14 @@ function submitQuick(
 	if (title.trim() !== "") return { page: list, toast: "post-updated" };
 
 	let listUrl = new URL(href(list), request.url.origin);
+	let url = new URL(listUrl);
+	url.searchParams.set("quick", post.id);
 	return {
 		title: "Posts",
 		current: "posts",
 		place: "Posts",
 		status: 400,
+		url,
 		body: (
 			<PostsScreen
 				listUrl={listUrl}
@@ -184,7 +190,7 @@ function submitEditor(
 		return {
 			title: post?.title ?? `New ${kind}`,
 			current: list,
-			place: list === "pages" ? "Pages" : "Posts",
+			place: post === null ? NEW_PLACE[list] : "Posts",
 			status: 400,
 			body: (
 				<EditorScreen
