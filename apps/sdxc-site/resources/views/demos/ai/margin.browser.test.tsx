@@ -11,7 +11,7 @@ import type { RenderResult } from "remix/component/test";
 
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
-import { page } from "vitest/browser";
+import { cdp, page } from "vitest/browser";
 
 import landing from "~/resources/views/demos/ai/index";
 
@@ -24,6 +24,7 @@ afterEach(async () => {
 	mounted?.cleanup();
 	mounted = undefined;
 	history.replaceState(null, "", location.pathname + location.search);
+	await cdp().send("Emulation.setEmulatedMedia", { features: [] });
 	await page.viewport(414, 896);
 });
 
@@ -97,6 +98,23 @@ describe("Margin's landing", () => {
 		for (let cell of cells) {
 			expect(getComputedStyle(cell).borderTopWidth).toBe("0px");
 		}
+	});
+
+	test("holds every scene still and finished when motion is reduced", async () => {
+		await cdp().send("Emulation.setEmulatedMedia", {
+			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+		});
+		let root = mount();
+		for (let section of root.querySelectorAll<HTMLElement>("main > *")) {
+			section.style.contentVisibility = "visible";
+		}
+		let timed = document
+			.getAnimations()
+			.filter((animation) => animation.timeline instanceof DocumentTimeline);
+		expect(timed.map((animation) => (animation as CSSAnimation).animationName)).toEqual([]);
+		let typed = root.querySelectorAll('#drafting [data-kind="output"]');
+		expect(typed.length).toBeGreaterThan(0);
+		for (let line of typed) expect(getComputedStyle(line).opacity).toBe("1");
 	});
 
 	test("stays inside a 320px phone", async () => {
