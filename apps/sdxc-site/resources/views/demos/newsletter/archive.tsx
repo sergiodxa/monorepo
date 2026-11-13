@@ -79,7 +79,7 @@ const TOPICS: readonly Topic[] = [
 		],
 	},
 	{
-		name: "Wires and signals",
+		name: "Phones and cables",
 		slug: "wires",
 		count: 7,
 		issues: [
