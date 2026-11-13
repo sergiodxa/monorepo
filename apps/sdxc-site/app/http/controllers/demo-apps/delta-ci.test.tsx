@@ -88,6 +88,7 @@ describe("Delta's Actions list", () => {
 		expect(runIds(body)).toEqual([]);
 		expect(body).toContain("No runs match");
 		expect(body).toContain(`href="${href("delta/actions")}"`);
+		expect(body.match(/>Clear filters</g)).toHaveLength(1);
 	});
 });
 

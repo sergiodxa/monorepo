@@ -97,6 +97,13 @@ describe("Delta's inbox", () => {
 
 		expect(body).toContain('data-inbox-group="sdxc/delta"');
 		expect(body).not.toContain('data-inbox-group="Today"');
+		expect(body).not.toContain("sdxc/delta · ");
+	});
+
+	test("offers one way to clear a filter that leaves a view empty", async () => {
+		let { body } = await page("notifications?view=done&reason=mention");
+
+		expect(body.match(/>Clear filters</g)).toHaveLength(1);
 	});
 
 	test("a row's Done answers 204 in the background and moves it to Done", async () => {

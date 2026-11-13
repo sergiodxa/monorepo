@@ -19,7 +19,7 @@ import {
 import { iife } from "@sdxc/iife";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
-import { HeadingScope, LabelChip, LinkButton, RelativeTime } from "@sdxc/ui";
+import { HeadingScope, LabelChip, RelativeTime } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 import { FilterBar } from "@sdxc/ui/app/filter-bar";
 import { SelectionBar } from "@sdxc/ui/app/selection-bar";
@@ -28,7 +28,7 @@ import type { ListQuery } from "../query";
 import type { IssueView } from "../records";
 import type { RecordState } from "../states";
 
-import { actionHref, issueHref, issuesHref } from "../data";
+import { actionHref, issueHref } from "../data";
 import { InitialsTile } from "../glyphs";
 import { COPY, FILTER_LABELS, SELECTION_LABELS } from "../labels";
 import { ListKeys } from "../list-keys";
@@ -488,13 +488,6 @@ export function IssuesScreen(handle: Handle<IssuesScreen.Props>) {
 										<Empty.Description>
 											{filtered ? COPY.issues.noneHint : COPY.issues.emptyHint}
 										</Empty.Description>
-										{filtered ? (
-											<Empty.Action>
-												<LinkButton href={issuesHref()} size="sm" variant="outline" color="neutral">
-													{COPY.issues.clear}
-												</LinkButton>
-											</Empty.Action>
-										) : null}
 									</Empty>
 								</div>
 							) : (

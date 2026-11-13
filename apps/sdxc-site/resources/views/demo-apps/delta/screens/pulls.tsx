@@ -19,7 +19,7 @@ import {
 import { iife } from "@sdxc/iife";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
-import { HeadingScope, LabelChip, LinkButton, RelativeTime } from "@sdxc/ui";
+import { HeadingScope, LabelChip, RelativeTime } from "@sdxc/ui";
 import { CheckRunIcon } from "@sdxc/ui/app/check-runs";
 import { Empty } from "@sdxc/ui/app/empty";
 import { FilterBar } from "@sdxc/ui/app/filter-bar";
@@ -27,7 +27,7 @@ import { FilterBar } from "@sdxc/ui/app/filter-bar";
 import type { PullView } from "../pull-records";
 import type { ListQuery } from "../query";
 
-import { pullHref, pullsHref } from "../data";
+import { pullHref } from "../data";
 import { InitialsTile } from "../glyphs";
 import { COPY, FILTER_LABELS } from "../labels";
 import { ListKeys } from "../list-keys";
@@ -377,13 +377,6 @@ export function PullsScreen(handle: Handle<PullsScreen.Props>) {
 										<Empty.Description>
 											{filtered ? COPY.pulls.noneHint : COPY.pulls.emptyHint}
 										</Empty.Description>
-										{filtered ? (
-											<Empty.Action>
-												<LinkButton href={pullsHref()} size="sm" variant="outline" color="neutral">
-													{COPY.issues.clear}
-												</LinkButton>
-											</Empty.Action>
-										) : null}
 									</Empty>
 								</div>
 							) : (

@@ -21,8 +21,8 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { font, text, weight } from "@sdxc/u/typography";
-import { HeadingScope, LinkButton, RelativeTime } from "@sdxc/ui";
-import { clearFiltersHref, paramValues, setParamHref } from "@sdxc/ui/app";
+import { HeadingScope, RelativeTime } from "@sdxc/ui";
+import { paramValues, setParamHref } from "@sdxc/ui/app";
 import { Empty } from "@sdxc/ui/app/empty";
 import { FilterBar } from "@sdxc/ui/app/filter-bar";
 import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
@@ -134,6 +134,8 @@ namespace InboxRow {
 		/** The page the row's forms return to without script. */
 		returnTo: string;
 		now: number;
+		/** Leaves the repository out, for a group headed by it. */
+		bare?: boolean;
 	}
 }
 
@@ -167,7 +169,7 @@ function SubjectIcon(handle: Handle<{ item: InboxItem }>) {
  */
 export function InboxRow(handle: Handle<InboxRow.Props>) {
 	return () => {
-		let { item, now, returnTo } = handle.props;
+		let { bare, item, now, returnTo } = handle.props;
 		let reference = item.kind === "commit" ? shortSha(String(item.target)) : (item.label ?? "");
 		return (
 			<li
@@ -253,7 +255,7 @@ export function InboxRow(handle: Handle<InboxRow.Props>) {
 							fg("neutral.muted"),
 						]}
 					>
-						<span mix={[font("mono")]}>{`${item.repo} · ${reference}`}</span>
+						<span mix={[font("mono")]}>{bare ? reference : `${item.repo} · ${reference}`}</span>
 						<span
 							data-reason={item.reason}
 							mix={[
@@ -382,11 +384,9 @@ export function InboxRow(handle: Handle<InboxRow.Props>) {
 }
 
 /** The empty state a view shows once nothing is left in it, said by why it is empty. */
-function Cleared(
-	handle: Handle<{ view: InboxView; filtered: boolean; url: URL; hidden?: boolean }>,
-) {
+function Cleared(handle: Handle<{ view: InboxView; filtered: boolean; hidden?: boolean }>) {
 	return () => {
-		let { filtered, hidden = false, url, view } = handle.props;
+		let { filtered, hidden = false, view } = handle.props;
 		let copy = COPY.inbox.empty[filtered ? "filtered" : view];
 		return (
 			<div data-inbox-cleared="" hidden={hidden} mix={[raw({ "&[hidden]": { display: "none" } })]}>
@@ -396,18 +396,6 @@ function Cleared(
 				>
 					<Empty.Title>{copy.title}</Empty.Title>
 					<Empty.Description>{copy.hint}</Empty.Description>
-					{filtered ? (
-						<Empty.Action>
-							<LinkButton
-								href={clearFiltersHref(url, ["reason"])}
-								size="sm"
-								variant="outline"
-								color="neutral"
-							>
-								{COPY.inbox.clear}
-							</LinkButton>
-						</Empty.Action>
-					) : null}
 				</Empty>
 			</div>
 		);
@@ -443,7 +431,7 @@ export function NotificationsScreen(handle: Handle<NotificationsScreen.Props>) {
 		let unread = items.filter((item) => inView(item, "inbox") && item.unread).length;
 		let rows: RemixNode =
 			shown.length === 0 ? (
-				<Cleared view={view} filtered={reasons.length > 0} url={url} />
+				<Cleared view={view} filtered={reasons.length > 0} />
 			) : (
 				<>
 					{groups.map((group) => (
@@ -471,12 +459,12 @@ export function NotificationsScreen(handle: Handle<NotificationsScreen.Props>) {
 							</h2>
 							<ul mix={[raw({ listStyle: "none", margin: 0, padding: 0 })]}>
 								{group.items.map((item) => (
-									<InboxRow item={item} returnTo={returnTo} now={now} />
+									<InboxRow item={item} returnTo={returnTo} now={now} bare={grouping === "repo"} />
 								))}
 							</ul>
 						</section>
 					))}
-					<Cleared view={view} filtered={reasons.length > 0} url={url} hidden />
+					<Cleared view={view} filtered={reasons.length > 0} hidden />
 				</>
 			);
 		return (

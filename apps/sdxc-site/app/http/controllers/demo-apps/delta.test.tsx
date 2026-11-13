@@ -300,7 +300,8 @@ describe("Delta's issues list", () => {
 		let { body } = await page("delta/issues?q=zzzz");
 
 		expect(body).toContain("No issues match");
-		expect(body).toContain("Clear filters");
+		expect(body.match(/>Clear filters</g)).toHaveLength(1);
+		expect((await page("delta/pulls?q=zzzz")).body.match(/>Clear filters</g)).toHaveLength(1);
 	});
 
 	test("the bulk bar closes every checked issue and comes back with one toast", async () => {

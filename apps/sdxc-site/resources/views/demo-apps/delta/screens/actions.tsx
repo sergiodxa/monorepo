@@ -13,8 +13,8 @@ import { CalendarIcon, CirclePlayIcon, TimerIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { font, tabularNums, text, weight } from "@sdxc/u/typography";
-import { HeadingScope, LinkButton, RelativeTime } from "@sdxc/ui";
-import { clearFiltersHref, paramValues } from "@sdxc/ui/app";
+import { HeadingScope, RelativeTime } from "@sdxc/ui";
+import { paramValues } from "@sdxc/ui/app";
 import { AutoRefresh } from "@sdxc/ui/app/auto-refresh";
 import { Empty } from "@sdxc/ui/app/empty";
 import { FilterBar } from "@sdxc/ui/app/filter-bar";
@@ -260,18 +260,17 @@ namespace RunsBody {
 	export interface Props {
 		runs: readonly Run[];
 		shown: readonly Run[];
-		url: URL;
 		now: number;
 	}
 }
 
 /**
  * Renders the runs the filters keep, or why there are none: no history to build yet, or no
- * run matching the filters, with the one link that clears them.
+ * run matching the filters, cleared from the filter bar above.
  */
 function RunsBody(handle: Handle<RunsBody.Props>) {
 	return () => {
-		let { now, runs, shown, url } = handle.props;
+		let { now, runs, shown } = handle.props;
 		if (runs.length === 0) {
 			return (
 				<Empty kind="first-run" icon={<CirclePlayIcon />}>
@@ -285,16 +284,6 @@ function RunsBody(handle: Handle<RunsBody.Props>) {
 				<Empty kind="no-results" icon={<CirclePlayIcon />}>
 					<Empty.Title>{COPY.actions.noneTitle}</Empty.Title>
 					<Empty.Description>{COPY.actions.noneHint}</Empty.Description>
-					<Empty.Action>
-						<LinkButton
-							href={clearFiltersHref(url, ["workflow", "status", "branch", "actor", "q"])}
-							size="sm"
-							variant="outline"
-							color="neutral"
-						>
-							{COPY.actions.clear}
-						</LinkButton>
-					</Empty.Action>
 				</Empty>
 			);
 		}
@@ -409,7 +398,7 @@ export function ActionsScreen(handle: Handle<ActionsScreen.Props>) {
 						>
 							{COPY.actions.runs(shown.length)}
 						</p>
-						<RunsBody runs={runs} shown={shown} url={url} now={now} />
+						<RunsBody runs={runs} shown={shown} now={now} />
 					</div>
 				</HeadingScope>
 			</>
