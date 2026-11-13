@@ -177,9 +177,8 @@ export function LandingHeader(handle: Handle<LandingHeader.Props>) {
 						variant={resolvedEyebrowVariant}
 						index={resolvedEyebrowVariant === "numbered" ? eyebrowIndex : undefined}
 						mix={[
-							self(isCenter ? "center" : "start"),
+							isSplit ? splitEyebrow() : self(isCenter ? "center" : "start"),
 							raw({ marginBlockEnd: resolvedEyebrowVariant === "mono" ? "0.5rem" : "1.5rem" }),
-							isSplit ? raw({ gridArea: "eyebrow" }) : [],
 							parts?.eyebrow,
 						]}
 					>
@@ -261,7 +260,8 @@ export function LandingHeader(handle: Handle<LandingHeader.Props>) {
 
 /**
  * The split grid: eyebrow over title in the wider first column and the lead in the second,
- * from the header's `lg` width. Narrower headers keep the stack.
+ * from the header's `lg` width. The lead spans both rows and the first row takes any height
+ * it adds, so a lead taller than the title never pulls the eyebrow away from it.
  */
 function splitGrid() {
 	return at(
@@ -270,11 +270,23 @@ function splitGrid() {
 		raw({
 			display: "grid",
 			gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1fr)",
-			gridTemplateAreas: '"eyebrow ." "title lead"',
+			gridTemplateRows: "1fr auto",
+			gridTemplateAreas: '"eyebrow lead" "title lead"',
 			columnGap: "4rem",
 			alignItems: "end",
 		}),
 	);
+}
+
+/**
+ * The split eyebrow: at the start of the stack on narrow headers, and from `lg` at the foot
+ * of the first grid row, so it rests on the title however tall the lead beside them runs.
+ */
+function splitEyebrow() {
+	return [
+		raw({ alignSelf: "var(--ui-landing-split-eyebrow-align, start)", justifySelf: "start" }),
+		at("lg", CONTAINER, raw({ gridArea: "eyebrow", "--ui-landing-split-eyebrow-align": "end" })),
+	];
 }
 
 /** The split lead: in the second column, on the title's last line, at most 28rem wide. */

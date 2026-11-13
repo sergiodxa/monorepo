@@ -58,6 +58,32 @@ describe("LandingHeader split", () => {
 		).toBeLessThanOrEqual(title.getBoundingClientRect().top);
 	});
 
+	test("keeps the eyebrow on the title when the lead runs taller than the title", () => {
+		let host = mount(
+			<LandingHeader
+				layout="split"
+				eyebrow="How it works"
+				description="Margin transcribes the call, then writes notes that each end in a timestamp. Follow one and you land on the line it came from, so a note is checked in a click, not trusted on faith."
+			>
+				Every note points at a line
+			</LandingHeader>,
+			1024,
+		);
+		let title = find(host, "h2, h1, h3");
+		let eyebrow = find(host, '[data-slot="eyebrow"], span');
+		let lead = find(host, "p");
+
+		expect(lead.getBoundingClientRect().height).toBeGreaterThan(
+			title.getBoundingClientRect().height * 2,
+		);
+		expect(title.getBoundingClientRect().top - eyebrow.getBoundingClientRect().bottom).toBeLessThan(
+			16,
+		);
+		expect(
+			Math.abs(lead.getBoundingClientRect().bottom - title.getBoundingClientRect().bottom),
+		).toBeLessThan(16);
+	});
+
 	test("stacks the lead under the title on a phone", () => {
 		let host = split(375);
 		let title = find(host, "h2, h1, h3");
@@ -65,6 +91,9 @@ describe("LandingHeader split", () => {
 
 		expect(lead.getBoundingClientRect().top).toBeGreaterThanOrEqual(
 			title.getBoundingClientRect().bottom,
+		);
+		expect(find(host, '[data-slot="eyebrow"], span').getBoundingClientRect().left).toBe(
+			title.getBoundingClientRect().left,
 		);
 		expect(host.scrollWidth).toBeLessThanOrEqual(375);
 	});
