@@ -10,6 +10,7 @@ import type { Handle } from "remix/component";
 
 import { ChevronDownIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
+import { when } from "@sdxc/u/state";
 import { Accordion, LinkButton } from "@sdxc/ui";
 import { ClosingCta, FaqBand, TestimonialBand } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
@@ -238,7 +239,8 @@ export function Questions() {
 
 /**
  * The closing call on an inset terracotta panel: the same pickup order the hero leads with,
- * and the phone number for anyone who'd rather talk.
+ * in cream in both themes so it reads as the one action (the band's own tokens hold its
+ * subtree in dark, hence the forced fill), and the phone number for anyone who'd rather talk.
  *
  * @returns The render function producing the band.
  */
@@ -252,7 +254,19 @@ export function Closing() {
 			description="Order tonight, collect any time we're open tomorrow. Or just come by; the kettle's always on."
 			actions={
 				<>
-					<LinkButton href="#order" variant="surface" mix={[landingCtaChrome()]}>
+					<LinkButton
+						href="#order"
+						variant="surface"
+						mix={[
+							landingCtaChrome(),
+							raw({
+								backgroundColor: "oklch(0.975 0.018 85) !important",
+								color: "oklch(0.38 0.11 38) !important",
+								boxShadow: "none !important",
+							}),
+							when("&:hover", raw({ backgroundColor: "oklch(0.93 0.03 80) !important" })),
+						]}
+					>
 						Order for pickup
 					</LinkButton>
 					<LinkButton href={PHONE.href} variant="ghost" mix={[landingCtaChrome()]}>
