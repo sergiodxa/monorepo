@@ -59,6 +59,21 @@ function rove(root: HTMLElement): void {
 }
 
 /**
+ * Closes a file the moment it is marked viewed and opens it when the mark is lifted. A redraw
+ * keeps each `<details>` as the reader left it, so the mark's change carries the fold.
+ */
+function fold(changes: MutationRecord[]): void {
+	for (let change of changes) {
+		let card = change.target;
+		if (!(card instanceof HTMLElement) || !card.matches(DIFF_FILE_SELECTOR)) continue;
+		let details = card.querySelector<HTMLDetailsElement>(
+			':scope > [data-slot="diff-file-details"]',
+		);
+		if (details !== null) details.open = !card.hasAttribute("data-viewed");
+	}
+}
+
+/**
  * The line link a key moves focus to from `link`: up or down its own column (the same side's
  * numbers, or its comment links), to the first or last of that column, or across its row.
  */
@@ -213,6 +228,10 @@ export const diffInteractions: MixinFactory<
 		let added = new MutationObserver(() => rove(root));
 		added.observe(root, { childList: true, subtree: true });
 		signal.addEventListener("abort", () => added.disconnect());
+
+		let marked = new MutationObserver(fold);
+		marked.observe(root, { attributes: true, attributeFilter: ["data-viewed"], subtree: true });
+		signal.addEventListener("abort", () => marked.disconnect());
 
 		root.addEventListener(
 			"pointerdown",

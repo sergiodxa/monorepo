@@ -346,6 +346,20 @@ describe("Diff file card", () => {
 		expect(card.querySelector('[data-slot="diff-file-counts"]')!.textContent).toContain("+2");
 	});
 
+	test("closes once a redraw marks it viewed, and opens when the mark is lifted", async () => {
+		let card = mount();
+		let details = card.querySelector("details")!;
+		expect(details.open).toBe(true);
+
+		card.setAttribute("data-viewed", "");
+		await new Promise((resolve) => setTimeout(resolve));
+		expect(details.open).toBe(false);
+
+		card.removeAttribute("data-viewed");
+		await new Promise((resolve) => setTimeout(resolve));
+		expect(details.open).toBe(true);
+	});
+
 	test("shows the copy button once the island runs", () => {
 		let card = mount();
 		let copy = card.querySelector<HTMLElement>('[data-action="copy-path"]')!;
