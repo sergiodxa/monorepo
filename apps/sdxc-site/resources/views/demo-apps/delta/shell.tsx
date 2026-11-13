@@ -11,6 +11,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import {
 	BookOpenIcon,
+	CirclePlayIcon,
 	CodeIcon,
 	GitCommitHorizontalIcon,
 	KeyboardIcon,
@@ -120,6 +121,13 @@ const REPO_TABS: RepoTabEntry[] = [
 		label: COPY.tabs.commits,
 		icon: <GitCommitHorizontalIcon />,
 		shortcut: "g m",
+	},
+	{
+		tab: "actions",
+		page: "actions",
+		label: COPY.tabs.actions,
+		icon: <CirclePlayIcon />,
+		shortcut: "g a",
 	},
 ];
 

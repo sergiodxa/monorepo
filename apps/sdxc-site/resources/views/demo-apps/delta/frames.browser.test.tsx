@@ -12,8 +12,10 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { themeScope } from "@sdxc/ui/styles";
+import { http, HttpResponse } from "msw";
+import { setupWorker } from "msw/browser";
 import { render } from "remix/component/test";
-import { afterAll, describe, expect, onTestFinished, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import { page } from "vitest/browser";
 
 import { readHistory, readTree } from "~/app/services/delta/source";
@@ -304,5 +306,106 @@ describe("Delta on a phone", () => {
 			(link) => link.checkVisibility() && link.textContent?.includes("Files"),
 		);
 		expect(back).toBeDefined();
+	});
+});
+
+/** Whether the log stream answers as the stream route does, or fails as a dropped one would. */
+let streamFails = false;
+
+/**
+ * The server the running job's log streams from: Delta's own `stream` answered as the stream
+ * route answers it, a line at a time with its pauses, or a `503` while `streamFails` holds.
+ */
+const STREAMS = setupWorker(
+	http.get(/\/demo\/apps\/delta\/streams\//, ({ request }) => {
+		let url = new URL(request.url);
+		let part = url.pathname.replace(/^\/demo\/apps\/delta\/streams\//, "");
+		let stream = streamFails ? null : delta.stream?.(part, { page: part, url, cookie: null });
+		if (stream === null || stream === undefined) return new HttpResponse(null, { status: 503 });
+		return new HttpResponse(stream.pipeThrough(new TextEncoderStream()), {
+			headers: { "Content-Type": "text/plain; charset=utf-8" },
+		});
+	}),
+);
+
+describe("Delta's CI", () => {
+	beforeAll(async () => {
+		await STREAMS.start({ quiet: true, onUnhandledRequest: "bypass" });
+	});
+
+	afterAll(() => {
+		STREAMS.stop();
+	});
+
+	test("the runs list, a run and its job swap only main, and Back and Forward walk them again", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/actions");
+		interceptNavigations();
+		let sidebar = root.querySelector("#delta-sidebar");
+		let entries = navigation.entries().length;
+
+		root.querySelector<HTMLAnchorElement>('[data-run="812"] a')!.click();
+		await settle(() => location.pathname.endsWith("/runs/812") && heading(root) !== "Actions");
+		let title = heading(root);
+		root.querySelector<HTMLAnchorElement>('[data-slot="delta-job-graph"] a[data-job="3"]')!.click();
+		await settle(() => heading(root) === "Test (1/3)");
+
+		expect(location.pathname).toBe(`${ROOT}/delta/actions/runs/812/job/3`);
+		expect(navigation.entries().length).toBe(entries + 2);
+
+		await navigation.back().finished;
+		await settle(() => heading(root) === title);
+		expect(location.pathname).toBe(`${ROOT}/delta/actions/runs/812`);
+		await navigation.back().finished;
+		await settle(() => heading(root) === "Actions");
+		expect(location.pathname).toBe(`${ROOT}/delta/actions`);
+		await navigation.forward().finished;
+		await settle(() => heading(root) === title);
+
+		expect(root.querySelector("#delta-sidebar")).toBe(sidebar);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("a failed job opens on its failed step", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/actions/runs/812/job/3");
+		let steps = [...root.querySelectorAll<HTMLDetailsElement>("details[data-log-step]")];
+
+		expect(steps.filter((step) => step.open).map((step) => step.dataset["state"])).toEqual([
+			"failure",
+		]);
+	});
+
+	test("a running job appends the lines its log streams and keeps the newest in view", async () => {
+		streamFails = false;
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/actions/runs/815/job/4");
+		let step = root.querySelector<HTMLElement>("[data-log-stream]")!;
+		let body = root.querySelector<HTMLElement>('[data-slot="log-viewer-body"]')!;
+		let lines = () => step.querySelectorAll("[data-log-line]").length;
+		let drawn = lines();
+
+		await settle(() => lines() >= drawn + 4);
+
+		expect(lines()).toBeGreaterThanOrEqual(drawn + 4);
+		expect(body.scrollHeight - body.scrollTop - body.clientHeight).toBeLessThanOrEqual(24);
+		expect(step.querySelector<HTMLElement>("[data-log-refresh]")!.hidden).toBe(true);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("a running job whose stream fails offers Refresh, as it does without script", async () => {
+		streamFails = true;
+		onTestFinished(() => {
+			streamFails = false;
+		});
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/actions/runs/815/job/4");
+		let step = root.querySelector<HTMLElement>("[data-log-stream]")!;
+
+		await settle(() => step.getAttribute("data-stream-end") === "failed");
+
+		let refresh = step.querySelector<HTMLAnchorElement>("[data-log-refresh] a")!;
+		expect(refresh.checkVisibility()).toBe(true);
+		expect(new URL(refresh.href).pathname).toBe(`${ROOT}/delta/actions/runs/815/job/4`);
 	});
 });

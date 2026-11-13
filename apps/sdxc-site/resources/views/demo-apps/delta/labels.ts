@@ -8,11 +8,14 @@
  */
 
 import type { AppShell } from "@sdxc/ui/app/app-shell";
+import type { AutoRefresh } from "@sdxc/ui/app/auto-refresh";
 import type { CodeView } from "@sdxc/ui/app/code-view";
 import type { CommandPalette } from "@sdxc/ui/app/command-palette";
 import type { Diff } from "@sdxc/ui/app/diff";
+import type { FilterBar } from "@sdxc/ui/app/filter-bar";
 import type { FilterMenu } from "@sdxc/ui/app/filter-menu";
 import type { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
+import type { LogViewer } from "@sdxc/ui/app/log-viewer";
 import type { Tree } from "@sdxc/ui/app/tree";
 
 /** The shell's landmark, skip link, phone menu and collapse toggle. */
@@ -173,6 +176,7 @@ export const COPY = {
 		label: "Repository",
 		code: "Code",
 		commits: "Commits",
+		actions: "Actions",
 		more: "More",
 	},
 	crumbs: "Breadcrumb",
@@ -260,6 +264,78 @@ export const COPY = {
 		all: "View all commits",
 		files: (count: number) => `${count} ${count === 1 ? "file" : "files"}`,
 		updated: "Updated",
+	},
+	actions: {
+		title: "Actions",
+		description: "Every workflow run on sdxc/delta, newest first.",
+		list: "Workflow runs",
+		search: "Filter workflow runs",
+		searchPlaceholder: "Filter by commit message",
+		workflow: "Workflow",
+		status: "Status",
+		branch: "Branch",
+		actor: "Actor",
+		statuses: {
+			success: "Success",
+			failure: "Failure",
+			in_progress: "In progress",
+			cancelled: "Cancelled",
+		},
+		events: {
+			push: (sha: string, actor: string) => `Commit ${sha} pushed by ${actor}`,
+			pull_request: (pr: number, actor: string) => `Pull request #${pr} synchronize by ${actor}`,
+			schedule: () => "Scheduled",
+			workflow_dispatch: (actor: string) => `Manually run by ${actor}`,
+		},
+		runs: (count: number) => `${count} workflow ${count === 1 ? "run" : "runs"}`,
+		duration: "Run time",
+		started: "Started",
+		refreshOff: "Off",
+		every: (seconds: number) => `${seconds}s`,
+		noneTitle: "No runs match",
+		noneHint: "Try another workflow or status, or clear the filters to see every run.",
+		clear: "Clear filters",
+		emptyTitle: "No workflow runs yet",
+		emptyHint: "Runs appear here once the history has a commit to build.",
+	},
+	run: {
+		summary: "Summary",
+		jobs: "Jobs",
+		triggered: "Triggered via",
+		events: {
+			push: "push",
+			pull_request: "pull request",
+			schedule: "schedule",
+			workflow_dispatch: "manual run",
+		},
+		status: "Status",
+		duration: "Total duration",
+		artifacts: "Artifacts",
+		artifactsNone: "None kept",
+		annotations: "Annotations",
+		annotationsCount: (errors: number, warnings: number) =>
+			[
+				errors > 0 ? `${errors} ${errors === 1 ? "error" : "errors"}` : "",
+				warnings > 0 ? `${warnings} ${warnings === 1 ? "warning" : "warnings"}` : "",
+			]
+				.filter(Boolean)
+				.join(" and "),
+		outdated: "Outdated: the cited lines changed since this run",
+		matrix: (name: string, done: number, total: number) =>
+			`Matrix: ${name} · ${done} of ${total} ${total === 1 ? "job" : "jobs"} completed`,
+		graph: "Job graph",
+		on: (event: string) => `on: ${event}`,
+		keptFor: "Kept for 14 days",
+		viewJob: "View job",
+		jobNav: "Jobs in this run",
+		runningFor: "Running for",
+		queued: "Waiting for a runner",
+		queuedHint:
+			"This job starts once a runner picks it up. Its log streams here from the first line.",
+		skipped: "This job was skipped",
+		skippedHint: "A job it needs failed, so it never ran. Open the failed job to see why.",
+		warning: "Warning",
+		backToRun: "Summary",
 	},
 	notFound: {
 		title: "Nothing lives at this address",

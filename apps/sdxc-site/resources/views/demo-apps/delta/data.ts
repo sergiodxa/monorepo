@@ -81,6 +81,25 @@ export function findHref(query?: string): string {
 	);
 }
 
+/** The address of the Actions runs list, with its filters when any are applied. */
+export function actionsHref(query?: string): string {
+	return repoHref(query === undefined || query === "" ? "actions" : `actions?${query}`);
+}
+
+/** The address of one run's summary, or of one of its jobs. */
+export function runHref(id: number, job?: number): string {
+	return repoHref(job === undefined ? `actions/runs/${id}` : `actions/runs/${id}/job/${job}`);
+}
+
+/**
+ * The address of a citation: the file with its lines painted by `?L=` and scrolled to by the
+ * hash, so the server and the browser agree on the range.
+ */
+export function linesHref(path: string, start: number, end: number = start): string {
+	let range = start === end ? `${start}` : `${start}-${end}`;
+	return `${fileHref(path, { query: `L=${range}` })}#L${start}`;
+}
+
 /** A commit's sha as lists show it. */
 export function shortSha(sha: string): string {
 	return sha.slice(0, 7);
@@ -94,7 +113,9 @@ export type DeltaRoute =
 	| { screen: "blob"; view: "blob" | "blame"; ref: string; path: string }
 	| { screen: "find"; ref: string }
 	| { screen: "commits"; ref: string }
-	| { screen: "commit"; sha: string };
+	| { screen: "commit"; sha: string }
+	| { screen: "actions" }
+	| { screen: "run"; id: number; job?: number };
 
 /**
  * Reads which screen a page path names. Paths are matched by shape only; whether the file,
@@ -119,6 +140,7 @@ export function parsePage(page: string): DeltaRoute | null {
 	if (first === undefined) return { screen: "dashboard" };
 	if (first !== REPO) return null;
 	if (second === undefined) return { screen: "home" };
+	if (second === "actions") return parseActions(third, rest);
 	if (third === undefined) return null;
 	if (second === "tree") return { screen: "tree", ref: third, path: rest.join("/") };
 	if ((second === "blob" || second === "blame") && rest.length > 0) {
@@ -129,6 +151,17 @@ export function parsePage(page: string): DeltaRoute | null {
 	if (second === "commits") return { screen: "commits", ref: third };
 	if (second === "commit") return { screen: "commit", sha: third };
 	return null;
+}
+
+/** Reads `actions`, `actions/runs/<id>` and `actions/runs/<id>/job/<n>`. */
+function parseActions(third: string | undefined, rest: string[]): DeltaRoute | null {
+	if (third === undefined) return { screen: "actions" };
+	let [id, jobSegment, job, ...extra] = rest;
+	if (third !== "runs" || id === undefined || !/^\d{1,6}$/.test(id) || extra.length > 0)
+		return null;
+	if (jobSegment === undefined) return { screen: "run", id: Number(id) };
+	if (jobSegment !== "job" || job === undefined || !/^\d{1,3}$/.test(job)) return null;
+	return { screen: "run", id: Number(id), job: Number(job) };
 }
 
 /**

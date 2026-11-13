@@ -30,6 +30,7 @@ import { MAIN_FRAME, MainFrame, MainScreen, mainSource } from "../main-frame";
 
 import type { ShellSection } from "./shell";
 
+import { ciScreen, ciStream } from "./ci";
 import { buildTree, isHeadRef, listFolder, parsePage, shortSha } from "./data";
 import { commitSource, readDiff, readDiffFile, readView, LazyHunks } from "./diffs";
 import { COPY } from "./labels";
@@ -141,6 +142,12 @@ const SCREENS = [
 	"delta/find/main",
 	"delta/find/main?q=shell",
 	"delta/commits/main",
+	"delta/actions",
+	"delta/actions?status=failure",
+	"delta/actions/runs/812",
+	"delta/actions/runs/812/job/3",
+	"delta/actions/runs/815",
+	"delta/actions/runs/815/job/4",
 ];
 
 /** One screen as both the whole page and the `main` frame draw it. */
@@ -285,6 +292,9 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 				crumb: `${REPO_NAME} › ${COPY.commits.title}`,
 				body: <CommitsScreen history={history} now={now} />,
 			};
+		case "actions":
+		case "run":
+			return (await ciScreen(target, request, { commits: count, now })) ?? notFound();
 		case "commit": {
 			let commit = await findCommit(target.sha);
 			if (commit === undefined) return notFound();
@@ -341,6 +351,7 @@ export default {
 	screens: SCREENS,
 	cookies: [SHELL_COOKIE],
 	toasts: TOASTS,
+	stream: (part, request) => ciStream(part, request),
 	frame: (part, request) => framePart(part, request),
 	async target(name, request) {
 		if (name !== MAIN_FRAME) return null;

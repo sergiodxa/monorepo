@@ -17,4 +17,16 @@ export const ANCHORS: DeltaAnchorSeed[] = [
 		match: "## How a Worker shows git history",
 		span: 1,
 	},
+	{
+		id: "ci-phone-scroll",
+		path: "frames.browser.test.tsx",
+		match: "expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);",
+		span: 1,
+	},
+	{
+		id: "ci-utc-days",
+		path: "data.ts",
+		match: "export function groupByDay<",
+		span: 3,
+	},
 ];
