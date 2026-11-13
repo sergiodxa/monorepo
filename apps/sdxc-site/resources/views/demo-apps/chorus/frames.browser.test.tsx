@@ -434,6 +434,33 @@ describe("Chorus's message box", () => {
 	});
 });
 
+describe("Chorus's action rows", () => {
+	test.each([375, 1280])(
+		"a post page's row spaces five controls evenly, icons one size, counts shown, at %ipx",
+		async (width) => {
+			await page.viewport(width, 860);
+			let root = await mountScreen("post/p-leonids");
+			let row = root.querySelector<HTMLElement>("article [data-slot='post-actions']")!;
+			let items = [...row.children].flatMap((child) =>
+				getComputedStyle(child).display === "contents" ? [...child.children] : [child],
+			);
+			let boxes = items.map((item) => item.getBoundingClientRect());
+			let gaps = boxes.slice(1).map((box, index) => box.left - boxes[index]!.right);
+			let icons = items.map((item) =>
+				Math.max(
+					...[...item.querySelectorAll("svg")].map((icon) => icon.getBoundingClientRect().width),
+				),
+			);
+
+			expect(items.length).toBe(5);
+			expect(new Set(icons.map(Math.round)).size).toBe(1);
+			expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(2);
+			expect(row.textContent).toContain("3.8K");
+			expect(row.textContent).toContain("412");
+		},
+	);
+});
+
 describe("Chorus from the keyboard", () => {
 	test("j and k walk the timeline's posts, k stopping at the first", async () => {
 		await page.viewport(1280, 860);

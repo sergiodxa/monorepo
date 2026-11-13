@@ -133,14 +133,14 @@ describe("Chorus reactions", () => {
 		expect(cookiesFrom(response)).toBe("chorus.repost.p-heatpumps=1");
 	});
 
-	test("unliking a post Noor had liked counts one fewer", async () => {
+	test("unliking a post Noor had liked shows it unliked, its count in the row", async () => {
 		let before = await page("post/p-leonids");
 		let cookie = cookiesFrom(await post("post/p-leonids", { intent: "like", on: "false" }));
 		let after = await page("post/p-leonids", cookie);
 
-		expect(before).toContain("<strong");
-		expect(before).toMatch(/3,820<\/strong> Likes/);
-		expect(after).toMatch(/3,819<\/strong> Likes/);
+		expect(likeLabel(before, "p-leonids")).toBe("Unlike");
+		expect(likeLabel(after, "p-leonids")).toBe("Like");
+		expect(after).toContain("<span>3.8K</span>");
 	});
 
 	test("a saved post shows on Saved", async () => {
@@ -243,7 +243,7 @@ describe("Chorus posting", () => {
 			new RegExp(`^${href("post/p-weather")}\\?toast=replied#post-n-`),
 		);
 		expect(body).toContain("Clear skies here too");
-		expect(body).toMatch(/1<\/strong> Replies/);
+		expect(body).toContain('aria-label="Reply (1 replies)"');
 		expect(await page("u/noorhaddad/replies", cookie)).toContain("Clear skies here too");
 	});
 

@@ -123,7 +123,7 @@ namespace PostActions {
 		post: PostView;
 		/** The page and fragment a no-script post returns to. */
 		returnTo: string;
-		/** The focal post's row: bigger icons, counts printed above instead. */
+		/** The focal post's row: bigger icons, and save and share spaced as their own controls. */
 		large?: boolean;
 	}
 }
@@ -146,7 +146,7 @@ export function PostActions(handle: Handle<PostActions.Props>) {
 			icon: (filled: boolean) => RemixNode,
 		) => {
 			let base = count - Number(on);
-			let counted = !large && kind !== "save";
+			let counted = kind !== "save";
 			return (
 				<span mix={[accent(kind)]}>
 					<OptimisticToggle
@@ -211,7 +211,7 @@ export function PostActions(handle: Handle<PostActions.Props>) {
 					>
 						<Reaction
 							icon={<MessageCircleIcon size={size} aria-hidden="true" />}
-							count={large ? 0 : post.replies}
+							count={post.replies}
 							large={large}
 						/>
 					</a>
@@ -263,7 +263,7 @@ export function PostActions(handle: Handle<PostActions.Props>) {
 						</span>
 					</span>
 				)}
-				<span mix={[raw({ display: "inline-flex", alignItems: "center" })]}>
+				<span mix={[raw({ display: large ? "contents" : "inline-flex", alignItems: "center" })]}>
 					{toggle(
 						"save",
 						post.saved,
@@ -301,7 +301,7 @@ function ShareMenu(handle: Handle<{ post: PostView; size: number }>) {
 					aria-label="Share"
 					title="Share"
 				>
-					<ShareIcon size={size} aria-hidden="true" />
+					<Reaction icon={<ShareIcon size={size} aria-hidden="true" />} count={-1} />
 				</Button>
 				<Menu id={id} placement="bottom-end" aria-label="Share post">
 					<CopyLink
@@ -1010,17 +1010,12 @@ namespace FocalPost {
 }
 
 /**
- * The post a detail page is about: larger text, the full date and views, the reaction
- * counts spelled out, then the action row at full size.
+ * The post a detail page is about: larger text, the full date and views, then the action row
+ * at full size with its counts.
  */
 export function FocalPost(handle: Handle<FocalPost.Props>) {
 	return () => {
 		let { now, post, quoted, returnTo, threadPrev } = handle.props;
-		let counts = [
-			{ count: post.reposts, label: "Reposts" },
-			{ count: post.likes, label: "Likes" },
-			{ count: post.replies, label: "Replies" },
-		].filter((entry) => entry.count > 0);
 
 		return (
 			<article
@@ -1117,41 +1112,9 @@ export function FocalPost(handle: Handle<FocalPost.Props>) {
 						</>
 					) : null}
 				</p>
-				{counts.length > 0 ? (
-					<p
-						mix={[
-							raw({
-								display: "flex",
-								flexWrap: "wrap",
-								gap: "0.25rem 1.25rem",
-								margin: "0",
-								paddingBlock: "0.75rem",
-								borderBlock: "1px solid var(--ui-neutral-border)",
-								fontSize: "0.9375rem",
-								color: "var(--ui-neutral-fg-muted)",
-							}),
-						]}
-					>
-						{counts.map((entry) => (
-							<span>
-								<strong
-									mix={[
-										raw({
-											color: "var(--ui-neutral-fg-emphasis)",
-											fontVariantNumeric: "tabular-nums",
-										}),
-									]}
-								>
-									{entry.count.toLocaleString("en")}
-								</strong>{" "}
-								{entry.label}
-							</span>
-						))}
-					</p>
-				) : null}
 				<div
 					mix={[
-						raw({ paddingBlock: "0.25rem", borderBlockEnd: "1px solid var(--ui-neutral-border)" }),
+						raw({ paddingBlock: "0.25rem", borderBlock: "1px solid var(--ui-neutral-border)" }),
 					]}
 				>
 					<PostActions post={post} returnTo={returnTo} large />
