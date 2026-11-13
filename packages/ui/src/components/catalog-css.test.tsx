@@ -96,6 +96,40 @@ const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
 		href: () => "/a",
 		labels: { caption: "a", day: () => "a", less: "a", more: "a" },
 	},
+	Diff: {
+		status: "modified",
+		additions: 1,
+		deletions: 1,
+		hunks: [
+			{
+				oldStart: 1,
+				oldLines: 1,
+				newStart: 1,
+				newLines: 1,
+				lines: [
+					{ kind: "del", old: 1, text: "a", words: [[0, 1]] },
+					{ kind: "add", new: 1, text: "b", words: [[0, 1]] },
+				],
+			},
+		],
+		view: "unified",
+		unifiedHref: "/a",
+		splitHref: "/a",
+		labels: {
+			copied: "a",
+			view: "a",
+			unified: "a",
+			split: "a",
+			filesViewed: "a",
+			columns: { oldNumber: "a", newNumber: "a", oldText: "a", change: "a" },
+			copyPath: "a",
+			statuses: { modified: "a" },
+			changes: () => "a",
+			binary: "a",
+			tooLarge: "a",
+			largeDiff: "a",
+		},
+	},
 };
 
 /** The probe props for the component exported as `name`. */

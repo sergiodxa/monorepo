@@ -32,6 +32,7 @@ import { formatRelativeTime } from "../utils/relative-time.js";
 import type { LineRange } from "./utils/line-range.js";
 
 import { codeViewSelection } from "./mixins/code-view-selection.js";
+import { CODE_TOKEN_PALETTE, codeTokenRules } from "./styles/code-tokens.js";
 import { lineLink, lineRangeQuery } from "./utils/line-range.js";
 
 export type { LineRange } from "./utils/line-range.js";
@@ -64,32 +65,6 @@ const FNV_OFFSET = 0x811c9dc5;
 
 /** FNV-1a prime, which spreads each character through the hash. */
 const FNV_PRIME = 0x01000193;
-
-/**
- * Token colors as `[light, dark]` pairs, used when the page declares no
- * `--highlight-*` property of its own.
- */
-const TOKEN_PALETTE: Record<string, readonly [string, string]> = {
-	comment: ["#6a737d", "#8b949e"],
-	keyword: ["#d73a49", "#ff7b72"],
-	operator: ["#d73a49", "#ff7b72"],
-	string: ["#032f62", "#a5d6ff"],
-	builtin: ["#032f62", "#a5d6ff"],
-	"attr-name": ["#032f62", "#a5d6ff"],
-	"attr-value": ["#032f62", "#a5d6ff"],
-	number: ["#005cc5", "#79c0ff"],
-	boolean: ["#005cc5", "#79c0ff"],
-	constant: ["#005cc5", "#79c0ff"],
-	property: ["#005cc5", "#79c0ff"],
-	tag: ["#005cc5", "#79c0ff"],
-	function: ["#6f42c1", "#d2a8ff"],
-	"class-name": ["#6f42c1", "#d2a8ff"],
-	regex: ["#e36209", "#ffa657"],
-	variable: ["#e36209", "#ffa657"],
-	punctuation: ["#24292f", "#e6edf3"],
-	inserted: ["#22863a", "#7ee787"],
-	deleted: ["#b31d28", "#ffa198"],
-};
 
 /**
  * Prop types for {@link CodeView} and its parts.
@@ -349,12 +324,6 @@ function tableRules(digits: number, hasBlame: boolean) {
 		backgroundColor: `var(--code-view-selected, ${selected})`,
 	};
 	let bar = { boxShadow: "inset 2px 0 0 var(--ui-brand-fg)" };
-	let tokenRules = Object.fromEntries(
-		Object.entries(TOKEN_PALETTE).map(([type, [light, dark]]) => [
-			`& .token.${type}`,
-			{ color: `var(--highlight-${type}, light-dark(${light}, ${dark}))` },
-		]),
-	);
 
 	return raw({
 		display: "block",
@@ -450,7 +419,7 @@ function tableRules(digits: number, hasBlame: boolean) {
 			textOverflow: "ellipsis",
 		},
 		...ageRules(),
-		...tokenRules,
+		...codeTokenRules(),
 		[`@container code-view (max-width: ${WRAP_WIDTH})`]: {
 			"&": { inlineSize: "100%", "--code-view-blame": hasBlame ? BLAME_NARROW_WIDTH : "0px" },
 			"& > tbody": {
@@ -601,7 +570,7 @@ function chunkRows(
 function renderRuns(runs: readonly CodeToken[]): RemixNode[] {
 	let merged: CodeToken[] = [];
 	for (let run of runs) {
-		let type = TOKEN_PALETTE[run.type] ? run.type : "plain";
+		let type = CODE_TOKEN_PALETTE[run.type] ? run.type : "plain";
 		let last = merged[merged.length - 1];
 		if (last && last.type === type) last.value += run.value;
 		else merged.push({ type, value: run.value });
