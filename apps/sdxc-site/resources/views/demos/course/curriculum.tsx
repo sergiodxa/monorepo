@@ -1,11 +1,13 @@
 /**
- * The curriculum, the page's centre: four counted figures over the six modules, two to a
- * row, each listing its lessons with their running times and marking the ones anyone may
- * watch before enrolling.
+ * The curriculum, the page's centre: four counted figures in the headline's weight over
+ * the six modules, two to a row, each listing its lessons with their running times and
+ * marking the ones anyone may watch before enrolling.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { Curriculum, LandingHeader, LandingSection, StatStrip } from "@sdxc/ui/landing";
@@ -44,13 +46,19 @@ export function CourseCurriculum() {
 				Six modules, one skill at a time
 			</LandingHeader>
 			<div mix={[raw({ display: "grid", gap: "3.5rem" })]}>
-				<StatStrip size="display" variant="gap">
-					<StatStrip.Item label="Lessons">{LESSONS.length}</StatStrip.Item>
-					<StatStrip.Item label="Of close-up wheel work">
-						{formatLength(TOTAL_SECONDS)}
+				<StatStrip size="display" variant="ruled">
+					<StatStrip.Item label="Lessons">
+						<Figure>{LESSONS.length}</Figure>
 					</StatStrip.Item>
-					<StatStrip.Item label="Free previews">{FREE_LESSONS}</StatStrip.Item>
-					<StatStrip.Item label="Pieces you keep">{MODULES.length}</StatStrip.Item>
+					<StatStrip.Item label="Minutes on the wheel">
+						<Figure>{Math.round(TOTAL_SECONDS / 60)}</Figure>
+					</StatStrip.Item>
+					<StatStrip.Item label="Free previews">
+						<Figure>{FREE_LESSONS}</Figure>
+					</StatStrip.Item>
+					<StatStrip.Item label="Pieces you keep">
+						<Figure>{MODULES.length}</Figure>
+					</StatStrip.Item>
 				</StatStrip>
 				{ROWS.map((row, rowIndex) => (
 					<Curriculum key={rowIndex}>
@@ -80,5 +88,27 @@ export function CourseCurriculum() {
 				))}
 			</div>
 		</LandingSection>
+	);
+}
+
+/**
+ * A counted figure in the headline's weight and tracking, so the strip reads as part of the
+ * band's display type.
+ *
+ * @param handle Runtime handle carrying the figure.
+ * @returns The render function producing the figure.
+ */
+function Figure(handle: Handle<{ children: RemixNode }>) {
+	return () => (
+		<span
+			mix={[
+				raw({
+					fontWeight: "var(--ui-landing-display-weight)",
+					letterSpacing: "var(--ui-landing-display-tracking)",
+				}),
+			]}
+		>
+			{handle.props.children}
+		</span>
 	);
 }
