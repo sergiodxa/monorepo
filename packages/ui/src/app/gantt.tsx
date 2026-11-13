@@ -1,5 +1,5 @@
 /**
- * A roadmap: grouped rows of projects, each a name in a sticky list beside a bar on a shared
+ * A Gantt chart: grouped rows of projects, each a name in a sticky list beside a bar on a shared
  * time axis, with months and weeks across the top and today's line through every row. A bar
  * fills with its progress and runs a hatched tail past its target when it is projected late.
  *
@@ -14,29 +14,29 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { mergeMix, raw } from "@sdxc/u/general";
 import { clientEntry } from "remix/component";
 
-import { roadmapToday } from "./mixins/roadmap-today.js";
+import { ganttToday } from "./mixins/gantt-today.js";
 
 /** Milliseconds in a day, the axis's unit. */
 const DAY_MS = 86_400_000;
 
-/** Container the roadmap names, so the list column narrows on a phone-narrow roadmap. */
-const ROADMAP_CONTAINER = "ui-roadmap";
+/** Container the chart names, so the list column narrows on a phone-narrow chart. */
+const GANTT_CONTAINER = "ui-gantt";
 
 /** Below this width the list column narrows and drops its trailing details. */
-const NARROW = `@container ${ROADMAP_CONTAINER} (width < 40rem)`;
+const NARROW = `@container ${GANTT_CONTAINER} (width < 40rem)`;
 
 /** The width of one day on the axis, which every offset and length multiplies. */
-const DAY = "var(--ui-roadmap-day-width, 6px)";
+const DAY = "var(--ui-gantt-day-width, 6px)";
 
 /** The list column's width. */
-const LIST = "var(--ui-roadmap-list-width, 20rem)";
+const LIST = "var(--ui-gantt-list-width, 20rem)";
 
 /** The height of a project row, which its bar centres in. */
-const ROW = "var(--ui-roadmap-row-height, 2.75rem)";
+const ROW = "var(--ui-gantt-row-height, 2.75rem)";
 
-/** Prop types for {@link Roadmap}, {@link Roadmap.Group} and {@link Roadmap.Item}. */
-export namespace Roadmap {
-	/** Every string the roadmap shows or announces; `{…}` marks where a value goes. */
+/** Prop types for {@link Gantt}, {@link Gantt.Group} and {@link Gantt.Item}. */
+export namespace Gantt {
+	/** Every string the chart shows or announces; `{…}` marks where a value goes. */
 	export interface Labels {
 		/** The today marker's name, such as "Today". */
 		today: string;
@@ -50,9 +50,9 @@ export namespace Roadmap {
 		unscheduled: string;
 	}
 
-	/** Props accepted by {@link Roadmap}. */
+	/** Props accepted by {@link Gantt}. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
-		/** The roadmap's accessible name. */
+		/** The chart's accessible name. */
 		label: string;
 		/** The first day on the axis, as `YYYY-MM-DD`. */
 		start: string;
@@ -65,11 +65,11 @@ export namespace Roadmap {
 		/** The list column's heading row, such as Active and Closed tabs. */
 		header?: RemixNode;
 		labels: Labels;
-		/** {@link Roadmap.Group}s, in order. */
+		/** {@link Gantt.Group}s, in order. */
 		children: RemixNode;
 	}
 
-	/** Context the roadmap hands its groups and items. */
+	/** Context the chart hands its groups and items. */
 	export interface Context {
 		start: number;
 		end: number;
@@ -77,17 +77,17 @@ export namespace Roadmap {
 		labels: Labels;
 	}
 
-	/** Props accepted by {@link Roadmap.Group}. */
+	/** Props accepted by {@link Gantt.Group}. */
 	export interface GroupProps extends Omit<TagProps<"section">, "title" | "children"> {
 		/** The group's name, such as a quarter. */
 		title: RemixNode;
 		/** Controls at the group header's end, such as an "Add project" link. */
 		actions?: RemixNode;
-		/** {@link Roadmap.Item}s. */
+		/** {@link Gantt.Item}s. */
 		children?: RemixNode;
 	}
 
-	/** Props accepted by {@link Roadmap.Item}. */
+	/** Props accepted by {@link Gantt.Item}. */
 	export interface ItemProps extends Omit<TagProps<"li">, "children"> {
 		name: string;
 		/** The project's page; the name in the list and on the bar both link to it. */
@@ -110,13 +110,13 @@ export namespace Roadmap {
 }
 
 /**
- * Client island: an invisible marker that scrolls the roadmap to today once it is laid out,
- * so a narrow screen opens on the present. Loads from `@sdxc/ui/app/roadmap#RoadmapToday`.
+ * Client island: an invisible marker that scrolls the chart to today once it is laid out,
+ * so a narrow screen opens on the present. Loads from `@sdxc/ui/app/gantt#GanttToday`.
  */
-export const RoadmapToday: EntryComponent<Record<never, never>> = clientEntry(
-	"@sdxc/ui/app/roadmap#RoadmapToday",
-	function RoadmapToday() {
-		return () => <span hidden data-slot="roadmap-scroll" mix={[roadmapToday()]} />;
+export const GanttToday: EntryComponent<Record<never, never>> = clientEntry(
+	"@sdxc/ui/app/gantt#GanttToday",
+	function GanttToday() {
+		return () => <span hidden data-slot="gantt-scroll" mix={[ganttToday()]} />;
 	},
 );
 
@@ -126,16 +126,16 @@ export const RoadmapToday: EntryComponent<Record<never, never>> = clientEntry(
  * @param date The date.
  * @returns Whole days since 1970-01-01.
  */
-export function roadmapDay(date: string): number {
+export function ganttDay(date: string): number {
 	return Math.round(Date.parse(`${date.slice(0, 10)}T00:00:00Z`) / DAY_MS);
 }
 
 /**
- * Days from the epoch to a date, or `fallback` when the date cannot be read, so a roadmap
+ * Days from the epoch to a date, or `fallback` when the date cannot be read, so a chart
  * whose range is missing or mistyped draws a one-day axis rather than failing to render.
  */
 function readableDay(date: string | undefined, fallback: number): number {
-	let day = typeof date === "string" ? roadmapDay(date) : Number.NaN;
+	let day = typeof date === "string" ? ganttDay(date) : Number.NaN;
 	return Number.isFinite(day) ? day : fallback;
 }
 
@@ -152,18 +152,18 @@ function format(day: number, locale: string, options: Intl.DateTimeFormatOptions
 }
 
 /**
- * Renders the roadmap inside its own scrolling box: the list column stays put while the axis
+ * Renders the chart inside its own scrolling box: the list column stays put while the axis
  * scrolls sideways, and the axis row stays put while the rows scroll. Size the box from
  * outside (a block size, or a flex parent) for the rows to scroll inside it.
  *
  * @example
- * <Roadmap label="Roadmap" start="2026-09-01" end="2027-03-31" today="2026-11-12" labels={labels}>
- * 	<Roadmap.Group title="Q4 2026">
- * 		<Roadmap.Item name="Checkout v2" href="/projects/checkout" start="2026-10-01" end="2026-12-15" progress={0.6} />
- * 	</Roadmap.Group>
- * </Roadmap>
+ * <Gantt label="Gantt" start="2026-09-01" end="2027-03-31" today="2026-11-12" labels={labels}>
+ * 	<Gantt.Group title="Q4 2026">
+ * 		<Gantt.Item name="Checkout v2" href="/projects/checkout" start="2026-10-01" end="2026-12-15" progress={0.6} />
+ * 	</Gantt.Group>
+ * </Gantt>
  */
-export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
+export function Gantt(handle: Handle<Gantt.Props, Gantt.Context>) {
 	return () => {
 		let {
 			label,
@@ -192,7 +192,7 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 			if (date.getUTCDay() === 1) weeks.push(day);
 		}
 		let firstMonday = weeks[0] ?? first;
-		let todayDay = today === undefined ? undefined : roadmapDay(today);
+		let todayDay = today === undefined ? undefined : ganttDay(today);
 		let showsToday = todayDay !== undefined && todayDay >= first && todayDay <= last;
 
 		return (
@@ -200,39 +200,39 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 				{...rest}
 				role="region"
 				aria-label={label}
-				data-slot="roadmap"
+				data-slot="gantt"
 				mix={mergeMix(
 					[
 						raw({
-							container: `${ROADMAP_CONTAINER} / inline-size`,
+							container: `${GANTT_CONTAINER} / inline-size`,
 							position: "relative",
 							overflow: "auto",
 							overscrollBehavior: "contain",
 							minInlineSize: 0,
 							backgroundColor: "var(--ui-bg, Canvas)",
-							"--ui-roadmap-track": along(span),
+							"--ui-gantt-track": along(span),
 						}),
 					],
 					mix,
 				)}
 			>
 				<div
-					data-slot="roadmap-grid"
+					data-slot="gantt-grid"
 					mix={[
 						raw({
 							position: "relative",
 							display: "grid",
-							gridTemplateColumns: `${LIST} var(--ui-roadmap-track)`,
+							gridTemplateColumns: `${LIST} var(--ui-gantt-track)`,
 							alignContent: "start",
 							minBlockSize: "100%",
-							[NARROW]: { "--ui-roadmap-list-width": "10rem" },
+							[NARROW]: { "--ui-gantt-list-width": "10rem" },
 							inlineSize: "max-content",
 							minInlineSize: "100%",
 						}),
 					]}
 				>
 					<div
-						data-slot="roadmap-corner"
+						data-slot="gantt-corner"
 						mix={[
 							raw({
 								position: "sticky",
@@ -254,7 +254,7 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 					</div>
 					<div
 						aria-hidden="true"
-						data-slot="roadmap-axis"
+						data-slot="gantt-axis"
 						mix={[
 							raw({
 								position: "sticky",
@@ -272,7 +272,7 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 					>
 						{months.map((month) => (
 							<span
-								data-slot="roadmap-month"
+								data-slot="gantt-month"
 								mix={[
 									raw({
 										position: "absolute",
@@ -307,7 +307,7 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 							if (!showsToday || todayDay === undefined) return null;
 							return (
 								<span
-									data-slot="roadmap-today-label"
+									data-slot="gantt-today-label"
 									mix={[
 										raw({
 											position: "absolute",
@@ -335,13 +335,13 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 					{children}
 					<div
 						aria-hidden="true"
-						data-slot="roadmap-weeks"
+						data-slot="gantt-weeks"
 						mix={[
 							raw({
 								position: "absolute",
 								insetBlock: "3.5rem 0",
 								insetInlineStart: LIST,
-								inlineSize: "var(--ui-roadmap-track)",
+								inlineSize: "var(--ui-gantt-track)",
 								zIndex: "0",
 								pointerEvents: "none",
 								backgroundImage:
@@ -356,7 +356,7 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 						if (!showsToday || todayDay === undefined) return null;
 						return (
 							<div
-								data-slot="roadmap-today"
+								data-slot="gantt-today"
 								mix={[
 									raw({
 										position: "absolute",
@@ -373,7 +373,7 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
 								<span mix={[visuallyHidden()]}>
 									{`${labels.today}: ${format(todayDay, locale, { dateStyle: "long" })}`}
 								</span>
-								<RoadmapToday />
+								<GanttToday />
 							</div>
 						);
 					})}
@@ -387,14 +387,14 @@ export function Roadmap(handle: Handle<Roadmap.Props, Roadmap.Context>) {
  * One group: a header row spanning list and axis, then its projects as a list, so a screen
  * reader hears each group's name and count before its rows.
  */
-Roadmap.Group = function RoadmapGroup(handle: Handle<Roadmap.GroupProps>) {
+Gantt.Group = function GanttGroup(handle: Handle<Gantt.GroupProps>) {
 	return () => {
 		let { title, actions, children, mix, id, ...rest } = handle.props;
 		return (
 			<section
 				{...rest}
 				id={id}
-				data-slot="roadmap-group"
+				data-slot="gantt-group"
 				mix={mergeMix([raw({ display: "contents" })], mix)}
 			>
 				<div
@@ -462,16 +462,16 @@ Roadmap.Group = function RoadmapGroup(handle: Handle<Roadmap.GroupProps>) {
  * the dates, progress and projection written out for a screen reader. A bar shorter than its
  * name lets the name run past its end.
  */
-Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
+Gantt.Item = function GanttItem(handle: Handle<Gantt.ItemProps>) {
 	return () => {
 		let { name, href, icon, meta, start, end, progress, projectedEnd, trailing, mix, ...rest } =
 			handle.props;
-		let roadmap = handle.context.get(Roadmap);
-		let { labels, locale } = roadmap;
-		let from = start === undefined ? undefined : roadmapDay(start);
-		let to = end === undefined ? undefined : roadmapDay(end);
+		let gantt = handle.context.get(Gantt);
+		let { labels, locale } = gantt;
+		let from = start === undefined ? undefined : ganttDay(start);
+		let to = end === undefined ? undefined : ganttDay(end);
 		let scheduled = from !== undefined && to !== undefined && to >= from;
-		let projected = projectedEnd === undefined ? undefined : roadmapDay(projectedEnd);
+		let projected = projectedEnd === undefined ? undefined : ganttDay(projectedEnd);
 		let late = scheduled && projected !== undefined && to !== undefined && projected > to;
 		let percent = Math.round(Math.min(Math.max(progress ?? 0, 0), 1) * 100);
 
@@ -529,13 +529,13 @@ Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
 			}
 			return parts.join(", ");
 		});
-		let left = scheduled ? from! - roadmap.start : 0;
+		let left = scheduled ? from! - gantt.start : 0;
 		let length = scheduled ? to! - from! + 1 : 0;
 
 		return (
 			<li
 				{...rest}
-				data-slot="roadmap-item"
+				data-slot="gantt-item"
 				mix={mergeMix(
 					[
 						raw({
@@ -552,7 +552,7 @@ Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
 				)}
 			>
 				<div
-					data-slot="roadmap-item-name"
+					data-slot="gantt-item-name"
 					mix={[
 						raw({
 							position: "sticky",
@@ -609,7 +609,7 @@ Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
 				</div>
 				<div
 					aria-hidden="true"
-					data-slot="roadmap-item-track"
+					data-slot="gantt-item-track"
 					mix={[raw({ position: "relative", zIndex: "1", minInlineSize: 0 })]}
 				>
 					{iife(() => {
@@ -639,7 +639,7 @@ Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
 									if (!late) return null;
 									return (
 										<span
-											data-slot="roadmap-late"
+											data-slot="gantt-late"
 											mix={[
 												raw({
 													position: "absolute",
@@ -658,8 +658,8 @@ Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
 									);
 								})}
 								<span
-									data-slot="roadmap-bar"
-									style={`--ui-roadmap-progress:${percent}%`}
+									data-slot="gantt-bar"
+									style={`--ui-gantt-progress:${percent}%`}
 									mix={[
 										raw({
 											position: "absolute",
@@ -671,12 +671,12 @@ Roadmap.Item = function RoadmapItem(handle: Handle<Roadmap.ItemProps>) {
 											border: "1px solid var(--ui-neutral-border)",
 											backgroundColor: "var(--ui-neutral-bg-tint)",
 											backgroundImage:
-												"linear-gradient(to right, color-mix(in oklch, var(--ui-brand-bg-solid) 22%, var(--ui-neutral-bg-tint)) var(--ui-roadmap-progress), transparent var(--ui-roadmap-progress))",
+												"linear-gradient(to right, color-mix(in oklch, var(--ui-brand-bg-solid) 22%, var(--ui-neutral-bg-tint)) var(--ui-gantt-progress), transparent var(--ui-gantt-progress))",
 										}),
 									]}
 								/>
 								<span
-									data-slot="roadmap-bar-label"
+									data-slot="gantt-bar-label"
 									mix={[
 										raw({
 											position: "absolute",
