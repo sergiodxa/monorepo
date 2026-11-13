@@ -317,6 +317,12 @@ describe("Chorus timeline and screens", () => {
 		expect(personal.headers.get("cache-control")).toBeNull();
 	});
 
+	test("the app's own cookie outranks one an earlier visit wrote at /demo", async () => {
+		let cookie = "chorus.like.p-heatpumps=1; chorus.like.p-heatpumps=0";
+
+		expect(likeLabel(await page("", cookie), "p-heatpumps")).toBe("Unlike");
+	});
+
 	test("an unreadable posts cookie reads as no posts", async () => {
 		let response = await fetchApp(href(), { headers: { cookie: "chorus.posts=%%%not-base64" } });
 

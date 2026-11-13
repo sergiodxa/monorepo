@@ -71,7 +71,9 @@ export interface PostView extends Post {
 }
 
 /**
- * Splits a `Cookie` header into its pairs, keeping only Chorus's.
+ * Splits a `Cookie` header into its pairs, keeping only Chorus's. Where a name repeats, the
+ * first wins: browsers send the cookie with the longest path first, so the app's own cookie
+ * outranks one an earlier visit wrote at `/demo`.
  *
  * @param header The request's `Cookie` header.
  * @returns Each Chorus cookie's value by name.
@@ -80,7 +82,7 @@ function chorusCookies(header: string | null): Map<string, string> {
 	let pairs = new Map<string, string>();
 	for (let pair of (header ?? "").split(";")) {
 		let [name = "", ...value] = pair.trim().split("=");
-		if (name.startsWith(COOKIE_PREFIX)) pairs.set(name, value.join("="));
+		if (name.startsWith(COOKIE_PREFIX) && !pairs.has(name)) pairs.set(name, value.join("="));
 	}
 	return pairs;
 }
