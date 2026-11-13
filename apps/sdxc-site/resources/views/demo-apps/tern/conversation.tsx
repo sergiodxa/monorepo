@@ -13,6 +13,7 @@ import {
 	CheckIcon,
 	ChevronDownIcon,
 	EllipsisIcon,
+	ExternalLinkIcon,
 	FileTextIcon,
 	FileCodeIcon,
 	PaperclipIcon,
@@ -62,6 +63,7 @@ import { CopyButton } from "@sdxc/ui/docs/copy-button";
 import type { AssistantTurn, FileRef, UserTurn } from "~/resources/views/demo-apps/tern/data";
 import type { Thread } from "~/resources/views/demo-apps/tern/thread";
 
+import { absoluteUrl } from "~/config/constants";
 import { TurnActivityView } from "~/resources/views/demo-apps/tern/activity";
 import { ReplyBlocks } from "~/resources/views/demo-apps/tern/blocks";
 import { MODELS, actionHref, findModel, href } from "~/resources/views/demo-apps/tern/data";
@@ -640,6 +642,52 @@ export function ModelPicker(handle: Handle<ModelPicker.Props>) {
 	};
 }
 
+/** The id of the dialog that hands out a chat's public link. */
+const SHARE_DIALOG = "tern-share";
+
+/**
+ * Hands out a chat's public link without leaving the chat: the link to copy, and a way to see
+ * the read-only page someone opening it gets, in a new tab.
+ */
+function ShareDialog(handle: Handle<{ id: string; title: string }>) {
+	return () => {
+		let { id, title } = handle.props;
+		let path = href(`share/${id}`);
+		return (
+			<Dialog id={SHARE_DIALOG} aria-labelledby={`${SHARE_DIALOG}-title`}>
+				<HeadingScope level={2}>
+					<Dialog.Header>
+						<Dialog.Title id={`${SHARE_DIALOG}-title`}>Share “{title}”</Dialog.Title>
+						<Dialog.Description>
+							Anyone with the link reads the chat as it is now. Messages you send later stay
+							private.
+						</Dialog.Description>
+					</Dialog.Header>
+					<div mix={[hstack({ gap: 2, align: "center" }), p(2), rounded("lg"), bg("neutral.tint")]}>
+						<code id={`${SHARE_DIALOG}-link`} mix={[grow(), truncate(), text("sm")]}>
+							{absoluteUrl(path)}
+						</code>
+						<CopyButton
+							target={`${SHARE_DIALOG}-link`}
+							label="Copy link"
+							copiedLabel="Link copied"
+						/>
+					</div>
+					<Dialog.Footer>
+						<LinkButton href={path} target="_blank" variant="outline" color="neutral">
+							<ExternalLinkIcon size={16} aria-hidden="true" />
+							Open shared view
+						</LinkButton>
+						<Button type="button" commandfor={SHARE_DIALOG} command="close">
+							Done
+						</Button>
+					</Dialog.Footer>
+				</HeadingScope>
+			</Dialog>
+		);
+	};
+}
+
 /** The chat's overflow menu: pin, share and delete. Pin and delete apply to saved chats only. */
 export function ChatMenu(handle: Handle<{ thread: Thread }>) {
 	return () => {
@@ -648,16 +696,18 @@ export function ChatMenu(handle: Handle<{ thread: Thread }>) {
 		if (base === null) return null;
 		return (
 			<>
-				<LinkButton
-					href={href(`share/${base.id}`)}
+				<Button
+					type="button"
 					variant="ghost"
 					color="neutral"
 					size="sm"
+					commandfor={SHARE_DIALOG}
+					command="show-modal"
 					mix={[media("(max-width: 40rem)", raw({ display: "none" }))]}
 				>
 					<Share2Icon size={16} aria-hidden="true" />
 					Share
-				</LinkButton>
+				</Button>
 				<Button
 					type="button"
 					variant="ghost"
@@ -676,27 +726,21 @@ export function ChatMenu(handle: Handle<{ thread: Thread }>) {
 						form={ACTIONS_FORM}
 						name="intent"
 						value={base.pinned ? "unpin" : "pin"}
-						data-rmx-document
 					>
 						{base.pinned ? <PinOffIcon /> : <PinIcon />}
 						{base.pinned ? "Unpin chat" : "Pin chat"}
 					</Menu.Item>
-					<Menu.Item href={href(`share/${base.id}`)}>
+					<Menu.Item commandfor={SHARE_DIALOG} command="show-modal">
 						<Share2Icon />
 						Share chat
 					</Menu.Item>
 					<Menu.Separator />
-					<Menu.Item
-						type="submit"
-						form={ACTIONS_FORM}
-						name="intent"
-						value="delete"
-						data-rmx-document
-					>
+					<Menu.Item type="submit" form={ACTIONS_FORM} name="intent" value="delete">
 						<TrashIcon />
 						Delete chat
 					</Menu.Item>
 				</Menu>
+				<ShareDialog id={base.id} title={base.title} />
 			</>
 		);
 	};

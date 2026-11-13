@@ -24,9 +24,10 @@ import { SettingsSection } from "@sdxc/ui/app/settings-section";
 import { Skeleton } from "@sdxc/ui/app/skeleton";
 
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
+import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
 import { MODELS, PERSON, actionHref, href } from "~/resources/views/demo-apps/tern/data";
 import { SETTINGS_LABELS } from "~/resources/views/demo-apps/tern/labels";
-import { MAIN_FRAME, TernShell } from "~/resources/views/demo-apps/tern/shell";
+import { TernShell } from "~/resources/views/demo-apps/tern/shell";
 
 /** The settings pages, by the path after `settings/`. */
 export const SETTINGS_PAGES = ["general", "personalization", "data"] as const;

@@ -28,6 +28,7 @@ import type { Thread } from "~/resources/views/demo-apps/tern/thread";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
+import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
 import { CanvasPane } from "~/resources/views/demo-apps/tern/canvas";
 import {
 	ChatColumn,
@@ -44,7 +45,7 @@ import {
 	searchConversations,
 } from "~/resources/views/demo-apps/tern/data";
 import { SPLIT_LABELS } from "~/resources/views/demo-apps/tern/labels";
-import { MAIN_FRAME, TO_MAIN, TernMark, TernShell } from "~/resources/views/demo-apps/tern/shell";
+import { TO_MAIN, TernMark, TernShell } from "~/resources/views/demo-apps/tern/shell";
 import { isSaved, threadTitle } from "~/resources/views/demo-apps/tern/thread";
 
 /** The cookie the chat's width beside the canvas is remembered in. */

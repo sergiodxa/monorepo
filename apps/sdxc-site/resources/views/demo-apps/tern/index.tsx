@@ -28,6 +28,7 @@ import type { ShellSection } from "~/resources/views/demo-apps/tern/shell";
 import type { Thread } from "~/resources/views/demo-apps/tern/thread";
 
 import { DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
+import { MAIN_FRAME, MainScreen, mainSource } from "~/resources/views/demo-apps/main-frame";
 import { CanvasPane } from "~/resources/views/demo-apps/tern/canvas";
 import {
 	CONVERSATIONS,
@@ -53,12 +54,7 @@ import {
 	SettingsScreen,
 	UsagePanel,
 } from "~/resources/views/demo-apps/tern/settings";
-import {
-	MAIN_FRAME,
-	SHELL_COOKIE,
-	TernApp,
-	TernShell,
-} from "~/resources/views/demo-apps/tern/shell";
+import { SHELL_COOKIE, TernApp, TernShell } from "~/resources/views/demo-apps/tern/shell";
 import {
 	THREAD_FIELD,
 	edit,
@@ -167,7 +163,7 @@ function notFound(collapsed: boolean): TernScreen {
 		title: "Page not found",
 		status: 404,
 		body: (
-			<TernShell collapsed={collapsed} crumb="Not found" title="Page not found">
+			<TernShell collapsed={collapsed} crumb="Not found">
 				<Empty icon={<CompassIcon />}>
 					<Empty.Title>Nothing lives at this address</Empty.Title>
 					<Empty.Description>
@@ -217,38 +213,46 @@ function sectionOf(page: string): ShellSection {
 	return "none";
 }
 
-/** The screen's address without a toast's one-time key, which {@link MAIN_FRAME} loads. */
-function frameSrc(url: URL): string {
-	let src = new URL(url);
-	src.searchParams.delete(DEMO_APP_TOAST_PARAM);
-	return `${src.pathname}${src.search}`;
+/**
+ * A screen's pane as the main frame holds it: wrapped with the title, sidebar row and address
+ * the shell takes on after a swap, and the toast the post that led here named.
+ */
+function mainScreen(screen: DemoAppScreen, request: DemoAppRequest): RemixNode {
+	let key = request.url.searchParams.get(DEMO_APP_TOAST_PARAM);
+	let toast = key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined;
+	return (
+		<MainScreen title={screen.title} nav={sectionOf(request.page)} url={request.url} toast={toast}>
+			{screen.body}
+		</MainScreen>
+	);
 }
 
 /**
  * Puts a screen's pane in Tern's document. A page fetched by address mounts the pane as the
- * {@link MAIN_FRAME} frame; a post's answer draws it in place, since its screen comes from the
- * post, and names it in `frames` so a post aimed at that frame answers the pane alone.
+ * main frame; a post's answer draws it in place, since its screen comes from the post, and
+ * names it in `frames` so a post aimed at the main frame answers the pane alone.
  */
 function inDocument(
 	screen: DemoAppScreen,
 	request: DemoAppRequest,
 	answered: boolean,
 ): DemoAppScreen {
+	let pane = answered ? mainScreen(screen, request) : undefined;
 	let app = (
 		<TernApp
 			current={sectionOf(request.page)}
 			collapsed={readAppShellCookie(request.cookie, SHELL_COOKIE)}
-			src={frameSrc(request.url)}
-			pane={answered ? screen.body : undefined}
+			src={mainSource(request.url)}
+			pane={pane}
 		/>
 	);
 	return answered
-		? { ...screen, body: app, frames: { [MAIN_FRAME]: screen.body } }
+		? { ...screen, body: app, frames: { [MAIN_FRAME]: pane } }
 		: { ...screen, body: app };
 }
 
 /**
- * Answers a page path with its screen, whose body is the pane {@link MAIN_FRAME} holds; a
+ * Answers a page path with its screen, whose body is the pane the main frame holds; a
  * share link is a page of its own, outside the shell. `null` when no screen lives there.
  */
 function route(request: DemoAppRequest): TernScreen | null {
@@ -458,7 +462,7 @@ export default {
 	target(name, request) {
 		if (name !== MAIN_FRAME) return null;
 		let screen = route(request) ?? notFound(readAppShellCookie(request.cookie, SHELL_COOKIE));
-		return screen.shared ? null : screen.body;
+		return screen.shared ? null : mainScreen(screen, request);
 	},
 	submit(page, form, request) {
 		let answer = submit(page, form, request);

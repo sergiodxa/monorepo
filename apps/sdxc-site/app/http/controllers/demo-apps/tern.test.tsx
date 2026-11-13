@@ -231,7 +231,7 @@ describe("Tern's screens and frames", () => {
 
 describe("Tern's main frame", () => {
 	/** The headers the browser runtime sends for a navigation aimed at the main frame. */
-	const TO_MAIN = { "X-Remix-Frame": "true", "X-Remix-Target": "tern-main" };
+	const TO_MAIN = { "X-Remix-Frame": "true", "X-Remix-Target": "main" };
 
 	test("a page inlines its pane in the main frame, so it reads without scripts", async () => {
 		let body = await (await fetchApp(href("c/flaky-test"))).text();
@@ -265,7 +265,7 @@ describe("Tern's main frame", () => {
 			);
 			expect(inApp.length, page).toBeGreaterThan(0);
 			for (let tag of inApp) {
-				let aimed = tag.includes('data-rmx-target="tern-main"');
+				let aimed = tag.includes('data-rmx-target="main"');
 				let settings = /action="\/demo\/apps\/tern\/settings\//.test(tag);
 				let background = tag.includes('data-slot="optimistic-toggle"');
 				expect(aimed || settings || background, `${page}: ${tag}`).toBe(true);

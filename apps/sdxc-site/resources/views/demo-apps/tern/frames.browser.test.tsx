@@ -18,12 +18,13 @@ import { page } from "vitest/browser";
 
 import { PENDING_FRAMES, blockSize } from "~/app/test/frame-size";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
+import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
 import tern from "~/resources/views/demo-apps/tern";
 import { CanvasPane } from "~/resources/views/demo-apps/tern/canvas";
 import { CONVERSATIONS, PROJECTS } from "~/resources/views/demo-apps/tern/data";
 import { ProjectFiles } from "~/resources/views/demo-apps/tern/screens";
 import { UsagePanel } from "~/resources/views/demo-apps/tern/settings";
-import { MAIN_FRAME, TernApp } from "~/resources/views/demo-apps/tern/shell";
+import { TernApp } from "~/resources/views/demo-apps/tern/shell";
 
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";

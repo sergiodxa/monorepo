@@ -27,10 +27,11 @@ import { Button } from "@sdxc/ui";
 import { AppShell } from "@sdxc/ui/app/app-shell";
 import { CommandPalette } from "@sdxc/ui/app/command-palette";
 import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
-import { Frame } from "remix/component";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
+import { MAIN_FRAME, MainFrame } from "~/resources/views/demo-apps/main-frame";
+import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 import {
 	CONVERSATIONS,
 	PERSON,
@@ -44,12 +45,9 @@ import { HELP_LABELS, PALETTE_LABELS, SHELL_LABELS } from "~/resources/views/dem
 export const SHELL_COOKIE = "tern-sidebar";
 
 /**
- * The frame holding a screen's top bar and content. Every in-app link and form aims at it, so
- * moving between chats, sending and switching settings reload it while the sidebar stays put.
+ * The attributes that aim a link or form at the main frame, which holds a screen's top bar and
+ * content, so following it before the page's script has loaded still swaps only that frame.
  */
-export const MAIN_FRAME = "tern-main";
-
-/** The attributes that aim a link or form at {@link MAIN_FRAME}. */
 export const TO_MAIN = { "data-rmx-target": MAIN_FRAME } as const;
 
 /** The id of the command palette ⌘K opens. */
@@ -133,6 +131,7 @@ function TernNav(handle: Handle<{ current: ShellSection }>) {
 		let chat = (id: string, title: string, icon?: RemixNode) => (
 			<AppShell.Item
 				{...TO_MAIN}
+				data-main-nav={`chat:${id}`}
 				data-rmx-prefetch="intent"
 				href={href(`c/${id}`)}
 				label={title}
@@ -146,6 +145,7 @@ function TernNav(handle: Handle<{ current: ShellSection }>) {
 				<AppShell.Group>
 					<AppShell.Item
 						{...TO_MAIN}
+						data-main-nav="new"
 						data-rmx-prefetch="intent"
 						href={href()}
 						icon={<SquarePenIcon />}
@@ -157,6 +157,7 @@ function TernNav(handle: Handle<{ current: ShellSection }>) {
 					/>
 					<AppShell.Item
 						{...TO_MAIN}
+						data-main-nav="search"
 						data-rmx-prefetch="intent"
 						href={href("search")}
 						icon={<SearchIcon />}
@@ -176,6 +177,7 @@ function TernNav(handle: Handle<{ current: ShellSection }>) {
 					{PROJECTS.map((project) => (
 						<AppShell.Item
 							{...TO_MAIN}
+							data-main-nav={`project:${project.slug}`}
 							data-rmx-prefetch="intent"
 							href={href(`projects/${project.slug}`)}
 							icon={<FolderIcon />}
@@ -259,7 +261,7 @@ namespace TernApp {
 		current: ShellSection;
 		/** The remembered collapsed sidebar, from {@link SHELL_COOKIE}. */
 		collapsed: boolean;
-		/** The screen's address, which {@link MAIN_FRAME} loads; it answers only the pane. */
+		/** The screen's address, which the main frame loads; it answers only the pane. */
 		src: string;
 		/**
 		 * The pane itself, drawn in place of the frame for a post answered as a whole page, whose
@@ -271,7 +273,8 @@ namespace TernApp {
 
 /**
  * Renders Tern's document: the sidebar, the command menu and the keyboard help around the
- * {@link MAIN_FRAME} frame, which the server fills in before the page leaves it.
+ * main frame, which the server fills in before the page leaves it, and the island that keeps
+ * the shell in step as that frame swaps.
  */
 export function TernApp(handle: Handle<TernApp.Props>) {
 	return () => {
@@ -318,8 +321,9 @@ export function TernApp(handle: Handle<TernApp.Props>) {
 							/>
 						</>
 					}
-					pane={pane ?? <Frame name={MAIN_FRAME} src={src} />}
+					pane={pane ?? <MainFrame src={src} />}
 				/>
+				<MainFrameSync root={href()} />
 				<TernPalette />
 				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</>
@@ -333,8 +337,6 @@ namespace TernShell {
 		collapsed: boolean;
 		/** Where the person is, shown in the top bar. */
 		crumb: string;
-		/** The page title before " — Tern", for a pane that lands by navigation. @default crumb */
-		title?: string;
 		/** The screen's own top-bar controls, such as the model picker. */
 		actions?: RemixNode;
 		/** Drops the content padding, for the chat's edge-to-edge column. */
@@ -344,18 +346,17 @@ namespace TernShell {
 }
 
 /**
- * Renders a Tern screen as the content of {@link MAIN_FRAME}: the top bar with the screen's
+ * Renders a Tern screen as the content of the main frame: the top bar with the screen's
  * crumb and controls, the command menu's trigger and the keyboard help, over the screen.
  */
 export function TernShell(handle: Handle<TernShell.Props>) {
 	return () => {
-		let { collapsed, crumb, title = crumb, actions, flush, children } = handle.props;
+		let { collapsed, crumb, actions, flush, children } = handle.props;
 
 		let pane = (
 			<AppShell.Pane
 				{...SHELL}
 				collapsed={collapsed}
-				title={`${title} — Tern`}
 				topbar={
 					<>
 						<span
