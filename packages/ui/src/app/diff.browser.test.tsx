@@ -306,7 +306,9 @@ describe("Diff file card", () => {
 		await cdp().send("Emulation.setEmulatedMedia", {
 			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
 		});
-		onTestFinished(() => cdp().send("Emulation.setEmulatedMedia", { features: [] }));
+		onTestFinished(async () => {
+			await cdp().send("Emulation.setEmulatedMedia", { features: [] });
+		});
 		let card = mount();
 		let chevron = card.querySelector<SVGElement>("summary svg")!;
 		expect(getComputedStyle(chevron).transitionDuration).toBe("0s");

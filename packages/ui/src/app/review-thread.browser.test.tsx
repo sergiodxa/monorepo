@@ -170,7 +170,9 @@ describe("ReviewThread folded", () => {
 		await cdp().send("Emulation.setEmulatedMedia", {
 			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
 		});
-		onTestFinished(() => cdp().send("Emulation.setEmulatedMedia", { features: [] }));
+		onTestFinished(async () => {
+			await cdp().send("Emulation.setEmulatedMedia", { features: [] });
+		});
 		let root = mount({
 			resolved: true,
 			resolvedSummary: "ana marked this conversation as resolved",

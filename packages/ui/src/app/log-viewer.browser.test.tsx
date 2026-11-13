@@ -198,7 +198,9 @@ describe("LogViewer", () => {
 		await cdp().send("Emulation.setEmulatedMedia", {
 			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
 		});
-		onTestFinished(() => cdp().send("Emulation.setEmulatedMedia", { features: [] }));
+		onTestFinished(async () => {
+			await cdp().send("Emulation.setEmulatedMedia", { features: [] });
+		});
 		let root = await mount({ steps: bigJob() });
 		let chevron = root.querySelector<SVGElement>('[data-slot="log-step-chevron"]')!;
 		expect(getComputedStyle(chevron).transitionDuration).toBe("0s");
