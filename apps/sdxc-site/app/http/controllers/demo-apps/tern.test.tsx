@@ -1,7 +1,8 @@
 /**
  * Tests Tern, the chat assistant demo, through the real router: a message sent without
  * JavaScript comes back answered, regenerate and edit branch the chat, feedback, pins and
- * deletes answer with their toasts, and the canvas, files and usage frames answer.
+ * deletes answer with their toasts, the canvas, files and usage frames answer, and a link or
+ * post aimed at the main frame answers that frame's pane alone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -78,20 +79,18 @@ describe("Tern without JavaScript", () => {
 	});
 
 	test("a new chat starts from the home screen's composer and suggestions", async () => {
-		let body = await (
-			await post("chat", { intent: "send", prompt: "Write a shorter email" })
-		).text();
+		let body = await (await post("", { intent: "send", prompt: "Write a shorter email" })).text();
 
 		expect(turns(body)).toBe(2);
 		expect(body).toMatch(/<h1[^>]*>Write a shorter email<\/h1>/);
-		expect(body).toContain(`action="${action("chat")}"`);
+		expect(body).toContain(`action="${action("")}"`);
 	});
 
 	test("the next send carries the chat so far, with no server state", async () => {
-		let first = await (await post("chat", { intent: "send", prompt: "Plan a trip" })).text();
+		let first = await (await post("", { intent: "send", prompt: "Plan a trip" })).text();
 		let thread = /name="thread" value="([^"]+)"/.exec(first)?.[1]?.replaceAll("&quot;", '"') ?? "";
 		let second = await (
-			await post("chat", { intent: "send", prompt: "Now fix this bug", thread })
+			await post("", { intent: "send", prompt: "Now fix this bug", thread })
 		).text();
 
 		expect(turns(second)).toBe(4);
@@ -227,5 +226,70 @@ describe("Tern's screens and frames", () => {
 		expect(body).toContain("Read-only");
 		expect(body).not.toContain('data-slot="composer"');
 		expect(body).not.toContain("Regenerate response");
+	});
+});
+
+describe("Tern's main frame", () => {
+	/** The headers the browser runtime sends for a navigation aimed at the main frame. */
+	const TO_MAIN = { "X-Remix-Frame": "true", "X-Remix-Target": "tern-main" };
+
+	test("a page inlines its pane in the main frame, so it reads without scripts", async () => {
+		let body = await (await fetchApp(href("c/flaky-test"))).text();
+
+		expect(body).toContain('name="robots"');
+		expect(body).toContain('data-slot="app-shell-sidebar"');
+		expect(body).toContain('<main id="tern-main"');
+		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
+	});
+
+	test("a link aimed at the main frame answers the pane alone, top bar included", async () => {
+		let response = await fetchApp(href("c/flaky-test?model=dive"), { headers: TO_MAIN });
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Vary")).toContain("X-Remix-Target");
+		expect(body).not.toContain('name="robots"');
+		expect(body).not.toContain('data-slot="app-shell-sidebar"');
+		expect(body).toContain('data-slot="app-shell-topbar"');
+		expect(body).toContain('aria-label="Model: Tern Dive"');
+		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
+	});
+
+	test("every link and form inside the pane is aimed at the main frame or opts out", async () => {
+		for (let page of ["c/debounce-search", "search", "projects/harbor-site", "settings/general"]) {
+			let body = await (await fetchApp(href(page), { headers: TO_MAIN })).text();
+			let tags = [...body.matchAll(/<(?:a|form)\s[^>]*>/g)].map((match) => match[0]);
+			let inApp = tags.filter(
+				(tag) =>
+					/(?:href|action)="\/demo\/apps\/tern(?:[/?"])/.test(tag) && !tag.includes("/share/"),
+			);
+			expect(inApp.length, page).toBeGreaterThan(0);
+			for (let tag of inApp) {
+				let aimed = tag.includes('data-rmx-target="tern-main"');
+				let settings = /action="\/demo\/apps\/tern\/settings\//.test(tag);
+				let background = tag.includes('data-slot="optimistic-toggle"');
+				expect(aimed || settings || background, `${page}: ${tag}`).toBe(true);
+			}
+		}
+	});
+
+	test("a message posted at the main frame answers the pane with its reply to stream", async () => {
+		let response = await fetchApp(action("c/flaky-test"), {
+			method: "POST",
+			headers: TO_MAIN,
+			body: new URLSearchParams({ intent: "send", prompt: "Compare these two options in a table" }),
+		});
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).not.toContain('name="robots"');
+		expect(body).not.toContain('data-slot="app-shell-sidebar"');
+		expect(turns(body)).toBe(4);
+		expect(body).toMatch(/id="tern-reply-3"[^>]*data-stream-pending/);
+	});
+
+	test("a shared chat owns no main frame, so a request aimed at it answers the whole page", async () => {
+		let body = await (await fetchApp(href("share/lisbon-offsite"), { headers: TO_MAIN })).text();
+		expect(body).toContain('name="robots"');
 	});
 });

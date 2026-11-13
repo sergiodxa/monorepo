@@ -26,7 +26,7 @@ import { Skeleton } from "@sdxc/ui/app/skeleton";
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import { MODELS, PERSON, actionHref, href } from "~/resources/views/demo-apps/tern/data";
 import { SETTINGS_LABELS } from "~/resources/views/demo-apps/tern/labels";
-import { TernShell } from "~/resources/views/demo-apps/tern/shell";
+import { MAIN_FRAME, TernShell } from "~/resources/views/demo-apps/tern/shell";
 
 /** The settings pages, by the path after `settings/`. */
 export const SETTINGS_PAGES = ["general", "personalization", "data"] as const;
@@ -322,7 +322,7 @@ export function SettingsScreen(handle: Handle<{ collapsed: boolean; page: Settin
 		});
 
 		return (
-			<TernShell current="settings" collapsed={collapsed} crumb="Settings">
+			<TernShell collapsed={collapsed} crumb="Settings">
 				<div mix={[vstack({ gap: 6, align: "stretch" })]}>
 					<PageHeader title="Settings" description={`For ${PERSON.email}`} />
 					<SettingsLayout
@@ -338,6 +338,7 @@ export function SettingsScreen(handle: Handle<{ collapsed: boolean; page: Settin
 						]}
 						page={page === null ? "index" : "section"}
 						backHref={href("settings")}
+						frame={MAIN_FRAME}
 						labels={SETTINGS_LABELS}
 					>
 						<HeadingScope level={2}>

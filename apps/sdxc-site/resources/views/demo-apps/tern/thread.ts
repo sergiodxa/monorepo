@@ -251,13 +251,14 @@ export function threadTitle(thread: Thread): string {
 }
 
 /**
- * The page a thread's forms post to: its saved conversation's, or `chat` for a new one.
+ * The page a thread's forms post to: its saved conversation's, or the home screen for a new
+ * one, so the address stays on a page that reloads.
  *
  * @param thread The thread.
  * @returns The page path under the app.
  */
 export function threadPage(thread: Thread): string {
-	return thread.base === null ? "chat" : `c/${thread.base.id}`;
+	return thread.base === null ? "" : `c/${thread.base.id}`;
 }
 
 /**

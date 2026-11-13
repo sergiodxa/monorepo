@@ -23,6 +23,7 @@ import type { Conversation } from "~/resources/views/demo-apps/tern/data";
 
 import { href } from "~/resources/views/demo-apps/tern/data";
 import { GhostBlock } from "~/resources/views/demo-apps/tern/ghost";
+import { TO_MAIN } from "~/resources/views/demo-apps/tern/shell";
 
 /** The code block's copy strings. */
 const CODE_LABELS = { copy: "Copy code", copied: "Copied" };
@@ -69,6 +70,7 @@ function CanvasHeader(handle: Handle<CanvasPane.Props>) {
 					<span mix={[raw({ inlineSize: "2rem", blockSize: "2rem" })]} />
 				) : (
 					<LinkButton
+						{...TO_MAIN}
 						href={href(`c/${conversation.id}`)}
 						variant="ghost"
 						color="neutral"

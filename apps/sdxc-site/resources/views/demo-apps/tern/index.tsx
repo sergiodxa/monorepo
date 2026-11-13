@@ -24,8 +24,10 @@ import type {
 	DemoAppScreen,
 } from "~/resources/views/demo-apps";
 import type { Conversation } from "~/resources/views/demo-apps/tern/data";
+import type { ShellSection } from "~/resources/views/demo-apps/tern/shell";
 import type { Thread } from "~/resources/views/demo-apps/tern/thread";
 
+import { DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
 import { CanvasPane } from "~/resources/views/demo-apps/tern/canvas";
 import {
 	CONVERSATIONS,
@@ -51,7 +53,12 @@ import {
 	SettingsScreen,
 	UsagePanel,
 } from "~/resources/views/demo-apps/tern/settings";
-import { SHELL_COOKIE, TernShell } from "~/resources/views/demo-apps/tern/shell";
+import {
+	MAIN_FRAME,
+	SHELL_COOKIE,
+	TernApp,
+	TernShell,
+} from "~/resources/views/demo-apps/tern/shell";
 import {
 	THREAD_FIELD,
 	edit,
@@ -155,12 +162,12 @@ const SCREENS = [
 ];
 
 /** The app's own 404, inside the shell so the sidebar still leads somewhere. */
-function notFound(collapsed: boolean): DemoAppScreen {
+function notFound(collapsed: boolean): TernScreen {
 	return {
 		title: "Page not found",
 		status: 404,
 		body: (
-			<TernShell current="none" collapsed={collapsed} crumb="Not found">
+			<TernShell collapsed={collapsed} crumb="Not found" title="Page not found">
 				<Empty icon={<CompassIcon />}>
 					<Empty.Title>Nothing lives at this address</Empty.Title>
 					<Empty.Description>
@@ -194,8 +201,57 @@ function chatScreen(thread: Thread, request: DemoAppRequest, streaming?: number)
 	};
 }
 
-/** Answers a page path with its screen, or `null` when no screen lives there. */
-function route(request: DemoAppRequest): DemoAppScreen | null {
+/** A Tern screen: its body is the pane, or a whole page for a share link, outside the shell. */
+interface TernScreen extends DemoAppScreen {
+	shared?: boolean;
+}
+
+/** The sidebar row a page marks as the one shown. */
+function sectionOf(page: string): ShellSection {
+	let [first = "", second] = page.split("/");
+	if (first === "") return "new";
+	if (first === "c" && second !== undefined) return `chat:${second}`;
+	if (first === "search") return "search";
+	if (first === "projects" && second !== undefined) return `project:${second}`;
+	if (first === "settings") return "settings";
+	return "none";
+}
+
+/** The screen's address without a toast's one-time key, which {@link MAIN_FRAME} loads. */
+function frameSrc(url: URL): string {
+	let src = new URL(url);
+	src.searchParams.delete(DEMO_APP_TOAST_PARAM);
+	return `${src.pathname}${src.search}`;
+}
+
+/**
+ * Puts a screen's pane in Tern's document. A page fetched by address mounts the pane as the
+ * {@link MAIN_FRAME} frame; a post's answer draws it in place, since its screen comes from the
+ * post, and names it in `frames` so a post aimed at that frame answers the pane alone.
+ */
+function inDocument(
+	screen: DemoAppScreen,
+	request: DemoAppRequest,
+	answered: boolean,
+): DemoAppScreen {
+	let app = (
+		<TernApp
+			current={sectionOf(request.page)}
+			collapsed={readAppShellCookie(request.cookie, SHELL_COOKIE)}
+			src={frameSrc(request.url)}
+			pane={answered ? screen.body : undefined}
+		/>
+	);
+	return answered
+		? { ...screen, body: app, frames: { [MAIN_FRAME]: screen.body } }
+		: { ...screen, body: app };
+}
+
+/**
+ * Answers a page path with its screen, whose body is the pane {@link MAIN_FRAME} holds; a
+ * share link is a page of its own, outside the shell. `null` when no screen lives there.
+ */
+function route(request: DemoAppRequest): TernScreen | null {
 	let { page, url, cookie } = request;
 	let collapsed = readAppShellCookie(cookie, SHELL_COOKIE);
 	let [first = "", second, ...rest] = page.split("/");
@@ -214,7 +270,11 @@ function route(request: DemoAppRequest): DemoAppScreen | null {
 		if (conversation === undefined) return null;
 		let thread = savedThread(conversation, model);
 		if (first === "share") {
-			return { title: `${conversation.title} (shared)`, body: <ShareScreen thread={thread} /> };
+			return {
+				title: `${conversation.title} (shared)`,
+				body: <ShareScreen thread={thread} />,
+				shared: true,
+			};
 		}
 		return chatScreen(thread, request);
 	}
@@ -357,6 +417,23 @@ function submitSettings(settingsPage: string, form: FormData): DemoAppRedirect |
 	return null;
 }
 
+/** Answers a form posted on `page`: a chat's send, regenerate or edit, or a settings section. */
+function submit(
+	page: string,
+	form: FormData,
+	request: DemoAppRequest,
+): DemoAppRedirect | DemoAppScreen | null {
+	let [first = "", second, ...rest] = page.split("/");
+	if (rest.length > 0) return null;
+	if (first === "" && second === undefined) return submitChat(null, form, request);
+	if (first === "c" && second !== undefined) {
+		let conversation = findConversation(second);
+		return conversation ? submitChat(conversation, form, request) : null;
+	}
+	if (first === "settings" && second !== undefined) return submitSettings(second, form);
+	return null;
+}
+
 /**
  * Tern as the gallery and `/demo/apps/tern` read it: its theme, every screen, its frames,
  * and how each form answers.
@@ -375,17 +452,16 @@ export default {
 	toasts: TOASTS,
 	frame: (part) => framePart(part),
 	render(request) {
-		return route(request) ?? notFound(readAppShellCookie(request.cookie, SHELL_COOKIE));
+		let screen = route(request) ?? notFound(readAppShellCookie(request.cookie, SHELL_COOKIE));
+		return screen.shared ? screen : inDocument(screen, request, false);
+	},
+	target(name, request) {
+		if (name !== MAIN_FRAME) return null;
+		let screen = route(request) ?? notFound(readAppShellCookie(request.cookie, SHELL_COOKIE));
+		return screen.shared ? null : screen.body;
 	},
 	submit(page, form, request) {
-		let [first = "", second, ...rest] = page.split("/");
-		if (rest.length > 0) return null;
-		if (first === "chat" && second === undefined) return submitChat(null, form, request);
-		if (first === "c" && second !== undefined) {
-			let conversation = findConversation(second);
-			return conversation ? submitChat(conversation, form, request) : null;
-		}
-		if (first === "settings" && second !== undefined) return submitSettings(second, form);
-		return null;
+		let answer = submit(page, form, request);
+		return answer !== null && "body" in answer ? inDocument(answer, request, true) : answer;
 	},
 } satisfies DemoApp;

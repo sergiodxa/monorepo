@@ -27,6 +27,7 @@ import { Button } from "@sdxc/ui";
 import { AppShell } from "@sdxc/ui/app/app-shell";
 import { CommandPalette } from "@sdxc/ui/app/command-palette";
 import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
+import { Frame } from "remix/component";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
@@ -41,6 +42,15 @@ import { HELP_LABELS, PALETTE_LABELS, SHELL_LABELS } from "~/resources/views/dem
 
 /** The cookie Tern's collapsed sidebar is remembered in. */
 export const SHELL_COOKIE = "tern-sidebar";
+
+/**
+ * The frame holding a screen's top bar and content. Every in-app link and form aims at it, so
+ * moving between chats, sending and switching settings reload it while the sidebar stays put.
+ */
+export const MAIN_FRAME = "tern-main";
+
+/** The attributes that aim a link or form at {@link MAIN_FRAME}. */
+export const TO_MAIN = { "data-rmx-target": MAIN_FRAME } as const;
 
 /** The id of the command palette ⌘K opens. */
 const PALETTE_ID = "tern-palette";
@@ -122,6 +132,7 @@ function TernNav(handle: Handle<{ current: ShellSection }>) {
 		let { current } = handle.props;
 		let chat = (id: string, title: string, icon?: RemixNode) => (
 			<AppShell.Item
+				{...TO_MAIN}
 				data-rmx-prefetch="intent"
 				href={href(`c/${id}`)}
 				label={title}
@@ -134,6 +145,7 @@ function TernNav(handle: Handle<{ current: ShellSection }>) {
 			<>
 				<AppShell.Group>
 					<AppShell.Item
+						{...TO_MAIN}
 						data-rmx-prefetch="intent"
 						href={href()}
 						icon={<SquarePenIcon />}
@@ -144,6 +156,7 @@ function TernNav(handle: Handle<{ current: ShellSection }>) {
 						data-shortcut-group="Navigation"
 					/>
 					<AppShell.Item
+						{...TO_MAIN}
 						data-rmx-prefetch="intent"
 						href={href("search")}
 						icon={<SearchIcon />}
@@ -162,6 +175,7 @@ function TernNav(handle: Handle<{ current: ShellSection }>) {
 				<AppShell.Group title="Projects">
 					{PROJECTS.map((project) => (
 						<AppShell.Item
+							{...TO_MAIN}
 							data-rmx-prefetch="intent"
 							href={href(`projects/${project.slug}`)}
 							icon={<FolderIcon />}
@@ -231,13 +245,96 @@ function TernPalette() {
 	);
 }
 
-namespace TernShell {
+/** The labels, ids and cookie the shell and its pane share, so the toggle and skip link agree. */
+const SHELL = {
+	id: "tern",
+	labels: SHELL_LABELS,
+	cookieName: SHELL_COOKIE,
+	cookiePath: demoAppCookiePath("tern"),
+	sheetBelow: "64rem",
+} as const;
+
+namespace TernApp {
 	export interface Props {
 		current: ShellSection;
 		/** The remembered collapsed sidebar, from {@link SHELL_COOKIE}. */
 		collapsed: boolean;
+		/** The screen's address, which {@link MAIN_FRAME} loads; it answers only the pane. */
+		src: string;
+		/**
+		 * The pane itself, drawn in place of the frame for a post answered as a whole page, whose
+		 * screen comes from the post and cannot be fetched again by address.
+		 */
+		pane?: RemixNode;
+	}
+}
+
+/**
+ * Renders Tern's document: the sidebar, the command menu and the keyboard help around the
+ * {@link MAIN_FRAME} frame, which the server fills in before the page leaves it.
+ */
+export function TernApp(handle: Handle<TernApp.Props>) {
+	return () => {
+		let { current, collapsed, src, pane } = handle.props;
+		return (
+			<>
+				<AppShell
+					{...SHELL}
+					collapsed={collapsed}
+					indicator="fill"
+					workspace={
+						<>
+							<AppShell.Identity
+								avatar={<TernMark />}
+								name="Tern"
+								detail="Personal"
+								commandfor="tern-workspace-menu"
+								command="toggle-popover"
+							/>
+							<WorkspaceMenu
+								id="tern-workspace-menu"
+								label="Switch workspace"
+								current={{ name: "Personal", href: href() }}
+								others={["Harbor Studio"]}
+							/>
+						</>
+					}
+					nav={<TernNav current={current} />}
+					footer={
+						<>
+							<AppShell.Identity
+								avatar={<Initials />}
+								name={PERSON.name}
+								detail="Studio plan"
+								commandfor="tern-user-menu"
+								command="toggle-popover"
+							/>
+							<UserMenu
+								id="tern-user-menu"
+								label="Account"
+								profileHref={href("settings/personalization")}
+								settingsHref={href("settings")}
+								helpId={HELP_ID}
+							/>
+						</>
+					}
+					pane={pane ?? <Frame name={MAIN_FRAME} src={src} />}
+				/>
+				<TernPalette />
+				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
+			</>
+		);
+	};
+}
+
+namespace TernShell {
+	export interface Props {
+		/** The remembered collapsed sidebar, from {@link SHELL_COOKIE}. */
+		collapsed: boolean;
 		/** Where the person is, shown in the top bar. */
 		crumb: string;
+		/** The page title before " — Tern", for a pane that lands by navigation. @default crumb */
+		title?: string;
 		/** The screen's own top-bar controls, such as the model picker. */
 		actions?: RemixNode;
 		/** Drops the content padding, for the chat's edge-to-edge column. */
@@ -246,56 +343,19 @@ namespace TernShell {
 	}
 }
 
-/** Renders a Tern screen inside the shell, with ⌘K and `?` answering on every page. */
+/**
+ * Renders a Tern screen as the content of {@link MAIN_FRAME}: the top bar with the screen's
+ * crumb and controls, the command menu's trigger and the keyboard help, over the screen.
+ */
 export function TernShell(handle: Handle<TernShell.Props>) {
 	return () => {
-		let { current, collapsed, crumb, actions, flush, children } = handle.props;
+		let { collapsed, crumb, title = crumb, actions, flush, children } = handle.props;
 
-		let shell = (
-			<AppShell
-				cookiePath={demoAppCookiePath("tern")}
-				id="tern"
-				labels={SHELL_LABELS}
+		let pane = (
+			<AppShell.Pane
+				{...SHELL}
 				collapsed={collapsed}
-				cookieName={SHELL_COOKIE}
-				indicator="fill"
-				sheetBelow="64rem"
-				workspace={
-					<>
-						<AppShell.Identity
-							avatar={<TernMark />}
-							name="Tern"
-							detail="Personal"
-							commandfor="tern-workspace-menu"
-							command="toggle-popover"
-						/>
-						<WorkspaceMenu
-							id="tern-workspace-menu"
-							label="Switch workspace"
-							current={{ name: "Personal", href: href() }}
-							others={["Harbor Studio"]}
-						/>
-					</>
-				}
-				nav={<TernNav current={current} />}
-				footer={
-					<>
-						<AppShell.Identity
-							avatar={<Initials />}
-							name={PERSON.name}
-							detail="Studio plan"
-							commandfor="tern-user-menu"
-							command="toggle-popover"
-						/>
-						<UserMenu
-							id="tern-user-menu"
-							label="Account"
-							profileHref={href("settings/personalization")}
-							settingsHref={href("settings")}
-							helpId={HELP_ID}
-						/>
-					</>
-				}
+				title={`${title} — Tern`}
 				topbar={
 					<>
 						<span
@@ -348,15 +408,13 @@ export function TernShell(handle: Handle<TernShell.Props>) {
 				}
 			>
 				{children}
-				<TernPalette />
-				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
-			</AppShell>
+			</AppShell.Pane>
 		);
 
 		return flush ? (
-			<div mix={[raw({ display: "contents", "--ui-app-content-padding": "0px" })]}>{shell}</div>
+			<div mix={[raw({ display: "contents", "--ui-app-content-padding": "0px" })]}>{pane}</div>
 		) : (
-			shell
+			pane
 		);
 	};
 }

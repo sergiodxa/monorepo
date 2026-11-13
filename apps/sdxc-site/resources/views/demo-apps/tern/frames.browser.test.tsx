@@ -1,7 +1,8 @@
 /**
  * Holds Tern's frames to the box their placeholders reserve, and every screen to a phone's
  * width: the canvas, a project's files and the usage panel each land at their placeholder's
- * height, and no screen scrolls sideways at 375px.
+ * height, and no screen, drawn as the page looks once its main frame is filled in, scrolls
+ * sideways at 375px.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,6 +23,7 @@ import { CanvasPane } from "~/resources/views/demo-apps/tern/canvas";
 import { CONVERSATIONS, PROJECTS } from "~/resources/views/demo-apps/tern/data";
 import { ProjectFiles } from "~/resources/views/demo-apps/tern/screens";
 import { UsagePanel } from "~/resources/views/demo-apps/tern/settings";
+import { MAIN_FRAME, TernApp } from "~/resources/views/demo-apps/tern/shell";
 
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
@@ -88,8 +90,15 @@ describe("Tern at a phone's width", () => {
 		await page.viewport(375, 812);
 		let [path = "", query = ""] = screen.split("?");
 		let url = new URL(`http://localhost/demo/apps/tern/${path}${query ? `?${query}` : ""}`);
-		let rendered = tern.render({ page: path, url, cookie: null });
-		let mounted = render(themed(rendered.body), PENDING_FRAMES);
+		let request = { page: path, url, cookie: null };
+		let pane = tern.target(MAIN_FRAME, request);
+		let body =
+			pane === null ? (
+				tern.render(request).body
+			) : (
+				<TernApp current="none" collapsed={false} src={url.pathname} pane={pane} />
+			);
+		let mounted = render(themed(body), PENDING_FRAMES);
 		onTestFinished(() => mounted.cleanup());
 		await new Promise((resolve) => requestAnimationFrame(resolve));
 

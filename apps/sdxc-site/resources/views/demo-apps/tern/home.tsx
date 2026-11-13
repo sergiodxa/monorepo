@@ -24,7 +24,7 @@ import {
 	screenHeight,
 } from "~/resources/views/demo-apps/tern/conversation";
 import { PERSON, actionHref } from "~/resources/views/demo-apps/tern/data";
-import { TernMark, TernShell } from "~/resources/views/demo-apps/tern/shell";
+import { TO_MAIN, TernMark, TernShell } from "~/resources/views/demo-apps/tern/shell";
 import { THREAD_FIELD, writeThread } from "~/resources/views/demo-apps/tern/thread";
 
 /** The prompts the empty chat suggests, one per kind of help Tern's canned replies cover. */
@@ -69,7 +69,6 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 		let firstName = PERSON.name.split(" ")[0];
 		return (
 			<TernShell
-				current="new"
 				collapsed={collapsed}
 				crumb="New chat"
 				flush
@@ -113,8 +112,8 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 						</div>
 						<form
 							method="post"
-							data-rmx-document
-							action={actionHref("chat")}
+							{...TO_MAIN}
+							action={actionHref("")}
 							aria-label="Suggested prompts"
 							mix={[
 								raw({

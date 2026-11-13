@@ -66,7 +66,7 @@ import { TurnActivityView } from "~/resources/views/demo-apps/tern/activity";
 import { ReplyBlocks } from "~/resources/views/demo-apps/tern/blocks";
 import { MODELS, actionHref, findModel, href } from "~/resources/views/demo-apps/tern/data";
 import { COMPOSER_LABELS, MESSAGE_LABELS } from "~/resources/views/demo-apps/tern/labels";
-import { TernMark } from "~/resources/views/demo-apps/tern/shell";
+import { TO_MAIN, TernMark } from "~/resources/views/demo-apps/tern/shell";
 import {
 	THREAD_FIELD,
 	threadKey,
@@ -182,7 +182,7 @@ function EditDialog(handle: Handle<{ thread: Thread; index: number; turn: UserTu
 			<Dialog id={id} aria-labelledby={`${id}-title`}>
 				<form
 					method="post"
-					data-rmx-document
+					{...TO_MAIN}
 					action={actionHref(threadPage(thread))}
 					mix={[vstack({ gap: 4, align: "stretch" })]}
 				>
@@ -270,6 +270,7 @@ function CanvasCard(handle: Handle<{ thread: Thread }>) {
 		if (!canvas || thread.base === null) return null;
 		return (
 			<a
+				{...TO_MAIN}
 				href={href(`c/${thread.base.id}?canvas=open`)}
 				data-rmx-prefetch="intent"
 				mix={[
@@ -506,7 +507,7 @@ export function ChatComposer(handle: Handle<ChatComposer.Props>) {
 			>
 				<Composer
 					method="post"
-					data-rmx-document
+					{...TO_MAIN}
 					action={actionHref(threadPage(thread))}
 					enctype="multipart/form-data"
 				>
@@ -624,6 +625,7 @@ export function ModelPicker(handle: Handle<ModelPicker.Props>) {
 								</Menu.Item>
 							) : (
 								<Menu.Item
+									{...TO_MAIN}
 									href={href(`${linkPage}${linkPage.includes("?") ? "&" : "?"}model=${model.id}`)}
 									aria-current={model.id === current.id ? "true" : undefined}
 								>
@@ -674,6 +676,7 @@ export function ChatMenu(handle: Handle<{ thread: Thread }>) {
 						form={ACTIONS_FORM}
 						name="intent"
 						value={base.pinned ? "unpin" : "pin"}
+						data-rmx-document
 					>
 						{base.pinned ? <PinOffIcon /> : <PinIcon />}
 						{base.pinned ? "Unpin chat" : "Pin chat"}
@@ -683,7 +686,13 @@ export function ChatMenu(handle: Handle<{ thread: Thread }>) {
 						Share chat
 					</Menu.Item>
 					<Menu.Separator />
-					<Menu.Item type="submit" form={ACTIONS_FORM} name="intent" value="delete">
+					<Menu.Item
+						type="submit"
+						form={ACTIONS_FORM}
+						name="intent"
+						value="delete"
+						data-rmx-document
+					>
 						<TrashIcon />
 						Delete chat
 					</Menu.Item>
@@ -728,7 +737,7 @@ export function ChatColumn(handle: Handle<ChatColumn.Props>) {
 				<form
 					id={ACTIONS_FORM}
 					method="post"
-					data-rmx-document
+					{...TO_MAIN}
 					action={actionHref(threadPage(thread))}
 					hidden
 				>

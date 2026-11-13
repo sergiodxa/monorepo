@@ -44,7 +44,7 @@ import {
 	searchConversations,
 } from "~/resources/views/demo-apps/tern/data";
 import { SPLIT_LABELS } from "~/resources/views/demo-apps/tern/labels";
-import { TernMark, TernShell } from "~/resources/views/demo-apps/tern/shell";
+import { MAIN_FRAME, TO_MAIN, TernMark, TernShell } from "~/resources/views/demo-apps/tern/shell";
 import { isSaved, threadTitle } from "~/resources/views/demo-apps/tern/thread";
 
 /** The cookie the chat's width beside the canvas is remembered in. */
@@ -75,7 +75,6 @@ export function ChatScreen(handle: Handle<ChatScreen.Props>) {
 
 		return (
 			<TernShell
-				current={base === null ? "none" : `chat:${base.id}`}
 				collapsed={collapsed}
 				crumb={threadTitle(thread)}
 				flush
@@ -101,6 +100,7 @@ export function ChatScreen(handle: Handle<ChatScreen.Props>) {
 							}
 							active="detail"
 							backHref={href(`c/${base.id}`)}
+							frame={MAIN_FRAME}
 							layout={layout}
 							cookie={SPLIT_COOKIE}
 							labels={SPLIT_LABELS}
@@ -202,6 +202,7 @@ function ChatRow(handle: Handle<{ conversation: Conversation; snippet: string }>
 		return (
 			<li>
 				<a
+					{...TO_MAIN}
 					href={href(`c/${conversation.id}`)}
 					data-rmx-prefetch="intent"
 					mix={[
@@ -265,7 +266,7 @@ export function SearchScreen(handle: Handle<{ query: string; collapsed: boolean 
 				: results;
 
 		return (
-			<TernShell current="search" collapsed={collapsed} crumb="Search chats">
+			<TernShell collapsed={collapsed} crumb="Search chats">
 				<div
 					mix={[
 						vstack({ gap: 6, align: "stretch" }),
@@ -275,6 +276,7 @@ export function SearchScreen(handle: Handle<{ query: string; collapsed: boolean 
 					<PageHeader title="Search chats" description="Every chat, by any word in it." />
 					<form
 						method="get"
+						{...TO_MAIN}
 						action={href("search")}
 						role="search"
 						mix={[hstack({ gap: 2, align: "center" })]}
@@ -300,7 +302,7 @@ export function SearchScreen(handle: Handle<{ query: string; collapsed: boolean 
 									Try a single word, such as “email” or “Lisbon”.
 								</Empty.Description>
 								<Empty.Action>
-									<LinkButton href={href("search")} variant="outline" color="neutral">
+									<LinkButton {...TO_MAIN} href={href("search")} variant="outline" color="neutral">
 										Clear search
 									</LinkButton>
 								</Empty.Action>
@@ -385,13 +387,13 @@ export function ProjectScreen(handle: Handle<{ project: Project; collapsed: bool
 		];
 
 		return (
-			<TernShell current={`project:${project.slug}`} collapsed={collapsed} crumb={project.name}>
+			<TernShell collapsed={collapsed} crumb={project.name}>
 				<div mix={[vstack({ gap: 6, align: "stretch" })]}>
 					<PageHeader
 						title={project.name}
 						description={project.description}
 						primaryAction={
-							<LinkButton href={href()}>
+							<LinkButton {...TO_MAIN} href={href()}>
 								<SquarePenIcon size={16} aria-hidden="true" />
 								New chat
 							</LinkButton>
