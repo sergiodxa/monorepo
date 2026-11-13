@@ -28,6 +28,8 @@ const APP: Foundations = {
 		"A record opened beside its list (DetailSheet, SplitView) or on its own page (PageHeader, PropertyList, Timeline).",
 		"Settings and editors: SettingsLayout, SettingsSection, SaveBar, SaveStatus, DangerZone, EditorLayout.",
 		"Metrics with context: StatCard, Sparkline, StatusStrip, RangePicker, Chart.",
+		"Pickers that filter as you type: FilterMenu for a branch, labels or an assignee, as links or a form posted when it closes.",
+		"Code and the work around it: CodeView with line links and blame, LogViewer, CheckRuns, MergeBox, ContributionGraph, and Tree with file rows.",
 	],
 	ideas: [
 		{
@@ -355,6 +357,11 @@ const APP: Foundations = {
 					name: "--ui-tree-indent",
 					default: "1.25rem",
 					controls: "Indent added per level of a `Tree` row.",
+				},
+				{
+					name: "--graph-level-0, --graph-level-1, --graph-level-2, --graph-level-3, --graph-level-4",
+					default: "neutral tint to brand solid",
+					controls: "Fill of each `ContributionGraph` level, from an empty day to the busiest.",
 				},
 				{
 					name: "--ui-table-body-intrinsic-size",

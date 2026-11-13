@@ -1948,6 +1948,7 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 				body = <ConfirmPhraseFace />;
 				break;
 			case "submitOnChange":
+			case "submitOnClose":
 				body = <SubmitOnChangeFace />;
 				break;
 			case "comboboxFilter":
@@ -1955,6 +1956,9 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 				break;
 			case "commandFilter":
 				body = <FilterFace label="Command…" />;
+				break;
+			case "treeFilter":
+				body = <FilterFace label="Go to file…" />;
 				break;
 			case "hotkey":
 				body = <Keycaps keys={["⌘", "K"]} />;
@@ -1973,6 +1977,7 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 				break;
 			case "calendarKeys":
 			case "rangePickerKeys":
+			case "contributionGraphKeys":
 				body = <Keycaps keys={["←", "→"]} />;
 				break;
 			case "tabKeys":
@@ -1990,6 +1995,7 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 			case "detailSheetKeys":
 			case "splitViewKeys":
 			case "statusStripKeys":
+			case "filterMenuKeys":
 				body = <Keycaps keys={["↑", "↓", "↵"]} />;
 				break;
 			case "ganttToday":
@@ -2070,6 +2076,7 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 				body = <SyncFace kind="live" />;
 				break;
 			case "messageFollow":
+			case "logViewerController":
 				body = <SyncFace kind="follow" />;
 				break;
 			case "composerSend":

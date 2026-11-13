@@ -177,6 +177,7 @@ const CATALOGUE = [
 	{ slug: "changelog-strip", module: "landing" },
 	{ slug: "chart", module: "app" },
 	{ slug: "check-row", module: "landing" },
+	{ slug: "check-runs", module: "app" },
 	{ slug: "checkbox", module: "components" },
 	{ slug: "checkbox-group", module: "components" },
 	{ slug: "closing-cta", module: "landing" },
@@ -184,6 +185,7 @@ const CATALOGUE = [
 	{ slug: "code-stage", module: "landing" },
 	{ slug: "code-tabs", module: "docs" },
 	{ slug: "code-tabs-sync", module: "docs" },
+	{ slug: "code-view", module: "app" },
 	{ slug: "color-area", module: "color" },
 	{ slug: "color-field", module: "color" },
 	{ slug: "color-picker", module: "color" },
@@ -198,6 +200,7 @@ const CATALOGUE = [
 	{ slug: "composer-submit", module: "chat" },
 	{ slug: "confirm", module: "components" },
 	{ slug: "context-menu", module: "app" },
+	{ slug: "contribution-graph", module: "app" },
 	{ slug: "contributor-wall", module: "landing" },
 	{ slug: "copy-button", module: "docs" },
 	{ slug: "crosshair", module: "landing" },
@@ -237,6 +240,7 @@ const CATALOGUE = [
 	{ slug: "file-tree", module: "docs" },
 	{ slug: "file-trigger", module: "app" },
 	{ slug: "filter-bar", module: "app" },
+	{ slug: "filter-menu", module: "app" },
 	{ slug: "flow-diagram", module: "landing" },
 	{ slug: "form", module: "components" },
 	{ slug: "grid-list", module: "app" },
@@ -262,6 +266,7 @@ const CATALOGUE = [
 	{ slug: "link", module: "components" },
 	{ slug: "link-button", module: "components" },
 	{ slug: "listbox", module: "components" },
+	{ slug: "log-viewer", module: "app" },
 	{ slug: "logo", module: "components" },
 	{ slug: "logo-cloud", module: "landing" },
 	{ slug: "logo-sentence", module: "landing" },
@@ -269,6 +274,7 @@ const CATALOGUE = [
 	{ slug: "marquee", module: "landing" },
 	{ slug: "menu", module: "components" },
 	{ slug: "menubar", module: "app" },
+	{ slug: "merge-box", module: "app" },
 	{ slug: "message", module: "chat" },
 	{ slug: "message-scroller", module: "chat" },
 	{ slug: "meter", module: "components" },
@@ -368,11 +374,92 @@ const FALLBACK: Shape[] = windowScene([
 	txt("UI", 80, 58, 14, "ink", { align: "center", font: "semibold" }),
 ]);
 
+/** The tone a contribution-graph face paints a day of `level` (0 to 4) with. */
+function graphTone(level: number): Tone {
+	if (level === 0) return "hairline";
+	return level >= 3 ? "accent" : "label";
+}
+
 /**
  * Hand-tuned interiors that carry the design bar — denser than the module defaults, still
  * inside the shared window / device / docs chrome.
  */
 const OVERRIDES: Record<string, Shape[]> = {
+	"check-runs": windowScene([
+		{ kind: "circle", cx: 34, cy: 36, r: 4, tone: "accent" },
+		txt("1 failing, 3 successful", 42, 39, 7, "ink", { font: "semibold" }),
+		{ kind: "line", x1: 26, y1: 46, x2: 134, y2: 46, tone: "hairline", weight: 1 },
+		{ kind: "circle", cx: 34, cy: 54, r: 3, tone: "accent" },
+		txt("test (ubuntu)", 42, 57, 6, "ink"),
+		txt("Details", 132, 57, 6, "muted", { align: "end" }),
+		{ kind: "circle", cx: 34, cy: 66, r: 3, tone: "label" },
+		txt("lint", 42, 69, 6, "muted"),
+		{ kind: "circle", cx: 34, cy: 78, r: 3, tone: "label" },
+		txt("typecheck", 42, 81, 6, "muted"),
+	]),
+	"code-view": windowScene([
+		txt("24 lines · 1.04 KB", 26, 35, 6, "muted", { font: "mono" }),
+		{ kind: "line", x1: 16, y1: 40, x2: 144, y2: 40, tone: "hairline", weight: 1 },
+		{ kind: "rect", x: 16, y: 52, w: 128, h: 18, tone: "label" },
+		...[48, 57, 66, 75, 84].map((y, index) =>
+			txt(String(index + 10), 30, y, 6, "muted", { align: "end", font: "mono" }),
+		),
+		{ kind: "line", x1: 38, y1: 46, x2: 92, y2: 46, tone: "accent", weight: 2 },
+		{ kind: "line", x1: 38, y1: 55, x2: 120, y2: 55, tone: "ink", weight: 2 },
+		{ kind: "line", x1: 46, y1: 64, x2: 104, y2: 64, tone: "ink", weight: 2 },
+		{ kind: "line", x1: 46, y1: 73, x2: 84, y2: 73, tone: "accent", weight: 2 },
+		{ kind: "line", x1: 38, y1: 82, x2: 60, y2: 82, tone: "label", weight: 2 },
+	]),
+	"contribution-graph": windowScene(
+		Array.from({ length: 13 * 7 }, (_, index): Shape => {
+			let week = Math.floor(index / 7);
+			let day = index % 7;
+			let level = (week * 7 + day * 3) % 5;
+			return {
+				kind: "rect",
+				x: 27 + week * 8.2,
+				y: 32 + day * 7.6,
+				w: 6.4,
+				h: 6.4,
+				r: 1.5,
+				tone: graphTone(level),
+			};
+		}),
+	),
+	"filter-menu": windowScene([
+		{ kind: "rect", x: 30, y: 30, w: 40, h: 12, r: 6, tone: "surface", ring: true },
+		txt("main", 50, 39, 6, "ink", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 30, y: 46, w: 92, h: 40, r: 6, tone: "surface", ring: true },
+		{ kind: "rect", x: 36, y: 51, w: 80, h: 9, r: 4, tone: "label" },
+		txt("Find a branch…", 40, 58, 5.5, "muted"),
+		txt("main", 40, 70, 6, "ink", { font: "semibold" }),
+		{ kind: "rect", x: 92, y: 64, w: 22, h: 8, r: 4, tone: "label" },
+		txt("fix/offsets", 40, 81, 6, "muted"),
+	]),
+	"log-viewer": windowScene([
+		{ kind: "circle", cx: 30, cy: 34, r: 3, tone: "label" },
+		txt("Install dependencies", 38, 37, 6, "muted"),
+		{ kind: "circle", cx: 30, cy: 46, r: 3, tone: "accent" },
+		txt("Run tests", 38, 49, 6, "ink", { font: "semibold" }),
+		...[60, 68, 76, 84].map((y, index) =>
+			txt(String(index + 1), 34, y, 5.5, "muted", { align: "end", font: "mono" }),
+		),
+		{ kind: "line", x1: 40, y1: 58, x2: 108, y2: 58, tone: "ink", weight: 1.6 },
+		{ kind: "line", x1: 40, y1: 66, x2: 92, y2: 66, tone: "label", weight: 1.6 },
+		{ kind: "line", x1: 40, y1: 74, x2: 124, y2: 74, tone: "accent", weight: 1.6 },
+		{ kind: "line", x1: 40, y1: 82, x2: 100, y2: 82, tone: "accent", weight: 1.6 },
+	]),
+	"merge-box": windowScene([
+		{ kind: "circle", cx: 32, cy: 34, r: 3, tone: "accent" },
+		txt("1 approving review", 40, 37, 6, "ink"),
+		{ kind: "circle", cx: 32, cy: 47, r: 3, tone: "accent" },
+		txt("All checks have passed", 40, 50, 6, "ink"),
+		{ kind: "circle", cx: 32, cy: 60, r: 3, tone: "accent" },
+		txt("No conflicts", 40, 63, 6, "ink"),
+		{ kind: "rect", x: 28, y: 70, w: 60, h: 14, r: 6, tone: "accent" },
+		txt("Merge", 58, 79, 6.5, "surface", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 89, y: 70, w: 12, h: 14, r: 6, tone: "accent" },
+	]),
 	button: windowScene([
 		{ kind: "rect", x: 52, y: 46, w: 56, h: 20, r: 10, tone: "accent" },
 		txt("Save", 80, 59, 9, "surface", { align: "center", font: "semibold" }),
