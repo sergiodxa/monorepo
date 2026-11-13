@@ -25,8 +25,11 @@ export interface DemoLanding {
 	artDirection: string;
 	/** A small scene of the page in its own art direction, for the gallery card. */
 	thumbnail: () => RemixNode;
-	/** The page, from its own header to its own footer. */
-	render: () => RemixNode;
+	/**
+	 * The page, from its own header to its own footer. It receives the requested URL, so a
+	 * GET form on the page (a pricing calculator, a filter) renders its answer server-side.
+	 */
+	render: (url: URL) => RemixNode;
 }
 
 /**

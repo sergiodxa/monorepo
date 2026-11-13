@@ -17,7 +17,10 @@ import DocumentLayout from "~/resources/layouts/document";
 import { findDemoLanding } from "~/resources/views/demos";
 import routes from "~/routes/web";
 
-/** Reuses the landing's streamed render under the current build's cache key. */
+/**
+ * Reuses the landing's streamed render under the current build's cache key, which holds the
+ * query, so each answer to a demo's GET form is cached on its own.
+ */
 export default createAction(routes.demo, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 	let demo = await findDemoLanding(slug);
@@ -32,7 +35,7 @@ export default createAction(routes.demo, async (ctx) => {
 				robots={NOINDEX_NOFOLLOW}
 				siteFooter={false}
 			>
-				{demo.render()}
+				{demo.render(new URL(ctx.request.url))}
 			</DocumentLayout>,
 		),
 	);

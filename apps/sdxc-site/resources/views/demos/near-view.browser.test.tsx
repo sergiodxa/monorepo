@@ -49,7 +49,7 @@ function nextFrame() {
 describe("demo landing sections rendered near the viewport", () => {
 	test.each(LANDINGS)("%s skips its heavy sections but never its hero", async (_, landing, ids) => {
 		await page.viewport(1440, 900);
-		mounted = render(landing.render());
+		mounted = render(landing.render(new URL("https://sdxc.dev/demo")));
 
 		for (let id of ids) {
 			let style = getComputedStyle(document.getElementById(id)!);
@@ -64,7 +64,7 @@ describe("demo landing sections rendered near the viewport", () => {
 
 	test.each(LANDINGS)("%s takes a smaller phone placeholder", async (_, landing) => {
 		await page.viewport(1440, 900);
-		mounted = render(landing.render());
+		mounted = render(landing.render(new URL("https://sdxc.dev/demo")));
 		let desktop = getComputedStyle(document.getElementById("pricing")!).containIntrinsicSize;
 
 		await page.viewport(375, 812);
@@ -77,7 +77,7 @@ describe("demo landing sections rendered near the viewport", () => {
 
 	test.each(LANDINGS)("%s lands a link to #pricing inside the viewport", async (_, landing) => {
 		await page.viewport(1440, 900);
-		mounted = render(landing.render());
+		mounted = render(landing.render(new URL("https://sdxc.dev/demo")));
 		await nextFrame();
 		let target = document.getElementById("pricing")!;
 		expect(target.firstElementChild!.checkVisibility({ contentVisibilityAuto: true })).toBe(false);
