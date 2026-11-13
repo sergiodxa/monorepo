@@ -356,6 +356,7 @@ const CATALOGUE = [
 	{ slug: "typed-terminal", module: "landing" },
 	{ slug: "typeset", module: "components" },
 	{ slug: "ui-label", module: "docs" },
+	{ slug: "usage-estimate", module: "landing" },
 	{ slug: "view-options", module: "app" },
 	{ slug: "youtube-embed", module: "components" },
 ] as const satisfies ReadonlyArray<{ slug: string; module: ModuleKind }>;

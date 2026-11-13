@@ -217,6 +217,7 @@ export const FACE_KIND = {
 	"typed-terminal": "landing-code",
 	typeset: "text-block",
 	"ui-label": "label",
+	"usage-estimate": "landing-pricing",
 	"view-options": "view-options",
 	"youtube-embed": "video",
 } as const;
