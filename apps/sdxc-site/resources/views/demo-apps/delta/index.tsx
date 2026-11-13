@@ -35,10 +35,11 @@ import { buildTree, isHeadRef, listFolder, parsePage, shortSha } from "./data";
 import { commitSource, readDiff, readDiffFile, readView, LazyHunks } from "./diffs";
 import { INBOX_TOASTS, inboxScreen, submitInbox } from "./inbox";
 import { COPY } from "./labels";
+import { dashboardScreen } from "./overview";
 import { peopleScreen } from "./people";
 import { BlobScreen, NotInBuild } from "./screens/blob";
 import { CommitScreen, CommitsScreen } from "./screens/commits";
-import { DashboardScreen, NotFoundScreen } from "./screens/dashboard";
+import { NotFoundScreen } from "./screens/dashboard";
 import { FindScreen } from "./screens/find";
 import { HomeScreen } from "./screens/home";
 import { SETTINGS_TOASTS, redrawSettings, settingsScreen, submitSettings } from "./settings";
@@ -219,14 +220,7 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 
 	switch (target.screen) {
 		case "dashboard":
-			return {
-				title: COPY.dashboard.title,
-				nav: "dashboard",
-				crumb: COPY.dashboard.title,
-				body: (
-					<DashboardScreen history={history} files={tree.files.length} latest={latest} now={now} />
-				),
-			};
+			return await dashboardScreen(request, { history, files: tree.files.length, latest, now });
 		case "home":
 		case "tree": {
 			let folder = target.screen === "home" ? "" : target.path;
