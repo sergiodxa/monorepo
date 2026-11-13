@@ -302,6 +302,18 @@ describe("Diff toolbar", () => {
 });
 
 describe("Diff file card", () => {
+	test("reaches the header's actions by Tab before the file's lines, and draws them on top", () => {
+		let card = mount();
+		let actions = card.querySelector<HTMLElement>('[data-slot="diff-file-actions"]')!;
+		let line = card.querySelector("a[data-line-number]")!;
+		let box = actions.getBoundingClientRect();
+
+		expect(actions.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(
+			actions.contains(document.elementFromPoint(box.right - 4, box.top + box.height / 2)),
+		).toBe(true);
+	});
+
 	test("collapses through its summary and keeps the actions on the header's row", async () => {
 		let card = mount();
 		let details = card.querySelector("details")!;

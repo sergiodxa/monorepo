@@ -451,6 +451,52 @@ Diff.File = function DiffFile(handle: Handle<Diff.FileProps>) {
 					mix,
 				)}
 			>
+				<div
+					data-slot="diff-file-actions"
+					mix={[
+						hstack({ gap: 1, align: "center" }),
+						pi(2),
+						bg("neutral.bg-tint"),
+						text("xs"),
+						raw({
+							gridColumn: 2,
+							gridRow: 1,
+							alignSelf: "stretch",
+							position: "relative",
+							zIndex: 1,
+						}),
+					]}
+				>
+					<button
+						type="button"
+						data-action="copy-path"
+						data-path={path}
+						aria-label={labels.copyPath}
+						title={labels.copyPath}
+						mix={[
+							center(),
+							is(7),
+							bs(7),
+							rounded("sm"),
+							fg("neutral.muted"),
+							raw({
+								display: "none",
+								border: "none",
+								background: "none",
+								padding: 0,
+								cursor: "pointer",
+							}),
+							when("[data-diff-live] &", raw({ display: "inline-flex" })),
+							hover(bg("neutral.bg-tint-hover")),
+							when("&[data-copied]", fg("success")),
+							focusVisible(outline({ color: "brand.ring", offset: 2 })),
+						]}
+					>
+						<CopyIcon size={14} aria-hidden="true" />
+					</button>
+					{menu}
+					{viewedControl}
+				</div>
 				<details
 					open={open}
 					data-slot="diff-file-details"
@@ -582,46 +628,6 @@ Diff.File = function DiffFile(handle: Handle<Diff.FileProps>) {
 						})}
 					</div>
 				</details>
-				<div
-					data-slot="diff-file-actions"
-					mix={[
-						hstack({ gap: 1, align: "center" }),
-						pi(2),
-						bg("neutral.bg-tint"),
-						text("xs"),
-						raw({ gridColumn: 2, gridRow: 1, alignSelf: "stretch" }),
-					]}
-				>
-					<button
-						type="button"
-						data-action="copy-path"
-						data-path={path}
-						aria-label={labels.copyPath}
-						title={labels.copyPath}
-						mix={[
-							center(),
-							is(7),
-							bs(7),
-							rounded("sm"),
-							fg("neutral.muted"),
-							raw({
-								display: "none",
-								border: "none",
-								background: "none",
-								padding: 0,
-								cursor: "pointer",
-							}),
-							when("[data-diff-live] &", raw({ display: "inline-flex" })),
-							hover(bg("neutral.bg-tint-hover")),
-							when("&[data-copied]", fg("success")),
-							focusVisible(outline({ color: "brand.ring", offset: 2 })),
-						]}
-					>
-						<CopyIcon size={14} aria-hidden="true" />
-					</button>
-					{menu}
-					{viewedControl}
-				</div>
 			</section>
 		);
 	};
