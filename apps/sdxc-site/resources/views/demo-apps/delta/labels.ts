@@ -812,6 +812,8 @@ export const COPY = {
 		views: { inbox: "Inbox", saved: "Saved", done: "Done" },
 		reason: "Reason",
 		reasons: {
+			review: "Review",
+			assign: "Assigned",
 			ci_activity: "CI activity",
 			mention: "Mentioned",
 			comment: "Comment",
@@ -825,10 +827,13 @@ export const COPY = {
 			run: (label: string, state: "success" | "failure" | "cancelled" | "in_progress") =>
 				`${label} ${{ success: "succeeded", failure: "failed", cancelled: "was cancelled", in_progress: "is running" }[state]}`,
 			mention: (actor: string) => `${actor} mentioned you`,
+			assign: (actor: string) => `${actor} assigned you`,
+			review: (actor: string) => `${actor} reviewed your pull request`,
 			comment: (actor: string) => `${actor} commented`,
 			author: (actor: string) => `${actor} commented on your commit`,
 		},
 		commit: "Commit",
+		kinds: { issue: "Issue", pull: "Pull request" },
 		unread: "Unread. ",
 		select: (title: string) => `Select ${title}`,
 		done: "Done",
