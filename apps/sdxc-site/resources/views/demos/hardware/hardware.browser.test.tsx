@@ -128,6 +128,25 @@ describe("Strata Two preorder", () => {
 });
 
 describe("Strata Two sound board", () => {
+	test("marks the switch the reader picks as the selected one", async () => {
+		renderPage();
+		let labels = [...document.querySelectorAll<HTMLLabelElement>("#play fieldset label")];
+		let notch = labels[1];
+		let selected = () =>
+			labels.map((label) => ({
+				checked: label.querySelector("input")!.checked,
+				background: getComputedStyle(label).backgroundColor,
+			}));
+		expect(selected()[0]!.checked).toBe(true);
+		expect(selected()[0]!.background).not.toBe(selected()[1]!.background);
+
+		notch!.click();
+		await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+		expect(selected().map((state) => state.checked)).toEqual([false, true]);
+		expect(selected()[1]!.background).not.toBe(selected()[0]!.background);
+	});
+
 	test("presses a key under the pointer and lets it up on release", () => {
 		renderPage();
 		let board = document.querySelector<HTMLButtonElement>("#play button")!;

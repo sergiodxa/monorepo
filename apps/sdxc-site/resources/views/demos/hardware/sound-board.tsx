@@ -179,6 +179,7 @@ export const SoundBoard = clientEntry(
 									raw({ position: "absolute", opacity: "0", pointerEvents: "none" }),
 									on("change", () => {
 										kind = option.kind;
+										void handle.update();
 									}),
 								]}
 							/>
