@@ -67,6 +67,17 @@ describe("the lesson player", () => {
 		);
 	});
 
+	test("shows the drawn frame through the video once the custom bar takes over", () => {
+		mounted = render(<LessonPlayer />);
+		let video = mounted.container.querySelector("video")!;
+		let bar = mounted.container.querySelector<HTMLElement>('[data-slot="video-player-controls"]')!;
+		expect(video.controls).toBe(false);
+		expect(getComputedStyle(video).opacity).toBe("0");
+		expect(getComputedStyle(bar).opacity).toBe("1");
+		video.controls = true;
+		expect(getComputedStyle(video).opacity).toBe("1");
+	});
+
 	test("hands the chapters and transcript to the native player as tracks", async () => {
 		mounted = render(<LessonPlayer />);
 		let [chapters, captions] = [...mounted.container.querySelectorAll("track")];

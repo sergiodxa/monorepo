@@ -96,6 +96,7 @@ export function LessonPlayer() {
 					poster={CLEAR_POSTER}
 					captionsLabel="English"
 					chaptersLabel="Chapters"
+					mix={[when("& > video:not([controls])", raw({ opacity: "0" }))]}
 				>
 					<VideoPlayer.Frame>
 						<div data-camera="side">
