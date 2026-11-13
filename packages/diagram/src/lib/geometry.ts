@@ -70,7 +70,7 @@ export function clip(box: Box, outline: Outline, toward: Point): Point {
  * @param radius - The largest corner radius
  * @returns The `d` attribute
  */
-export function pathData(points: readonly Point[], radius = 10): string {
+export function pathData(points: readonly Point[], radius = 12): string {
 	let [first, ...rest] = points;
 	if (!first) return "";
 	let d = `M${num(first.x)} ${num(first.y)}`;

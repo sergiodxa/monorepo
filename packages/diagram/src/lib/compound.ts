@@ -51,7 +51,7 @@ export interface CompoundLayout {
 }
 
 /** Space between a group's border and its contents. */
-const GROUP_PADDING = 16;
+const GROUP_PADDING = 22;
 
 /** The id of the top level, which no group may take. */
 const ROOT = "\u0000root";
