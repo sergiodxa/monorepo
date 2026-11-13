@@ -13,8 +13,8 @@ import { BENCHMARK } from "~/resources/views/demos/library/data";
 
 /** The terminal's lines: the text, and whether it is the lime success line. */
 const LINES = [
-	["$ bun add plumb", false],
-	["+ plumb@4.2.0  0 deps", false],
+	["$ bun add plumb-schema", false],
+	["+ plumb-schema@4.2.0", false],
 	["$ bunx plumb check", false],
 	["✓ User  compiled 0.4 ms", true],
 ] as const;

@@ -18,12 +18,18 @@ export const REPO = {
 	openIssues: 31,
 } as const;
 
+/**
+ * The name plumb publishes under on npm. The bare `plumb` belongs to an unrelated package,
+ * so every install line and import names this one; the CLI it installs is still `plumb`.
+ */
+export const PACKAGE = "plumb-schema";
+
 /** The install command per package manager, in the order the tabs show them. */
 export const INSTALL = [
-	{ value: "npm", command: "npm install plumb" },
-	{ value: "pnpm", command: "pnpm add plumb" },
-	{ value: "bun", command: "bun add plumb" },
-	{ value: "deno", command: "deno add npm:plumb" },
+	{ value: "npm", command: `npm install ${PACKAGE}` },
+	{ value: "pnpm", command: `pnpm add ${PACKAGE}` },
+	{ value: "bun", command: `bun add ${PACKAGE}` },
+	{ value: "deno", command: `deno add npm:${PACKAGE}` },
 ] as const;
 
 /**

@@ -27,12 +27,15 @@ export function ClosingBand() {
 			title="Validate your first request body"
 			description="Install plumb, write the schema you already have in your head, and read the function it compiles to. Five minutes, no account, MIT."
 			actions={
-				<>
-					<InstallLine name="plumb-install-closing" />
-					<LinkButton href="#docs" color="brand" mix={[landingCtaChrome()]}>
-						Read the quickstart
-					</LinkButton>
-				</>
+				<InstallLine
+					name="plumb-install-closing"
+					align="center"
+					after={
+						<LinkButton href="#docs" color="brand" mix={[landingCtaChrome()]}>
+							Read the quickstart
+						</LinkButton>
+					}
+				/>
 			}
 		/>
 	);

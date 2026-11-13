@@ -18,6 +18,21 @@ import {
 
 import { renderNearView } from "~/resources/views/demos/near-view";
 
+/** A Remix route: the action reads the body from the request the router hands it. */
+const REMIX = `import { route } from "remix/routes";
+import { createRouter } from "remix/router";
+import { User } from "./schemas";
+
+let routes = route({ users: "/users" });
+let router = createRouter();
+
+router.post(routes.users, async ({ request }) => {
+  let result = User.safeParse(await request.json());
+  if (!result.ok) return Response.json(result.issues, { status: 422 });
+  let user = await db.users.insert(result.value);
+  return Response.json(user, { status: 201 });
+});`;
+
 /** A Hono route. */
 const HONO = `import { Hono } from "hono";
 import { User } from "./schemas";
@@ -41,18 +56,6 @@ export async function POST(request: Request) {
   let user = await db.users.insert(result.value);
   return Response.json(user, { status: 201 });
 }`;
-
-/** An Express route. */
-const EXPRESS = `import express from "express";
-import { User } from "./schemas";
-
-let app = express().use(express.json());
-
-app.post("/users", async (req, res) => {
-  let result = User.safeParse(req.body);
-  if (!result.ok) return res.status(422).json(result.issues);
-  res.status(201).json(await db.users.insert(result.value));
-});`;
 
 /** A Cloudflare Worker, reading the module \`plumb build\` wrote at build time. */
 const WORKER = `// precompiled by \`plumb build\`: Workers forbid eval
@@ -101,9 +104,9 @@ export function RuntimesChapter() {
 						lineNumbers
 						name="plumb-runtimes"
 						tabs={[
+							{ label: "remix.ts", content: REMIX, language: "ts" },
 							{ label: "hono.ts", content: HONO, language: "ts" },
 							{ label: "next.ts", content: NEXT, language: "ts" },
-							{ label: "express.ts", content: EXPRESS, language: "ts" },
 							{ label: "worker.js", content: WORKER, language: "js" },
 						]}
 					/>

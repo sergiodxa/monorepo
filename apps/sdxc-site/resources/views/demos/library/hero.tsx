@@ -7,12 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { ArrowRightIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
-import { LinkButton } from "@sdxc/ui";
 import { AccentText, LandingHero, TypedTerminal } from "@sdxc/ui/landing";
-import { landingCtaChrome } from "@sdxc/ui/styles";
 
-import { RELEASE } from "~/resources/views/demos/library/data";
+import { PACKAGE, RELEASE } from "~/resources/views/demos/library/data";
 import { InstallLine } from "~/resources/views/demos/library/install-line";
 
 /**
@@ -21,8 +20,8 @@ import { InstallLine } from "~/resources/views/demos/library/install-line";
  * each line fits a phone's terminal without scrolling.
  */
 const SESSION: readonly TypedTerminal.Line[] = [
-	{ kind: "input", text: "bun add plumb" },
-	{ kind: "output", text: `+ plumb@${RELEASE.version}  0 dependencies`, status: "muted" },
+	{ kind: "input", text: `bun add ${PACKAGE}` },
+	{ kind: "output", text: `+ ${PACKAGE}@${RELEASE.version}  0 dependencies`, status: "muted" },
 	{ kind: "input", text: "bunx plumb check src/schemas" },
 	{ kind: "output", text: "✓ User     12 fields  0.4 ms", status: "ok" },
 	{ kind: "output", text: "✓ Address   5 fields  0.1 ms", status: "ok" },
@@ -59,12 +58,33 @@ export function LibraryHero() {
 				</>
 			}
 			actions={
-				<>
-					<InstallLine name="plumb-install-hero" />
-					<LinkButton href="#docs" variant="surface" mix={[landingCtaChrome()]}>
-						Read the quickstart
-					</LinkButton>
-				</>
+				<InstallLine
+					name="plumb-install-hero"
+					after={
+						<a
+							href="#docs"
+							mix={[
+								raw({
+									display: "inline-flex",
+									alignItems: "center",
+									gap: "0.5rem",
+									fontSize: "0.875rem",
+									fontWeight: "500",
+									color: "var(--ui-neutral-fg-emphasis)",
+									textDecoration: "underline",
+									textDecorationColor: "var(--ui-landing-hairline)",
+									textUnderlineOffset: "0.3em",
+								}),
+							]}
+						>
+							Read the quickstart
+							<ArrowRightIcon
+								aria-hidden="true"
+								mix={[raw({ inlineSize: "1em", blockSize: "1em" })]}
+							/>
+						</a>
+					}
+				/>
 			}
 			note="MIT · 0 dependencies · 2.9 kB min+gzip · Node 18+, Bun, Deno and Workers"
 			release={

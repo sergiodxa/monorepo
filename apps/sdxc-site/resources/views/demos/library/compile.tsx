@@ -19,7 +19,7 @@ import {
 import { renderNearView } from "~/resources/views/demos/near-view";
 
 /** The schema a reader writes. */
-const SCHEMA = `import { p } from "plumb";
+const SCHEMA = `import { p } from "plumb-schema";
 
 export const User = p.object({
   id: p.string().uuid(),

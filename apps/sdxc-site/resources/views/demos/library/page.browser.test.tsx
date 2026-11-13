@@ -84,7 +84,7 @@ describe("the Plumb page", () => {
 		expect(visible(hero!).map((code) => code.textContent)).toEqual([INSTALL[0].command]);
 
 		await userEvent.click(hero!.querySelector<HTMLElement>('label[for="plumb-install-hero-bun"]')!);
-		expect(visible(hero!).map((code) => code.textContent)).toEqual(["bun add plumb"]);
+		expect(visible(hero!).map((code) => code.textContent)).toEqual([INSTALL[2].command]);
 		expect(visible(closing!).map((code) => code.textContent)).toEqual([INSTALL[0].command]);
 
 		let shown = visible(hero!)[0]!;
