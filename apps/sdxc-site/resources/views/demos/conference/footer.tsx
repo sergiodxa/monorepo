@@ -52,8 +52,8 @@ const COLUMNS: SiteFooter.Column[] = [
 ];
 
 /**
- * The line-up letter: one heading, one line on what arrives and when, and the address field
- * beside its button from `sm`.
+ * The line-up letter: one heading, one line on what arrives and when, the address field
+ * beside its button from `sm`, and the note the sign-up's redirect lands on.
  */
 function Letter() {
 	return () => (
@@ -66,7 +66,7 @@ function Letter() {
 					Four emails a year: the call for speakers, the line-up, early bird day and the videos.
 				</p>
 			</div>
-			<form method="post" action="/examples/overprint/letter">
+			<form method="post" action="/examples/overprint/letter#letter-signed-up">
 				<div
 					mix={css({
 						display: "flex",
@@ -88,6 +88,23 @@ function Letter() {
 						Sign up
 					</Button>
 				</div>
+				<p
+					id="letter-signed-up"
+					role="status"
+					mix={css({
+						display: "none",
+						margin: "0.75rem 0 0",
+						fontSize: "0.9375rem",
+						fontWeight: "600",
+						paddingInlineStart: "0.75rem",
+						borderInlineStart: `3px solid ${PINK}`,
+						scrollMarginBlock: "6rem",
+						"&:target": { display: "block" },
+					})}
+				>
+					Signed up: the 2028 call for speakers is the first email. (This is a demo, so no address
+					was stored.)
+				</p>
 			</form>
 		</div>
 	);

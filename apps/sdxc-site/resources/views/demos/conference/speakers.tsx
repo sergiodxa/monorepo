@@ -26,7 +26,7 @@ import { renderNearView } from "~/resources/views/demos/near-view";
  */
 export default function ConferenceSpeakers() {
 	return () => (
-		<LandingSection id="speakers" mix={[renderNearView(1700, 3900)]}>
+		<LandingSection id="speakers" mix={[renderNearView(1740, 2666)]}>
 			<LandingHeader
 				eyebrow="Speakers · 12"
 				layout="split"

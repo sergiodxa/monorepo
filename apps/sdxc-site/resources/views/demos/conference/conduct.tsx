@@ -39,7 +39,7 @@ export default function ConferenceConduct() {
 		<LandingSection
 			id="conduct"
 			mix={[
-				renderNearView(640, 1250),
+				renderNearView(395, 852),
 				css({
 					backgroundColor: BLUE,
 					color: "var(--ui-bg)",

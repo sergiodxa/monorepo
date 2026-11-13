@@ -32,7 +32,7 @@ const FACTS = [
  */
 export default function ConferenceVenue() {
 	return () => (
-		<LandingSection id="venue" tone="tinted" mix={[renderNearView(820, 1500)]}>
+		<LandingSection id="venue" tone="tinted" mix={[renderNearView(704, 1181)]}>
 			<div
 				mix={css({
 					display: "grid",

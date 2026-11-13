@@ -27,7 +27,7 @@ import { renderNearView } from "~/resources/views/demos/near-view";
  */
 export default function ConferenceSponsors() {
 	return () => (
-		<LandingSection id="sponsors" tone="tinted" mix={[renderNearView(900, 1400)]}>
+		<LandingSection id="sponsors" tone="tinted" mix={[renderNearView(1082, 1194)]}>
 			<LandingHeader
 				eyebrow="Sponsors"
 				align="center"

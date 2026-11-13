@@ -34,7 +34,7 @@ const FLAGS: Record<Tier["state"], string> = {
  */
 export default function ConferenceTickets() {
 	return () => (
-		<LandingSection id="tickets" mix={[renderNearView(980, 1900)]}>
+		<LandingSection id="tickets" mix={[renderNearView(793, 1824)]}>
 			<LandingHeader
 				eyebrow={`Tickets · ${TIERS.reduce((sum, tier) => sum + tier.seats, 0)} seats in three releases`}
 				layout="split"
@@ -242,19 +242,40 @@ function SeatMeter(handle: Handle<{ tier: Tier; ink: string }>) {
 }
 
 /**
- * The release's action: a checkout form for the one on sale, and a disabled button saying why
- * for the others, so a reader sees at a glance which button works.
+ * The release's action: a checkout form for the one on sale, whose redirect lands on the note
+ * under its button, and a disabled button saying why for the others, so a reader sees at a
+ * glance which button works.
  */
 function TierAction(handle: Handle<{ tier: Tier }>) {
 	return () => {
 		let { tier } = handle.props;
 		if (tier.state === "on-sale") {
 			return (
-				<form method="post" action="/examples/overprint/checkout" mix={css({ display: "grid" })}>
+				<form
+					method="post"
+					action="/examples/overprint/checkout#ticket-reserved"
+					mix={css({ display: "grid", gap: "0.75rem" })}
+				>
 					<input type="hidden" name="release" value={tier.id} />
 					<Button type="submit" color="brand" mix={[landingCtaChrome()]}>
 						Buy a {tier.name.toLowerCase()} ticket
 					</Button>
+					<p
+						id="ticket-reserved"
+						role="status"
+						mix={css({
+							display: "none",
+							margin: "0",
+							padding: "0.625rem 0.75rem",
+							border: `2px solid ${PINK}`,
+							fontSize: "0.875rem",
+							scrollMarginBlock: "6rem",
+							"&:target": { display: "block" },
+						})}
+					>
+						Your {tier.name.toLowerCase()} seat is held for 15 minutes. (This is a demo, so no
+						ticket was sold.)
+					</p>
 				</form>
 			);
 		}

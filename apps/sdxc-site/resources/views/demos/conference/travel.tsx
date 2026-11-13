@@ -30,7 +30,7 @@ const ROUTES = [
  */
 export default function ConferenceTravel() {
 	return () => (
-		<LandingSection id="travel" mix={[renderNearView(760, 1500)]}>
+		<LandingSection id="travel" mix={[renderNearView(580, 1051)]}>
 			<LandingHeader
 				eyebrow="Travel and stay"
 				layout="split"

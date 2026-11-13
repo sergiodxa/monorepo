@@ -34,7 +34,7 @@ const WIDE = "@container overprint-schedule (min-width: 48rem)";
  */
 export default function ConferenceSchedule() {
 	return () => (
-		<LandingSection id="schedule" mix={[renderNearView(1900, 3300)]}>
+		<LandingSection id="schedule" mix={[renderNearView(1607, 2735)]}>
 			<LandingHeader
 				eyebrow="Thursday 15 April · Programme"
 				layout="split"
