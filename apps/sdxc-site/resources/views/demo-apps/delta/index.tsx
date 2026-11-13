@@ -33,6 +33,7 @@ import type { ShellSection } from "./shell";
 import { ciScreen, ciStream } from "./ci";
 import { buildTree, isHeadRef, listFolder, parsePage, shortSha } from "./data";
 import { commitSource, readDiff, readDiffFile, readView, LazyHunks } from "./diffs";
+import { INBOX_TOASTS, inboxScreen, submitInbox } from "./inbox";
 import { COPY } from "./labels";
 import { BlobScreen, NotInBuild } from "./screens/blob";
 import { CommitScreen, CommitsScreen } from "./screens/commits";
@@ -131,6 +132,7 @@ const TOASTS: Record<string, Omit<Toast.Flash, "id">> = {
 		description: "Your comments, edits and reviews are gone, so Delta starts fresh.",
 	},
 	...TRACKER_TOASTS,
+	...INBOX_TOASTS,
 };
 
 /** The screens a visitor reaches by clicking, the dashboard first. */
@@ -152,6 +154,9 @@ const SCREENS = [
 	"delta/actions/runs/812/job/3",
 	"delta/actions/runs/815",
 	"delta/actions/runs/815/job/4",
+	"notifications",
+	"notifications?filter=done",
+	"notifications?group=repo&reason=mention",
 ];
 
 /** One screen as both the whole page and the `main` frame draw it. */
@@ -296,6 +301,8 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 				crumb: `${REPO_NAME} › ${COPY.commits.title}`,
 				body: <CommitsScreen history={history} now={now} />,
 			};
+		case "notifications":
+			return await inboxScreen(request, now);
 		case "actions":
 		case "run":
 			return (await ciScreen(target, request, { commits: count, now })) ?? notFound();
@@ -396,7 +403,7 @@ export default {
 			),
 		};
 	},
-	submit(page, form, request) {
-		return submitTracker(page, form, request);
+	async submit(page, form, request) {
+		return (await submitInbox(page, form, request)) ?? submitTracker(page, form, request);
 	},
 } satisfies DemoApp;

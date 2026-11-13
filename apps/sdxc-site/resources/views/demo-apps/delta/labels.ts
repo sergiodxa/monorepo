@@ -120,6 +120,29 @@ export const DIFF_FILE_LABELS: Diff.FileLabels = {
 	empty: "File renamed without changes.",
 };
 
+/** The inbox's filter bar. */
+export const INBOX_FILTER_LABELS: FilterBar.Labels = {
+	toolbar: "Filter notifications",
+	tabs: "Notification views",
+	filters: "Filters",
+	options: "View",
+	apply: "Apply",
+	is: "is",
+	isAnyOf: "is any of",
+	clear: "Clear filters",
+	remove: (field, values) => `Remove ${field}: ${values}`,
+};
+
+/** The bar the inbox's selection turns its footer into. */
+export const INBOX_SELECTION_LABELS: SelectionBar.Labels = {
+	toolbar: "Notifications",
+	clear: "Clear selection",
+	selected: "{count} selected",
+	cleared: "Selection cleared",
+	previous: "Previous page",
+	next: "Next page",
+};
+
 /** The runs list's filter bar. */
 export const RUNS_FILTER_LABELS: FilterBar.Labels = {
 	toolbar: "Filter workflow runs",
@@ -237,6 +260,7 @@ export const COPY = {
 	topics: ["remix", "code-host", "sdxc-ui", "demo"],
 	nav: {
 		dashboard: "Dashboard",
+		notifications: "Notifications",
 		repositories: "Repositories",
 	},
 	tabs: {
@@ -429,6 +453,68 @@ export const COPY = {
 		all: "View all commits",
 		files: (count: number) => `${count} ${count === 1 ? "file" : "files"}`,
 		updated: "Updated",
+	},
+	inbox: {
+		title: "Notifications",
+		caughtUp: "You're all caught up.",
+		unreadCount: (count: number) =>
+			`${count} unread ${count === 1 ? "notification" : "notifications"}.`,
+		views: { inbox: "Inbox", saved: "Saved", done: "Done" },
+		reason: "Reason",
+		reasons: {
+			ci_activity: "CI activity",
+			mention: "Mentioned",
+			comment: "Comment",
+			author: "Author",
+		},
+		groupBy: "Group by",
+		byDate: "Date",
+		byRepo: "Repository",
+		groups: { today: "Today", yesterday: "Yesterday", week: "This week", older: "Older" },
+		activity: {
+			run: (label: string, state: "success" | "failure" | "cancelled" | "in_progress") =>
+				`${label} ${{ success: "succeeded", failure: "failed", cancelled: "was cancelled", in_progress: "is running" }[state]}`,
+			mention: (actor: string) => `${actor} mentioned you`,
+			comment: (actor: string) => `${actor} commented`,
+			author: (actor: string) => `${actor} commented on your commit`,
+		},
+		commit: "Commit",
+		unread: "Unread. ",
+		select: (title: string) => `Select ${title}`,
+		done: "Done",
+		undone: "Move to inbox",
+		save: "Save",
+		unsave: "Unsave",
+		markRead: "Mark as read",
+		moveToInbox: "Move to inbox",
+		failed: "Couldn't save",
+		shown: (count: number) => `${count} ${count === 1 ? "notification" : "notifications"}`,
+		clear: "Clear filters",
+		empty: {
+			inbox: {
+				title: "All caught up",
+				hint: "Nothing needs you right now. New mentions, comments and failed runs land here.",
+			},
+			saved: {
+				title: "Nothing saved",
+				hint: "Save a notification to keep it here after you mark it done.",
+			},
+			done: {
+				title: "Nothing done yet",
+				hint: "Notifications you mark as done move here, so you can bring one back.",
+			},
+			filtered: {
+				title: "No notifications for this reason",
+				hint: "Try another reason, or clear the filter to see every notification in this view.",
+			},
+		},
+		toasts: {
+			done: "Marked as done",
+			undo: "Undo",
+			undone: "Moved back to inbox",
+			read: "Marked as read",
+			saved: "Saved for later",
+		},
 	},
 	actions: {
 		title: "Actions",

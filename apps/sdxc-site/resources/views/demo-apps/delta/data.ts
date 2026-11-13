@@ -81,6 +81,11 @@ export function findHref(query?: string): string {
 	);
 }
 
+/** The address of the notifications inbox, with its view and filters when any are applied. */
+export function notificationsHref(query?: string): string {
+	return href(query === undefined || query === "" ? "notifications" : `notifications?${query}`);
+}
+
 /** The address of the Actions runs list, with its filters when any are applied. */
 export function actionsHref(query?: string): string {
 	return repoHref(query === undefined || query === "" ? "actions" : `actions?${query}`);
@@ -127,7 +132,8 @@ export type DeltaRoute =
 	| { screen: "commits"; ref: string }
 	| { screen: "commit"; sha: string }
 	| { screen: "actions" }
-	| { screen: "run"; id: number; job?: number };
+	| { screen: "run"; id: number; job?: number }
+	| { screen: "notifications" };
 
 /**
  * Reads which screen a page path names. Paths are matched by shape only; whether the file,
@@ -150,6 +156,7 @@ export function parsePage(page: string): DeltaRoute | null {
 	if (segments.some((segment) => segment === "\u0000" || segment === "..")) return null;
 	let [first, second, third, ...rest] = segments;
 	if (first === undefined) return { screen: "dashboard" };
+	if (first === "notifications") return second === undefined ? { screen: "notifications" } : null;
 	if (first !== REPO) return null;
 	if (second === undefined) return { screen: "home" };
 	if (second === "actions") return parseActions(third, rest);

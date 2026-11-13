@@ -348,11 +348,19 @@ describe("Delta on a phone", () => {
 /** Whether the log stream answers as the stream route does, or fails as a dropped one would. */
 let streamFails = false;
 
+/** Every background post a toggle sent, as the page path it posted to. */
+let toggled: string[] = [];
+
 /**
- * The server the running job's log streams from: Delta's own `stream` answered as the stream
- * route answers it, a line at a time with its pauses, or a `503` while `streamFails` holds.
+ * The server behind the page's own fetches: the running job's log as Delta's `stream` answers
+ * it, a line at a time with its pauses (or a `503` while `streamFails` holds), and every
+ * toggle's background post answered `204`, as the action route answers one.
  */
-const STREAMS = setupWorker(
+const WORKER = setupWorker(
+	http.post(/\/demo\/apps\/delta\//, ({ request }) => {
+		toggled.push(new URL(request.url).pathname.replace(/^\/demo\/apps\/delta\//, ""));
+		return new HttpResponse(null, { status: 204 });
+	}),
 	http.get(/\/demo\/apps\/delta\/streams\//, ({ request }) => {
 		let url = new URL(request.url);
 		let part = url.pathname.replace(/^\/demo\/apps\/delta\/streams\//, "");
@@ -364,15 +372,15 @@ const STREAMS = setupWorker(
 	}),
 );
 
+beforeAll(async () => {
+	await WORKER.start({ quiet: true, onUnhandledRequest: "bypass" });
+});
+
+afterAll(() => {
+	WORKER.stop();
+});
+
 describe("Delta's CI", () => {
-	beforeAll(async () => {
-		await STREAMS.start({ quiet: true, onUnhandledRequest: "bypass" });
-	});
-
-	afterAll(() => {
-		STREAMS.stop();
-	});
-
 	test("the runs list, a run and its job swap only main, and Back and Forward walk them again", async () => {
 		await page.viewport(1280, 800);
 		let root = await mountScreen("delta/actions");
@@ -443,6 +451,73 @@ describe("Delta's CI", () => {
 		let refresh = step.querySelector<HTMLAnchorElement>("[data-log-refresh] a")!;
 		expect(refresh.checkVisibility()).toBe(true);
 		expect(new URL(refresh.href).pathname).toBe(`${ROOT}/delta/actions/runs/815/job/4`);
+	});
+});
+
+describe("Delta's inbox", () => {
+	/** A row of the inbox by its notification's id. */
+	function row(root: HTMLElement, id: string): HTMLElement {
+		return root.querySelector<HTMLElement>(`li[data-notification="${id}"]`)!;
+	}
+
+	/** The rows still shown in the view. */
+	function shown(root: HTMLElement): string[] {
+		return [...root.querySelectorAll<HTMLElement>("li[data-notification]")]
+			.filter((item) => !item.hidden)
+			.map((item) => item.dataset["notification"]!);
+	}
+
+	test("Done hides the row at once and posts in the background, adding no history entry", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("notifications");
+		let entries = navigation.entries().length;
+		let address = location.href;
+		toggled = [];
+
+		row(root, "ci-812")
+			.querySelector<HTMLButtonElement>('[data-inbox-action="done"] button[type=submit]')!
+			.click();
+		await settle(() => toggled.length > 0);
+
+		expect(row(root, "ci-812").hidden).toBe(true);
+		expect(toggled).toEqual(["notifications/ci-812"]);
+		expect(location.href).toBe(address);
+		expect(navigation.entries().length).toBe(entries);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("e marks the focused row done and keeps the keyboard on the next one", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("notifications");
+		let [first, second] = shown(root);
+		toggled = [];
+
+		row(root, first!).querySelector<HTMLAnchorElement>("a[data-row-link]")!.focus();
+		document.activeElement!.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "e", bubbles: true, cancelable: true }),
+		);
+		await settle(() => toggled.length > 0);
+
+		expect(row(root, first!).hidden).toBe(true);
+		expect(document.activeElement?.closest("li[data-notification]")).toBe(row(root, second!));
+	});
+
+	test("marking the last row done says the inbox is all caught up", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("notifications");
+		let cleared = root.querySelector<HTMLElement>("[data-inbox-cleared]")!;
+
+		expect(cleared.checkVisibility()).toBe(false);
+		for (let id of shown(root)) {
+			row(root, id)
+				.querySelector<HTMLButtonElement>('[data-inbox-action="done"] button[type=submit]')!
+				.click();
+		}
+		await settle(() => cleared.checkVisibility());
+
+		expect(shown(root)).toEqual([]);
+		expect(cleared.checkVisibility()).toBe(true);
+		expect(cleared.textContent).toContain("All caught up");
 	});
 });
 
