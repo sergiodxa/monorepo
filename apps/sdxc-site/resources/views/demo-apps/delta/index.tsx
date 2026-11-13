@@ -19,6 +19,7 @@ import {
 	commitsBySha,
 	fileTokens,
 	findCommit,
+	isFullCommit,
 	readBlame,
 	readHistory,
 	readTree,
@@ -30,6 +31,7 @@ import { MAIN_FRAME, MainFrame, MainScreen, mainSource } from "../main-frame";
 import type { ShellSection } from "./shell";
 
 import { buildTree, isHeadRef, listFolder, parsePage, shortSha } from "./data";
+import { commitSource, readDiff, readDiffFile, readView, LazyHunks } from "./diffs";
 import { COPY } from "./labels";
 import { BlobScreen, NotInBuild } from "./screens/blob";
 import { CommitScreen, CommitsScreen } from "./screens/commits";
@@ -286,14 +288,41 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 		case "commit": {
 			let commit = await findCommit(target.sha);
 			if (commit === undefined) return notFound();
+			let diff = isFullCommit(commit)
+				? await readDiff(await commitSource(commit), request.url)
+				: undefined;
 			return {
 				title: `${commit.subject} · ${shortSha(commit.sha)}`,
 				nav: "repo",
 				crumb: `${REPO_NAME} › ${shortSha(commit.sha)}`,
-				body: <CommitScreen commit={commit} commits={count} now={now} />,
+				body: (
+					<CommitScreen commit={commit} commits={count} now={now} diff={diff} url={request.url} />
+				),
 			};
 		}
 	}
+}
+
+/**
+ * Answers one of Delta's frames: a large file's lines in a commit, once the reader opens it.
+ * The frame's query carries the page's address and its view, so expand links inside it lead
+ * back to the page.
+ */
+async function framePart(part: string, request: DemoAppRequest): Promise<RemixNode | null> {
+	let [kind, scope, id, ...rest] = part.split("/");
+	if (kind !== "diff" || scope !== "commit" || id === undefined || rest.length > 0) return null;
+	let path = request.url.searchParams.get("path");
+	let commit = await findCommit(id);
+	if (path === null || commit === undefined || !isFullCommit(commit)) return null;
+	let file = commit.files.find((candidate) => candidate.path === path);
+	if (file === undefined) return null;
+	let page = new URL(request.url.searchParams.get("page") ?? "/", request.url);
+	for (let [name, value] of request.url.searchParams) {
+		if (name === "diff" || name === "expand" || name === "load")
+			page.searchParams.append(name, value);
+	}
+	let view = await readDiffFile(await commitSource(commit), file, page, true);
+	return <LazyHunks file={view} view={readView(page)} />;
 }
 
 /**
@@ -312,6 +341,7 @@ export default {
 	screens: SCREENS,
 	cookies: [SHELL_COOKIE],
 	toasts: TOASTS,
+	frame: (part, request) => framePart(part, request),
 	async target(name, request) {
 		if (name !== MAIN_FRAME) return null;
 		let screen = await route(request);

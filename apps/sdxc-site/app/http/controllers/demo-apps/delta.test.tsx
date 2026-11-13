@@ -9,7 +9,8 @@
 
 import { describe, expect, test } from "vitest";
 
-import { readHistory, readTree } from "~/app/services/delta/source";
+import { hasHiddenLines } from "~/app/services/delta/hunks";
+import { fileHunks, fileLinesAt, readHistory, readTree } from "~/app/services/delta/source";
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 import { listFolder } from "~/resources/views/demo-apps/delta/data";
@@ -34,6 +35,22 @@ function escaped(text: string): string {
 
 let tree = await readTree();
 let history = await readHistory();
+
+/** A commit and a modified file in it whose hunks leave lines of the file hidden. */
+async function expandable(): Promise<{ sha: string; path: string } | undefined> {
+	for (let commit of history.commits) {
+		for (let file of commit.files) {
+			if (file.oldPath !== undefined || !file.deletions || !file.additions) continue;
+			if (file.additions + file.deletions > 400) continue;
+			let lines = await fileLinesAt(commit.sha, file.path);
+			let hunks = await fileHunks(commit.sha, file.path);
+			if (lines !== undefined && hunks !== undefined && hasHiddenLines(hunks, lines)) {
+				return { sha: commit.sha, path: file.path };
+			}
+		}
+	}
+	return undefined;
+}
 
 describe("Delta's repository home", () => {
 	test("lists every top-level file and folder, each linked", async () => {
@@ -149,14 +166,54 @@ describe("Delta's commits", () => {
 		expect(body).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.]+/);
 	});
 
-	test("a commit's page shows its subject and the files it changed", async () => {
+	test("a commit's page shows its subject and a diff card for every file it changed", async () => {
 		let commit = history.commits[0];
 		if (commit === undefined) return;
 		let { body, status } = await page(`delta/commit/${commit.sha.slice(0, 10)}`);
 
 		expect(status).toBe(200);
 		expect(body).toContain(escaped(commit.subject));
-		for (let file of commit.files) expect(body).toContain(file.path);
+		for (let file of commit.files) {
+			expect(body).toContain(`data-slot="diff-file" data-path="${escaped(file.path)}"`);
+		}
+	});
+
+	test("keeps the split view in the address", async () => {
+		let commit = history.commits[0];
+		if (commit === undefined) return;
+		let { body } = await page(`delta/commit/${commit.sha}?diff=split`);
+
+		expect(body).toContain('data-view="split"');
+		expect(body).toContain('aria-current="page"');
+	});
+
+	test("widens a file's context from its own lines, linking each press back to the page", async () => {
+		let found = await expandable();
+		if (found === undefined) return;
+		let before = await page(`delta/commit/${found.sha}`);
+		let after = await page(
+			`delta/commit/${found.sha}?expand=${encodeURIComponent(`${found.path}:20`)}`,
+		);
+
+		let headers = (body: string) => [...body.matchAll(/@@ -\d+,?\d* \+\d+,?\d* @@/g)].length;
+		expect(headers(after.body)).toBeLessThanOrEqual(headers(before.body));
+		expect(after.body).not.toBe(before.body);
+		expect(before.body).toContain(`expand=${encodeURIComponent(found.path)}%3A20`);
+	});
+
+	test("draws a large file closed behind Load diff, and its frame answers the lines", async () => {
+		let commit = history.commits.find((candidate) =>
+			candidate.files.some((file) => (file.additions ?? 0) + (file.deletions ?? 0) > 400),
+		);
+		if (commit === undefined) return;
+		let { body } = await page(`delta/commit/${commit.sha}`);
+		expect(body).toContain("data-large");
+		expect(body).toContain("Load diff");
+		let frame = /"(\/demo\/apps\/delta\/frames\/diff\/commit\/[^"]+)"/.exec(body)?.[1];
+		expect(frame).toBeDefined();
+		let response = await fetchApp(frame!.replaceAll("&amp;", "&"));
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain('data-slot="diff-hunks"');
 	});
 
 	test("an unknown commit answers the app's 404", async () => {

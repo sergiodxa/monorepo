@@ -13,6 +13,8 @@ import type { Line } from "@sdxc/highlight";
 import { parseHunks, parsePatch } from "@sdxc/diff";
 import { tokenizeLines } from "@sdxc/highlight";
 
+import { unapplyHunks } from "./hunks";
+
 /** One file at the pinned commit. */
 export interface DeltaFile {
 	/** Relative to `DELTA_ROOT`, such as `shell.tsx` or `screens/blob.tsx`. */
@@ -311,4 +313,52 @@ export async function fileHunks(sha: string, path: string): Promise<Hunk[] | und
 	let hunks = parseHunks(parsed.text, file);
 	parsedHunks.set(key, hunks);
 	return hunks;
+}
+
+/** Files as they were after a commit, keyed by `sha:path`. */
+let filesAt = new Map<string, Promise<string[] | undefined>>();
+
+/**
+ * A file's lines as they stood right after a commit in the history, rebuilt from the pinned
+ * file by walking every later commit's patch of it backwards, renames included. Memoized per
+ * `(sha, path)`, so expanding context on one file pays the walk once per isolate.
+ *
+ * @param sha A commit inside the history.
+ * @param path The file's path at that commit.
+ * @returns The lines, or `undefined` when a later patch was dropped for size or the commit is
+ *   outside the history, so the walk cannot be trusted.
+ */
+export function fileLinesAt(sha: string, path: string): Promise<string[] | undefined> {
+	let key = `${sha}:${path}`;
+	let cached = filesAt.get(key);
+	if (cached !== undefined) return cached;
+	let promise = walkBack(sha, path);
+	filesAt.set(key, promise);
+	return promise;
+}
+
+/** Walks a file back from the pinned commit to `sha`, as {@link fileLinesAt} answers. */
+async function walkBack(sha: string, path: string): Promise<string[] | undefined> {
+	let [tree, history] = await Promise.all([readTree(), readHistory()]);
+	let stop = history.commits.findIndex((commit) => commit.sha === sha);
+	if (stop === -1) return undefined;
+	let later = history.commits.slice(0, stop);
+	let names = new Map<string, string>();
+	let current = path;
+	for (let commit of [...later].reverse()) {
+		let change = commit.files.find((file) => (file.oldPath ?? file.path) === current);
+		if (change !== undefined) current = change.path;
+		names.set(commit.sha, current);
+	}
+	let file = tree.files.find((candidate) => candidate.path === current);
+	let lines = file === undefined ? [] : file.text.replace(/\r?\n$/, "").split(/\r?\n/);
+	for (let commit of later) {
+		let name = names.get(commit.sha) ?? path;
+		let change = commit.files.find((candidate) => candidate.path === name);
+		if (change === undefined) continue;
+		let hunks = await fileHunks(commit.sha, name);
+		if (hunks === undefined) return undefined;
+		lines = unapplyHunks(lines, hunks);
+	}
+	return lines;
 }

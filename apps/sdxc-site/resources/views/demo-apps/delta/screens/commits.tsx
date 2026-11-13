@@ -1,7 +1,7 @@
 /**
  * Delta's commits, read from git at build time: the list on `main` grouped by the day each
  * commit was authored, every row a subject, its co-authors, its author and age and a short
- * sha that copies the full one; and one commit's page, its message and the files it changed.
+ * sha that copies the full one; and one commit's page, its message and every file's diff.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { GitCommitHorizontalIcon, GitBranchIcon } from "@sdxc/icons";
+import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { font, tabularNums, text, weight } from "@sdxc/u/typography";
@@ -21,7 +22,10 @@ import type { DeltaCommit, DeltaCommitMeta, DeltaHistory } from "~/app/services/
 
 import { DELTA_HISTORY_LIMIT } from "~/config/delta";
 
-import { commitHref, commitsHref, fileHref, groupByDay, joinNames, shortSha } from "../data";
+import type { DiffView } from "../diffs";
+
+import { commitHref, commitsHref, groupByDay, joinNames, shortSha } from "../data";
+import { DiffPage } from "../diffs";
 import { InitialsTile } from "../glyphs";
 import { COPY } from "../labels";
 import { RepoHeader } from "../shell";
@@ -260,17 +264,21 @@ namespace CommitScreen {
 		commit: DeltaCommit | DeltaCommitMeta;
 		commits: number;
 		now: number;
+		/** The commit's files as diffs; absent for a commit outside the build's history. */
+		diff?: DiffView;
+		/** The page's address, which carries the view and every expansion. */
+		url: URL;
 	}
 }
 
 /**
- * Renders one commit: its subject, author and age, its full message, and the files it
- * changed with their counts. A commit outside the build's history shows its name and why
- * the rest is missing.
+ * Renders one commit: its subject, author and age, its full message, and the diff of every
+ * file it changed. A commit outside the build's history shows its name and why the rest is
+ * missing.
  */
 export function CommitScreen(handle: Handle<CommitScreen.Props>) {
 	return () => {
-		let { commit, commits, now } = handle.props;
+		let { commit, commits, diff, now, url } = handle.props;
 		let full = "files" in commit ? commit : undefined;
 		let people = joinNames([commit.author, ...(full?.coAuthors ?? [])], COPY.commits.and);
 		return (
@@ -337,64 +345,29 @@ export function CommitScreen(handle: Handle<CommitScreen.Props>) {
 								</Empty.Action>
 							</Empty>
 						) : (
-							<>
-								<section aria-labelledby="commit-files">
-									<h2
-										id="commit-files"
-										mix={[text("sm"), weight("semibold"), raw({ margin: "0 0 0.5rem" })]}
-									>
-										{COPY.commit.filesChanged(full.files.length)}
-									</h2>
-									<CommitList label={COPY.commit.files}>
-										{full.files.map((file) => (
-											<li
+							<section aria-labelledby="commit-files">
+								<h2 id="commit-files" mix={[visuallyHidden()]}>
+									{COPY.commit.diffs}
+								</h2>
+								{diff === undefined ? null : (
+									<DiffPage
+										diff={diff}
+										url={url}
+										toolbar={
+											<span
 												mix={[
-													raw({
-														display: "flex",
-														alignItems: "center",
-														gap: "0.75rem",
-														paddingBlock: "0.5rem",
-														paddingInline: "0.875rem",
-														borderBlockStart: "1px solid var(--ui-neutral-border)",
-														"&:first-child": { borderBlockStart: "0" },
-													}),
+													text("sm"),
+													fg("neutral.muted"),
+													tabularNums(),
+													raw({ marginInlineEnd: "auto" }),
 												]}
 											>
-												<a
-													href={fileHref(file.path)}
-													mix={[
-														font("mono"),
-														text("sm"),
-														fg("neutral.emphasis"),
-														raw({ flex: "1 1 auto", minInlineSize: 0, overflowWrap: "anywhere" }),
-													]}
-												>
-													{file.oldPath === undefined
-														? file.path
-														: `${file.oldPath} → ${file.path}`}
-												</a>
-												<span
-													mix={[
-														font("mono"),
-														text("xs"),
-														tabularNums(),
-														raw({ display: "inline-flex", gap: "0.5rem" }),
-													]}
-												>
-													{file.additions === null ? (
-														<span mix={[fg("neutral.muted")]}>{COPY.commit.binary}</span>
-													) : (
-														<>
-															<span mix={[fg("success")]}>{`+${file.additions}`}</span>
-															<span mix={[fg("danger")]}>{`−${file.deletions}`}</span>
-														</>
-													)}
-												</span>
-											</li>
-										))}
-									</CommitList>
-								</section>
-							</>
+												{COPY.commit.summary(diff.files.length, diff.additions, diff.deletions)}
+											</span>
+										}
+									/>
+								)}
+							</section>
 						)}
 					</div>
 				</HeadingScope>

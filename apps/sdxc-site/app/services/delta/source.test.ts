@@ -17,6 +17,7 @@ import {
 	commitsBySha,
 	fileHunks,
 	fileLines,
+	fileLinesAt,
 	fileTokens,
 	findCommit,
 	isFullCommit,
@@ -153,6 +154,40 @@ describe("patches", () => {
 		let first = await fileHunks(commit.sha, file.newPath);
 		expect(first).toBeDefined();
 		expect(await fileHunks(commit.sha, file.newPath)).toBe(first);
+	});
+});
+
+describe("fileLinesAt", () => {
+	test("reads the pinned file at the newest commit to touch it", async () => {
+		let [tree, history] = await Promise.all([readTree(), readHistory()]);
+		for (let file of tree.files) {
+			let newest = history.commits.find((commit) =>
+				commit.files.some((changed) => changed.path === file.path),
+			);
+			if (newest === undefined) continue;
+			expect(await fileLinesAt(newest.sha, file.path), file.path).toEqual(
+				file.text.replace(/\r?\n$/, "").split(/\r?\n/),
+			);
+		}
+	});
+
+	test("rebuilds every changed file so each hunk's new lines sit where it says", async () => {
+		let history = await readHistory();
+		for (let commit of history.commits) {
+			for (let changed of commit.files) {
+				let hunks = await fileHunks(commit.sha, changed.path);
+				let lines = await fileLinesAt(commit.sha, changed.path);
+				if (hunks === undefined || lines === undefined) continue;
+				for (let line of hunks.flatMap((hunk) => hunk.lines)) {
+					if (line.new === undefined) continue;
+					expect(lines[line.new - 1], `${commit.sha} ${changed.path}:${line.new}`).toBe(line.text);
+				}
+			}
+		}
+	});
+
+	test("answers nothing for a commit outside the history", async () => {
+		expect(await fileLinesAt("0".repeat(40), "shell.tsx")).toBeUndefined();
 	});
 });
 

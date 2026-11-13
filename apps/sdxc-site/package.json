@@ -32,6 +32,7 @@
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/iife": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/lazy-frame": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/mail": "workspace:*",

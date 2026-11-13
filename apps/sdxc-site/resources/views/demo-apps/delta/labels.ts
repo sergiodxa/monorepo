@@ -10,6 +10,7 @@
 import type { AppShell } from "@sdxc/ui/app/app-shell";
 import type { CodeView } from "@sdxc/ui/app/code-view";
 import type { CommandPalette } from "@sdxc/ui/app/command-palette";
+import type { Diff } from "@sdxc/ui/app/diff";
 import type { FilterMenu } from "@sdxc/ui/app/filter-menu";
 import type { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 import type { Tree } from "@sdxc/ui/app/tree";
@@ -75,6 +76,83 @@ export const REF_LABELS: FilterMenu.Labels = {
 	empty: "Nothing to show",
 	more: "{count} more, refine your filter",
 	save: "Save",
+};
+
+/** What a page of diffs announces once a path is copied. */
+export const DIFF_LABELS: Diff.Labels = { copied: "Copied" };
+
+/** The unified/split switch and the review's progress above a page of diffs. */
+export const DIFF_TOOLBAR_LABELS: Diff.ToolbarLabels = {
+	view: "Diff view",
+	unified: "Unified",
+	split: "Split",
+	filesViewed: "files viewed",
+};
+
+/** One file's card: its header, its hidden column names and the notes that stand in for lines. */
+export const DIFF_FILE_LABELS: Diff.FileLabels = {
+	columns: {
+		oldNumber: "Original file line number",
+		newNumber: "Diff line number",
+		oldText: "Original file line",
+		change: "Diff line change",
+	},
+	expandContext: "Expand context",
+	copyPath: "Copy file path",
+	statuses: {
+		added: "Added",
+		modified: "Modified",
+		deleted: "Deleted",
+		renamed: "Renamed",
+		copied: "Copied",
+	},
+	changes: (additions, deletions) =>
+		`${additions} ${additions === 1 ? "addition" : "additions"}, ${deletions} ${deletions === 1 ? "deletion" : "deletions"}`,
+	binary: "Binary file not shown.",
+	tooLarge: "This diff is too large to keep in the build.",
+	largeDiff: "Large diffs are not rendered by default.",
+	empty: "File renamed without changes.",
+};
+
+/** The runs list's filter bar. */
+export const RUNS_FILTER_LABELS: FilterBar.Labels = {
+	toolbar: "Filter workflow runs",
+	tabs: "Workflow runs",
+	filters: "Filters",
+	options: "View",
+	apply: "Apply",
+	is: "is",
+	isAnyOf: "is any of",
+	clear: "Clear filters",
+	remove: (field, values) => `Remove ${field}: ${values}`,
+};
+
+/** The runs list's refresh control. */
+export const REFRESH_LABELS: AutoRefresh.Labels = {
+	trigger: "Auto-refresh",
+	updated: "Updated {time}",
+};
+
+/** A job log's chrome and each step's state. */
+export const LOG_LABELS: LogViewer.Labels = {
+	log: "Job log",
+	states: {
+		success: "Succeeded",
+		failure: "Failed",
+		running: "In progress",
+		queued: "Queued",
+		skipped: "Skipped",
+		cancelled: "Cancelled",
+	},
+	search: "Search logs",
+	matches: "{index} of {count}",
+	noMatches: "No results",
+	previousMatch: "Previous match",
+	nextMatch: "Next match",
+	showTimestamps: "Show timestamps",
+	hideTimestamps: "Hide timestamps",
+	jumpToLatest: "Jump to latest",
+	refresh: "Refresh to see the latest lines",
 };
 
 /** The app's own words, by screen. */
@@ -161,6 +239,10 @@ export const COPY = {
 		files: "Changed files",
 		filesChanged: (count: number) => `${count} ${count === 1 ? "file" : "files"} changed`,
 		binary: "Binary",
+		summary: (files: number, additions: number, deletions: number) =>
+			`${files} changed ${files === 1 ? "file" : "files"} with ${additions} ${additions === 1 ? "addition" : "additions"} and ${deletions} ${deletions === 1 ? "deletion" : "deletions"}`,
+		loadDiff: "Load diff",
+		diffs: "Changes",
 		missingTitle: "This commit isn't in Delta's build",
 		missingHint:
 			"The build keeps the latest commits that touch Delta. Older ones keep only their name and date.",

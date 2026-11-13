@@ -16,7 +16,7 @@ import { render } from "remix/component/test";
 import { afterAll, describe, expect, onTestFinished, test } from "vitest";
 import { page } from "vitest/browser";
 
-import { readTree } from "~/app/services/delta/source";
+import { readHistory, readTree } from "~/app/services/delta/source";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import delta from "~/resources/views/demo-apps/delta";
 
@@ -281,6 +281,18 @@ describe("Delta on a phone", () => {
 		await mountScreen(screen);
 
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
+	});
+
+	test("a commit's diffs, split or unified, never scroll the page sideways", async () => {
+		await page.viewport(375, 812);
+		let commit = (await readHistory()).commits[0];
+		if (commit === undefined) return;
+
+		for (let view of ["unified", "split"]) {
+			let root = await mountScreen(`delta/commit/${commit.sha}?diff=${view}`);
+			expect(root.querySelectorAll('[data-slot="diff-file"]').length, view).toBeGreaterThan(0);
+			expect(document.documentElement.scrollWidth, view).toBeLessThanOrEqual(375);
+		}
 	});
 
 	test("a file trades the tree for a parent link", async () => {

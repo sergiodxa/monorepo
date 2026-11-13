@@ -31,6 +31,7 @@ globalThis.navigation?.addEventListener("navigate", stayOnExampleNavigation);
  * imported here where the bundler can resolve it.
  */
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
+	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
 	"@sdxc/ui/app/app-shell-toggle": () => import("@sdxc/ui/app/app-shell-toggle"),
 	"@sdxc/ui/app/auto-refresh": () => import("@sdxc/ui/app/auto-refresh"),
 	"@sdxc/ui/app/board": () => import("@sdxc/ui/app/board"),
