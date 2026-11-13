@@ -1,7 +1,8 @@
 /**
  * Review gestures for a page of diffs, from listeners on the page's diff root rather than
  * one per line: a `+` press or a drag across line numbers names the lines a comment covers,
- * and a file's copy button writes its path. Why JS: ranges and the clipboard need script.
+ * a file's copy button writes its path, and the arrow keys walk a table's line links from its
+ * one Tab stop. Why JS: ranges, roving focus and the clipboard need script.
  * No-JS baseline: each `+` links to the app's comment form, and numbers link to their line.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -40,6 +41,32 @@ export const DIFF_SELECTED_ATTRIBUTE = "data-selected";
 
 /** Selector for anything a comment gesture starts or lands on: a number or a `+` link. */
 const LINE_SELECTOR = "a[data-line-number], a[data-comment]";
+
+/**
+ * The line link a key moves focus to from `link`: up or down its own column (the same side's
+ * numbers, or its comment links), to the first or last of that column, or across its row.
+ */
+function lineStep(link: HTMLAnchorElement, key: string): HTMLAnchorElement | undefined {
+	if (!link.matches(LINE_SELECTOR)) return undefined;
+	let row = link.closest("tr");
+	let table = link.closest("table");
+	if (row === null || table === null) return undefined;
+	if (key === "ArrowLeft" || key === "ArrowRight") {
+		let across = [...row.querySelectorAll<HTMLAnchorElement>(LINE_SELECTOR)];
+		return across[across.indexOf(link) + (key === "ArrowLeft" ? -1 : 1)];
+	}
+	let column = link.closest("td")?.cellIndex;
+	let kind = link.hasAttribute("data-comment") ? "a[data-comment]" : "a[data-line-number]";
+	let same = [...table.querySelectorAll<HTMLAnchorElement>(kind)].filter(
+		(other) => other.closest("td")?.cellIndex === column,
+	);
+	let at = same.indexOf(link);
+	if (key === "ArrowUp") return same[at - 1];
+	if (key === "ArrowDown") return same[at + 1];
+	if (key === "Home") return same[0];
+	if (key === "End") return same[same.length - 1];
+	return undefined;
+}
 
 /** How long a copy button reads as copied. */
 const COPIED_MS = 2000;
@@ -201,6 +228,21 @@ export const diffInteractions: MixinFactory<
 				if (done === undefined || done.end === done.line) return;
 				swallowClick = true;
 				request(done, done.end);
+			},
+			{ signal },
+		);
+
+		root.addEventListener(
+			"keydown",
+			(press) => {
+				if (!(press.target instanceof HTMLAnchorElement)) return;
+				let next = lineStep(press.target, press.key);
+				if (next === undefined) return;
+				press.preventDefault();
+				let table = press.target.closest("table");
+				table?.querySelector<HTMLElement>('a[tabindex="0"]')?.setAttribute("tabindex", "-1");
+				next.tabIndex = 0;
+				next.focus();
 			},
 			{ signal },
 		);

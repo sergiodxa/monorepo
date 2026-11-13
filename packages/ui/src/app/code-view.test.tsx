@@ -68,7 +68,10 @@ describe("CodeView on a 10,000-line file", () => {
 		let html = await rendered;
 		expect(occurrences(html, /<tr[ >]/g)).toBe(10_000);
 		expect(occurrences(html, /<tbody[ >]/g)).toBe(50);
-		expect(html).toContain('<a id="L10000" href="?L=10000#L10000" data-line-number="10000"></a>');
+		expect(html).toContain(
+			'<a id="L10000" href="?L=10000#L10000" data-line-number="10000" tabindex="-1"></a>',
+		);
+		expect(occurrences(html, /tabindex="0"/g)).toBe(1);
 	});
 
 	test("hydrates one island for the whole view, none per row", async () => {

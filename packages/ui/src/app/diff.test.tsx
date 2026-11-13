@@ -259,8 +259,12 @@ describe("Diff markup", () => {
 		let html = await body(
 			<Diff.Hunks path="a.ts" fileId="diff-a" hunks={[change]} labels={FILE_LABELS} />,
 		);
-		expect(html).toContain('<a id="diff-aL11" href="#diff-aL11" data-line-number="11"></a>');
-		expect(html).toContain('<a id="diff-aR11" href="#diff-aR11" data-line-number="11"></a>');
+		expect(html).toContain(
+			'<a id="diff-aL11" href="#diff-aL11" data-line-number="11" tabindex="-1"></a>',
+		);
+		expect(html).toContain(
+			'<a id="diff-aR11" href="#diff-aR11" data-line-number="11" tabindex="-1"></a>',
+		);
 		expect(html).toMatch(
 			/<tr data-kind="del"><td><a id="diff-aL11"[^>]*><\/a><\/td><td><\/td><td>let b = <mark>2<\/mark>;<\/td><\/tr>/,
 		);
@@ -286,7 +290,7 @@ describe("Diff markup", () => {
 			/>,
 		);
 		expect(html).toMatch(
-			/data-line-number="11"><\/a><\/td><td>let b = <mark>3<\/mark>;<\/td><\/tr><tr data-thread=""><td colspan="3"><p>Why 3\?<\/p>/,
+			/data-line-number="11" tabindex="-1"><\/a><\/td><td>let b = <mark>3<\/mark>;<\/td><\/tr><tr data-thread=""><td colspan="3"><p>Why 3\?<\/p>/,
 		);
 	});
 

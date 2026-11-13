@@ -548,6 +548,7 @@ function chunkRows(
 	blame: Map<number, BlameCell> | undefined,
 ): RemixNode[] {
 	let rows: RemixNode[] = [];
+	let focusLine = selected?.start ?? 1;
 	for (let line = start; line <= end; line += 1) {
 		let cell = blame?.get(line);
 		let isSelected = selected !== undefined && line >= selected.start && line <= selected.end;
@@ -579,7 +580,12 @@ function chunkRows(
 			<tr data-selected={isSelected ? "" : undefined}>
 				{blameData}
 				<td>
-					<a id={`L${line}`} href={lineHref(line)} data-line-number={line} />
+					<a
+						id={`L${line}`}
+						href={lineHref(line)}
+						data-line-number={line}
+						tabIndex={line === focusLine ? 0 : -1}
+					/>
 				</td>
 				<td>{renderRuns(lines[line - 1] ?? [])}</td>
 			</tr>,

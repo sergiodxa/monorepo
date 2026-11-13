@@ -724,6 +724,7 @@ Diff.Hunks = function DiffHunks(handle: Handle<Diff.HunksProps>) {
 			threads,
 			expandHref,
 			labels,
+			stop: { open: true },
 		};
 		let widest = 1;
 		for (let hunk of hunks) {
@@ -805,6 +806,8 @@ interface RowScope {
 	threads?: Readonly<Record<string, RemixNode>>;
 	expandHref?: (hunk: Hunk, index: number) => string;
 	labels: Diff.HunksLabels;
+	/** Whether no line link has taken the table's one Tab stop yet; the first one drawn does. */
+	stop: { open: boolean };
 }
 
 /** A row ready to draw and the lines it counts toward its chunk. */
@@ -944,6 +947,16 @@ function splitRow(hunk: Hunk, pair: SplitRow, runs: CodeToken[][], scope: RowSco
 	);
 }
 
+/**
+ * A line link's `tabindex`: the first one a table draws is its one Tab stop, and the arrow keys
+ * move it from there, so a long diff costs one Tab rather than two or three per line.
+ */
+function tabStop(scope: RowScope): 0 | -1 {
+	if (!scope.stop.open) return -1;
+	scope.stop.open = false;
+	return 0;
+}
+
 /** A number cell: an empty link painted from `data-line-number`, so a copy takes only code. */
 function numberCell(scope: RowScope, side: DiffSide, line: number | undefined): RemixNode {
 	if (line === undefined) return <td />;
@@ -960,6 +973,7 @@ function numberCell(scope: RowScope, side: DiffSide, line: number | undefined): 
 				id={`${scope.anchor}${side}${line}`}
 				href={scope.lineHref(side, line)}
 				data-line-number={line}
+				tabIndex={tabStop(scope)}
 			/>
 		</td>
 	);
@@ -983,6 +997,7 @@ function codeCell(
 				href={scope.commentHref(scope.path, side, line)}
 				data-comment={`${side}${line}`}
 				aria-label={scope.labels.addComment?.(side, line)}
+				tabIndex={tabStop(scope)}
 			/>
 		) : null;
 	return (

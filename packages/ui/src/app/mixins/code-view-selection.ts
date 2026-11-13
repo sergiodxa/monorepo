@@ -1,7 +1,7 @@
 /**
- * Line selection for a code view, from one listener on the view rather than one per line:
- * a number click selects its line, a shift-click extends to a range, the address becomes
- * `#L3-L8` in place, the band paints, and the line menu moves to the first selected line.
+ * Line selection for a code view, from one listener on the view: a number click selects its
+ * line, a shift-click a range, the address becomes `#L3-L8` in place, the band and line menu
+ * follow, and the numbers are one Tab stop the arrow keys walk.
  * Why JS: ranges, an address rewritten without a navigation, and the clipboard need script.
  * No-JS baseline: every number links to `?L=n#Ln`, the server paints that line and
  * `:target` paints the line an address names.
@@ -36,6 +36,32 @@ export const CODE_VIEW_MENU_ATTRIBUTE = "data-line-menu";
 
 /** Selector for a line's number link, whose `data-line-number` names its line. */
 const NUMBER_SELECTOR = "a[data-line-number]";
+
+/**
+ * The line each key moves focus to from `line`, so the numbers are one Tab stop the arrows walk:
+ * a line up or down, a screen up or down, or the first or last line.
+ */
+const LINE_STEPS: Record<string, (line: number, view: HTMLElement) => number> = {
+	ArrowUp: (line) => Math.max(1, line - 1),
+	ArrowDown: (line, view) => Math.min(lastLine(view), line + 1),
+	PageUp: (line) => Math.max(1, line - 20),
+	PageDown: (line, view) => Math.min(lastLine(view), line + 20),
+	Home: () => 1,
+	End: (_, view) => lastLine(view),
+};
+
+/** The view's last line number, read from its last number link. */
+function lastLine(view: HTMLElement): number {
+	let numbers = view.querySelectorAll(NUMBER_SELECTOR);
+	return Number(numbers[numbers.length - 1]?.getAttribute("data-line-number") ?? 1);
+}
+
+/** Moves the numbers' one Tab stop from `from` to `to` and focuses `to`. */
+function rove(from: HTMLElement | null, to: HTMLElement): void {
+	if (from !== null && from !== to) from.tabIndex = -1;
+	to.tabIndex = 0;
+	to.focus();
+}
 
 /** Search parameter a server reads to paint a range without script. */
 const LINE_PARAM = "L";
@@ -199,12 +225,33 @@ export const codeViewSelection: MixinFactory<
 		}
 
 		view.addEventListener(
+			"keydown",
+			(press) => {
+				if (
+					!(press.target instanceof HTMLAnchorElement) ||
+					!press.target.matches(NUMBER_SELECTOR)
+				) {
+					return;
+				}
+				let line = Number(press.target.getAttribute("data-line-number"));
+				let next = LINE_STEPS[press.key]?.(line, view);
+				if (next === undefined) return;
+				let target = view.ownerDocument.getElementById(`L${next}`);
+				if (!(target instanceof HTMLAnchorElement) || !view.contains(target)) return;
+				press.preventDefault();
+				rove(press.target, target);
+			},
+			{ signal },
+		);
+
+		view.addEventListener(
 			"click",
 			(click) => {
 				if (!(click.target instanceof Element)) return;
 				let number = click.target.closest<HTMLAnchorElement>(NUMBER_SELECTOR);
 				if (number === null || !view.contains(number)) return;
 				click.preventDefault();
+				rove(view.querySelector<HTMLAnchorElement>(`${NUMBER_SELECTOR}[tabindex="0"]`), number);
 
 				let line = Number(number.getAttribute("data-line-number"));
 				let anchor = state.anchor;

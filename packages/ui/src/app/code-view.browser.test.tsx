@@ -252,6 +252,22 @@ describe("CodeView keyboard", () => {
 		expect(location.hash).toBe("#L2-L5");
 	});
 
+	test("puts the numbers in one Tab stop the arrow keys walk", async () => {
+		let root = mount();
+		let stops = () => root.querySelectorAll('a[data-line-number]:not([tabindex="-1"])');
+
+		expect(stops()).toHaveLength(1);
+		number(1).focus();
+		await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+		expect(document.activeElement).toBe(number(3));
+		await userEvent.keyboard("{ArrowUp}");
+		expect(document.activeElement).toBe(number(2));
+		await userEvent.keyboard("{End}");
+		expect(document.activeElement).toBe(number(30));
+		expect(stops()).toHaveLength(1);
+		expect(location.hash).toBe("");
+	});
+
 	test("rewrites the address to the permalink on y, keeping the lines", async () => {
 		mount();
 		await userEvent.click(number(3));

@@ -330,6 +330,26 @@ describe("Diff file card", () => {
 });
 
 describe("Diff comments", () => {
+	test("puts a table's line links in one Tab stop the arrow keys walk", async () => {
+		let card = mount();
+		let links = () => [
+			...card.querySelectorAll<HTMLElement>("a[data-line-number], a[data-comment]"),
+		];
+		let first = links().find((link) => link.tabIndex === 0)!;
+
+		expect(links().filter((link) => link.tabIndex === 0)).toEqual([first]);
+		first.focus();
+		await userEvent.keyboard("{ArrowDown}");
+		let below = document.activeElement as HTMLElement;
+		expect(below.matches("a[data-line-number]")).toBe(true);
+		expect(below.closest("td")!.cellIndex).toBe(first.closest("td")!.cellIndex);
+		expect(below.closest("tr")).not.toBe(first.closest("tr"));
+		await userEvent.keyboard("{ArrowRight}");
+		expect(document.activeElement!.closest("tr")).toBe(below.closest("tr"));
+		expect(document.activeElement).not.toBe(below);
+		expect(links().filter((link) => link.tabIndex === 0)).toEqual([document.activeElement]);
+	});
+
 	test("shows a line's + on hover, linked to the comment form without script", async () => {
 		mount();
 		let plus = code("R", 5).querySelector<HTMLAnchorElement>("a[data-comment]")!;
