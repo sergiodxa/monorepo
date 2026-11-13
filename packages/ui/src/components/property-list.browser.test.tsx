@@ -1,7 +1,7 @@
 /**
  * Lays PropertyList out in a real browser: the label column holds one width down every
  * row and stacks in a narrow container, an empty value reads its name, the edit popover
- * opens under its own row, and the tiles variant goes two-up only where it fits.
+ * opens under its own row or gives way to the app's, and tiles go two-up only where they fit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -136,6 +136,33 @@ describe("PropertyList", () => {
 		expect(box.top - anchor.bottom).toBeLessThan(12);
 		expect(box.left).toBeCloseTo(anchor.left, 0);
 		expect(popover.getAttribute("aria-label")).toBe("Edit owner");
+	});
+
+	test("opens the app's own popover in place of the row's", async () => {
+		let host = mount(
+			<PropertyList>
+				<PropertyList.Item
+					label="Labels"
+					edit={{
+						id: "edit-labels",
+						label: "Edit labels",
+						popover: (
+							<div id="edit-labels" popover="auto" data-slot="app-picker">
+								Picker
+							</div>
+						),
+					}}
+				>
+					bug
+				</PropertyList.Item>
+			</PropertyList>,
+		);
+		let button = host.querySelector<HTMLButtonElement>('[data-slot="property-edit"]')!;
+		let picker = host.querySelector<HTMLElement>('[data-slot="app-picker"]')!;
+
+		expect(host.querySelector('[data-slot="property-popover"]')).toBeNull();
+		await userEvent.click(button);
+		expect(picker.matches(":popover-open")).toBe(true);
 	});
 
 	test("sets tiles two to a row only where two fit", () => {

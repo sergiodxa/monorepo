@@ -53,7 +53,8 @@ export namespace PropertyList {
 
 	/**
 	 * Makes a row editable in place: its value becomes a button that opens a popover
-	 * anchored under it, holding whatever form the app renders as `content`.
+	 * anchored under it, holding whatever form the app renders as `content`, or the app's
+	 * own popover given as `popover`.
 	 */
 	export interface Edit {
 		/** Id of the popover, which the value button targets. */
@@ -61,7 +62,13 @@ export namespace PropertyList {
 		/** What the button does, read before the current value, such as "Edit assignee". */
 		label: string;
 		/** The popover's content: the app's form, its described options and its submit. */
-		content: RemixNode;
+		content?: RemixNode;
+		/**
+		 * A whole popover whose `id` is `id`, drawn in place of the row's own, such as a
+		 * filterable picker for a multi-value property; the value button still opens it and
+		 * anchors it under the row.
+		 */
+		popover?: RemixNode;
 	}
 
 	/** Every native `<div>` attribute the row's group accepts, plus its label and value. */
@@ -167,6 +174,11 @@ export function PropertyList(handle: Handle<PropertyList.Props, PropertyList.Con
  * >
  * 	{assignee?.name}
  * </PropertyList.Item>
+ * @example
+ * <PropertyList.Item label="Labels" empty="None yet"
+ * 	edit={{ id: "edit-labels", label: "Edit labels", popover: <FilterMenu.Popover id="edit-labels" {...picker} /> }}>
+ * 	{chips}
+ * </PropertyList.Item>
  */
 PropertyList.Item = function PropertyListItem(handle: Handle<PropertyList.ItemProps>) {
 	return () => {
@@ -264,8 +276,8 @@ interface PropertyEditProps {
 
 /**
  * The editable value: a full-width button naming its action before the current value,
- * and the popover it opens. The button is the popover's invoker, which makes it the
- * popover's implicit anchor, so the form opens directly under its row.
+ * and the popover it opens, the row's own or the app's. The button is the popover's
+ * invoker, which makes it the popover's implicit anchor, so it opens under its row.
  *
  * @param handle Runtime handle carrying the edit description and the rendered value.
  * @returns The render function producing the button and its popover.
@@ -308,16 +320,18 @@ function PropertyEdit(handle: Handle<PropertyEditProps>) {
 					</span>
 					<ChevronDownIcon size={14} aria-hidden="true" mix={[shrink(0), fg("neutral.muted")]} />
 				</button>
-				<Popover
-					id={edit.id}
-					placement="bottom-start"
-					role="dialog"
-					aria-label={edit.label}
-					data-slot="property-popover"
-					mix={[p(3), is("min(20rem, calc(100vw - 2rem))"), text("sm")]}
-				>
-					{edit.content}
-				</Popover>
+				{edit.popover ?? (
+					<Popover
+						id={edit.id}
+						placement="bottom-start"
+						role="dialog"
+						aria-label={edit.label}
+						data-slot="property-popover"
+						mix={[p(3), is("min(20rem, calc(100vw - 2rem))"), text("sm")]}
+					>
+						{edit.content}
+					</Popover>
+				)}
 			</>
 		);
 	};
