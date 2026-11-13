@@ -1,7 +1,8 @@
 /**
  * Tests for {@link PageHeader} in a real browser: secondary, primary, then overflow actions on
  * the title's row, the description kept under the title at any width, the trail or parent link
- * by width, tabs marking the current view, the sticky variant compacting, and wrapping at 320px.
+ * by width, tabs marking the current view, tabs folding into "More" at 375px with the current tab
+ * kept in the row, the sticky variant compacting, and wrapping at 320px.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,6 +39,22 @@ const TABS: PageHeader.Tab[] = [
 	{ href: "#incidents", label: "Incidents", count: 3 },
 	{ href: "#settings", label: "Settings" },
 ];
+
+/** A repository's views with their counts, the way a code host's header lists them. */
+const REPO_TABS: PageHeader.Tab[] = [
+	{ href: "#code", label: "Code", current: true },
+	{ href: "#issues", label: "Issues", count: 26 },
+	{ href: "#pulls", label: "Pull requests", count: 71 },
+	{ href: "#actions", label: "Actions" },
+	{ href: "#insights", label: "Insights" },
+];
+
+/** The labels of the tab links shown in the row, in order. */
+function rowTabs(): string[] {
+	return [...document.querySelectorAll<HTMLAnchorElement>('[data-slot="page-header-tabs"] a')]
+		.filter((link) => link.checkVisibility())
+		.map((link) => link.firstChild!.textContent!);
+}
 
 /** Mounts a monitor's header inside a box `width` wide. */
 function mountHeader(width: string, props: Partial<PageHeader.Props> = {}) {
@@ -248,5 +265,69 @@ describe("PageHeader", () => {
 		expect(Math.round(header.getBoundingClientRect().top)).toBe(0);
 		expect(getComputedStyle(document.querySelector("h1")!).fontSize).toBe("24px");
 		expect(shown('[data-slot="page-header-description"]')).toBe(true);
+	});
+
+	test("folds a repository's tabs into More at 375px without scrolling sideways", async () => {
+		await page.viewport(375, 700);
+		mountHeader("100%", { title: "acme / delta", tabs: REPO_TABS, tabsLabel: "Repository" });
+		let nav = document.querySelector<HTMLElement>('[data-slot="page-header-tabs"]')!;
+		let more = page.getByRole("navigation", { name: "Repository" }).getByRole("button", {
+			name: "More",
+		});
+
+		expect(rowTabs()).toEqual(["Code", "Issues"]);
+		await expect.element(more).toBeVisible();
+		expect(nav.scrollWidth).toBeLessThanOrEqual(nav.clientWidth);
+		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
+
+		await more.click();
+		let menu = page.getByRole("menu", { name: "More" });
+		await expect.element(menu).toBeVisible();
+		let items = [...menu.element().querySelectorAll("a")];
+		expect(items.map((item) => item.getAttribute("href"))).toEqual([
+			"#pulls",
+			"#actions",
+			"#insights",
+		]);
+		expect(items[0]!.textContent).toBe("Pull requests71");
+		let box = menu.element().getBoundingClientRect();
+		expect(box.right).toBeLessThanOrEqual(375);
+		expect(box.top).toBeGreaterThanOrEqual(more.element().getBoundingClientRect().bottom);
+	});
+
+	test("keeps the current tab in the narrow row when it would have folded", async () => {
+		await page.viewport(375, 700);
+		mountHeader("100%", {
+			tabs: REPO_TABS.map((tab) => ({ ...tab, current: tab.label === "Actions" })),
+		});
+
+		expect(rowTabs()).toEqual(["Code", "Actions"]);
+		let current = document.querySelector<HTMLElement>(
+			'[data-slot="page-header-tabs"] [aria-current="page"]',
+		)!;
+		expect(current.checkVisibility()).toBe(true);
+		let menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+		expect([...menu.querySelectorAll("a")].map((item) => item.getAttribute("href"))).toEqual([
+			"#issues",
+			"#pulls",
+			"#insights",
+		]);
+	});
+
+	test("shows every tab in the row on a wide header, with no More", async () => {
+		mountHeader("60rem", { tabs: REPO_TABS });
+
+		expect(rowTabs()).toEqual(["Code", "Issues", "Pull requests", "Actions", "Insights"]);
+		expect(shown('[data-slot="page-header-tabs-more"]')).toBe(false);
+	});
+
+	test("leaves three tabs in the row at 375px, where More would stand in for one", async () => {
+		await page.viewport(375, 700);
+		mountHeader("100%");
+
+		expect(rowTabs()).toEqual(["Overview", "Incidents", "Settings"]);
+		expect(document.querySelector('[data-slot="page-header-tabs-more"]')).toBeNull();
+		let nav = document.querySelector<HTMLElement>('[data-slot="page-header-tabs"]')!;
+		expect(nav.scrollWidth).toBeLessThanOrEqual(nav.clientWidth);
 	});
 });

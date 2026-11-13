@@ -1,7 +1,8 @@
 /**
  * The top of an app screen in one order: where it sits (a breadcrumb, or a parent link on a
  * narrow pane), the `<h1>` with its status and one-line description, the actions (secondary,
- * primary, then overflow), and an optional row of tabs. The sticky variant compacts once stuck.
+ * primary, then overflow), and an optional row of tabs that folds into "More ▾" on a narrow
+ * pane. The sticky variant compacts once stuck.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,13 +10,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { ChevronLeftIcon } from "@sdxc/icons";
+import { ChevronDownIcon, ChevronLeftIcon } from "@sdxc/icons";
 import { bg, fg, outline } from "@sdxc/u/color";
 import { mergeMix, raw } from "@sdxc/u/general";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { tabularNums, text, weight } from "@sdxc/u/typography";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import { Breadcrumbs } from "../components/breadcrumbs.js";
+import { Menu } from "../components/menu.js";
 
 /** The container the header measures and, when sticky, the one whose stuck state it reads. */
 const CONTAINER = "ui-page-header";
@@ -28,6 +31,12 @@ const NARROW = `@container ${CONTAINER} (max-width: 39.9375rem)`;
 
 /** The sticky header once it is held at the top while motion is welcome, which is when it compacts. */
 const STUCK = `@container ${CONTAINER} scroll-state(stuck: top)`;
+
+/** How many tabs a narrow header shows before the rest fold into "More". */
+const DEFAULT_NARROW_TABS = 2;
+
+/** The overflow menu's label when `tabsMore` is omitted. */
+const DEFAULT_MORE_LABEL = "More";
 
 /** Whether the header sticks and compacts when `sticky` is omitted. */
 const DEFAULT_STICKY = false;
@@ -82,6 +91,14 @@ export namespace PageHeader {
 		/** The tabs landmark's name, such as "Monitor views". */
 		tabsLabel?: string;
 		/**
+		 * How many tabs stay in the row under 40rem of header width; the rest move into a
+		 * "More ▾" menu, and the current tab always stays in the row.
+		 * @default 2
+		 */
+		tabsNarrow?: number;
+		/** The overflow menu's label. @default "More" */
+		tabsMore?: string;
+		/**
 		 * Sticks the header at `--ui-app-sticky-top` and compacts it once stuck: the trail and the
 		 * description fold away and the title shrinks. Reduced motion keeps it full size.
 		 * @default false
@@ -101,6 +118,8 @@ export namespace PageHeader {
  * <PageHeader crumbsLabel="Breadcrumb" crumbs={[{ label: "Monitors", href: "/monitors" }, { label: "api.acme.dev" }]} title="api.acme.dev" status={<Badge color="success">Up</Badge>} actions={<Button variant="outline">Pause</Button>} primaryAction={<Button>Edit monitor</Button>} />
  */
 export function PageHeader(handle: Handle<PageHeader.Props>) {
+	let moreId = `page-header-more-${generateUUID()}`;
+
 	return () => {
 		let {
 			title,
@@ -114,12 +133,15 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 			overflow,
 			tabs = [],
 			tabsLabel,
+			tabsNarrow = DEFAULT_NARROW_TABS,
+			tabsMore = DEFAULT_MORE_LABEL,
 			sticky = DEFAULT_STICKY,
 			mix,
 			...rest
 		} = handle.props;
 		let back = parent ?? parentOf(crumbs);
 		let hasActions = primaryAction !== undefined || actions !== undefined || overflow !== undefined;
+		let folded = foldedTabs(tabs, tabsNarrow);
 
 		return (
 			<header
@@ -406,68 +428,64 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 									}),
 								]}
 							>
-								{tabs.map((tab) => (
-									<li key={tab.href}>
+								{tabs.map((tab, index) => (
+									<li
+										key={tab.href}
+										data-folded={folded.has(index) ? "" : undefined}
+										mix={[folded.has(index) ? when(NARROW, raw({ display: "none" })) : []]}
+									>
 										<a
 											href={tab.href}
 											aria-current={tab.current ? "page" : undefined}
-											mix={[
-												raw({
-													position: "relative",
-													display: "inline-flex",
-													alignItems: "center",
-													gap: "0.375rem",
-													blockSize: "2.5rem",
-													whiteSpace: "nowrap",
-													textDecoration: "none",
-												}),
-												text("sm"),
-												fg("neutral.muted"),
-												hover(fg("neutral.emphasis")),
-												focusVisible(outline({ color: "brand.ring", offset: -2 })),
-												when('&[aria-current="page"]', [fg("neutral.emphasis"), weight("medium")]),
-												when(
-													'&[aria-current="page"]::after',
-													raw({
-														content: '""',
-														position: "absolute",
-														insetInline: "0",
-														insetBlockEnd: "0",
-														blockSize: "2px",
-														borderRadius: "2px",
-														backgroundColor: "var(--ui-brand-bg-solid)",
-													}),
-												),
-											]}
+											mix={tabMix()}
 										>
 											{tab.label}
-											{tab.count !== undefined ? (
-												<span
-													data-slot="page-header-tab-count"
-													mix={[
-														raw({
-															minInlineSize: "1.25rem",
-															paddingInline: "0.375rem",
-															borderRadius: "999px",
-															fontSize: "0.75rem",
-															lineHeight: "1.25rem",
-															textAlign: "center",
-															boxSizing: "border-box",
-														}),
-														tabularNums(),
-														weight("medium"),
-														bg("neutral.bg-tint-hover"),
-														fg("neutral.emphasis"),
-													]}
-												>
-													{tab.count}
-												</span>
-											) : null}
+											{tab.count !== undefined ? <TabCount count={tab.count} /> : null}
 										</a>
 									</li>
 								))}
+								{folded.size > 0 ? (
+									<li
+										data-slot="page-header-tabs-more"
+										mix={[when(WIDE, raw({ display: "none" }))]}
+									>
+										<button
+											type="button"
+											commandfor={moreId}
+											command="toggle-popover"
+											aria-haspopup="menu"
+											mix={[
+												...tabMix(),
+												raw({
+													border: "none",
+													background: "none",
+													padding: "0",
+													font: "inherit",
+													cursor: "pointer",
+												}),
+											]}
+										>
+											{tabsMore}
+											<ChevronDownIcon size={14} aria-hidden="true" />
+										</button>
+									</li>
+								) : null}
 							</ul>
 						</nav>
+					) : null}
+					{folded.size > 0 ? (
+						<Menu id={moreId} placement="bottom-end" aria-label={tabsMore}>
+							{tabs.map((tab, index) =>
+								folded.has(index) ? (
+									<Menu.Item key={tab.href} href={tab.href}>
+										{tab.label}
+										{tab.count !== undefined ? (
+											<TabCount count={tab.count} mix={[raw({ marginInlineStart: "auto" })]} />
+										) : null}
+									</Menu.Item>
+								) : null,
+							)}
+						</Menu>
 					) : null}
 				</div>
 			</header>
@@ -532,4 +550,88 @@ function parentOf(crumbs: PageHeader.Crumb[]): PageHeader.Parent | undefined {
 		if (crumb?.href) return { href: crumb.href, label: crumb.label };
 	}
 	return undefined;
+}
+
+/**
+ * The indices of the tabs a narrow header moves into "More": all but the first `narrow`,
+ * where the current tab takes the last place in the row when it would have folded, so the
+ * view shown is always named in the row. Empty when "More" would stand in for a single tab.
+ */
+function foldedTabs(tabs: PageHeader.Tab[], narrow: number): Set<number> {
+	let keep = Math.max(1, narrow);
+	if (tabs.length <= keep + 1) return new Set();
+	let current = tabs.findIndex((tab) => tab.current);
+	let shown = tabs.map((_, index) => index).slice(0, keep);
+	if (current >= keep) shown[keep - 1] = current;
+	return new Set(tabs.map((_, index) => index).filter((index) => !shown.includes(index)));
+}
+
+/**
+ * A tab's look, shared by the links and the "More" button: a 40px row of muted text, and for
+ * the current tab emphasis with a 2px accent underline.
+ */
+function tabMix() {
+	return [
+		raw({
+			position: "relative",
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "0.375rem",
+			blockSize: "2.5rem",
+			whiteSpace: "nowrap",
+			textDecoration: "none",
+		}),
+		text("sm"),
+		fg("neutral.muted"),
+		hover(fg("neutral.emphasis")),
+		focusVisible(outline({ color: "brand.ring", offset: -2 })),
+		when('&[aria-current="page"]', [fg("neutral.emphasis"), weight("medium")]),
+		when(
+			'&[aria-current="page"]::after',
+			raw({
+				content: '""',
+				position: "absolute",
+				insetInline: "0",
+				insetBlockEnd: "0",
+				blockSize: "2px",
+				borderRadius: "2px",
+				backgroundColor: "var(--ui-brand-bg-solid)",
+			}),
+		),
+	];
+}
+
+/** Props accepted by {@link TabCount}. */
+interface TabCountProps {
+	count: number;
+	mix?: TagProps<"span">["mix"];
+}
+
+/** A tab's count as a 12px pill, such as open issues, read before the tab is opened. */
+function TabCount(handle: Handle<TabCountProps>) {
+	return () => (
+		<span
+			data-slot="page-header-tab-count"
+			mix={mergeMix(
+				[
+					raw({
+						minInlineSize: "1.25rem",
+						paddingInline: "0.375rem",
+						borderRadius: "999px",
+						fontSize: "0.75rem",
+						lineHeight: "1.25rem",
+						textAlign: "center",
+						boxSizing: "border-box",
+					}),
+					tabularNums(),
+					weight("medium"),
+					bg("neutral.bg-tint-hover"),
+					fg("neutral.emphasis"),
+				],
+				handle.props.mix,
+			)}
+		>
+			{handle.props.count}
+		</span>
+	);
 }
