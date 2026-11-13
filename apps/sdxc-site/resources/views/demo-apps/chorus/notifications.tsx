@@ -31,7 +31,7 @@ import {
 	shortAge,
 } from "~/resources/views/demo-apps/chorus/parts";
 import { PostCard } from "~/resources/views/demo-apps/chorus/post";
-import { ChorusShell } from "~/resources/views/demo-apps/chorus/shell";
+import { ChorusColumn } from "~/resources/views/demo-apps/chorus/shell";
 
 /** The notification tabs: everything, or only what names Noor. */
 export type NotificationTab = "all" | "mentions";
@@ -251,7 +251,7 @@ export function NotificationsScreen(handle: Handle<NotificationsScreen.Props>) {
 		);
 		let page = tab === "all" ? "notifications" : "notifications?tab=mentions";
 		return (
-			<ChorusShell
+			<ChorusColumn
 				current="notifications"
 				phoneBar
 				header={
@@ -309,7 +309,7 @@ export function NotificationsScreen(handle: Handle<NotificationsScreen.Props>) {
 				>
 					{compact(NOTIFICATIONS.length)} notifications from the last week.
 				</p>
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }

@@ -15,6 +15,7 @@ import { LinkButton } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 import { countCharacters } from "@sdxc/ui/character-count";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { Frame } from "remix/component";
 
 import type {
 	DemoApp,
@@ -25,14 +26,18 @@ import type {
 import type { Conversation } from "~/resources/views/demo-apps/chorus/data";
 import type { FeedKind } from "~/resources/views/demo-apps/chorus/home";
 import type { ProfileTab } from "~/resources/views/demo-apps/chorus/profile";
+import type { Destination } from "~/resources/views/demo-apps/chorus/shell";
 import type { ToggleKind, VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
+import { DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
 import {
 	ARRIVALS,
+	COLUMN_FRAME,
 	CONVERSATIONS,
 	EVERYONE,
 	FOR_YOU,
 	ME,
+	POLL_FRAME_PREFIX,
 	POST_LIMIT,
 	findPerson,
 	href,
@@ -42,6 +47,7 @@ import { TitleBar, postById } from "~/resources/views/demo-apps/chorus/feed";
 import { HomeScreen } from "~/resources/views/demo-apps/chorus/home";
 import { ConversationScreen, MessagesScreen } from "~/resources/views/demo-apps/chorus/messages";
 import { NotificationsScreen } from "~/resources/views/demo-apps/chorus/notifications";
+import { PollView } from "~/resources/views/demo-apps/chorus/post";
 import { PROFILE_TABS, ProfileScreen } from "~/resources/views/demo-apps/chorus/profile";
 import { FollowCard, TrendsCard } from "~/resources/views/demo-apps/chorus/rail";
 import {
@@ -49,7 +55,7 @@ import {
 	ComposeScreen,
 	PostScreen,
 } from "~/resources/views/demo-apps/chorus/screens";
-import { ChorusShell } from "~/resources/views/demo-apps/chorus/shell";
+import { ChorusColumn, ChorusShell } from "~/resources/views/demo-apps/chorus/shell";
 import {
 	clearCookies,
 	isPersonal,
@@ -145,7 +151,7 @@ function notFound(): DemoAppScreen {
 		title: "Page not found",
 		status: 404,
 		body: (
-			<ChorusShell current="none" header={<TitleBar title="Not found" back={href()} />}>
+			<ChorusColumn current="none" header={<TitleBar title="Not found" back={href()} />}>
 				<Empty icon={<CompassIcon />}>
 					<Empty.Title>This page doesn't exist</Empty.Title>
 					<Empty.Description>
@@ -156,9 +162,53 @@ function notFound(): DemoAppScreen {
 						<LinkButton href={href()}>Back to your timeline</LinkButton>
 					</Empty.Action>
 				</Empty>
-			</ChorusShell>
+			</ChorusColumn>
 		),
 	};
+}
+
+/**
+ * The destination a page belongs to, which the nav marks; a post, the composer and other
+ * people's profiles belong to none.
+ *
+ * @param page The page path.
+ */
+function destinationOf(page: string): Destination {
+	let [first = "", second] = page.split("/");
+	if (first === "") return "home";
+	if (first === "u") return second === ME.handle ? "profile" : "none";
+	let destinations: Record<string, Destination> = {
+		explore: "explore",
+		notifications: "notifications",
+		messages: "messages",
+		bookmarks: "bookmarks",
+	};
+	return destinations[first] ?? "none";
+}
+
+/**
+ * The app around a page's column, marking the page's destination; Explore drops the rail's
+ * search box for its own.
+ *
+ * @param page The page path.
+ * @param column The column: its frame on a page load, or drawn in place for a refused post.
+ */
+function inShell(page: string, column: RemixNode): RemixNode {
+	return (
+		<ChorusShell current={destinationOf(page)} railSearch={!page.startsWith("explore")}>
+			{column}
+		</ChorusShell>
+	);
+}
+
+/**
+ * The address a page's frames load from: the page's own, without its one-time toast, so a
+ * frame caches with the page and a reload of the column never repeats the toast.
+ */
+function frameSource(url: URL): string {
+	let source = new URL(url);
+	source.searchParams.delete(DEMO_APP_TOAST_PARAM);
+	return `${source.pathname}${source.search}`;
 }
 
 /**
@@ -302,6 +352,32 @@ function framePart(part: string, request: DemoAppRequest): RemixNode | null {
 	return null;
 }
 
+/**
+ * Answers a named frame on a page: the page's column, or one post's poll. Any other name
+ * answers `null`, and the request gets the whole page.
+ */
+function targetPart(name: string, request: DemoAppRequest): RemixNode | null {
+	let state = readState(request.cookie);
+	if (name === COLUMN_FRAME) return (route(request, state) ?? notFound()).body;
+	if (name.startsWith(POLL_FRAME_PREFIX)) {
+		let post = postById(name.slice(POLL_FRAME_PREFIX.length), state);
+		if (!post?.poll) return null;
+		return <PollView post={post} returnTo={pageOf(request)} />;
+	}
+	return null;
+}
+
+/** The page path a request is on, with its query and without its one-time toast. */
+function pageOf(request: DemoAppRequest): string {
+	let query = new URLSearchParams(request.url.search);
+	query.delete(DEMO_APP_TOAST_PARAM);
+	let search = query.toString();
+	return search === "" ? request.page : `${request.page}?${search}`;
+}
+
+/** The intents a post's own forms send: its toggles and a poll's vote. */
+const POST_INTENTS = new Set(["like", "repost", "save", "vote"]);
+
 /** The text of a form field, or `""` when it is missing or a file. */
 function field(form: FormData, name: string): string {
 	let value = form.get(name);
@@ -313,6 +389,7 @@ function field(form: FormData, name: string): string {
  * never an address elsewhere; an unreadable one falls back to `fallback`.
  */
 function returnPage(form: FormData, fallback: string): string {
+	if (!form.has("return")) return fallback;
 	let value = field(form, "return");
 	if (value.includes("//") || value.startsWith("/") || value.includes("\\")) return fallback;
 	return value;
@@ -333,9 +410,10 @@ export function draftIssue(text: string): string | null {
 }
 
 /**
- * Answers the composer: a post within the limit is added to the visitor's posts and the
- * visitor lands on it, on their timeline or under the post they replied to; anything else
- * answers the page it was written on again with what was typed and why.
+ * Answers the composer, which posts to the page it sits on: a post within the limit is added
+ * to the visitor's posts and the visitor lands on it, on that page, under the post they
+ * replied to, or on the timeline from the compose page; anything else answers the page it
+ * was written on again with what was typed and why.
  */
 function submitCompose(
 	form: FormData,
@@ -349,25 +427,37 @@ function submitCompose(
 
 	let issue = draftIssue(text);
 	if (issue !== null) {
-		let [page = "", query = ""] = field(form, "from").split("?");
-		let url = new URL(request.url);
-		url.search = query;
-		let screen = route({ ...request, page, url }, state, { value: field(form, "text"), issue });
-		return screen ? { ...screen, status: 400 } : null;
+		let screen = route(request, state, { value: field(form, "text"), issue });
+		if (!screen) return null;
+		return {
+			...screen,
+			body: inShell(request.page, screen.body),
+			frames: { [COLUMN_FRAME]: screen.body },
+			status: 400,
+		};
 	}
 
 	let id = `n-${generateUUID().slice(0, 8)}`;
 	let cookie = postsCookie(state, { id, text, at: Date.now(), replyTo, quote });
-	return replyTo
-		? { page: `post/${replyTo}`, hash: `post-${id}`, toast: "replied", cookies: [cookie] }
-		: { page: "", hash: `post-${id}`, toast: "posted", cookies: [cookie] };
+	let hash = `post-${id}`;
+	if (replyTo) return { page: `post/${replyTo}`, hash, toast: "replied", cookies: [cookie] };
+	let page = request.page === "compose" ? "" : pageOf(request);
+	return { page, hash, toast: "posted", cookies: [cookie] };
 }
 
-/** Answers a post's like, repost, save or vote, returning to the row it was pressed on. */
-function submitPost(id: string, form: FormData, state: VisitorState): DemoAppRedirect | null {
+/**
+ * Answers a post's like, repost, save or vote, returning to the row it was pressed on: on the
+ * page its `return` field names, or else the page the form posted to.
+ */
+function submitPost(
+	id: string,
+	form: FormData,
+	request: DemoAppRequest,
+	state: VisitorState,
+): DemoAppRedirect | null {
 	let post = lookupPost(id, state);
 	if (!post) return null;
-	let back = { page: returnPage(form, `post/${id}`), hash: `post-${id}` };
+	let back = { page: returnPage(form, pageOf(request)), hash: `post-${id}` };
 	let intent = field(form, "intent");
 	if (intent === "vote") {
 		let option = Number(field(form, "option"));
@@ -399,16 +489,27 @@ export default {
 	isPersonal,
 	toasts: TOASTS,
 	frame: (part, request) => framePart(part, request),
+	target: (name, request) => targetPart(name, request),
 	render(request) {
-		return route(request, readState(request.cookie)) ?? notFound();
+		let screen = route(request, readState(request.cookie)) ?? notFound();
+		return {
+			...screen,
+			body: inShell(request.page, <Frame name={COLUMN_FRAME} src={frameSource(request.url)} />),
+		};
 	},
 	submit(page, form, request) {
 		let state = readState(request.cookie);
 		let [first = "", second, ...rest] = page.split("/");
 		if (rest.length > 0) return null;
-		if (first === "compose" && second === undefined) return submitCompose(form, request, state);
-		if (first === "post" && second !== undefined) return submitPost(second, form, state);
-		if (first === "u" && second !== undefined && field(form, "intent") === "follow") {
+		let intent = field(form, "intent");
+		if (intent === "compose" || (first === "compose" && second === undefined)) {
+			return submitCompose(form, request, state);
+		}
+		let postId = field(form, "post") || (first === "post" ? second : undefined);
+		if (postId !== undefined && POST_INTENTS.has(intent)) {
+			return submitPost(postId, form, request, state);
+		}
+		if (first === "u" && second !== undefined && intent === "follow") {
 			let person = findPerson(second);
 			if (!person || person.handle === ME.handle) return null;
 			return {

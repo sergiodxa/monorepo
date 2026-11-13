@@ -19,6 +19,7 @@ import type { PostView, VisitorState } from "~/resources/views/demo-apps/chorus/
 
 import {
 	ARRIVED_POSTS,
+	COLUMN_FRAME,
 	PEOPLE,
 	POSTS,
 	TRENDS,
@@ -31,7 +32,7 @@ import {
 	TrendLines,
 	trendRow,
 } from "~/resources/views/demo-apps/chorus/rail";
-import { ChorusShell } from "~/resources/views/demo-apps/chorus/shell";
+import { ChorusColumn } from "~/resources/views/demo-apps/chorus/shell";
 
 /** Explore's tabs: trends and people without a query; top posts and people with one. */
 export type ExploreTab = "top" | "people";
@@ -91,9 +92,8 @@ export function ExploreScreen(handle: Handle<ExploreScreen.Props>) {
 		let peoplePage = query === "" ? "explore?tab=people" : `explore?q=${encoded}&tab=people`;
 
 		return (
-			<ChorusShell
+			<ChorusColumn
 				current="explore"
-				railSearch={false}
 				header={
 					<>
 						<h1
@@ -110,7 +110,7 @@ export function ExploreScreen(handle: Handle<ExploreScreen.Props>) {
 							{query === "" ? "Explore" : `Search: ${query}`}
 						</h1>
 						<div mix={[raw({ padding: "0.5rem 1rem" })]}>
-							<SearchBox query={query} />
+							<SearchBox query={query} inColumn />
 						</div>
 						<FeedTabs
 							label="Explore sections"
@@ -133,7 +133,7 @@ export function ExploreScreen(handle: Handle<ExploreScreen.Props>) {
 					now={now}
 					page={tab === "people" ? peoplePage : base}
 				/>
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }
@@ -200,6 +200,8 @@ function TrendList() {
 				<li>
 					<a
 						href={href(`explore?q=${encodeURIComponent(trend.query)}`)}
+						data-rmx-target={COLUMN_FRAME}
+						data-rmx-prefetch="intent"
 						mix={[
 							trendRow(),
 							raw({

@@ -1,6 +1,7 @@
 /**
  * Messages: the conversations list, and one conversation as bubbles with a box to answer.
- * Each is its own address, so a phone shows one pane at a time and the back link leads up.
+ * Each is its own address loaded into the column's frame, so the nav stays put, a phone
+ * shows one pane at a time, and the back link leads up.
  * A post shared from its menu arrives here with the conversation still to pick.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -18,6 +19,7 @@ import type { Conversation, Message, Person } from "~/resources/views/demo-apps/
 import type { PostView, VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
 import {
+	COLUMN_FRAME,
 	CONVERSATIONS,
 	ME,
 	NOW,
@@ -27,7 +29,7 @@ import {
 } from "~/resources/views/demo-apps/chorus/data";
 import { TitleBar } from "~/resources/views/demo-apps/chorus/feed";
 import { PersonAvatar, fullDate, shortAge } from "~/resources/views/demo-apps/chorus/parts";
-import { ChorusShell } from "~/resources/views/demo-apps/chorus/shell";
+import { ChorusColumn } from "~/resources/views/demo-apps/chorus/shell";
 
 /**
  * A conversation's messages with the visitor's own sent ones after them, as the visitor reads it.
@@ -65,7 +67,7 @@ export function MessagesScreen(handle: Handle<MessagesScreen.Props>) {
 	return () => {
 		let { now, share, state } = handle.props;
 		return (
-			<ChorusShell current="messages" phoneBar header={<TitleBar title="Messages" />}>
+			<ChorusColumn current="messages" phoneBar header={<TitleBar title="Messages" />}>
 				{share ? (
 					<div mix={[raw({ padding: "0.75rem 1rem 0" })]}>
 						<Banner
@@ -99,6 +101,7 @@ export function MessagesScreen(handle: Handle<MessagesScreen.Props>) {
 							<li>
 								<a
 									href={href(`messages/${person.handle}${shareQuery(share)}`)}
+									data-rmx-target={COLUMN_FRAME}
 									data-rmx-prefetch="intent"
 									mix={[
 										raw({
@@ -177,7 +180,7 @@ export function MessagesScreen(handle: Handle<MessagesScreen.Props>) {
 						);
 					})}
 				</ul>
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }
@@ -207,12 +210,17 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 			? `${share.person.name}: “${share.text.slice(0, 120)}” ${href(`post/${share.id}`)}`
 			: "";
 		return (
-			<ChorusShell
+			<ChorusColumn
 				current="messages"
 				compose={false}
 				tabBar={false}
 				header={
-					<TitleBar title={person.name} subtitle={`@${person.handle}`} back={href("messages")} />
+					<TitleBar
+						title={person.name}
+						subtitle={`@${person.handle}`}
+						back={href("messages")}
+						backInColumn
+					/>
 				}
 			>
 				<ol
@@ -292,7 +300,9 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 				<form
 					method="post"
 					action={actionHref(`messages/${person.handle}`)}
-					data-rmx-document=""
+					data-rmx-key={`reply-${messages.length}`}
+					data-rmx-target={COLUMN_FRAME}
+					data-rmx-reset-scroll="manual"
 					mix={[
 						raw({
 							position: "sticky",
@@ -352,7 +362,7 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 						<SendIcon size={18} aria-hidden="true" />
 					</Button>
 				</form>
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }

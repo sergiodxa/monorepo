@@ -1,7 +1,8 @@
 /**
  * Chorus's home: the For you and Following timelines, a composer on top, and the "Show N new
- * posts" pill that rises while the visitor reads. The pill is plain CSS and a link, so new
- * posts arrive with or without script, and it appears without motion when motion is reduced.
+ * posts" pill that rises while the visitor reads. The pill is plain CSS and a link into the
+ * column's frame, so new posts arrive with or without script, and without motion when motion
+ * is reduced.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,6 +23,7 @@ import type { VisitorState } from "~/resources/views/demo-apps/chorus/state";
 import { ChorusComposer } from "~/resources/views/demo-apps/chorus/composer";
 import {
 	ARRIVALS,
+	COLUMN_FRAME,
 	FOR_YOU,
 	ME,
 	POSTS,
@@ -36,7 +38,7 @@ import {
 	postById,
 } from "~/resources/views/demo-apps/chorus/feed";
 import { PersonAvatar } from "~/resources/views/demo-apps/chorus/parts";
-import { ChorusShell, TABLET } from "~/resources/views/demo-apps/chorus/shell";
+import { ChorusColumn, TABLET } from "~/resources/views/demo-apps/chorus/shell";
 import { follows, viewPost } from "~/resources/views/demo-apps/chorus/state";
 
 /** The two timelines. */
@@ -149,6 +151,8 @@ function NewPostsPill(handle: Handle<{ feed: FeedKind; arrived: number }>) {
 				<a
 					href={homeHref(feed, arrived + 1)}
 					data-slot="chorus-new-posts"
+					data-rmx-target={COLUMN_FRAME}
+					data-rmx-prefetch="intent"
 					mix={[
 						raw({
 							display: "inline-flex",
@@ -208,7 +212,7 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 		let { arrived, draft, feed, now, state } = handle.props;
 		let items = timeline(feed, arrived, state);
 		return (
-			<ChorusShell
+			<ChorusColumn
 				current="home"
 				phoneBar
 				header={
@@ -246,6 +250,8 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 					<ChorusComposer
 						id="home"
 						from={homePage(feed, arrived)}
+						inColumn
+						revision={state.posts.length}
 						placeholder="Share something with your circle"
 						value={draft?.value}
 						issue={draft?.issue}
@@ -274,7 +280,7 @@ export function HomeScreen(handle: Handle<HomeScreen.Props>) {
 						<FeedEnd>You're all caught up.</FeedEnd>
 					</>
 				)}
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }

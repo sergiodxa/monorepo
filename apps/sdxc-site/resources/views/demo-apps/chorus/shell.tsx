@@ -422,12 +422,21 @@ function PhoneBar() {
 namespace ChorusShell {
 	export interface Props {
 		current: Destination;
+		/** Shows the rail's search box; Explore has its own. @default true */
+		railSearch?: boolean;
+		/** The column: a `chorus-column` frame, or a column drawn in place. */
+		children: RemixNode;
+	}
+}
+
+namespace ChorusColumn {
+	export interface Props {
+		/** The destination the phone's tab bar marks; the shell's nav marks the same one. */
+		current: Destination;
 		/** The column's sticky header: a title row with a back link, or the feed's tabs. */
 		header: RemixNode;
 		/** Shows the phone's top bar above the header; detail screens drop it for their back link. */
 		phoneBar?: boolean;
-		/** Shows the rail's search box; Explore has its own. @default true */
-		railSearch?: boolean;
 		/** Shows the phone's floating compose button. @default true */
 		compose?: boolean;
 		/** Shows the phone's tab bar; a conversation gives the space to its reply box. @default true */
@@ -436,8 +445,12 @@ namespace ChorusShell {
 	}
 }
 
-/** Renders a Chorus screen inside the frame, with `?` and the nav's keys on every page. */
-export function ChorusShell(handle: Handle<ChorusShell.Props>) {
+/**
+ * One screen's column: the phone's top bar, the sticky header, the screen, and the phone's tab
+ * bar and compose button. It is the content of the `chorus-column` frame, so a tab, a thread
+ * or a post swaps the column while the nav and the rail stay as they are.
+ */
+export function ChorusColumn(handle: Handle<ChorusColumn.Props>) {
 	return () => {
 		let {
 			children,
@@ -445,9 +458,100 @@ export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 			current,
 			header,
 			phoneBar = false,
-			railSearch = true,
 			tabBar = true,
 		} = handle.props;
+		return (
+			<>
+				{phoneBar ? <PhoneBar /> : null}
+				<div
+					data-slot="chorus-header"
+					mix={[
+						raw({
+							position: "sticky",
+							insetBlockStart: "0",
+							zIndex: "20",
+							backgroundColor: "color-mix(in oklch, var(--ui-bg) 86%, transparent)",
+							backdropFilter: "blur(14px) saturate(1.5)",
+							WebkitBackdropFilter: "blur(14px) saturate(1.5)",
+							borderBlockEnd: "1px solid var(--chorus-hairline)",
+						}),
+					]}
+				>
+					{header}
+				</div>
+				<HeadingScope
+					level={2}
+					mix={[raw({ flex: "1 0 auto", display: "flex", flexDirection: "column" })]}
+				>
+					{children}
+				</HeadingScope>
+				{tabBar ? (
+					<TabBar label="Primary" hideFrom="40rem" showLabels={false}>
+						{DESTINATIONS.filter(
+							(destination) => destination.id !== "bookmarks" && destination.id !== "profile",
+						).map((destination) => {
+							let Icon = destination.icon;
+							let here = destination.id === current;
+							return (
+								<TabBar.Item
+									href={href(destination.page)}
+									icon={<Icon strokeWidth={here ? 2.6 : 1.9} />}
+									label={destination.label}
+									current={here}
+									count={destination.id === "notifications" && !here ? UNREAD : undefined}
+									countLabel={`${UNREAD} unread`}
+									data-rmx-prefetch="intent"
+								/>
+							);
+						})}
+					</TabBar>
+				) : null}
+				{compose ? (
+					<a
+						href={href("compose")}
+						aria-label="New post"
+						data-slot="chorus-fab"
+						mix={[
+							raw({
+								position: "fixed",
+								insetInlineEnd: "1rem",
+								insetBlockEnd: `calc(${TAB_BAR_BLOCK_SIZE} + env(safe-area-inset-bottom, 0px) + 1rem)`,
+								zIndex: "30",
+								display: "grid",
+								placeItems: "center",
+								inlineSize: "3.5rem",
+								blockSize: "3.5rem",
+								borderRadius: "999px",
+								color: "white",
+								backgroundColor: "var(--ui-brand-bg-solid)",
+								boxShadow:
+									"0 10px 24px -10px var(--ui-color-brand-700), 0 2px 6px -2px rgb(0 0 0 / 0.2)",
+								transition: "scale 120ms",
+								[`@media ${TABLET}`]: { display: "none" },
+							}),
+							when("&:active", raw({ scale: "0.94" })),
+							when(
+								"&:focus-visible",
+								raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "3px" }),
+							),
+							motionReduce(raw({ transition: "none" })),
+						]}
+					>
+						<PenLineIcon size={24} aria-hidden="true" />
+					</a>
+				) : null}
+			</>
+		);
+	};
+}
+
+/**
+ * Renders the app around one screen's column: the nav, the rail, the account menu and the
+ * keyboard help, with `?` and the nav's keys on every page.
+ */
+export function ChorusShell(handle: Handle<ChorusShell.Props>) {
+	return () => {
+		let { children, current, railSearch = true } = handle.props;
 		return (
 			<div
 				data-slot="chorus"
@@ -513,86 +617,9 @@ export function ChorusShell(handle: Handle<ChorusShell.Props>) {
 						}),
 					]}
 				>
-					{phoneBar ? <PhoneBar /> : null}
-					<div
-						data-slot="chorus-header"
-						mix={[
-							raw({
-								position: "sticky",
-								insetBlockStart: "0",
-								zIndex: "20",
-								backgroundColor: "color-mix(in oklch, var(--ui-bg) 86%, transparent)",
-								backdropFilter: "blur(14px) saturate(1.5)",
-								WebkitBackdropFilter: "blur(14px) saturate(1.5)",
-								borderBlockEnd: "1px solid var(--chorus-hairline)",
-							}),
-						]}
-					>
-						{header}
-					</div>
-					<HeadingScope
-						level={2}
-						mix={[raw({ flex: "1 0 auto", display: "flex", flexDirection: "column" })]}
-					>
-						{children}
-					</HeadingScope>
-					{tabBar ? (
-						<TabBar label="Primary" hideFrom="40rem" showLabels={false}>
-							{DESTINATIONS.filter(
-								(destination) => destination.id !== "bookmarks" && destination.id !== "profile",
-							).map((destination) => {
-								let Icon = destination.icon;
-								let here = destination.id === current;
-								return (
-									<TabBar.Item
-										href={href(destination.page)}
-										icon={<Icon strokeWidth={here ? 2.6 : 1.9} />}
-										label={destination.label}
-										current={here}
-										count={destination.id === "notifications" && !here ? UNREAD : undefined}
-										countLabel={`${UNREAD} unread`}
-										data-rmx-prefetch="intent"
-									/>
-								);
-							})}
-						</TabBar>
-					) : null}
+					{children}
 				</main>
 				<RightRail search={railSearch} />
-				{compose ? (
-					<a
-						href={href("compose")}
-						aria-label="New post"
-						data-slot="chorus-fab"
-						mix={[
-							raw({
-								position: "fixed",
-								insetInlineEnd: "1rem",
-								insetBlockEnd: `calc(${TAB_BAR_BLOCK_SIZE} + env(safe-area-inset-bottom, 0px) + 1rem)`,
-								zIndex: "30",
-								display: "grid",
-								placeItems: "center",
-								inlineSize: "3.5rem",
-								blockSize: "3.5rem",
-								borderRadius: "999px",
-								color: "white",
-								backgroundColor: "var(--ui-brand-bg-solid)",
-								boxShadow:
-									"0 10px 24px -10px var(--ui-color-brand-700), 0 2px 6px -2px rgb(0 0 0 / 0.2)",
-								transition: "scale 120ms",
-								[`@media ${TABLET}`]: { display: "none" },
-							}),
-							when("&:active", raw({ scale: "0.94" })),
-							when(
-								"&:focus-visible",
-								raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "3px" }),
-							),
-							motionReduce(raw({ transition: "none" })),
-						]}
-					>
-						<PenLineIcon size={24} aria-hidden="true" />
-					</a>
-				) : null}
 				<AccountMenu />
 				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</div>

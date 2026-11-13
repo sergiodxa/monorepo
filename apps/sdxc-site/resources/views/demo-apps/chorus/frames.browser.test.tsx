@@ -1,23 +1,29 @@
 /**
- * Holds Chorus's layout in a real browser: the rail's cards land at their placeholders'
- * height, no screen scrolls sideways on a phone, the phone's compose button is gone from a
- * tablet up, the icon rail shows no names, and a profile's avatar sits over its banner.
+ * Holds Chorus in a real browser: the rail's cards land at their placeholders' height, phone
+ * and tablet layouts hold, and every link or form aimed at a frame names a mounted one whose
+ * reload fetches that frame alone, leaving the nav and the rest of the page as they were.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/component";
+import type { FrameHandle, Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
+import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
+import { CharacterCount } from "@sdxc/ui/character-count";
 import { themeScope } from "@sdxc/ui/styles";
+import { renderToStream } from "remix/component/server";
 import { render } from "remix/component/test";
 import { afterAll, describe, expect, onTestFinished, test } from "vitest";
 import { page } from "vitest/browser";
 
-import { PENDING_FRAMES, blockSize } from "~/app/test/frame-size";
+import { blockSize } from "~/app/test/frame-size";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import chorus from "~/resources/views/demo-apps/chorus";
+import { CopyLink } from "~/resources/views/demo-apps/chorus/copy-link";
+import { COLUMN_FRAME, href, pollFrame } from "~/resources/views/demo-apps/chorus/data";
+import { FeedKeys } from "~/resources/views/demo-apps/chorus/feed-keys";
 import { FollowCard, TrendsCard } from "~/resources/views/demo-apps/chorus/rail";
 import { readState } from "~/resources/views/demo-apps/chorus/state";
 
@@ -41,6 +47,56 @@ function themed(node: RemixNode): RemixNode {
 	);
 }
 
+/** The islands a column holds, by export name, so frame content hydrates in the test page. */
+const ISLANDS: Record<string, Function> = { CharacterCount, CopyLink, FeedKeys, OptimisticToggle };
+
+/** Every frame load the page asked for, in order, with the frame name it was aimed at. */
+let requests: Array<{ src: string; target: string | undefined }> = [];
+
+/** The frames of the screen mounted last, as its components reach them. */
+let frames: Handle["frames"] | undefined;
+
+/** Catches the mounted root's frames, so a test can reload one as a link aimed at it would. */
+function FrameProbe(handle: Handle) {
+	frames = handle.frames;
+	return () => null;
+}
+
+/**
+ * Answers a frame as the app's page route does: a name Chorus owns renders through its
+ * `target`, with nested frames inlined as the server inlines them. The rail's unnamed frames
+ * never answer, so their placeholders stay, as on first paint.
+ */
+function answer(src: string, target: string | undefined): ReadableStream<Uint8Array> | null {
+	if (target === undefined) return null;
+	let url = new URL(src, location.origin);
+	let page = url.pathname.replace(/^\/demo\/apps\/chorus\/?/, "");
+	let node = chorus.target?.(target, { page, url, cookie: null });
+	if (node === null || node === undefined || node instanceof Promise) return null;
+	return renderToStream(node, {
+		resolveFrame: (nested, name) => answer(nested, name) ?? "",
+	});
+}
+
+/** Render options whose frames answer through Chorus, recording every load. */
+const ANSWERING_FRAMES = {
+	frameInit: {
+		resolveFrame(src: string, options?: { target?: string }) {
+			requests.push({ src, target: options?.target });
+			return answer(src, options?.target) ?? new Promise<never>(() => {});
+		},
+		loadModule: (_url: string, name: string) => ISLANDS[name]!,
+	},
+};
+
+/** Waits until `ready` holds, a frame at a time, for up to two seconds. */
+async function until(ready: () => boolean): Promise<void> {
+	let deadline = performance.now() + 2000;
+	while (!ready() && performance.now() < deadline) {
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+	}
+}
+
 /** Expects the content to take the placeholder's height, to a pixel. */
 function expectSameSize(content: number, fallback: number) {
 	expect(content).toBeGreaterThan(0);
@@ -48,18 +104,35 @@ function expectSameSize(content: number, fallback: number) {
 }
 
 /**
- * Mounts one screen of the app at the current viewport, its frames pending as on first
- * paint, and waits a frame. The screen must draw something, so a render that throws fails.
+ * Mounts one screen of the app at the current viewport and waits for its column frame to
+ * land; the rail's frames stay pending. The column must draw, so a render that throws fails.
  */
 async function mountScreen(screen: string): Promise<HTMLElement> {
 	let [path = "", query = ""] = screen.split("?");
-	let url = new URL(`http://localhost/demo/apps/chorus/${path}${query ? `?${query}` : ""}`);
+	let url = new URL(`${location.origin}${href(screen)}`);
 	let rendered = chorus.render({ page: path, url, cookie: null });
-	let mounted = render(themed(rendered.body), PENDING_FRAMES);
+	requests = [];
+	let mounted = render(
+		themed(
+			<>
+				<FrameProbe />
+				{rendered.body}
+			</>,
+		),
+		{ ...ANSWERING_FRAMES, frameInit: { ...ANSWERING_FRAMES.frameInit, src: url.href } },
+	);
 	onTestFinished(() => mounted.cleanup());
-	await new Promise((resolve) => requestAnimationFrame(resolve));
-	expect(mounted.container.querySelector('[data-slot="chorus"]'), screen).not.toBeNull();
+	let column = () => mounted.container.querySelector('[data-slot="chorus-header"]');
+	await until(() => column() !== null);
+	expect(column(), `${screen}${query}`).not.toBeNull();
 	return mounted.container;
+}
+
+/** The frame a name points at on the mounted screen, failing when none is mounted. */
+function mountedFrame(name: string): FrameHandle {
+	let frame = frames?.get(name);
+	expect(frame, name).toBeDefined();
+	return frame!;
 }
 
 afterAll(async () => {
@@ -193,5 +266,74 @@ describe("Chorus's Copy link", () => {
 
 		expect(link.getAttribute("href")).toBe("/demo/apps/chorus/post/p-leonids");
 		expect(followed).toBe(false);
+	});
+});
+
+describe("Chorus's frame targets", () => {
+	test.each(["", "u/noorhaddad", "notifications", "explore", "messages", "messages/kofibuilds"])(
+		"every link and form aimed at a frame on %j reloads that frame alone",
+		async (screen) => {
+			await page.viewport(1280, 860);
+			let root = await mountScreen(screen);
+			let nav = root.querySelector('[data-slot="chorus"] > header');
+			let aimed = [...root.querySelectorAll<HTMLElement>("[data-rmx-target]")];
+			expect(aimed.length).toBeGreaterThan(0);
+
+			let seen = new Set<string>();
+			for (let element of aimed) {
+				let target = element.dataset.rmxTarget!;
+				let frame = mountedFrame(target);
+				let src = element.getAttribute("href") ?? element.getAttribute("action")!;
+				if (element instanceof HTMLFormElement && element.method === "get") continue;
+				if (element instanceof HTMLFormElement || seen.has(`${target} ${src}`)) continue;
+				seen.add(`${target} ${src}`);
+
+				requests = [];
+				await frame.reload({ src });
+
+				expect(requests, src).toEqual([{ src, target }]);
+				expect(nav?.isConnected, src).toBe(true);
+				expect(root.querySelector('[data-slot="chorus"] > header'), src).toBe(nav);
+			}
+		},
+	);
+
+	test("For you to Following swaps the column and keeps the nav and rail", async () => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("");
+		let nav = root.querySelector('[data-slot="chorus"] > header');
+		let rail = root.querySelector('[data-slot="chorus"] > aside');
+		let following = root.querySelector<HTMLAnchorElement>(
+			'nav[aria-label="Timelines"] a[href$="feed=following"]',
+		)!;
+
+		await mountedFrame(COLUMN_FRAME).reload({ src: following.getAttribute("href")! });
+
+		expect(root.querySelector("h1")?.textContent).toBe("Home: Following");
+		expect(
+			root.querySelector('nav[aria-label="Timelines"] [aria-current="page"]')?.textContent,
+		).toBe("Following");
+		expect(root.querySelector('[data-slot="chorus"] > header')).toBe(nav);
+		expect(root.querySelector('[data-slot="chorus"] > aside')).toBe(rail);
+	});
+
+	test("a vote is aimed at its own poll, so the posts around it stay the same nodes", async () => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("post/p-friday-poll");
+		let form = root.querySelector<HTMLFormElement>(
+			`form[data-rmx-target="${pollFrame("p-friday-poll")}"]`,
+		)!;
+		let article = root.querySelector("article");
+
+		requests = [];
+		await mountedFrame(pollFrame("p-friday-poll")).reload({ src: form.getAttribute("action")! });
+
+		expect(requests).toEqual([
+			{ src: href("post/p-friday-poll"), target: pollFrame("p-friday-poll") },
+		]);
+		expect(root.querySelector("article")).toBe(article);
+		expect(
+			root.querySelector(`form[data-rmx-target="${pollFrame("p-friday-poll")}"]`),
+		).not.toBeNull();
 	});
 });

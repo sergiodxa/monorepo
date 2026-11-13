@@ -192,7 +192,7 @@ export default route({
 		/** The app's home without `page`, one of its screens with it. */
 		show: get("/demo/apps/:app(/*page)"),
 		/** Where a screen's forms post; it keeps nothing and answers by sending the visitor back. */
-		action: post("/demo/apps/:app/*page"),
+		action: post("/demo/apps/:app(/*page)"),
 	},
 	/**
 	 * One secondary part of a demo screen as an HTML fragment, which the screen streams in

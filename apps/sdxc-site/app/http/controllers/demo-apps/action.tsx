@@ -16,19 +16,20 @@ import { DEMO_APP_TOAST_PARAM, demoAppHref, findDemoApp } from "~/resources/view
 import DemoAppDocument from "~/resources/views/demo-apps/document";
 import routes from "~/routes/web";
 
-/** The `:app` and `*page` the form posted under. */
-const PARAMS = s.object({ app: s.string(), page: s.string() });
+/** The `:app` and `*page` the form posted under; `page` is absent on the home screen. */
+const PARAMS = s.object({ app: s.string(), page: s.optional(s.string()) });
 
 /**
  * Answers `303` to the screen the app chose, with its toast's key and a one-time suffix in
- * the query, or renders
- * the screen the app answered with (`400` unless it says otherwise). An unknown app answers
- * `404` and a post the app cannot read `400`; a redirect outside the app's own address is
- * refused, so a post can only ever send the visitor back into it. A toggle's background post
- * answers `204` with the redirect's cookies, as its page already shows the change.
+ * the query, or renders the screen the app answered with (`400` unless it says otherwise); a
+ * post aimed at one of that screen's named frames answers that frame's content alone. An
+ * unknown app answers `404` and a post the app cannot read `400`; a redirect outside the
+ * app's own address is refused, so a post can only ever send the visitor back into it. A
+ * toggle's background post answers `204` with the redirect's cookies, as its page already
+ * shows the change.
  */
 export default createAction(routes.demoApps.action, async (ctx) => {
-	let { app: slug, page } = s.parse(PARAMS, ctx.params);
+	let { app: slug, page = "" } = s.parse(PARAMS, ctx.params);
 	let app = await findDemoApp(slug);
 	if (app === null) return new Response("Not found.", { status: 404 });
 
@@ -40,6 +41,9 @@ export default createAction(routes.demoApps.action, async (ctx) => {
 	if (next === null) return new Response("That form could not be read.", { status: 400 });
 
 	if ("body" in next) {
+		let frameName = ctx.request.headers.get("X-Remix-Target");
+		let frame = frameName === null ? undefined : next.frames?.[frameName];
+		if (frame !== undefined) return ctx.render(frame, { status: next.status ?? 400 });
 		return ctx.render(
 			<DemoAppDocument assets={ctx.assets} app={app} screen={next} toast={null} />,
 			{ status: next.status ?? 400 },

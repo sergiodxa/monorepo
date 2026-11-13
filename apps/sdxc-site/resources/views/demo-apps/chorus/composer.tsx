@@ -1,8 +1,8 @@
 /**
  * The post composer: the writer's avatar, a field that grows with its text, and a footer with
- * the character ring and the Post button. It posts as a whole document, so the visitor lands
- * on a fresh page with an empty box, with or without script; with script the ring counts as
- * you type and Post waits until there is something within the limit to send.
+ * the character ring and the Post button. It posts to the page it sits on; with script it can
+ * load the answer into the column's frame, where a fresh, empty box replaces it, and the ring
+ * counts as you type while Post waits until there is something within the limit to send.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,7 @@ import { when } from "@sdxc/u/state";
 import { Button } from "@sdxc/ui";
 import { CharacterCount } from "@sdxc/ui/character-count";
 
-import { ME, POST_LIMIT, actionHref } from "~/resources/views/demo-apps/chorus/data";
+import { COLUMN_FRAME, ME, POST_LIMIT, href } from "~/resources/views/demo-apps/chorus/data";
 import { COUNT_LABELS } from "~/resources/views/demo-apps/chorus/labels";
 import { PersonAvatar } from "~/resources/views/demo-apps/chorus/parts";
 
@@ -23,8 +23,18 @@ namespace Composer {
 	export interface Props {
 		/** Distinguishes the field when a page has two composers. */
 		id: string;
-		/** The page the composer sits on, which a refused post is answered on again. */
+		/** The page the composer sits on and posts to, which a refused post is answered on again. */
 		from: string;
+		/**
+		 * Loads the answer into the column's frame, for a composer whose post lands on the page
+		 * it sits on; without it the post loads a whole document.
+		 */
+		inColumn?: boolean;
+		/**
+		 * Counts the visitor's posts, so the box the column's frame redraws after a post is a new,
+		 * empty one rather than the one holding what was just sent.
+		 */
+		revision?: number;
 		/** The field's placeholder and accessible name. */
 		placeholder: string;
 		/** The submit button's text. @default "Post" */
@@ -46,7 +56,7 @@ namespace Composer {
 	}
 }
 
-/** Renders the composer as a form posting to `compose`, which answers on the timeline. */
+/** Renders the composer as a form posting to its own page with the `compose` intent. */
 export function ChorusComposer(handle: Handle<Composer.Props>) {
 	return () => {
 		let {
@@ -54,10 +64,12 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 			autofocus,
 			from,
 			id,
+			inColumn = false,
 			issue,
 			placeholder,
 			quote,
 			replyTo,
+			revision = 0,
 			submit = "Post",
 			tall,
 			value = "",
@@ -68,9 +80,12 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 		return (
 			<form
 				method="post"
-				action={actionHref("compose")}
+				action={href(from)}
 				data-slot="chorus-composer"
-				data-rmx-document=""
+				data-rmx-key={`composer-${id}-${revision}`}
+				data-rmx-target={inColumn ? COLUMN_FRAME : undefined}
+				data-rmx-reset-scroll={inColumn ? "manual" : undefined}
+				data-rmx-document={inColumn ? undefined : ""}
 				mix={[
 					raw({
 						display: "grid",
@@ -80,7 +95,7 @@ export function ChorusComposer(handle: Handle<Composer.Props>) {
 					}),
 				]}
 			>
-				<input type="hidden" name="from" value={from} />
+				<input type="hidden" name="intent" value="compose" />
 				{replyTo ? <input type="hidden" name="replyTo" value={replyTo} /> : null}
 				{quote ? <input type="hidden" name="quote" value={quote} /> : null}
 				<PersonAvatar person={ME} />

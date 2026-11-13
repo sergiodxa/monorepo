@@ -14,7 +14,8 @@ import { describe, expect, test } from "vitest";
 import { withoutToastNonce } from "~/app/test/demo-apps";
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppFrameHref, demoAppHref } from "~/resources/views/demo-apps";
-import { NOTIFICATIONS } from "~/resources/views/demo-apps/chorus/data";
+import chorus from "~/resources/views/demo-apps/chorus";
+import { COLUMN_FRAME, NOTIFICATIONS, pollFrame } from "~/resources/views/demo-apps/chorus/data";
 import { groupSentence } from "~/resources/views/demo-apps/chorus/notifications";
 
 /** Chorus's addresses. */
@@ -68,6 +69,36 @@ function cookiesFrom(response: Response, previous = ""): string {
 /** A page's HTML as the visitor with `cookie` sees it. */
 async function page(path: string, cookie = ""): Promise<string> {
 	return await (await fetchApp(href(path), { headers: { cookie } })).text();
+}
+
+/**
+ * Fetches a page as the browser runtime loads it into one named frame.
+ *
+ * @param address The page's address.
+ * @param name The frame's name, sent as `X-Remix-Target`.
+ * @param cookie The visitor's `Cookie` header.
+ */
+async function targeted(address: string, name: string, cookie = ""): Promise<Response> {
+	return await fetchApp(address, {
+		headers: { cookie, "x-remix-frame": "true", "x-remix-target": name },
+	});
+}
+
+/** The names of every frame a page mounts, nested ones included, from its frame data. */
+function frameNames(body: string): Set<string> {
+	let names = new Set<string>();
+	for (let match of body.matchAll(
+		/<script type="application\/json" id="rmx-data">(.*?)<\/script>/g,
+	)) {
+		let data = JSON.parse(match[1]!) as { f?: Record<string, { name?: string }> };
+		for (let frame of Object.values(data.f ?? {})) if (frame.name) names.add(frame.name);
+	}
+	return names;
+}
+
+/** The frame names a page's links and forms aim at. */
+function targetsOf(body: string): Set<string> {
+	return new Set([...body.matchAll(/data-rmx-target="([^"]+)"/g)].map((match) => match[1]!));
 }
 
 /** The like button's accessible name in one post's card. */
@@ -164,7 +195,7 @@ describe("Chorus reactions", () => {
 
 describe("Chorus posting", () => {
 	test("a post lands at the top of the timeline with its toast", async () => {
-		let response = await post("compose", { text: "Hello from the test suite #demo", from: "" });
+		let response = await post("", { intent: "compose", text: "Hello from the test suite #demo" });
 		let cookie = cookiesFrom(response);
 		let body = await page("", cookie);
 
@@ -179,7 +210,7 @@ describe("Chorus posting", () => {
 	});
 
 	test("an empty post answers the page again with why", async () => {
-		let response = await post("compose", { text: "   ", from: "" });
+		let response = await post("", { intent: "compose", text: "   " });
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
@@ -189,7 +220,7 @@ describe("Chorus posting", () => {
 
 	test("a post over 280 characters keeps every character and says how far over", async () => {
 		let text = "a".repeat(290);
-		let response = await post("compose", { text, from: "" });
+		let response = await post("", { intent: "compose", text });
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
@@ -198,10 +229,10 @@ describe("Chorus posting", () => {
 	});
 
 	test("a reply lands under the post it answers and counts on it", async () => {
-		let response = await post("compose", {
+		let response = await post("post/p-weather", {
+			intent: "compose",
 			text: "Clear skies here too",
 			replyTo: "p-weather",
-			from: "post/p-weather",
 		});
 		let cookie = cookiesFrom(response);
 		let body = await page("post/p-weather", cookie);
@@ -215,10 +246,10 @@ describe("Chorus posting", () => {
 	});
 
 	test("a refused reply answers the post page with the text kept", async () => {
-		let response = await post("compose", {
+		let response = await post("post/p-weather", {
+			intent: "compose",
 			text: "",
 			replyTo: "p-weather",
-			from: "post/p-weather",
 		});
 		let body = await response.text();
 
@@ -356,5 +387,108 @@ describe("Chorus timeline and screens", () => {
 		]) {
 			expect((await fetchApp(href(path))).status, path).toBe(404);
 		}
+	});
+});
+
+describe("Chorus frames", () => {
+	test("every link and form aimed at a frame names one its page mounts", async () => {
+		let aimed = 0;
+		for (let screen of chorus.screens) {
+			let body = await page(screen);
+			let names = frameNames(body);
+			for (let target of targetsOf(body)) {
+				expect(names, `${screen} → ${target}`).toContain(target);
+				aimed += 1;
+			}
+		}
+		expect(aimed).toBeGreaterThan(chorus.screens.length);
+	});
+
+	test("a page mounts its column as a frame loading the page's own address", async () => {
+		let body = await page("?feed=following&toast=posted");
+
+		expect(body).toContain(`"name":"${COLUMN_FRAME}","src":"${href("?feed=following")}"`);
+	});
+
+	test("a request aimed at the column answers the column alone", async () => {
+		for (let [path, heading] of [
+			["?feed=following", "Home: Following"],
+			["?arrived=1", "Home: For you"],
+			["u/noorhaddad/media", "Noor Haddad"],
+			["notifications?tab=mentions", "Notifications"],
+			["explore?tab=people", "Explore"],
+			["messages/kofibuilds", "Kofi"],
+		] as const) {
+			let response = await targeted(href(path), COLUMN_FRAME);
+			let body = await response.text();
+
+			expect(response.status, path).toBe(200);
+			expect(body, path).not.toContain('data-slot="chorus"');
+			expect(body, path).toContain('data-slot="chorus-header"');
+			expect(body, path).toMatch(new RegExp(`<h1[^>]*>[^<]*${heading}`));
+		}
+	});
+
+	test("a request aimed at a frame the page lacks answers the whole page", async () => {
+		expect(await (await targeted(href(), "nope")).text()).toContain('data-slot="chorus"');
+	});
+
+	test("a vote aimed at its poll comes back as the poll alone, counted", async () => {
+		let response = await fetchApp(href(), {
+			method: "POST",
+			body: new URLSearchParams({ intent: "vote", post: "p-friday-poll", option: "2" }),
+			headers: { "x-remix-target": pollFrame("p-friday-poll") },
+		});
+		let cookie = cookiesFrom(response);
+		let poll = await (await targeted(href(), pollFrame("p-friday-poll"), cookie)).text();
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(`${href()}#post-p-friday-poll`);
+		expect(poll).toContain('aria-label="Your vote"');
+		expect(poll).toContain("1,404 votes");
+		expect(poll).not.toContain('id="post-');
+	});
+
+	test("a post from the composer comes back as the column it was written in, on top", async () => {
+		let response = await fetchApp(href("?feed=following"), {
+			method: "POST",
+			body: new URLSearchParams({ intent: "compose", text: "Framed hello" }),
+			headers: { "x-remix-target": COLUMN_FRAME },
+		});
+		let cookie = cookiesFrom(response);
+		let location = response.headers.get("location") ?? "";
+		let column = await (await targeted(location, COLUMN_FRAME, cookie)).text();
+
+		expect(location.startsWith(`${href("?feed=following")}&toast=posted.`)).toBe(true);
+		expect(column).toContain("Framed hello");
+		expect(column).toContain("Home: Following");
+		expect(column).toContain('data-rmx-key="composer-home-1"');
+		expect(column).not.toContain('data-slot="chorus"');
+	});
+
+	test("a refused post aimed at the column answers the column with the text and why", async () => {
+		let response = await fetchApp(href(), {
+			method: "POST",
+			body: new URLSearchParams({ intent: "compose", text: "   " }),
+			headers: { "x-remix-target": COLUMN_FRAME },
+		});
+		let body = await response.text();
+
+		expect(response.status).toBe(400);
+		expect(body).toContain("Write something before posting.");
+		expect(body).not.toContain('data-slot="chorus"');
+	});
+
+	test("a message sent into the thread comes back as the thread with it", async () => {
+		let response = await post("messages/kofibuilds", { text: "Framed message" }, "", {
+			"x-remix-target": COLUMN_FRAME,
+		});
+		let cookie = cookiesFrom(response);
+		let location = response.headers.get("location") ?? "";
+		let thread = await (await targeted(location, COLUMN_FRAME, cookie)).text();
+
+		expect(thread).toContain("Framed message");
+		expect(thread).toContain('data-rmx-key="reply-');
+		expect(thread).not.toContain('data-slot="chorus"');
 	});
 });

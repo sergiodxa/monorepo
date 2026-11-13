@@ -25,6 +25,7 @@ import { dark, media, motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 import { Button, Menu } from "@sdxc/ui";
 import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
+import { Frame } from "remix/component";
 
 import type { PaletteScale } from "~/resources/components/demo-theme";
 import type { Person } from "~/resources/views/demo-apps/chorus/data";
@@ -32,7 +33,7 @@ import type { PostView } from "~/resources/views/demo-apps/chorus/state";
 
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import { CopyLink } from "~/resources/views/demo-apps/chorus/copy-link";
-import { ME, actionHref, href } from "~/resources/views/demo-apps/chorus/data";
+import { ME, actionHref, href, pollFrame } from "~/resources/views/demo-apps/chorus/data";
 import {
 	PersonAvatar,
 	RichText,
@@ -545,8 +546,21 @@ export function QuotedPost(handle: Handle<{ quoted: PostView; now: number }>) {
 namespace PollView {
 	export interface Props {
 		post: PostView;
+		/** The page the poll sits on, which a vote posts to and, without script, returns to. */
 		returnTo: string;
 	}
+}
+
+/**
+ * A post's poll in its own frame, loaded with the page it sits on: a vote reloads only this
+ * frame, so the bars grow in place while the timeline, its scroll and the shell stay put.
+ */
+export function PollFrame(handle: Handle<PollView.Props>) {
+	return () => {
+		let { post, returnTo } = handle.props;
+		if (!post.poll) return null;
+		return <Frame name={pollFrame(post.id)} src={href(returnTo)} />;
+	};
 }
 
 /**
@@ -569,7 +583,10 @@ export function PollView(handle: Handle<PollView.Props>) {
 			return (
 				<form
 					method="post"
-					action={actionHref(`post/${post.id}`)}
+					action={href(returnTo)}
+					data-rmx-target={pollFrame(post.id)}
+					data-rmx-reset-scroll="manual"
+					data-rmx-reset-focus="manual"
 					mix={[
 						raw({
 							position: "relative",
@@ -581,7 +598,7 @@ export function PollView(handle: Handle<PollView.Props>) {
 					]}
 				>
 					<input type="hidden" name="intent" value="vote" />
-					<input type="hidden" name="return" value={returnTo} />
+					<input type="hidden" name="post" value={post.id} />
 					{poll.options.map((option, index) => (
 						<button
 							type="submit"
@@ -954,7 +971,7 @@ export function PostCard(handle: Handle<PostCard.Props>) {
 					<Pictures post={post} />
 					<LinkPreview post={post} />
 					{quoted ? <QuotedPost quoted={quoted} now={now} /> : null}
-					<PollView post={post} returnTo={returnTo} />
+					<PollFrame post={post} returnTo={returnTo} />
 					<PostActions post={post} returnTo={returnTo} />
 					{threadLink ? (
 						<a
@@ -1085,7 +1102,7 @@ export function FocalPost(handle: Handle<FocalPost.Props>) {
 					<Pictures post={post} />
 					<LinkPreview post={post} />
 					{quoted ? <QuotedPost quoted={quoted} now={now} /> : null}
-					<PollView post={post} returnTo={returnTo} />
+					<PollFrame post={post} returnTo={returnTo} />
 				</div>
 				<p mix={[raw({ margin: "0", fontSize: "0.9375rem", color: "var(--ui-neutral-fg-muted)" })]}>
 					<time datetime={post.at}>{fullDate(post.at)}</time>

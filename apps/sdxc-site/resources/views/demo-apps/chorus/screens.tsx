@@ -21,7 +21,7 @@ import { ChorusComposer } from "~/resources/views/demo-apps/chorus/composer";
 import { ARRIVED_POSTS, ME, POSTS, href } from "~/resources/views/demo-apps/chorus/data";
 import { Feed, FeedEnd, TitleBar, postById } from "~/resources/views/demo-apps/chorus/feed";
 import { FocalPost, PostCard, QuotedPost } from "~/resources/views/demo-apps/chorus/post";
-import { ChorusShell } from "~/resources/views/demo-apps/chorus/shell";
+import { ChorusColumn } from "~/resources/views/demo-apps/chorus/shell";
 import { isOn } from "~/resources/views/demo-apps/chorus/state";
 
 /** Every post a visitor can see, fixtures, arrivals and their own, as they see it. */
@@ -92,7 +92,7 @@ export function PostScreen(handle: Handle<PostScreen.Props>) {
 		let replies = replyItems(post, state);
 		let page = `post/${post.id}`;
 		return (
-			<ChorusShell current="none" compose={false} header={<TitleBar title="Post" back={href()} />}>
+			<ChorusColumn current="none" compose={false} header={<TitleBar title="Post" back={href()} />}>
 				{above.map((parent, index) => (
 					<PostCard
 						post={parent}
@@ -114,6 +114,8 @@ export function PostScreen(handle: Handle<PostScreen.Props>) {
 					<ChorusComposer
 						id="reply"
 						from={page}
+						inColumn
+						revision={state.posts.length}
 						placeholder={`Reply to ${post.person.name}`}
 						submit="Reply"
 						replyTo={post.id}
@@ -127,7 +129,7 @@ export function PostScreen(handle: Handle<PostScreen.Props>) {
 				) : (
 					<FeedEnd>End of replies.</FeedEnd>
 				)}
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }
@@ -162,7 +164,7 @@ export function ComposeScreen(handle: Handle<ComposeScreen.Props>) {
 		let { from, title } = composeMode(replyTo, quote);
 		let back = replyTo ? href(`post/${replyTo.id}`) : href();
 		return (
-			<ChorusShell
+			<ChorusColumn
 				current="none"
 				compose={false}
 				tabBar={false}
@@ -192,7 +194,7 @@ export function ComposeScreen(handle: Handle<ComposeScreen.Props>) {
 					tall
 					attachment={quote ? <QuotedPost quoted={quote} now={now} /> : undefined}
 				/>
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }
@@ -203,7 +205,7 @@ export function BookmarksScreen(handle: Handle<{ state: VisitorState; now: numbe
 		let { now, state } = handle.props;
 		let saved = allPosts(state).filter((post) => isOn(state, "save", post.id, post.saved ?? false));
 		return (
-			<ChorusShell
+			<ChorusColumn
 				current="bookmarks"
 				phoneBar
 				header={<TitleBar title="Saved" subtitle={`@${ME.handle}`} />}
@@ -227,7 +229,7 @@ export function BookmarksScreen(handle: Handle<{ state: VisitorState; now: numbe
 						label="Saved posts"
 					/>
 				)}
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }

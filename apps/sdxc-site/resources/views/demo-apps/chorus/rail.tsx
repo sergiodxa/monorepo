@@ -19,7 +19,13 @@ import { Skeleton } from "@sdxc/ui/app/skeleton";
 import type { Person } from "~/resources/views/demo-apps/chorus/data";
 import type { VisitorState } from "~/resources/views/demo-apps/chorus/state";
 
-import { PEOPLE, TRENDS, actionHref, href } from "~/resources/views/demo-apps/chorus/data";
+import {
+	COLUMN_FRAME,
+	PEOPLE,
+	TRENDS,
+	actionHref,
+	href,
+} from "~/resources/views/demo-apps/chorus/data";
 import { PersonAvatar, compact } from "~/resources/views/demo-apps/chorus/parts";
 import { follows } from "~/resources/views/demo-apps/chorus/state";
 
@@ -39,13 +45,20 @@ function Text(handle: Handle<{ ghost?: boolean; children: RemixNode }>) {
 		);
 }
 
-/** The search box: a GET form to Explore, so a search is an address to send. */
-export function SearchBox(handle: Handle<{ query?: string; autofocus?: boolean }>) {
+/**
+ * The search box: a GET form to Explore, so a search is an address to send. On Explore it
+ * loads the results into the column's frame and keeps the field focused.
+ */
+export function SearchBox(
+	handle: Handle<{ query?: string; autofocus?: boolean; inColumn?: boolean }>,
+) {
 	return () => (
 		<search>
 			<form
 				method="get"
 				action={href("explore")}
+				data-rmx-target={handle.props.inColumn ? COLUMN_FRAME : undefined}
+				data-rmx-reset-focus={handle.props.inColumn ? "manual" : undefined}
 				mix={[
 					raw({
 						position: "relative",

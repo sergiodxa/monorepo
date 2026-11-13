@@ -47,6 +47,11 @@ export interface DemoAppScreen {
 	body: RemixNode;
 	/** `404` for the app's own not-found screen. Default: `200`. */
 	status?: number;
+	/**
+	 * The content of each named frame on the screen, keyed by its name, for a screen a form
+	 * post answers: a post aimed at one of them (`X-Remix-Target`) answers that content alone.
+	 */
+	frames?: Record<string, RemixNode>;
 }
 
 /** Where a form post sends the visitor, and which of the app's toasts greets them there. */

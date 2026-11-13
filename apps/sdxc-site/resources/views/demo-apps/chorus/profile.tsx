@@ -37,7 +37,7 @@ import {
 } from "~/resources/views/demo-apps/chorus/feed";
 import { PersonAvatar, SceneArt, compact } from "~/resources/views/demo-apps/chorus/parts";
 import { FollowButton, FollowsYou } from "~/resources/views/demo-apps/chorus/rail";
-import { ChorusShell, TABLET } from "~/resources/views/demo-apps/chorus/shell";
+import { ChorusColumn, TABLET } from "~/resources/views/demo-apps/chorus/shell";
 import { followerCount, followingCount, isOn } from "~/resources/views/demo-apps/chorus/state";
 
 /** A profile's tabs, in order; `posts` is the profile's own address. */
@@ -141,7 +141,7 @@ export function ProfileScreen(handle: Handle<ProfileScreen.Props>) {
 		let following = mine ? followingCount(state) : person.following;
 
 		return (
-			<ChorusShell
+			<ChorusColumn
 				current={mine ? "profile" : "none"}
 				header={
 					<TitleBar
@@ -305,6 +305,7 @@ export function ProfileScreen(handle: Handle<ProfileScreen.Props>) {
 				>
 					<FeedTabs
 						label={`${person.name}'s profile`}
+						keepScroll
 						tabs={PROFILE_TABS.map((entry) => ({
 							label: entry[0]!.toUpperCase() + entry.slice(1),
 							href: href(entry === "posts" ? base : `${base}/${entry}`),
@@ -320,7 +321,7 @@ export function ProfileScreen(handle: Handle<ProfileScreen.Props>) {
 					now={now}
 					page={page}
 				/>
-			</ChorusShell>
+			</ChorusColumn>
 		);
 	};
 }
