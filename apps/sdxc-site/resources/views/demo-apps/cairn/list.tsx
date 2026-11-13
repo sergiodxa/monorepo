@@ -28,6 +28,7 @@ import { ViewOptions } from "@sdxc/ui/app/view-options";
 import { Frame } from "remix/component";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
+import { MainAnchor } from "~/resources/views/demo-apps/main-frame";
 
 import type { PriorityId, StatusId } from "./data";
 import type { IssueView, VisitorState } from "./state";
@@ -988,20 +989,23 @@ export function OpenIssue(handle: Handle<OpenIssue.Props>) {
 		let step = (id: string | undefined) =>
 			id === undefined ? null : setParamHref(listUrl(url), "issue", id);
 		return (
-			<IssueDetail
-				issue={open}
-				state={state}
-				returnTo={returnPage(scope, url)}
-				level={2}
-				closeHref={setParamHref(listUrl(url), "issue", null)}
-				frames={{ view: VIEW_FRAME, issue: ISSUE_FRAME }}
-				position={{
-					index: index + 1,
-					total: ordered.length,
-					previousHref: index > 0 ? step(ordered[index - 1]?.id) : null,
-					nextHref: index >= 0 ? step(ordered[index + 1]?.id) : null,
-				}}
-			/>
+			<>
+				<MainAnchor url={url} />
+				<IssueDetail
+					issue={open}
+					state={state}
+					returnTo={returnPage(scope, url)}
+					level={2}
+					closeHref={setParamHref(listUrl(url), "issue", null)}
+					frames={{ view: VIEW_FRAME, issue: ISSUE_FRAME }}
+					position={{
+						index: index + 1,
+						total: ordered.length,
+						previousHref: index > 0 ? step(ordered[index - 1]?.id) : null,
+						nextHref: index >= 0 ? step(ordered[index + 1]?.id) : null,
+					}}
+				/>
+			</>
 		);
 	};
 }

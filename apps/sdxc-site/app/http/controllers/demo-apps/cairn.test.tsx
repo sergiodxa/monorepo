@@ -489,6 +489,28 @@ describe("Cairn frames", () => {
 		expect(view).not.toContain('data-slot="app-shell"');
 	});
 
+	test("a comment posted into the issue frame lands on itself through the frame's anchor", async () => {
+		let response = await fetchApp(href("team/web?issue=WEB-140"), {
+			method: "POST",
+			body: new URLSearchParams([
+				["issue", "WEB-140"],
+				["intent", "comment"],
+				["body", "Scrolled into view after the post."],
+			]),
+			headers: { "X-Remix-Frame": "true", "X-Remix-Target": "cairn-issue" },
+		});
+		let location = response.headers.get("Location") ?? "";
+		expect(location).toMatch(/[?&]at=comment-v-/);
+
+		let issue = await frameOf(
+			location.replace("/demo/apps/cairn/", ""),
+			"cairn-issue",
+			cookiesFrom(response),
+		);
+		expect(issue).toContain("Scrolled into view after the post.");
+		expect(issue).toMatch(/<template data-main-anchor="comment-v-/);
+	});
+
 	test("every in-app link and form names the frame it reloads, and still works as a plain page", async () => {
 		let list = await page("team/web?issue=WEB-121");
 		expect(list).toMatch(/<a href="[^"]*issue=WEB-124"[^>]*data-rmx-target="cairn-issue"/);

@@ -526,7 +526,6 @@ function Activity(handle: Handle<{ issue: IssueView; returnTo: string; frame?: s
 					method="post"
 					action={editHref(returnTo)}
 					data-rmx-target={frame}
-					data-rmx-document={frame === undefined ? "" : undefined}
 					mix={[raw({ display: "flex", flexDirection: "column", gap: "0.5rem" })]}
 				>
 					<input type="hidden" name="intent" value="comment" />

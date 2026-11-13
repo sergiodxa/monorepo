@@ -17,6 +17,8 @@ import { Board, boardMoveFormId } from "@sdxc/ui/app/board";
 import { DetailSheet } from "@sdxc/ui/app/detail-sheet";
 import { Frame } from "remix/component";
 
+import { MainAnchor } from "~/resources/views/demo-apps/main-frame";
+
 import type { StatusId, Team } from "./data";
 import type { IssueView, VisitorState } from "./state";
 
@@ -351,33 +353,38 @@ export function SheetView(handle: Handle<BoardView.Props>) {
 		let open = index === -1 ? undefined : ordered[index];
 		if (!open) return null;
 		return (
-			<DetailSheet
-				id="cairn-issue-sheet"
-				title={open.title}
-				description={`${open.id} · ${STATUS_NAMES[open.status]}`}
-				closeHref={setParamHref(url, "issue", null)}
-				target={SHEET_FRAME}
-				permalink={href(`issue/${open.id}`)}
-				position={{
-					index: index + 1,
-					total: ordered.length,
-					previousHref: index > 0 ? setParamHref(url, "issue", ordered[index - 1]!.id) : null,
-					nextHref:
-						index < ordered.length - 1 ? setParamHref(url, "issue", ordered[index + 1]!.id) : null,
-				}}
-				labels={SHEET_LABELS}
-				keys="sheet"
-				inset
-			>
-				<IssueDetail
-					issue={open}
-					state={state}
-					returnTo={boardPage(team, url)}
-					level={2}
-					frames={{ view: BOARD_FRAME, issue: SHEET_FRAME }}
-					sheet
-				/>
-			</DetailSheet>
+			<>
+				<MainAnchor url={url} />
+				<DetailSheet
+					id="cairn-issue-sheet"
+					title={open.title}
+					description={`${open.id} · ${STATUS_NAMES[open.status]}`}
+					closeHref={setParamHref(url, "issue", null)}
+					target={SHEET_FRAME}
+					permalink={href(`issue/${open.id}`)}
+					position={{
+						index: index + 1,
+						total: ordered.length,
+						previousHref: index > 0 ? setParamHref(url, "issue", ordered[index - 1]!.id) : null,
+						nextHref:
+							index < ordered.length - 1
+								? setParamHref(url, "issue", ordered[index + 1]!.id)
+								: null,
+					}}
+					labels={SHEET_LABELS}
+					keys="sheet"
+					inset
+				>
+					<IssueDetail
+						issue={open}
+						state={state}
+						returnTo={boardPage(team, url)}
+						level={2}
+						frames={{ view: BOARD_FRAME, issue: SHEET_FRAME }}
+						sheet
+					/>
+				</DetailSheet>
+			</>
 		);
 	};
 }
