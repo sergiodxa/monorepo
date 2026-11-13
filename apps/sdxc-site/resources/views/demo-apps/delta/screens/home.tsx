@@ -32,6 +32,9 @@ import { InitialsTile } from "../glyphs";
 import { COPY } from "../labels";
 import { RepoHeader } from "../shell";
 
+/** The card width below which the file card drops its secondary text: dates, subjects. */
+const NARROW = "@container (max-width: 36rem)";
+
 /** Commits by sha, for a row to name the last commit touching its entry. */
 type CommitIndex = Map<string, DeltaCommit | DeltaCommitMeta>;
 
@@ -90,7 +93,7 @@ export function LatestCommit(handle: Handle<LatestCommit.Props>) {
 									alignItems: "center",
 									gap: "0.5rem",
 									flexShrink: 0,
-									"@container (max-width: 36rem)": { display: "none" },
+									[NARROW]: { display: "none" },
 								}),
 								text("xs"),
 								fg("neutral.muted"),
@@ -139,7 +142,8 @@ namespace FileList {
 
 /**
  * Renders a folder's entries as a table: the name, the subject of the last commit touching
- * it and that commit's age, folders first. A folder below the root opens with a row up.
+ * it and that commit's age, folders first. A folder below the root opens with a row up. The
+ * hidden header row sets the fixed layout's columns, so on a phone the name takes the subject's room.
  */
 function FileList(handle: Handle<FileList.Props>) {
 	return () => {
@@ -167,18 +171,28 @@ function FileList(handle: Handle<FileList.Props>) {
 				<thead
 					mix={[
 						raw({
-							position: "absolute",
-							inlineSize: "1px",
-							blockSize: "1px",
-							overflow: "hidden",
-							clipPath: "inset(50%)",
+							"& th": {
+								padding: 0,
+								border: 0,
+								blockSize: 0,
+								lineHeight: 0,
+								overflow: "hidden",
+								whiteSpace: "nowrap",
+								clipPath: "inset(50%)",
+							},
 						}),
 					]}
 				>
 					<tr>
-						<th scope="col">{COPY.files.name}</th>
-						<th scope="col">{COPY.files.lastCommit}</th>
-						<th scope="col">{COPY.files.updated}</th>
+						<th scope="col" mix={raw({ inlineSize: "38%", [NARROW]: { inlineSize: "auto" } })}>
+							{COPY.files.name}
+						</th>
+						<th scope="col" mix={raw({ [NARROW]: { inlineSize: 0 } })}>
+							{COPY.files.lastCommit}
+						</th>
+						<th scope="col" mix={raw({ inlineSize: "8.5rem", [NARROW]: { inlineSize: "5.5rem" } })}>
+							{COPY.files.updated}
+						</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -205,7 +219,7 @@ function FileList(handle: Handle<FileList.Props>) {
 						let Icon = entry.kind === "folder" ? FolderIcon : FileIcon;
 						return (
 							<tr data-entry={entry.path}>
-								<td mix={[cell, raw({ inlineSize: "38%" })]}>
+								<td mix={[cell]}>
 									<a
 										href={entry.kind === "folder" ? folderHref(entry.path) : fileHref(entry.path)}
 										data-rmx-prefetch="intent"
@@ -232,7 +246,14 @@ function FileList(handle: Handle<FileList.Props>) {
 										<span mix={[truncate(), font("mono"), text("xs")]}>{entry.name}</span>
 									</a>
 								</td>
-								<td mix={[cell, raw({ "@container (max-width: 36rem)": { display: "none" } })]}>
+								<td
+									mix={[
+										cell,
+										raw({
+											[NARROW]: { paddingInline: 0, lineHeight: 0, "& > *": { display: "none" } },
+										}),
+									]}
+								>
 									{commit === undefined ? null : (
 										<a
 											href={commitHref(commit.sha)}
@@ -250,14 +271,7 @@ function FileList(handle: Handle<FileList.Props>) {
 										</a>
 									)}
 								</td>
-								<td
-									mix={[
-										cell,
-										raw({ inlineSize: "8.5rem", textAlign: "end" }),
-										fg("neutral.muted"),
-										text("xs"),
-									]}
-								>
+								<td mix={[cell, raw({ textAlign: "end" }), fg("neutral.muted"), text("xs")]}>
 									{commit === undefined ? (
 										"—"
 									) : (

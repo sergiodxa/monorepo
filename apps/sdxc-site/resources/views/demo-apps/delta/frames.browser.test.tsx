@@ -337,6 +337,15 @@ describe("Delta on a phone", () => {
 		}
 	});
 
+	test("a folder's listing gives each name the row's width, with its parent row on top", async () => {
+		await page.viewport(375, 812);
+		let root = await mountScreen("delta/tree/main/screens");
+		let row = root.querySelector<HTMLTableRowElement>("tr[data-entry]")!;
+		let name = row.cells[0]!.getBoundingClientRect().width;
+
+		expect(name).toBeGreaterThan(row.getBoundingClientRect().width / 2);
+	});
+
 	test("a file trades the tree for a parent link", async () => {
 		await page.viewport(375, 812);
 		let root = await mountScreen(`delta/blob/main/${nested.path}`);
