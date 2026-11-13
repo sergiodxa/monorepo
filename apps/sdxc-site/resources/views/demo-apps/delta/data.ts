@@ -147,7 +147,8 @@ export type DeltaRoute =
 	| { screen: "run"; id: number; job?: number }
 	| { screen: "notifications" }
 	| { screen: "org" }
-	| { screen: "user"; handle: string };
+	| { screen: "user"; handle: string }
+	| { screen: "settings"; section?: "general" | "branches" };
 
 /**
  * Reads which screen a page path names. Paths are matched by shape only; whether the file,
@@ -177,6 +178,7 @@ export function parsePage(page: string): DeltaRoute | null {
 	if (first !== REPO) return null;
 	if (second === undefined) return { screen: "home" };
 	if (second === "actions") return parseActions(third, rest);
+	if (second === "settings") return parseSettings(third, rest);
 	if (second === "issues") return parseIssues(third, rest);
 	if (second === "pulls") return third === undefined ? { screen: "pulls" } : null;
 	if (second === "pull") return parsePull(third, rest);
@@ -190,6 +192,13 @@ export function parsePage(page: string): DeltaRoute | null {
 	if (second === "commits") return { screen: "commits", ref: third };
 	if (second === "commit") return { screen: "commit", sha: third };
 	return null;
+}
+
+/** Reads `settings`, `settings/general` and `settings/branches`. */
+function parseSettings(third: string | undefined, rest: string[]): DeltaRoute | null {
+	if (third === undefined) return { screen: "settings" };
+	if (rest.length > 0 || (third !== "general" && third !== "branches")) return null;
+	return { screen: "settings", section: third };
 }
 
 /** Reads `actions`, `actions/runs/<id>` and `actions/runs/<id>/job/<n>`. */

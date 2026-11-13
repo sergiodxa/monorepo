@@ -21,6 +21,7 @@ import {
 	KeyboardIcon,
 	LayoutDashboardIcon,
 	RotateCwIcon,
+	SettingsIcon,
 } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
@@ -165,6 +166,13 @@ const REPO_TABS: RepoTabEntry[] = [
 		label: COPY.tabs.actions,
 		icon: <CirclePlayIcon />,
 		shortcut: "g a",
+	},
+	{
+		tab: "settings",
+		page: "settings",
+		label: COPY.tabs.settings,
+		icon: <SettingsIcon />,
+		shortcut: "g s",
 	},
 ];
 

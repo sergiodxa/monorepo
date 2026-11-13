@@ -41,6 +41,7 @@ import { CommitScreen, CommitsScreen } from "./screens/commits";
 import { DashboardScreen, NotFoundScreen } from "./screens/dashboard";
 import { FindScreen } from "./screens/find";
 import { HomeScreen } from "./screens/home";
+import { SETTINGS_TOASTS, redrawSettings, settingsScreen, submitSettings } from "./settings";
 import { DeltaFrame, RepoCounts, SHELL_COOKIE } from "./shell";
 import { isPersonal } from "./state";
 import { DeltaThumbnail } from "./thumbnail";
@@ -134,6 +135,7 @@ const TOASTS: Record<string, Omit<Toast.Flash, "id">> = {
 	},
 	...TRACKER_TOASTS,
 	...INBOX_TOASTS,
+	...SETTINGS_TOASTS,
 };
 
 /** The screens a visitor reaches by clicking, the dashboard first. */
@@ -172,6 +174,9 @@ const SCREENS = [
 	"u/sergiodxa?year=2026",
 	"u/mara",
 	"u/kenji?year=2025",
+	"delta/settings",
+	"delta/settings/general",
+	"delta/settings/branches",
 ];
 
 /** One screen as both the whole page and the `main` frame draw it. */
@@ -316,6 +321,8 @@ async function route(request: DemoAppRequest): Promise<Screen> {
 				crumb: `${REPO_NAME} › ${COPY.commits.title}`,
 				body: <CommitsScreen history={history} now={now} />,
 			};
+		case "settings":
+			return settingsScreen(target, request, count);
 		case "org":
 		case "user":
 			return (await peopleScreen(target, request, now)) ?? notFound();
@@ -425,6 +432,16 @@ export default {
 		};
 	},
 	async submit(page, form, request) {
-		return (await submitInbox(page, form, request)) ?? submitTracker(page, form, request);
+		let settings = submitSettings(page, form, request);
+		if (settings !== null && "draft" in settings) {
+			return await redrawSettings(
+				request,
+				settings.draft,
+				async (name, drafted) => (await this.target?.(name, drafted)) ?? null,
+			);
+		}
+		return (
+			settings ?? (await submitInbox(page, form, request)) ?? submitTracker(page, form, request)
+		);
 	},
 } satisfies DemoApp;

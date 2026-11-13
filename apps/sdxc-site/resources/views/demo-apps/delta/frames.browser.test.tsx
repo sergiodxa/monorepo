@@ -90,6 +90,9 @@ async function resolveDeltaFrame(
 			url,
 			cookie: jarHeader(),
 		});
+		if (answer && "body" in answer && answer.frames?.[target] !== undefined) {
+			return answer.frames[target];
+		}
 		if (answer && !("body" in answer)) {
 			for (let header of answer.cookies ?? []) {
 				let pair = header.split(";")[0] ?? "";
@@ -519,6 +522,66 @@ describe("Delta's inbox", () => {
 		expect(shown(root)).toEqual([]);
 		expect(cleared.checkVisibility()).toBe(true);
 		expect(cleared.textContent).toContain("All caught up");
+	});
+});
+
+describe("Delta's settings", () => {
+	/** The settings the visitor's cookie holds now, as the next page reads them. */
+	function savedSettings(): Record<string, unknown> {
+		let value = /delta\.settings=([^;]+)/.exec(jarHeader() ?? "")?.[1];
+		return value === undefined
+			? {}
+			: (JSON.parse(decodeURIComponent(value)) as Record<string, unknown>);
+	}
+
+	test("Save posts through main and redraws it in place, adding no history entry", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/settings/branches");
+		let address = location.href;
+		let entries = navigation.entries().length;
+		let length = history.length;
+		let reviews = root.querySelector<HTMLSelectElement>('select[name="reviews"]')!;
+
+		reviews.value = "3";
+		reviews.form!.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+		await settle(() => root.querySelector('select[name="reviews"]') !== reviews);
+
+		expect(posted).toEqual(["delta/settings/branches"]);
+		expect(savedSettings()["reviews"]).toBe(3);
+		expect(root.querySelector('select[name="reviews"]')).not.toBeNull();
+		expect(location.href).toBe(address);
+		expect(navigation.entries().length).toBe(entries);
+		expect(history.length).toBe(length);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("a feature switch saves the moment it flips, adding no history entry", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/settings");
+		let entries = navigation.entries().length;
+
+		let wiki = root.querySelector<HTMLInputElement>('input[name="wiki"]')!;
+		wiki.click();
+		await settle(() => root.querySelector('input[name="wiki"]') !== wiki);
+
+		expect(posted).toEqual(["delta/settings"]);
+		expect(savedSettings()["wiki"]).toBe(true);
+		expect(navigation.entries().length).toBe(entries);
+	});
+
+	test("a refused save keeps every character typed and says why, in place", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/settings");
+		let name = root.querySelector<HTMLInputElement>('input[name="name"]')!;
+
+		name.value = "my repo";
+		name.form!.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+		await settle(() => root.querySelector('input[name="name"][aria-invalid="true"]') !== null);
+
+		expect(posted).toEqual(["delta/settings"]);
+		expect(savedSettings()).toEqual({});
+		expect(root.querySelector<HTMLInputElement>('input[name="name"]')!.value).toBe("my repo");
+		expect(root.textContent).toContain("without spaces");
 	});
 });
 
