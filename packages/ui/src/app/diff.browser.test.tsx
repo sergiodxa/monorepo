@@ -240,6 +240,33 @@ describe("Diff split view", () => {
 	});
 });
 
+describe("Diff toolbar", () => {
+	test("pads each view segment so its label sits inside the raised tile", () => {
+		mounted = render(
+			<Diff labels={{ copied: "Copied" }}>
+				<Diff.Toolbar
+					view="unified"
+					unifiedHref="?diff=unified"
+					splitHref="?diff=split"
+					labels={{
+						view: "Diff view",
+						unified: "Unified",
+						split: "Split",
+						filesViewed: "files viewed",
+					}}
+				/>
+			</Diff>,
+		);
+		let segments = document.querySelectorAll<HTMLElement>('[data-slot="diff-toolbar"] nav a');
+		expect(segments).toHaveLength(2);
+		for (let segment of segments) {
+			let style = getComputedStyle(segment);
+			expect(Number.parseFloat(style.paddingInlineStart)).toBeGreaterThanOrEqual(8);
+			expect(segment.getBoundingClientRect().height).toBeGreaterThanOrEqual(26);
+		}
+	});
+});
+
 describe("Diff file card", () => {
 	test("collapses through its summary and keeps the actions on the header's row", async () => {
 		let card = mount();

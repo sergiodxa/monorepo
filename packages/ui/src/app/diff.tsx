@@ -335,6 +335,9 @@ Diff.Toolbar = function DiffToolbar(handle: Handle<Diff.ToolbarProps>) {
 							data-rmx-target={target}
 							aria-current={name === view ? "page" : undefined}
 							mix={[
+								hstack({ align: "center" }),
+								bs(7),
+								pi(2.5),
 								segmentedItem({ selected: '&[aria-current="page"]' }),
 								raw({ textDecoration: "none" }),
 							]}
