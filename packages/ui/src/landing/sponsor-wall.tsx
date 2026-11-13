@@ -22,6 +22,9 @@ import { eyebrow } from "../styles/landing.js";
 /** Container the tier grids and the backer cloud query for their column steps. */
 const CONTAINER = "ui-landing-sponsor-wall";
 
+/** The property the wall sets from `align`, read by the backer cloud and the actions row. */
+const JUSTIFY = "--ui-sponsor-wall-justify";
+
 /** Translucent line the tier grids rule their cells with. */
 const HAIRLINE = "var(--ui-landing-hairline, color-mix(in oklch, CanvasText 8%, transparent))";
 
@@ -72,8 +75,14 @@ export namespace SponsorWall {
 	export interface Props extends TagProps<"div"> {
 		/** {@link SponsorWall.Tier} groups, highest first, then an optional {@link SponsorWall.Individuals}. */
 		children: RemixNode;
-		/** Closing actions, such as "Become a sponsor", rendered inside a centred {@link CtaGroup}. */
+		/** Closing actions, such as "Become a sponsor", rendered inside a {@link CtaGroup}. */
 		actions?: RemixNode;
+		/**
+		 * Where the backer cloud and the closing actions sit on their rows: centred under a
+		 * centred title, or on the start edge under a title set flush with the column.
+		 * @default "center"
+		 */
+		align?: "center" | "start";
 	}
 
 	/**
@@ -113,6 +122,11 @@ export namespace SponsorWall {
 		src?: string;
 		/** Circle size. Defaults to {@link DEFAULT_PERSON_SIZE}. */
 		size?: PersonSize;
+		/**
+		 * Sets the name under the circle, for a backer the page names in full. The caption
+		 * links to `href` too, while the circle stays the one link focus and assistive technology reach.
+		 */
+		showName?: boolean;
 	}
 }
 
@@ -130,7 +144,7 @@ export namespace SponsorWall {
  */
 export function SponsorWall(handle: Handle<SponsorWall.Props>) {
 	return () => {
-		let { actions, children, mix, ...rest } = handle.props;
+		let { actions, align, children, mix, ...rest } = handle.props;
 
 		return (
 			<div
@@ -140,14 +154,20 @@ export function SponsorWall(handle: Handle<SponsorWall.Props>) {
 					[
 						container(CONTAINER),
 						vstack({ gap: 14, align: "stretch" }),
-						raw({ inlineSize: "100%" }),
+						raw({
+							inlineSize: "100%",
+							[JUSTIFY]: align === "start" ? "flex-start" : "center",
+						}),
 					],
 					mix,
 				)}
 			>
 				<HeadingScope>{children}</HeadingScope>
 				{actions ? (
-					<CtaGroup data-slot="sponsor-wall-actions" mix={[raw({ justifyContent: "center" })]}>
+					<CtaGroup
+						data-slot="sponsor-wall-actions"
+						mix={[raw({ justifyContent: `var(${JUSTIFY}, center)` })]}
+					>
 						{actions}
 					</CtaGroup>
 				) : null}
@@ -320,7 +340,7 @@ SponsorWall.Individuals = function SponsorWallIndividuals(
 							display: "flex",
 							flexWrap: "wrap",
 							alignItems: "center",
-							justifyContent: "center",
+							justifyContent: `var(${JUSTIFY}, center)`,
 							gap: "0.75rem",
 						}),
 					]}
@@ -391,6 +411,27 @@ function personCircle(diameter: string) {
 }
 
 /**
+ * A named backer's caption: two centred lines at most in the heading ink, so names of any
+ * length keep every person in the cloud the same width.
+ */
+function personName() {
+	return raw({
+		maxInlineSize: "100%",
+		fontSize: "0.8125rem",
+		lineHeight: "1.25",
+		fontWeight: "500",
+		textAlign: "center",
+		color: "var(--ui-neutral-fg-emphasis)",
+		textDecoration: "none",
+		overflowWrap: "anywhere",
+		display: "-webkit-box",
+		WebkitBoxOrient: "vertical",
+		WebkitLineClamp: "2",
+		overflow: "hidden",
+	});
+}
+
+/**
  * One individual backer: a linked circle with their picture, or their initials, named by
  * `name` for assistive technology and as a tooltip.
  *
@@ -398,14 +439,29 @@ function personCircle(diameter: string) {
  * @returns The render function producing the backer's list item.
  * @example
  * <SponsorWall.Person href="https://github.com/ana" name="Ana Souza" src={ana} size="sm" />
+ * @example
+ * <SponsorWall.Person href="https://github.com/ana" name="Ana Souza" src={ana} size="lg" showName />
  */
 SponsorWall.Person = function SponsorWallPerson(handle: Handle<SponsorWall.PersonProps>) {
 	return () => {
-		let { href, mix, name, size, src, ...rest } = handle.props;
+		let { href, mix, name, showName, size, src, ...rest } = handle.props;
 		let resolvedSize = size ?? DEFAULT_PERSON_SIZE;
 
 		return (
-			<li data-slot="sponsor-wall-person" mix={[raw({ display: "flex" })]}>
+			<li
+				data-slot="sponsor-wall-person"
+				mix={[
+					showName
+						? raw({
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								gap: "0.5rem",
+								inlineSize: "6rem",
+							})
+						: raw({ display: "flex" }),
+				]}
+			>
 				<a
 					{...rest}
 					href={href}
@@ -420,6 +476,18 @@ SponsorWall.Person = function SponsorWallPerson(handle: Handle<SponsorWall.Perso
 						<span aria-hidden="true">{initials(name)}</span>
 					)}
 				</a>
+				{showName ? (
+					<a
+						href={href}
+						rel={rest.rel}
+						tabIndex={-1}
+						aria-hidden="true"
+						data-slot="sponsor-wall-name"
+						mix={[personName()]}
+					>
+						{name}
+					</a>
+				) : null}
 			</li>
 		);
 	};

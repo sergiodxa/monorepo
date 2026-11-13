@@ -161,4 +161,62 @@ describe("SponsorWall", () => {
 		let labels = [...host.querySelectorAll('[data-slot="sponsor-wall-label"]')];
 		expect(labels.map((label) => label.tagName)).toEqual(["H3", "H3", "H3", "H3", "H3", "H3"]);
 	});
+
+	test("names a backer under the circle when asked, through one focusable link", () => {
+		let host = document.createElement("div");
+		host.style.inlineSize = "375px";
+		document.body.appendChild(host);
+		render(
+			<SponsorWall>
+				<SponsorWall.Individuals>
+					<SponsorWall.Person
+						href="https://example.com/ana"
+						name="Ana Souza with a name long enough to wrap twice and more"
+						size="lg"
+						showName
+					/>
+					<SponsorWall.Person
+						href="https://example.com/bo"
+						name="Bo Lindqvist"
+						size="lg"
+						showName
+					/>
+				</SponsorWall.Individuals>
+			</SponsorWall>,
+			{ container: host },
+		);
+
+		let people = [...host.querySelectorAll<HTMLElement>('[data-slot="sponsor-wall-person"]')];
+		let names = people.map((person) =>
+			person.querySelector<HTMLElement>('[data-slot="sponsor-wall-name"]')!,
+		);
+		expect(names[1]!.textContent).toBe("Bo Lindqvist");
+		expect(names[1]!.getAttribute("href")).toBe("https://example.com/bo");
+		expect(names[1]!.tabIndex).toBe(-1);
+		expect(names[1]!.getAttribute("aria-hidden")).toBe("true");
+		expect(people[0]!.getBoundingClientRect().width).toBe(people[1]!.getBoundingClientRect().width);
+		expect(names[0]!.getBoundingClientRect().height).toBeLessThanOrEqual(
+			2 * Number.parseFloat(getComputedStyle(names[0]!).lineHeight) + 1,
+		);
+	});
+
+	test("sets the backer cloud and the actions on the start edge when aligned to start", () => {
+		let host = document.createElement("div");
+		host.style.inlineSize = "1280px";
+		document.body.appendChild(host);
+		render(
+			<SponsorWall align="start" actions={<a href="/sponsor">Become a sponsor</a>}>
+				<SponsorWall.Individuals>
+					<SponsorWall.Person href="https://example.com/ana" name="Ana Souza" />
+				</SponsorWall.Individuals>
+			</SponsorWall>,
+			{ container: host },
+		);
+
+		let left = host.getBoundingClientRect().left;
+		let person = host.querySelector('[data-slot="sponsor-wall-person"]')!;
+		let action = host.querySelector('a[href="/sponsor"]')!;
+		expect(person.getBoundingClientRect().left).toBe(left);
+		expect(action.getBoundingClientRect().left).toBe(left);
+	});
 });
