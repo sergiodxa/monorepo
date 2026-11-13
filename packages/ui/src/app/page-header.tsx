@@ -92,11 +92,15 @@ export namespace PageHeader {
 		tabsLabel?: string;
 		/**
 		 * How many tabs stay in the row under 40rem of header width; the rest move into a
-		 * "More ▾" menu, and the current tab always stays in the row.
+		 * "More ▾" menu, the current tab always stays in the row, and the row folds only when
+		 * two or more tabs would move.
 		 * @default 2
 		 */
 		tabsNarrow?: number;
-		/** The overflow menu's label. @default "More" */
+		/**
+		 * The "More ▾" button's text and its menu's accessible name, in the app's own language.
+		 * @default "More"
+		 */
 		tabsMore?: string;
 		/**
 		 * Sticks the header at `--ui-app-sticky-top` and compacts it once stuck: the trail and the
@@ -109,13 +113,15 @@ export namespace PageHeader {
 
 /**
  * Renders the header. From 40rem the actions end the title's row, the description under both;
- * narrower, they sit beside the title when they fit and after the description otherwise. A
- * sticky header spans the shell's gutter (`--ui-app-gutter`) so content never shows beside it.
+ * narrower, actions sit beside the title or after the description, and tabs past `tabsNarrow`
+ * fold into a popover "More ▾" menu that opens with no script. Sticky spans `--ui-app-gutter`.
  *
  * @param handle Runtime handle carrying the header's props.
  * @returns The render function producing the header's markup.
  * @example
  * <PageHeader crumbsLabel="Breadcrumb" crumbs={[{ label: "Monitors", href: "/monitors" }, { label: "api.acme.dev" }]} title="api.acme.dev" status={<Badge color="success">Up</Badge>} actions={<Button variant="outline">Pause</Button>} primaryAction={<Button>Edit monitor</Button>} />
+ * @example
+ * <PageHeader title="acme / delta" tabsLabel={t("repo.views")} tabsMore={t("repo.more")} tabs={[{ href: "/code", label: t("repo.code"), current: true }, { href: "/issues", label: t("repo.issues"), count: 26 }, { href: "/pulls", label: t("repo.pulls"), count: 71 }, { href: "/actions", label: t("repo.actions") }]} />
  */
 export function PageHeader(handle: Handle<PageHeader.Props>) {
 	let moreId = `page-header-more-${generateUUID()}`;

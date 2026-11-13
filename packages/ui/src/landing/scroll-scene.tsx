@@ -46,7 +46,9 @@ export namespace ScrollScene {
 		timeline: string;
 		/**
 		 * Viewport heights of scroll the stage stays pinned for. A longer runway plays the
-		 * scene more slowly against the reader's scroll. Defaults to {@link DEFAULT_LENGTH}.
+		 * scene more slowly against the reader's scroll.
+		 *
+		 * @default 2.5
 		 */
 		length?: number;
 		/** The stage: the drawing and whatever annotates it, sized to fit under the header. */
@@ -58,9 +60,9 @@ export namespace ScrollScene {
 }
 
 /**
- * Renders the runway and its sticky stage, a grid centred in the viewport below the header,
- * so a drawing sized to fit stays wholly in view for the scene's length. A browser without
- * view timelines, or a reader who prefers reduced motion, gets the stage in normal flow.
+ * Renders the runway and a sticky stage centred under `--ui-landing-header-height`, all in CSS
+ * with nothing to hydrate; inside a scroll panel, set `--ui-scroll-scene-viewport` to its height.
+ * Without view timelines, or under reduced motion, the stage sits in normal flow as a still frame.
  *
  * @param handle Runtime handle carrying the timeline name, length and stage.
  * @returns The render function producing the scene.

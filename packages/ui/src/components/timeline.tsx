@@ -126,9 +126,9 @@ function rowTrack() {
 }
 
 /**
- * Renders the `<ol>` and its rail. The rail is drawn once, behind every icon from the
- * first to the last, so a folded run keeps the line continuous when it opens; icons sit on
- * the page's background, `--ui-timeline-surface`, which masks the rail where they meet it.
+ * Renders the `<ol>` and its rail, drawn once behind every icon so an opened fold keeps the line
+ * whole; icons and {@link Timeline.Comment} cards sit on `--ui-timeline-surface`, masking the rail,
+ * in a `--ui-timeline-icon-box` square. {@link Timeline.Commits} groups a push; all of it is HTML.
  *
  * @param handle Runtime handle carrying the `<ol>`'s props.
  * @returns The render function producing the list's markup.
@@ -140,6 +140,15 @@ function rowTrack() {
  * 	<Timeline.Event icon={<MessageSquareIcon />} avatar={<Avatar size="xs" />} actor="Ana" body={<p>Rolling back.</p>}>
  * 		commented
  * 	</Timeline.Event>
+ * </Timeline>
+ * @example
+ * <Timeline aria-label={t("pull.conversation")}>
+ * 	<Timeline.Comment id="comment-12" avatar={<Avatar size="xs" />} author="ana" action={t("pull.commented")} time={<RelativeTime date={at} />}>
+ * 		<Markdown source={body} />
+ * 	</Timeline.Comment>
+ * 	<Timeline.Commits icon={<GitCommitHorizontalIcon />} actor="ana" summary={t("pull.addedCommits", { count: 1 })}>
+ * 		<Timeline.Commit sha="a1b2c3d" href="/commit/a1b2c3d">Fix the parser</Timeline.Commit>
+ * 	</Timeline.Commits>
  * </Timeline>
  */
 export function Timeline(handle: Handle<Timeline.Props>) {

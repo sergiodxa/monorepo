@@ -8,7 +8,7 @@
  */
 
 /**
- * One painted run of source. Structural, so the runs `@sdxc/highlight` returns pass
+ * One painted run of source. Structural, so any highlighter's `{ type, value }` runs pass
  * straight through.
  */
 export interface CodeToken {

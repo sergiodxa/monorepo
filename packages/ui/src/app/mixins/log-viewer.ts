@@ -348,7 +348,8 @@ function attach(root: HTMLElement, options: LogViewerBehavior.Options, signal: A
 }
 
 /**
- * Wires the `LogViewer` the host sits in, for as long as the host stays mounted.
+ * Wires the `LogViewer` the host sits in: search over every line, each live step's stream, and
+ * following the tail; it all detaches when the host unmounts.
  *
  * @param options The counter's copy.
  * @example <div hidden mix={[logViewerController({ matches: "{index} of {count}", noMatches: "No results" })]} />

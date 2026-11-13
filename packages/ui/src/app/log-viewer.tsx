@@ -70,10 +70,13 @@ export namespace LogViewer {
 
 	/** One step of the job. */
 	export interface Step {
+		/** The step's title in its `<summary>`, such as "Run tests". */
 		name: string;
+		/** Picks the step's icon and opens a failed step by default. */
 		state: State;
 		/** How long it took, already formatted, e.g. "1m 12s". */
 		duration?: string;
+		/** The output so far; `##[group]` markers fold and ANSI codes become toned spans. */
 		lines: LogLine[];
 		/** Starts open; a failed step does by default and every other step starts closed. */
 		open?: boolean;
@@ -104,9 +107,13 @@ export namespace LogViewer {
 		matches: string;
 		/** Shown in place of the counter when nothing matches, e.g. "No results". */
 		noMatches: string;
+		/** The search's step-back button name, e.g. "Previous match". */
 		previousMatch: string;
+		/** The search's step-forward button name, e.g. "Next match". */
 		nextMatch: string;
+		/** The toggle's text while timestamps are hidden, e.g. "Show timestamps". */
 		showTimestamps: string;
+		/** The toggle's text while timestamps show, e.g. "Hide timestamps". */
 		hideTimestamps: string;
 		/** The pill shown when lines arrive below the view, e.g. "Jump to latest". */
 		jumpToLatest: string;
@@ -116,6 +123,7 @@ export namespace LogViewer {
 
 	/** Props for {@link LogViewer}. */
 	export interface Props extends Omit<TagProps<"section">, "children"> {
+		/** The job's steps in run order; each becomes one collapsible section. */
 		steps: Step[];
 		/** A line's link, e.g. `(step, n) => "#step:" + step + ":" + n`; its fragment becomes the line's id. */
 		lineHref: (step: number, n: number) => string;
@@ -123,6 +131,7 @@ export namespace LogViewer {
 		timestamps?: boolean;
 		/** The page with timestamps toggled, e.g. `?ts=1`; omitted, the toggle is not drawn. */
 		timestampsHref?: string;
+		/** Every string the viewer shows or announces, so it reads in any language. */
 		labels: Labels;
 	}
 
@@ -130,8 +139,11 @@ export namespace LogViewer {
 	export interface StreamProps {
 		/** The step's position in the job, from 1, as `lineHref` receives it. */
 		index: number;
+		/** The running step, with the stream its further lines come from. */
 		step: Step & { stream: StreamSource };
+		/** The viewer's `lineHref`, so streamed lines link like drawn ones. */
 		lineHref: (step: number, n: number) => string;
+		/** The viewer's strings. */
 		labels: Labels;
 	}
 
@@ -447,9 +459,9 @@ function LogStep(handle: Handle<LogStepProps>) {
 }
 
 /**
- * Renders the job's log: a toolbar (search, once the island runs, and the timestamps toggle),
- * then every step in one scrolling box. Every line is in the page from the start, so the
- * browser's find-in-page and selection work over all of it, closed steps included.
+ * Every line is in the page from the start, so find-in-page and line links work without script;
+ * mapping `@sdxc/ui/app/log-viewer` runs {@link LogViewerController} for search, streaming and
+ * tail-follow. Set `--ui-log-viewer-height` for the scroll box, `--ui-log-chunk-lines` per chunk.
  *
  * @param handle Runtime handle carrying the viewer's props.
  * @returns The render function producing the viewer.

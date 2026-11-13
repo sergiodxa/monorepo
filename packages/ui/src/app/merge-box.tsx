@@ -60,6 +60,7 @@ export namespace MergeBox {
 
 	/** One precondition. */
 	export interface Row {
+		/** Picks the row's icon and color, so met, waiting and failing read apart at a glance. */
 		tone: Tone;
 		/** The row's claim ("1 approving review", "All checks have passed"). */
 		title: RemixNode;
@@ -71,8 +72,11 @@ export namespace MergeBox {
 
 	/** The precondition rows, drawn in this order when given. */
 	export interface Rows {
+		/** Whether the required reviews are in. */
 		reviews?: Row;
+		/** How the checks stand, with room for a `CheckRuns` list as its children. */
 		checks?: Row;
+		/** Whether the branch merges cleanly into its base. */
 		conflicts?: Row;
 	}
 
@@ -93,7 +97,9 @@ export namespace MergeBox {
 
 	/** Props accepted by {@link MergeBox}; the host is a `<section>`. */
 	export interface Props extends Omit<TagProps<"section">, "children"> {
+		/** Enables the merge button only at `ready`, and swaps it for the outcome once settled. */
 		state: State;
+		/** The preconditions shown above the button; an omitted row is left out. */
 		rows?: Rows;
 		/** The methods offered. @default ["merge", "squash", "rebase"] */
 		methods?: Method[];
@@ -105,6 +111,7 @@ export namespace MergeBox {
 		fields?: RemixNode;
 		/** What follows a settled pull request, such as a "Delete branch" form. */
 		followUp?: RemixNode;
+		/** Every string the box shows, so it reads in any language. */
 		labels: Labels;
 	}
 }
@@ -112,8 +119,8 @@ export namespace MergeBox {
 /**
  * Renders the precondition rows, then the merge control or the outcome. While the request can't
  * merge, both halves of the split button stay on screen, disabled, and the sentence naming why is
- * their `aria-describedby`. The method menu is a radio group posting `method`; the submit button
- * names the chosen method through CSS, so choosing one needs no script.
+ * their `aria-describedby`. The method menu is a native popover of radios posting `method`, and
+ * the button names the chosen method through CSS, so the box needs no island at all.
  *
  * @param handle Runtime handle carrying the host `<section>`'s props.
  * @returns The render function producing the box's markup.

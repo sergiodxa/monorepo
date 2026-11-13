@@ -139,7 +139,10 @@ export namespace CommandPalette {
 		title: string;
 		/** Replaces the root placeholder while the page is open. */
 		placeholder?: string;
-		/** A combo or sequence that opens the palette straight on this page, e.g. `"t"`. */
+		/**
+		 * A combo or sequence that opens the palette straight on this page, e.g. `"t"`, listed in
+		 * the help sheet under `title`.
+		 */
 		shortcut?: string;
 		children: RemixNode;
 	}
@@ -152,7 +155,10 @@ export namespace CommandPalette {
 		title: string;
 		/** Replaces the root placeholder while the finder is open. */
 		placeholder?: string;
-		/** A combo or sequence that opens the palette straight on the finder, e.g. `"t"`. */
+		/**
+		 * A combo or sequence that opens the palette straight on the finder, e.g. `"t"`, listed in
+		 * the help sheet under `title`.
+		 */
 		shortcut?: string;
 		/** Every path to search, in the order shown before anything is typed. */
 		paths: readonly string[];
@@ -200,7 +206,7 @@ function Hint(handle: Handle<{ keys: string }>) {
 /**
  * Renders the palette: a modal dialog 640px wide, 15% from the top, full width less a gutter on
  * a phone. Without JavaScript a trigger still opens it and every command stays a working link
- * or button; the island adds filtering, arrow keys, pages and the ⌘K binding.
+ * or button; the island adds filtering, arrow keys, pages, the {@link CommandPalette.Finder} and ⌘K.
  *
  * @param handle Runtime handle carrying the palette's props.
  * @returns The render function producing the palette.
@@ -209,6 +215,11 @@ function Hint(handle: Handle<{ keys: string }>) {
  * 	<CommandPalette.Group heading="Navigation">
  * 		<CommandPalette.Item id="go-monitors" title="Go to Monitors" href="/monitors" shortcut="g m" />
  * 	</CommandPalette.Group>
+ * </CommandPalette>
+ * @example
+ * <CommandPalette id="palette" labels={labels}>
+ * 	<CommandPalette.Item id="go-file" title="Go to File" page="files" />
+ * 	<CommandPalette.Finder id="files" title="Go to File" shortcut="t" paths={tree.paths} href="/blob/main/{path}" />
  * </CommandPalette>
  */
 export function CommandPalette(handle: Handle<CommandPalette.Props>) {
@@ -512,14 +523,16 @@ CommandPalette.Page = function CommandPalettePage(handle: Handle<CommandPalette.
 };
 
 /**
- * Renders a fuzzy file finder as a page of the palette: the island ranks `paths` against the
- * query with {@link fuzzyFilter} on every keystroke and lists the best `limit`, each a link
- * with its matched characters in bold. A server's `/find?q=` page lists the same results.
+ * Renders a "Go to file" page: the {@link CommandPaletteController} island ranks `paths` with
+ * {@link fuzzyFilter} per keystroke and lists the best `limit` as links, matched characters bold.
+ * Results appear once the island loads; a server's `/find?q=` page ranks the same way for no script.
  *
  * @param handle Runtime handle carrying the finder's props.
  * @returns The render function producing the finder's page.
  * @example
  * <CommandPalette.Finder id="files" title="Go to File" shortcut="t" paths={tree.paths} href="/blob/main/{path}" />
+ * @example
+ * <CommandPalette.Item id="go-file" title="Go to File" page="files" />
  */
 CommandPalette.Finder = function CommandPaletteFinder(handle: Handle<CommandPalette.FinderProps>) {
 	return () => {

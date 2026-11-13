@@ -74,7 +74,8 @@ export namespace ContributorWall {
 
 /**
  * Renders the mosaic. Every tile is square and the grid's columns step with its own
- * width, so the wall keeps its texture from a phone column to a wide split.
+ * width, so the wall keeps its texture from a phone column to a wide split. Server markup and
+ * CSS alone; tiles round to `--ui-landing-card-radius-inner` and outline in `--ui-landing-hairline`.
  *
  * @param handle Runtime handle carrying the host `<ul>`'s props.
  * @returns The render function producing the wall's markup.
@@ -220,7 +221,7 @@ ContributorWall.Person = function ContributorWallPerson(
 
 /**
  * The closing tile: the count of contributors the wall leaves out, linking to all of them,
- * outlined rather than tinted so it reads as a way out of the mosaic.
+ * drawn as a hairline outline so it reads as a way out of the mosaic.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the tile's list item.

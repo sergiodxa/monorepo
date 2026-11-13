@@ -46,6 +46,7 @@ export namespace ContributionGraph {
 	export interface Day {
 		/** The day as `YYYY-MM-DD`. */
 		date: string;
+		/** Picks the day's level against `levels`; repeated dates add up. */
 		count: number;
 	}
 
@@ -66,6 +67,7 @@ export namespace ContributionGraph {
 
 	/** Props accepted by {@link ContributionGraph}; the host is a `<div>`. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
+		/** The counts to plot, in any order; only days between `start` and `end` are drawn. */
 		days: readonly Day[];
 		/** The first day drawn, as `YYYY-MM-DD`. */
 		start: string;
@@ -79,6 +81,7 @@ export namespace ContributionGraph {
 		locale?: string;
 		/** First day of the week, 0 = Sunday; defaults to the locale's. */
 		weekStart?: number;
+		/** Every string the graph shows, so it reads in any language. */
 		labels: Labels;
 	}
 
@@ -175,10 +178,9 @@ interface Week {
 }
 
 /**
- * Renders the caption, the month header, one row per weekday with its header, one cell per day
- * and the "Less · More" legend. The table scrolls inside its own box, starting at its newest week,
- * so a phone shows the current week and the page never scrolls sideways. Without script each day's
- * `title` shows its count; {@link ContributionGraphTooltip} replaces it with one shared tooltip.
+ * Without script each day's `title` names its count; mapping `@sdxc/ui/app/contribution-graph` in
+ * the browser entry runs {@link ContributionGraphTooltip}, for a shared tooltip and arrow keys. Size
+ * it with `--ui-contribution-graph-cell` and `-gap`, match `-bg` to the surface, tint `--graph-level-0`–`4`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the graph's markup.

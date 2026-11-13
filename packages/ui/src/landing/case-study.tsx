@@ -80,9 +80,9 @@ export namespace CaseStudy {
 }
 
 /**
- * Renders the running head, the edge-to-edge plate and the spread under it: one column on
- * a phone, then from the `lg` container a twelve-column grid whose first three columns stay
- * empty, a margin beside the title and the problem, the work and the result.
+ * Renders the running head, the edge-to-edge plate and the spread: one column on a phone, then
+ * from the `lg` container twelve, the first three a margin beside the title and the facts. Server
+ * markup and CSS alone; `--ui-landing-case-figure-size` resizes the result's figure.
  *
  * @param handle Runtime handle carrying the spread's props.
  * @returns The render function producing the band.

@@ -1,8 +1,9 @@
 /**
- * The browser half of the command palette: filters the server-rendered commands by title and
- * keywords, ranks a finder page's paths, moves the active row, opens nested pages, fills
- * Recent, and binds the palette's toggle key, every page's key and every command's own key. Why JS: filtering, active-descendant movement and
- * page stacks need script. No-JS baseline: a trigger opens the dialog and every command works.
+ * The browser half of the command palette: filters commands by title and keywords, ranks a
+ * finder page's paths, moves the active row, opens pages, fills Recent, and binds the toggle
+ * key and every page's and command's own key. Why JS: filtering, active-descendant movement,
+ * page stacks and finder ranking need script. No-JS baseline: a trigger opens the dialog and
+ * every command works.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

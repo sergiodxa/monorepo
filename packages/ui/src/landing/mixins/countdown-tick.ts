@@ -1,7 +1,7 @@
 /**
  * Why JS: the time left changes every second after the page renders, and a cached page was
  * rendered against an older clock. No-JS baseline: the countdown reads the time left when the
- * server rendered it, beside the date it counts down to.
+ * server rendered it, and its `<time datetime>` names the moment it counts down to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

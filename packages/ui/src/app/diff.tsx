@@ -99,6 +99,7 @@ export namespace Diff {
 
 	/** Props accepted by {@link Diff}: every native `<div>` attribute for its root. */
 	export interface Props extends TagProps<"div"> {
+		/** The strings the page's island announces, so it reads in any language. */
 		labels: Labels;
 		/** A {@link Diff.Toolbar} and the page's {@link Diff.File} cards. */
 		children?: RemixNode;
@@ -108,7 +109,9 @@ export namespace Diff {
 	export interface ToolbarLabels {
 		/** Names the view switch for assistive technology, such as "Diff view". */
 		view: string;
+		/** The unified link's text, such as "Unified". */
 		unified: string;
+		/** The split link's text, such as "Split". */
 		split: string;
 		/** Follows the "n / N" count, such as "files viewed". */
 		filesViewed: string;
@@ -116,6 +119,7 @@ export namespace Diff {
 
 	/** Props accepted by {@link Diff.Toolbar}: every native `<div>` attribute. */
 	export interface ToolbarProps extends TagProps<"div"> {
+		/** The view the page renders, which the switch marks current. */
 		view: View;
 		/** This page's address with `?diff=unified`. */
 		unifiedHref: string;
@@ -125,7 +129,9 @@ export namespace Diff {
 		target?: string;
 		/** Files marked viewed; with `total`, draws "n / N files viewed" and its bar. */
 		viewed?: number;
+		/** The files on the page; with `viewed`, draws the progress. */
 		total?: number;
+		/** The toolbar's strings. */
 		labels: ToolbarLabels;
 		/** Controls between the switch and the progress: "Jump to", a file filter. */
 		children?: RemixNode;
@@ -145,6 +151,7 @@ export namespace Diff {
 
 	/** Copy {@link Diff.Hunks} shows or announces. */
 	export interface HunksLabels {
+		/** The hidden headers that tell a screen reader which column a cell is in. */
 		columns: ColumnLabels;
 		/** Names each hunk's expand link, such as "Expand context". */
 		expandContext?: string;
@@ -174,10 +181,11 @@ export namespace Diff {
 	export interface HunksProps extends TagProps<"div"> {
 		/** The file's path, which names the table and keys the comment links. */
 		path: string;
+		/** The parsed hunks to draw, with their word-level ranges. */
 		hunks: readonly Hunk[];
 		/** Language the code highlights as (`ts`, `css`); omitted, lines draw plain. */
 		language?: string;
-		/** @default "unified" */
+		/** One column, or old and new side by side above 48rem. @default "unified" */
 		view?: View;
 		/** Prefix of every line anchor, `<fileId>R12`. @default "diff-" plus a hash of the path */
 		fileId?: string;
@@ -199,6 +207,7 @@ export namespace Diff {
 		 * the file itself (a thread's excerpt or suggestion), so anchors stay unique. @default true
 		 */
 		anchored?: boolean;
+		/** The table's strings. */
 		labels: HunksLabels;
 	}
 
@@ -209,8 +218,11 @@ export namespace Diff {
 			Omit<HunksProps, keyof TagProps<"div"> | "hunks" | "labels" | "fileId" | "anchored"> {
 		/** The path on the old side, drawn as `old → new` when it differs from `path`. */
 		oldPath?: string;
+		/** Drawn as a toned letter (A, M, D, R, C) and read out through `labels.statuses`. */
 		status: FileStatus;
+		/** Lines added, counted in the header and its five-block bar. */
 		additions: number;
+		/** Lines deleted, counted in the header and its five-block bar. */
 		deletions: number;
 		/** The file's hunks; omitted for a binary file, a dropped patch or a lazy one. */
 		hunks?: readonly Hunk[];
@@ -233,6 +245,7 @@ export namespace Diff {
 		load?: RemixNode;
 		/** Changed lines past which the file counts as large. @default DEFAULT_LARGE_THRESHOLD */
 		largeThreshold?: number;
+		/** The card's strings, so it reads in any language. */
 		labels: FileLabels;
 	}
 
@@ -241,14 +254,15 @@ export namespace Diff {
 
 	/** Props {@link DiffInteractions} receives from {@link Diff}. */
 	export interface InteractionsProps {
+		/** The root's strings. */
 		labels: Labels;
 	}
 }
 
 /**
- * Renders the page's diffs and the one island that answers every file's `+`, drag and copy
- * buttons from this root, so three hundred files hydrate one component. The app's own island
- * listens for `DIFF_COMMENT_EVENT` on the document and opens its comment form.
+ * Without script each `+` links to `commentHref`; mapping `@sdxc/ui/app/diff` runs one
+ * {@link DiffInteractions} for every file, turning `+`, drags and copy into `DIFF_COMMENT_EVENT`.
+ * Set `--diff-font-size`, `--diff-line-height` and the `--diff-add-*`/`--diff-del-*` tints.
  *
  * @param handle Runtime handle carrying the root's props.
  * @returns The render function producing the root.

@@ -61,6 +61,7 @@ export namespace CheckRuns {
 		name: string;
 		/** The workflow it belongs to ("CI / pull_request"). */
 		workflow?: string;
+		/** Decides the row's icon and its place in the sorted list. */
 		state: State;
 		/** How long it ran, already formatted ("2m 14s"). */
 		duration?: string;
@@ -87,6 +88,7 @@ export namespace CheckRuns {
 
 	/** Props accepted by {@link CheckRunIcon}. */
 	export interface IconProps {
+		/** Picks the glyph's shape and tone. */
 		state: State;
 		/** The state's name, announced in place of the shape ("Failed"). */
 		label: string;
@@ -94,7 +96,9 @@ export namespace CheckRuns {
 
 	/** Props accepted by {@link CheckRuns}; the host is a `<details>`. */
 	export interface Props extends Omit<TagProps<"details">, "children" | "open"> {
+		/** Every run in any order; the part sorts them failures first. */
 		runs: readonly Run[];
+		/** The strings the summary, icons and links show, so the part reads in any language. */
 		labels: Labels;
 		/** Locale the counts are joined in ("1 failing, 1 pending and 22 successful"). */
 		locale?: string;
@@ -157,8 +161,8 @@ function overallState(runs: readonly CheckRuns.Run[]): CheckRuns.State | undefin
 
 /**
  * Renders the summary sentence as the `<summary>` of a `<details>` that lists every run, failed
- * ones first. The list opens on its own when a run failed; the pending icon pulses and holds still
- * for visitors who prefer reduced motion. Each row links to its log.
+ * ones first, opening on its own when a run failed. It is complete as server HTML: the native
+ * disclosure needs no island, and it reads only the theme's shared tokens.
  *
  * @param handle Runtime handle carrying the host `<details>`'s props.
  * @returns The render function producing the part's markup.

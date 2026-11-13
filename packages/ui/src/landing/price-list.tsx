@@ -26,7 +26,8 @@ export namespace PriceList {
 	export interface Props extends TagProps<"div"> {
 		/**
 		 * Narrowest a column gets, as a CSS length; the list fits as many columns as clear it.
-		 * Defaults to {@link DEFAULT_COLUMN_WIDTH}.
+		 *
+		 * @default "18rem"
 		 */
 		columnWidth?: string;
 		/** One or more {@link PriceList.Group} elements. */
@@ -60,7 +61,8 @@ export namespace PriceList {
 
 /**
  * Lays its groups into columns that each stay at least `columnWidth` wide, starting every
- * group at the top of its cell so a short group never stretches to its neighbour's height.
+ * group at the top of its cell so a short group keeps its own height. Server markup and CSS
+ * alone; group titles rule off in `--ui-landing-hairline`, set in `--ui-landing-display-weight`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the list's markup.
@@ -102,6 +104,10 @@ export function PriceList(handle: Handle<PriceList.Props>) {
  *
  * @param handle Runtime handle carrying the title, description and items.
  * @returns The render function producing the group's markup.
+ * @example
+ * <PriceList.Group title="Pastry" description="From 7 am">
+ * 	<PriceList.Item name="Butter croissant" price="$4.25" />
+ * </PriceList.Group>
  */
 PriceList.Group = function PriceListGroup(handle: Handle<PriceList.GroupProps>) {
 	return () => {
@@ -179,6 +185,7 @@ PriceList.Group = function PriceListGroup(handle: Handle<PriceList.GroupProps>) 
  *
  * @param handle Runtime handle carrying the name, price and description.
  * @returns The render function producing the item's markup.
+ * @example <PriceList.Item name="Seeded rye" price="$10">Sunflower, flax and pumpkin seeds.</PriceList.Item>
  */
 PriceList.Item = function PriceListItem(handle: Handle<PriceList.ItemProps>) {
 	return () => {

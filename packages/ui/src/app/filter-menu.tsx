@@ -67,6 +67,7 @@ export namespace FilterMenu {
 	export type Item = {
 		/** What the form posts for the item, and its identity in the list. */
 		value: string;
+		/** The row's text, which the filter field matches against. */
 		label: string;
 		/** Where a `navigate` item goes. */
 		href?: string;
@@ -82,7 +83,9 @@ export namespace FilterMenu {
 
 	/** A titled run of items: stacked sections, or one tab each with `tabs`. */
 	export type Group = {
+		/** The section heading, or the tab's name with `tabs`. */
 		label: string;
+		/** The group's choices, drawn in this order after the selected ones. */
 		items: Item[];
 	};
 
@@ -106,12 +109,15 @@ export namespace FilterMenu {
 	export type ListProps = {
 		/** Prefix for every id the list renders. */
 		id: string;
+		/** Whether rows are links, radios or checkboxes. */
 		mode: Mode;
 		/** The field name radios and checkboxes post under. */
 		name?: string;
+		/** Every choice; the island filters them in the browser. */
 		groups: Group[];
+		/** Draws one tab per group instead of stacked sections. */
 		tabs?: boolean;
-		/** @default 100 */
+		/** How many matches the list draws before one closing "more" row. @default 100 */
 		limit?: number;
 		/** The filter the server already applied, such as the `q` a no-script filter sent. */
 		query?: string;
@@ -119,6 +125,7 @@ export namespace FilterMenu {
 		filterForm: string;
 		/** Whether that form has an address to filter on, which shows the field without script. */
 		searchable?: boolean;
+		/** Every string the list shows. */
 		labels: Labels;
 	};
 
@@ -126,7 +133,9 @@ export namespace FilterMenu {
 	export interface PopoverProps extends Omit<TagProps<"div">, "id" | "children" | "popover"> {
 		/** The popover's id, which the trigger, or any `popovertarget`, opens. */
 		id: string;
+		/** Whether rows are links, radios or checkboxes. */
 		mode: Mode;
+		/** Every choice, sent whole to the island so filtering never waits on the server. */
 		groups: Group[];
 		/** Draws the groups as tabs (Branches | Tags) instead of stacked sections. */
 		tabs?: boolean;
@@ -140,12 +149,13 @@ export namespace FilterMenu {
 		filterAction?: string;
 		/** The filter already applied, as the `filterAction` page read it. */
 		query?: string;
-		/** @default 100 */
+		/** How many matches the list draws before one closing "more" row. @default 100 */
 		limit?: number;
 		/** A closing link or action, such as "View all branches". */
 		footer?: RemixNode;
-		/** @default "bottom-start" */
+		/** The trigger's side the popover opens on above phone widths. @default "bottom-start" */
 		placement?: Popover.Placement;
+		/** Every string the menu shows, so it reads in any language. */
 		labels: Labels;
 	}
 
@@ -157,9 +167,9 @@ export namespace FilterMenu {
 }
 
 /**
- * Renders a trigger button and the popover it opens. In `navigate` mode the rows are links; in
- * `single` and `multiple` they are a form posted to `action` when the popover closes having
- * changed, or by its Save button without script. Pair a picker with a `SaveStatus`.
+ * Renders a trigger and its native popover: links in `navigate` mode, a form posted to `action` by
+ * its Save button in `single` and `multiple`. Mapping `@sdxc/ui/app/filter-menu` in the browser
+ * entry runs {@link FilterMenuList}: typing filters, arrows walk, and closing a changed picker posts.
  *
  * @param handle Runtime handle carrying the menu's props.
  * @returns The render function producing the trigger and popover.

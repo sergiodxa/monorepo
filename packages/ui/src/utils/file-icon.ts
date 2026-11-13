@@ -61,7 +61,7 @@ const ICON_BY_EXTENSION: Record<string, FileIconComponent> = {
 /** Options for {@link fileIcon}. */
 export interface FileIconOptions {
 	/**
-	 * The icon for an extension the map does not know, such as `FileCodeIcon` where every
+	 * The icon for an extension outside the built-in map, such as `FileCodeIcon` where every
 	 * titled file is source code.
 	 *
 	 * @default FileIcon

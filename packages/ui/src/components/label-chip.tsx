@@ -54,9 +54,9 @@ export namespace LabelChip {
 }
 
 /**
- * Renders the chip. A pill derives its tint, border and text from the colour at fixed
- * lightness in OKLCH, so the text clears 4.5:1 against the tint for every hue, light or
- * dark; the dot variant reads its text and border from the neutral theme roles.
+ * Renders the chip as plain HTML and CSS. A pill derives tint, border and text from the colour at
+ * fixed OKLCH lightness through `light-dark()`, so text clears 4.5:1 for every hue in the page's
+ * `color-scheme`; the dot variant reads neutral roles. Rules read the colour from `--ui-label-chip-color`.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the chip's markup.

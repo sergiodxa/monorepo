@@ -72,24 +72,33 @@ const FNV_PRIME = 0x01000193;
 export namespace CodeView {
 	/** One painted run of source; the runs `@sdxc/highlight` returns pass straight through. */
 	export interface Token {
+		/** The token's kind ("keyword", "string"), which picks its color from the highlight theme. */
 		type: string;
+		/** The source text the run covers; the runs joined give back the line. */
 		value: string;
 	}
 
 	/** The commit a blame hunk names. */
 	export interface BlameCommit {
+		/** The commit's hash, shortened for display. */
 		sha: string;
+		/** The commit message's first line, the hunk's headline. */
 		subject: string;
+		/** Who made the commit, shown beside its age. */
 		author: string;
 		/** When the commit was made, which sets the hunk's age and its place on the strip. */
 		date: RelativeTimeFormat.DateInput;
+		/** Where the commit's page lives; the subject links there. */
 		href: string;
 	}
 
 	/** A run of lines, counted from 1, last changed by one commit. */
 	export interface BlameHunk {
+		/** The hunk's first line. */
 		start: number;
+		/** The hunk's last line, inclusive. */
 		end: number;
+		/** The commit that last changed these lines. */
 		commit: BlameCommit;
 	}
 
@@ -97,7 +106,9 @@ export namespace CodeView {
 	export interface Labels {
 		/** Name of the button that opens the line menu, such as "Line options". */
 		lineMenu: string;
+		/** The line menu's item that copies the selected lines' text, such as "Copy line". */
 		copyLine: string;
+		/** The line menu's item that copies the cited lines' permalink, such as "Copy permalink". */
 		copyPermalink: string;
 		/** Shown when `issueHref` is set, such as "Reference in new issue". */
 		referenceInNewIssue?: string;
@@ -136,6 +147,7 @@ export namespace CodeView {
 		permalink?: string;
 		/** Where "Reference in new issue" goes; the permalink arrives as its `body` parameter. */
 		issueHref?: string;
+		/** Every string the view shows or announces, so it reads in any language. */
 		labels: Labels;
 		/** The moment blame ages count from. @default the current time */
 		now?: RelativeTimeFormat.DateInput;
@@ -165,8 +177,11 @@ export namespace CodeView {
 	export interface SelectionProps {
 		/** The `id` the line menu's popover takes. */
 		menuId: string;
+		/** The view's `permalink`, which `y` and "Copy permalink" extend with the selection. */
 		permalink?: string;
+		/** The view's `issueHref`, which shows "Reference in new issue" when set. */
 		issueHref?: string;
+		/** The view's strings. */
 		labels: Labels;
 	}
 }
@@ -204,9 +219,9 @@ function splitSource(code: string): string[] {
 }
 
 /**
- * Renders the view: the header slot, then the lines in a table that scrolls sideways inside
- * the view (wrapping once the view is narrower than 40rem), and the one island that owns
- * selection for the whole file. Line `n` is `#Ln`; `selected` paints the cited lines.
+ * Without script `selected` and `#Ln` paint the cited lines, and each number links to `?L=n#Ln`;
+ * mapping `@sdxc/ui/app/code-view` runs {@link CodeViewSelection} for ranges, the menu and `y`.
+ * Set `--code-view-font-size`, `-line-height`, `-blame-width`, `-selected` and `--code-age-1`–`5`.
  *
  * @param handle Runtime handle carrying the view's props.
  * @returns The render function producing the view.

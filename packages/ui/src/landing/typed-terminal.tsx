@@ -76,9 +76,13 @@ export namespace TypedTerminal {
 	 * Props accepted by {@link TypedTerminal}.
 	 */
 	export interface Props extends Omit<TagProps<"div">, "children" | "title"> {
-		/** Accessible name of the session's figure. Required — the library ships no copy. */
+		/** Accessible name of the session's figure, in the page's language. */
 		"aria-label": string;
-		/** Accessible name of the pause toggle. */
+		/**
+		 * Accessible name of the pause toggle.
+		 *
+		 * @default "Pause the animation"
+		 */
 		pauseLabel?: string;
 		/** Window title, such as a file name or a shell. */
 		title?: RemixNode;
@@ -96,10 +100,9 @@ export namespace TypedTerminal {
 }
 
 /**
- * Renders the session as one `<pre>` in the terminal panel, with its pause toggle in the
- * panel's title bar, centred against the title.
- * Every line's full text is in the markup from the start, clipped only visually while it
- * types, so screen readers and copy read the whole session and reduced motion shows it done.
+ * Renders the session as one `<pre>` on the `variant`'s panel, its pause toggle in the title bar.
+ * The typing is CSS alone with nothing to hydrate: every line's full text is in the markup,
+ * clipped while it types, so screen readers, copy and reduced motion get the finished session.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the terminal's markup.
@@ -111,6 +114,13 @@ export namespace TypedTerminal {
  * 		{ kind: "input", text: 'visit "/login"' },
  * 		{ kind: "output", text: "✓ 1 step · 0.4s", status: "ok" },
  * 	]}
+ * />
+ * @example
+ * <TypedTerminal
+ * 	variant="code"
+ * 	aria-label="A spec being written"
+ * 	title="checkout.spec"
+ * 	lines={[{ kind: "input", text: 'Scenario: "Pay with a saved card"' }]}
  * />
  */
 export function TypedTerminal(handle: Handle<TypedTerminal.Props>) {

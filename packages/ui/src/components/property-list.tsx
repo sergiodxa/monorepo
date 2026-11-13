@@ -64,9 +64,9 @@ export namespace PropertyList {
 		/** The popover's content: the app's form, its described options and its submit. */
 		content?: RemixNode;
 		/**
-		 * A whole popover whose `id` is `id`, drawn in place of the row's own, such as a
-		 * filterable picker for a multi-value property; the value button still opens it and
-		 * anchors it under the row.
+		 * A whole popover whose `id` is `id`, drawn in place of the row's own and its `content`,
+		 * such as a `FilterMenu.Popover` picker for a multi-value property; the value button
+		 * still opens it and anchors it under the row.
 		 */
 		popover?: RemixNode;
 	}
@@ -158,9 +158,9 @@ export function PropertyList(handle: Handle<PropertyList.Props, PropertyList.Con
 }
 
 /**
- * Renders one property. In the rows variant the label column holds
- * `--ui-property-list-label-width` (9rem) from a 22rem container up and stacks above the
- * value below it; a value-less row names its emptiness in muted text.
+ * Renders one property. In the rows variant the label column holds `--ui-property-list-label-width`
+ * (9rem) from a 22rem container up and stacks over the value below that; an empty row says so.
+ * With `edit`, the value opens a Popover API popover with no script: the row's own or `popover`.
  *
  * @param handle Runtime handle carrying the group `<div>`'s props.
  * @returns The render function producing the row's markup.

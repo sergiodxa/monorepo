@@ -164,7 +164,7 @@ export namespace Tree {
 		placeholder?: string;
 		/** The query the page was rendered with, so the field shows what narrowed the tree. */
 		value?: string;
-		/** Search parameter the query submits under. @default DEFAULT_FILTER_PARAM */
+		/** Search parameter the query submits under. @default "filter" */
 		name?: string;
 		/** Other search parameters the submission keeps, as hidden fields. */
 		params?: Record<string, string>;
@@ -240,9 +240,9 @@ function readAmbientDepth(handle: Handle<unknown, any>): number | undefined {
 }
 
 /**
- * Renders the tree's root host: a bordered `<div>` carrying `role="tree"`,
- * stacking {@link Tree.Item} nodes in block flow, with `data-empty`
- * centering a fallback message; an unlabeled tree logs a dev `console.warn`.
+ * Renders the bordered `role="tree"` panel; folders open and file links work with no script.
+ * Rows indent `--ui-tree-indent` per level, `frame` aims every {@link Tree.Leaf} at one frame,
+ * `data-empty` centers a fallback, and {@link Tree.Filter} and {@link Tree.Navigation} add islands.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the tree's markup.
@@ -250,7 +250,7 @@ function readAmbientDepth(handle: Handle<unknown, any>): number | undefined {
  * <Tree aria-label={t("files.title")}>
  * 	<Tree.Item id="src">
  * 		<Tree.ItemContent>
- * 			<Tree.ExpandButton aria-label={t("files.expand")} />
+ * 			<Tree.ExpandButton />
  * 			{t("files.folder", { name: "src" })}
  * 		</Tree.ItemContent>
  * 		<Tree.Item id="src-index">
@@ -261,6 +261,14 @@ function readAmbientDepth(handle: Handle<unknown, any>): number | undefined {
  * @example
  * <Tree aria-label={t("files.title")} data-empty>
  * 	{t("files.empty")}
+ * </Tree>
+ * @example
+ * <Tree id="files" aria-label={t("files.title")} frame="main">
+ * 	<Tree.Navigation labels={{ group: t("keys.files"), next: t("keys.next") }} />
+ * 	<Tree.Item id="app" open>
+ * 		<Tree.ItemContent><Tree.ExpandButton />app</Tree.ItemContent>
+ * 		<Tree.Leaf href="/blob/main/app/routes.ts" name="routes.ts" path="app/routes.ts" current />
+ * 	</Tree.Item>
  * </Tree>
  */
 export function Tree(handle: Handle<Tree.Props, Tree.RootContext>) {
@@ -307,7 +315,7 @@ export function Tree(handle: Handle<Tree.Props, Tree.RootContext>) {
  * @example
  * <Tree.Item id="src">
  * 	<Tree.ItemContent>
- * 		<Tree.ExpandButton aria-label={t("files.expand")} />
+ * 		<Tree.ExpandButton />
  * 		{t("files.folder", { name: "src" })}
  * 	</Tree.ItemContent>
  * 	<Tree.Item id="src-index">
@@ -317,7 +325,7 @@ export function Tree(handle: Handle<Tree.Props, Tree.RootContext>) {
  * @example
  * <Tree.Item id="src" open>
  * 	<Tree.ItemContent>
- * 		<Tree.ExpandButton aria-label={t("files.collapse")} />
+ * 		<Tree.ExpandButton />
  * 		{t("files.folder", { name: "src" })}
  * 	</Tree.ItemContent>
  * </Tree.Item>
@@ -378,7 +386,7 @@ Tree.Item = TreeItem;
  * @returns The render function producing the row's markup.
  * @example
  * <Tree.ItemContent>
- * 	<Tree.ExpandButton aria-label={t("files.expand")} />
+ * 	<Tree.ExpandButton />
  * 	{t("files.folder", { name: "src" })}
  * </Tree.ItemContent>
  * @example
@@ -465,7 +473,7 @@ Tree.LoadMoreItem = SentinelRow;
  * @returns The render function producing the chevron's markup.
  * @example
  * <Tree.ItemContent>
- * 	<Tree.ExpandButton aria-label={t("files.expand")} />
+ * 	<Tree.ExpandButton />
  * 	{t("files.folder", { name: "src" })}
  * </Tree.ItemContent>
  */
@@ -648,8 +656,8 @@ Tree.Leaf = function TreeLeaf(handle: Handle<Tree.LeafProps>) {
 
 /**
  * Renders a "Go to file" field over a tree: a GET form (`?filter=` by default), so without
- * script the server renders the narrowed tree with {@link treeFilterMatches}; once hydrated,
- * the {@link TreeFilterField} island narrows the tree named by `tree` on every keystroke.
+ * script the server renders the narrowed tree with {@link treeFilterMatches}. The
+ * {@link TreeFilterField} island applies {@link treeFilter} to narrow it on every keystroke.
  *
  * @param handle Runtime handle carrying the form's props.
  * @returns The render function producing the form.
@@ -719,9 +727,9 @@ export const TreeNavigation: EntryComponent<Tree.NavigationProps> = clientEntry(
 );
 
 /**
- * Turns on keyboard navigation for a server-rendered tree: ↑↓ and `j`/`k` move one Tab stop
- * between visible rows, → opens or enters a folder, ← closes it or goes to its parent,
- * Home/End jump, and typing finds a row by name. Place it first inside {@link Tree}.
+ * Adds the keys as the {@link TreeNavigation} island running {@link treeNavigation}: ↑↓ and
+ * `j`/`k` between visible rows, → opens or enters a folder, ← closes it or goes up, Home/End
+ * and type-ahead. Without script every row is a Tab stop. Place it first inside {@link Tree}.
  *
  * @param handle Runtime handle carrying the keys' help-sheet copy.
  * @returns The render function producing the island.

@@ -40,13 +40,17 @@ export namespace ReviewThread {
 	export interface Comment {
 		/** The card's id, so `#discussion_r123` lands on it. */
 		id?: string;
+		/** The author's picture, such as an `Avatar`, at the card's start. */
 		avatar: RemixNode;
+		/** The author's name, usually a link to their profile. */
 		author: RemixNode;
 		/** The muted verb after the name, such as "commented". */
 		action?: RemixNode;
+		/** When it was written, such as a `RelativeTime`, after the verb. */
 		time?: RemixNode;
 		/** A `⋯` menu trigger at the card's header end. */
 		menu?: RemixNode;
+		/** The reactions row under the body. */
 		reactions?: RemixNode;
 		/** The comment belongs to a review not yet submitted, so only its author sees it. */
 		pending?: boolean;
@@ -58,6 +62,7 @@ export namespace ReviewThread {
 	export interface Lines {
 		/** The file's path, which names the excerpt. */
 		path: string;
+		/** The lines to draw, as parsed hunks. */
 		hunks: readonly Hunk[];
 		/** Language the lines highlight as. */
 		language?: string;
@@ -75,7 +80,9 @@ export namespace ReviewThread {
 		reply: string;
 		/** Shown in the empty reply box, such as "Reply…". */
 		replyPlaceholder?: string;
+		/** The button on an open thread, such as "Resolve conversation". */
 		resolve: string;
+		/** The button on a resolved thread, such as "Unresolve conversation". */
 		unresolve: string;
 		/** The badge on an outdated thread, such as "Outdated". */
 		outdated: string;
@@ -83,6 +90,7 @@ export namespace ReviewThread {
 		pending: string;
 		/** Heads a suggestion block, such as "Suggested change". */
 		suggestion: string;
+		/** The button under a suggestion with an `applyAction`, such as "Apply suggestion". */
 		applySuggestion: string;
 		/** Hidden column headers for the excerpt and suggestion tables. */
 		columns: Diff.ColumnLabels;
@@ -90,6 +98,7 @@ export namespace ReviewThread {
 
 	/** Props accepted by {@link ReviewThread}: every native `<div>` attribute for its root. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
+		/** The thread's comments, oldest first. */
 		comments: readonly Comment[];
 		/** The thread is resolved, which folds it to `resolvedSummary`. */
 		resolved?: boolean;
@@ -102,6 +111,7 @@ export namespace ReviewThread {
 		 * outdated thread, whose original lines no longer show in the diff.
 		 */
 		excerpt?: Lines;
+		/** A change the reviewer proposes, drawn as a small diff under the comments. */
 		suggestion?: Suggestion;
 		/** Where a reply posts its text (as `body`); omitted, the thread draws no reply box. */
 		replyAction?: string;
@@ -111,14 +121,15 @@ export namespace ReviewThread {
 		frame?: string;
 		/** Hidden inputs every form carries, such as a CSRF token. */
 		fields?: RemixNode;
+		/** Every string the thread shows or announces, so it reads in any language. */
 		labels: Labels;
 	}
 }
 
 /**
- * Renders a review thread. Open, it shows the excerpt, the comments, the suggestion and the
- * reply and resolve forms; resolved or outdated, the same content sits in a closed
- * `<details>` behind one line, so a long review keeps only what still needs an answer open.
+ * Open, it shows the excerpt, comments, suggestion and forms; resolved or outdated, it folds into
+ * a closed `<details>` behind one line. Every form is a plain POST, so it works without script and
+ * needs no island; with the page's runtime, `frame` reloads only the thread in place.
  *
  * @param handle Runtime handle carrying the thread's props.
  * @returns The render function producing the thread.

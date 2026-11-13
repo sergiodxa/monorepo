@@ -56,7 +56,11 @@ export namespace Countdown {
 		now?: DateInput;
 		/** Unit names, merged over the English ones. */
 		labels?: Partial<Labels>;
-		/** Shows the seconds unit and ticks every second; off, the minutes are the smallest unit. */
+		/**
+		 * Shows the seconds unit and ticks every second; off, the minutes are the smallest unit.
+		 *
+		 * @default true
+		 */
 		seconds?: boolean;
 		/** What the countdown reads once the moment has passed, such as "Doors are open". */
 		done: string;
@@ -88,9 +92,9 @@ export namespace Countdown {
 }
 
 /**
- * Renders the units left as `<time datetime>`, each a figure over its name, with the done text
- * beside them hidden until the moment passes. With `live` it hands the same props to
- * {@link CountdownLive}, so the server HTML is identical and the island takes over the ticking.
+ * The time left from `now` as a `<time datetime>` that reads true with no script; `live` hydrates
+ * {@link CountdownLive} (map it in the browser entry) to tick on the viewer's clock. Type it with
+ * `--ui-countdown-value-{font,size,weight,color}`, `--ui-countdown-label-{font,size}` and `--ui-countdown-{gap,align}`.
  *
  * @param handle Runtime handle carrying the moment, the labels and the `<time>`'s props.
  * @returns The render function producing the countdown.
@@ -161,8 +165,8 @@ namespace CountdownBody {
 }
 
 /**
- * The units and the done text inside the `<time>`, with `data-state` on neither: the host
- * carries it, and exactly one of the two children is visible at a time.
+ * The units and the done text inside the `<time>`, exactly one of the two visible at a time;
+ * the live island also writes `data-state` on the host as it ticks.
  */
 function CountdownBody(handle: Handle<CountdownBody.Props>) {
 	return () => {
