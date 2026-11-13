@@ -24,6 +24,10 @@ import type {
 	DemoAppScreen,
 } from "~/resources/views/demo-apps";
 
+import { DEMO_APP_TOAST_PARAM, readToastParam } from "~/resources/views/demo-apps";
+
+import { MAIN_FRAME, MainFrame, MainScreen, mainSource } from "../main-frame";
+
 import type { CreateDraft } from "./create";
 import type { ListScope } from "./list";
 import type { RoadmapTab } from "./roadmap";
@@ -58,7 +62,7 @@ import {
 } from "./list";
 import { ProjectHeader, ProjectsScreen } from "./projects";
 import { ROADMAP_FRAME, RoadmapScreen, RoadmapTimeline } from "./roadmap";
-import { CairnShell, SHELL_COOKIE } from "./shell";
+import { CairnFrame, CairnShell, SHELL_COOKIE, type ShellSection } from "./shell";
 import {
 	allIssues,
 	asAssignee,
@@ -169,12 +173,12 @@ const SCREENS = [
 ];
 
 /** The app's own 404, inside the shell so the sidebar still leads somewhere. */
-function notFound(collapsed: boolean, state: VisitorState): DemoAppScreen {
+function notFound(state: VisitorState): DemoAppScreen {
 	return {
 		title: "Page not found",
 		status: 404,
 		body: (
-			<CairnShell current="none" collapsed={collapsed} crumb="Not found" state={state} from="">
+			<CairnShell current="none" state={state} from="">
 				<Empty icon={<CompassIcon />}>
 					<Empty.Title>Nothing lives at this address</Empty.Title>
 					<Empty.Description>
@@ -274,6 +278,70 @@ function listScope(
 		};
 	}
 	return undefined;
+}
+
+/**
+ * The nav item a page marks current and the crumb its top bar shows, read from its address so
+ * the shell's first render and the `main` manifest after a swap agree.
+ */
+function screenMeta(
+	request: DemoAppRequest,
+	state: VisitorState,
+): { nav: ShellSection; crumb: string } {
+	let issues = allIssues(state);
+	let [first = "", second, third] = request.page.split("/");
+	if (first === "team" && third === "board") {
+		let team = findTeam(second);
+		if (team) return { nav: `board:${team.id}`, crumb: `${team.name} › Board` };
+	}
+	if (third === undefined) {
+		let scope = listScope(first, second, issues);
+		if (scope) return { nav: scope.section, crumb: scope.title };
+	}
+	if (second === undefined) {
+		if (first === "inbox") return { nav: "inbox", crumb: "Inbox" };
+		if (first === "projects") return { nav: "projects", crumb: "Projects" };
+		if (first === "roadmap") return { nav: "roadmap", crumb: "Roadmap" };
+		if (first === "cycles") return { nav: "cycles", crumb: "Cycles" };
+		if (first === "new") return { nav: "none", crumb: "Create issue" };
+	}
+	if (first === "issue" && second !== undefined) {
+		let issue = findIssue(second, state);
+		if (issue) {
+			return {
+				nav: `team:${issue.team}`,
+				crumb: `${findTeam(issue.team)?.name ?? ""} › ${issue.id}`,
+			};
+		}
+	}
+	return { nav: "none", crumb: "Not found" };
+}
+
+/**
+ * A screen drawn as a whole page with its main area inline rather than framed, for an answer
+ * that carries what a refused post typed, which reloading the address would lose.
+ */
+function wholePage(
+	request: DemoAppRequest,
+	state: VisitorState,
+	screen: DemoAppScreen,
+): DemoAppScreen {
+	let meta = screenMeta(request, state);
+	return {
+		...screen,
+		body: (
+			<CairnFrame
+				current={meta.nav}
+				crumb={meta.crumb}
+				collapsed={readAppShellCookie(request.cookie, SHELL_COOKIE)}
+				state={state}
+			>
+				<MainScreen title={screen.title} nav={meta.nav} crumb={meta.crumb} url={request.url}>
+					{screen.body}
+				</MainScreen>
+			</CairnFrame>
+		),
+	};
 }
 
 /**
@@ -588,7 +656,9 @@ function submitCreate(
 			title: "Give the issue a title, then create it again.",
 			from: fromPage(form, ""),
 		});
-		return screen ? { ...screen, status: 400 } : null;
+		return screen
+			? wholePage({ ...request, page: "new" }, state, { ...screen, status: 400 })
+			: null;
 	}
 
 	let id = nextIssueId(state, team.id);
@@ -624,12 +694,42 @@ export default {
 	isPersonal,
 	toasts: TOASTS,
 	frame: (part, request) => framePart(part, request),
-	target: (name, request) => targetFrame(name, request),
+	target(name, request) {
+		if (name !== MAIN_FRAME) return targetFrame(name, request);
+		let state = readState(request.cookie);
+		let screen = route(request, state) ?? notFound(state);
+		let meta = screenMeta(request, state);
+		let param = request.url.searchParams.get(DEMO_APP_TOAST_PARAM);
+		let key = param === null ? null : readToastParam(param).key;
+		return (
+			<MainScreen
+				title={screen.title}
+				nav={meta.nav}
+				crumb={meta.crumb}
+				url={request.url}
+				toast={key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined}
+			>
+				{screen.body}
+			</MainScreen>
+		);
+	},
 	render(request) {
 		let state = readState(request.cookie);
-		return (
-			route(request, state) ?? notFound(readAppShellCookie(request.cookie, SHELL_COOKIE), state)
-		);
+		let screen = route(request, state) ?? notFound(state);
+		return {
+			title: screen.title,
+			status: screen.status,
+			body: (
+				<CairnFrame
+					current={screenMeta(request, state).nav}
+					crumb={screenMeta(request, state).crumb}
+					collapsed={readAppShellCookie(request.cookie, SHELL_COOKIE)}
+					state={state}
+				>
+					<MainFrame src={mainSource(request.url)} />
+				</CairnFrame>
+			),
+		};
 	},
 	submit(page, form, request) {
 		let state = readState(request.cookie);

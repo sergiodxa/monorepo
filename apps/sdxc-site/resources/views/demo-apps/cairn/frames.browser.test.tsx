@@ -67,19 +67,51 @@ function FrameProbe(handle: Handle) {
 	return () => null;
 }
 
+/** The visitor's cookies as the mounted screen's posts set them, name to `name=value`. */
+let jar = new Map<string, string>();
+
+/** The `Cookie` header the jar sends. */
+function jarHeader(): string | null {
+	return jar.size === 0 ? null : [...jar.values()].join("; ");
+}
+
+/** Keeps each `Set-Cookie` value a post answered with, dropping the ones it expires. */
+function keep(cookies: string[] | undefined): void {
+	for (let header of cookies ?? []) {
+		let pair = header.split(";")[0] ?? "";
+		let name = pair.split("=")[0] ?? "";
+		if (/Max-Age=0/.test(header)) jar.delete(name);
+		else jar.set(name, pair);
+	}
+}
+
+/** Every post a mounted screen sent, as the page path it posted to. */
+let posted: string[] = [];
+
 /**
- * Resolves Cairn's named frames as the page route does, by asking the app for the frame its
- * name and address pick, and leaves every other frame (a cycle's parts) pending.
+ * Resolves Cairn's named frames as the page route does: a post goes through the app's own
+ * `submit` and its redirect, then the frame its name and the landing address pick is drawn.
+ * Every other frame (a cycle's parts) stays pending.
  */
-function resolveCairnFrame(cookie: string | null) {
-	return (src: string, options?: { target?: string }) => {
-		let target = options?.target;
-		if (target === undefined || cairn.target === undefined) return new Promise<never>(() => {});
-		requested.push(target);
-		let url = new URL(src, "http://localhost");
-		let page = url.pathname.replace(/^\/demo\/apps\/cairn\/?/, "");
-		return cairn.target(target, { page, url, cookie }) ?? new Promise<never>(() => {});
-	};
+function resolveCairnFrame(
+	src: string,
+	options?: { target?: string; method?: string; formData?: FormData },
+) {
+	let target = options?.target;
+	if (target === undefined || cairn.target === undefined) return new Promise<never>(() => {});
+	requested.push(target);
+	let url = new URL(src, "http://localhost");
+	let page = url.pathname.replace(/^\/demo\/apps\/cairn\/?/, "");
+	if (options?.method?.toLowerCase() === "post" && options.formData) {
+		posted.push(page);
+		let answer = cairn.submit(page, options.formData, { page, url, cookie: jarHeader() });
+		if (answer && !("body" in answer)) {
+			keep(answer.cookies);
+			url = new URL(`/demo/apps/cairn/${answer.page}`, "http://localhost");
+			page = url.pathname.replace(/^\/demo\/apps\/cairn\/?/, "");
+		}
+	}
+	return cairn.target(target, { page, url, cookie: jarHeader() }) ?? new Promise<never>(() => {});
 }
 
 /**
@@ -94,12 +126,20 @@ async function mountScreen(screen: string, cookie: string | null = null): Promis
 	let url = new URL(`http://localhost/demo/apps/cairn/${path}${query ? `?${query}` : ""}`);
 	let rendered = cairn.render({ page: path, url, cookie });
 	requested = [];
+	posted = [];
+	jar = new Map(
+		(cookie ?? "")
+			.split(";")
+			.map((pair) => pair.trim())
+			.filter(Boolean)
+			.map((pair) => [pair.split("=")[0]!, pair] as const),
+	);
 	let mounted = render(
 		<>
 			{themed(rendered.body)}
 			<FrameProbe />
 		</>,
-		{ frameInit: { resolveFrame: resolveCairnFrame(cookie) } },
+		{ frameInit: { resolveFrame: resolveCairnFrame } },
 	);
 	onTestFinished(() => mounted.cleanup());
 	await settleFrames();
@@ -359,5 +399,74 @@ describe("Cairn's frames reload alone", () => {
 		expect(
 			root.querySelector('nav[aria-label="Roadmap tabs"] a[aria-current="page"]')?.textContent,
 		).toBe("Closed");
+	});
+});
+
+describe("Cairn works like an app once its script runs", () => {
+	test("moving between screens swaps only main, keeping the sidebar and top bar", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("team/web");
+		let sidebar = root.querySelector("#cairn-sidebar");
+		let topbar = root.querySelector('[data-slot="app-shell-topbar"]');
+
+		for (let path of ["inbox", "projects", "roadmap", "cycles", "team/web/board", ""]) {
+			expect(await reloadFrame("main", path)).toContain("main");
+			expect(root.querySelector("#cairn-sidebar"), path).toBe(sidebar);
+			expect(root.querySelector('[data-slot="app-shell-topbar"]'), path).toBe(topbar);
+			expect(root.querySelectorAll("[data-main-screen]"), path).toHaveLength(1);
+		}
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("a property save posts through a frame and never navigates, keeping the list's scroll", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("team/web?issue=WEB-121");
+		let rowsBox = root.querySelector<HTMLElement>("#cairn-rows")!;
+		rowsBox.scrollTop = 120;
+		let address = location.href;
+		onTestFinished(() => history.replaceState(null, "", address));
+		let entries = history.length;
+
+		root
+			.querySelector<HTMLButtonElement>(
+				'button[form="cairn-props-WEB-121"][name="status"][value="done"]',
+			)!
+			.click();
+		await settleFrames();
+		await settleFrames();
+
+		expect(posted).toEqual(["team/web"]);
+		expect(`${location.pathname}${location.search}`).toBe(
+			"/demo/apps/cairn/team/web?issue=WEB-121",
+		);
+		expect(history.length).toBe(entries);
+		expect(root.querySelector('[data-group="done"] [data-issue="WEB-121"]')).not.toBeNull();
+		expect(root.querySelector("#cairn-rows")).toBe(rowsBox);
+		expect(rowsBox.scrollTop).toBe(120);
+	});
+
+	test("a board move posts through a frame and never navigates", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("team/web/board");
+		let columns = root.querySelector('[data-slot="board-columns"]');
+		let address = location.href;
+		onTestFinished(() => history.replaceState(null, "", address));
+		let entries = history.length;
+		let card = root.querySelector<HTMLElement>('[data-sortable-item="WEB-130"] a')!;
+		let from = card.closest("[data-sortable-list]")!.getAttribute("data-sortable-list");
+
+		card.focus();
+		card.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "ArrowLeft", shiftKey: true, bubbles: true }),
+		);
+		await settleFrames();
+		await settleFrames();
+
+		expect(posted).toEqual(["team/web/board"]);
+		expect(`${location.pathname}${location.search}`).toBe("/demo/apps/cairn/team/web/board");
+		expect(history.length).toBe(entries);
+		let now = root.querySelector('[data-sortable-item="WEB-130"]')!.closest("[data-sortable-list]");
+		expect(now!.getAttribute("data-sortable-list")).not.toBe(from);
+		expect(root.querySelector('[data-slot="board-columns"]')).toBe(columns);
 	});
 });

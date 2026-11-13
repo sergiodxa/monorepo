@@ -38,6 +38,7 @@ import { TabBar } from "@sdxc/ui/app/tab-bar";
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 
 import { UserMenu, WorkspaceMenu } from "../account-menus";
+import { MainFrameSync } from "../main-frame-sync";
 
 import type { VisitorState } from "./state";
 
@@ -121,26 +122,6 @@ const HELP_GROUPS: KeyboardHelp.Group[] = [
 	},
 ];
 
-namespace CairnShell {
-	export interface Props {
-		current: ShellSection;
-		/** The remembered collapsed sidebar, from {@link SHELL_COOKIE}. */
-		collapsed: boolean;
-		/** Where the person is, shown in the top bar. */
-		crumb: string;
-		state: VisitorState;
-		/** The team a new issue starts in, from the screen the person is on. */
-		team?: string;
-		/** The page the create dialog returns to after a refused post. */
-		from: string;
-		/** Drops the content padding, for edge-to-edge panes. */
-		flush?: boolean;
-		/** Holds the screen to the window's height, for a board that scrolls inside itself. */
-		fill?: boolean;
-		children: RemixNode;
-	}
-}
-
 /** The sidebar's rows: the person's work, the workspace, each team, then the saved views. */
 function CairnNav(handle: Handle<{ current: ShellSection; unread: number }>) {
 	return () => {
@@ -159,6 +140,7 @@ function CairnNav(handle: Handle<{ current: ShellSection; unread: number }>) {
 				icon={icon}
 				label={label}
 				current={current === section}
+				data-main-nav={section}
 				data-shortcut={shortcut}
 				data-shortcut-label={shortcut ? `Go to ${label}` : undefined}
 				data-shortcut-group={shortcut ? "Navigation" : undefined}
@@ -326,24 +308,38 @@ function CairnPalette(handle: Handle<{ state: VisitorState }>) {
 	};
 }
 
+namespace CairnFrame {
+	export interface Props {
+		/** The nav item the first screen marks current; later screens mark their own. */
+		current: ShellSection;
+		/** The remembered collapsed sidebar, from {@link SHELL_COOKIE}. */
+		collapsed: boolean;
+		/** Where the person is on the first screen, shown in the top bar. */
+		crumb: string;
+		state: VisitorState;
+		/** The `main` frame every screen swaps into. */
+		children: RemixNode;
+	}
+}
+
 /**
- * Renders a Cairn screen inside the shell, with the command menu, the keyboard help and the
- * create dialog on every page, so ⌘K, `?` and `c` answer wherever the person is.
+ * Renders Cairn's shell once around the `main` frame: the sidebar, the top bar, the command
+ * menu and the keyboard help stay mounted while screens swap beneath them, and the browser
+ * marks the current nav item and writes the crumb after each swap.
  */
-export function CairnShell(handle: Handle<CairnShell.Props>) {
+export function CairnFrame(handle: Handle<CairnFrame.Props>) {
 	return () => {
-		let { current, collapsed, crumb, flush, fill, children, state, team, from } = handle.props;
+		let { current, collapsed, crumb, children, state } = handle.props;
 		let unread = NOTICES.filter((notice) => notice.unread).length;
 		let me = PEOPLE.find((person) => person.id === ME);
 
-		let shell = (
+		return (
 			<AppShell
 				cookiePath={demoAppCookiePath("cairn")}
 				id="cairn"
 				labels={SHELL_LABELS}
 				collapsed={collapsed}
 				cookieName={SHELL_COOKIE}
-				fill={fill}
 				indicator="fill"
 				sheetBelow="64rem"
 				workspace={
@@ -396,6 +392,7 @@ export function CairnShell(handle: Handle<CairnShell.Props>) {
 				topbar={
 					<>
 						<span
+							data-main-crumb=""
 							mix={[
 								grow(),
 								truncate(),
@@ -439,6 +436,83 @@ export function CairnShell(handle: Handle<CairnShell.Props>) {
 				}
 			>
 				{children}
+				<MainFrameSync root={href()} />
+				<CairnPalette state={state} />
+				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
+			</AppShell>
+		);
+	};
+}
+
+namespace CairnShell {
+	export interface Props {
+		/** The nav item this screen belongs to, which the phone's tab bar marks. */
+		current: ShellSection;
+		/** Kept for the screens that pass it; the crumb is written by the `main` manifest. */
+		crumb?: string;
+		/** Kept for the screens that pass it; the sidebar's state lives in {@link CairnFrame}. */
+		collapsed?: boolean;
+		state?: VisitorState;
+		/** The team a new issue starts in, from the screen the person is on. */
+		team?: string;
+		/** The page the create dialog returns to after a refused post. */
+		from: string;
+		/** Drops the content padding, for edge-to-edge panes. */
+		flush?: boolean;
+		/** Holds the screen to the window's height, for a view that scrolls inside itself. */
+		fill?: boolean;
+		children: RemixNode;
+	}
+}
+
+/** Where the docked sidebar starts, at which a filling screen holds the window's height. */
+const DOCKED = "(min-width: 64rem)";
+
+/**
+ * Renders one screen inside the `main` frame, with what belongs to the screen rather than the
+ * shell: the phone's tab bar marking this screen, and the create dialog defaulting to its team.
+ * A flush or filling screen sets the shell's padding and height from inside, through `:has()`,
+ * so swapping between screens with different layouts needs nothing from the shell.
+ */
+export function CairnShell(handle: Handle<CairnShell.Props>) {
+	return () => {
+		let { current, children, team, from, flush = false, fill = false } = handle.props;
+		let unread = NOTICES.filter((notice) => notice.unread).length;
+		let filling = {
+			[`@media ${DOCKED}`]: {
+				"[data-slot='app-shell-content']:has(&)": { display: "flex", flexDirection: "column" },
+				"[data-slot='app-shell-main']:has(&)": {
+					display: "flex",
+					flexDirection: "column",
+					flex: "1 1 0",
+					minBlockSize: "0",
+				},
+			},
+		};
+		return (
+			<div
+				data-cairn-screen={fill ? "fill" : "page"}
+				mix={[
+					raw({
+						display: "flex",
+						flexDirection: "column",
+						flex: "1 1 auto",
+						minInlineSize: 0,
+						minBlockSize: 0,
+						"[data-main-region]:has(&), [data-main-screen]:has(&)": {
+							display: "flex",
+							flexDirection: "column",
+							flex: "1 1 auto",
+							minBlockSize: "0",
+						},
+						...(flush
+							? { "[data-slot='app-shell-content']:has(&)": { "--ui-app-content-padding": "0px" } }
+							: {}),
+						...(fill ? filling : {}),
+					}),
+				]}
+			>
+				{children}
 				<TabBar label="Primary" hideFrom="48rem">
 					<TabBar.Item
 						href={href()}
@@ -467,16 +541,8 @@ export function CairnShell(handle: Handle<CairnShell.Props>) {
 						current={current === "projects" || current === "roadmap"}
 					/>
 				</TabBar>
-				<CairnPalette state={state} />
-				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 				<CreateIssueDialog id={CREATE_ID} team={team ?? "web"} from={from} />
-			</AppShell>
-		);
-
-		return flush ? (
-			<div mix={[raw({ display: "contents", "--ui-app-content-padding": "0px" })]}>{shell}</div>
-		) : (
-			shell
+			</div>
 		);
 	};
 }
