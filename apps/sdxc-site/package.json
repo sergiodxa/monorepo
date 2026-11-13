@@ -20,6 +20,7 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/diagram": "workspace:*",
+		"@sdxc/emoji": "workspace:*",
 		"@sdxc/file-storage-r2": "workspace:*",
 		"@sdxc/font": "workspace:*",
 		"@sdxc/health": "workspace:*",
