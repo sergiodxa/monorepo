@@ -68,6 +68,27 @@ token APIs, a markdown walk visitor, and composable UI — no `createEmoji` bind
 Root never imports the catalog. Apps that want the built-in table load
 `@sdxc/emoji/catalog` (or fetch equivalent JSON) and pass it in.
 
+The UI entry lives in `@sdxc/emoji` (emoji data and shortcode behavior are not a
+general catalog concern), but it must **work alongside `@sdxc/ui`**, not beside a
+private look:
+
+- Style exclusively through `@sdxc/u` utility mixins (`bg`, `fg`, `borderEdge`,
+  spacing, radius, typography, …) — the same path `@sdxc/ui` components use.
+- Color, surface, radius, focus ring, and elevation come only from the shared
+  `--ui-*` contract: `@sdxc/u/theme.css` for the base scales and
+  `@sdxc/ui/theme.css` for the semantic layer apps already load. No hard-coded
+  hex, no parallel token set, no package-local palette.
+- Accept `mix` on every host and part so an app can compose the same mixins it
+  uses with `@sdxc/ui`.
+- Match density and interaction chrome to nearby controls (`Command`,
+  `TextArea`, floating surfaces): selected row tint, focus-visible ring, rounded
+  search field, elevated panel — by reading those variables, not by copying
+  `@sdxc/ui` source.
+- `./ui` depends on `@sdxc/u` (and `remix`); it does not need to depend on
+  `@sdxc/ui` as a library import. An app that already mounts `@sdxc/ui/theme.css`
+  (which pulls in `@sdxc/u/theme.css`) supplies the theme; without that theme the
+  utilities still resolve through the documented `--ui-*` fallbacks.
+
 ### Catalog shape (inverted)
 
 The canonical table is one entry per emoji (or per custom image), not one row per shortcode:
@@ -217,7 +238,9 @@ Custom image bytes live wherever the app stores them (DB, R2, CDN). The catalog 
 Search keeps focus; arrows move `aria-activedescendant` through the grid or list; Enter picks;
 Escape closes; focus returns to the field or trigger. Category controls are a tablist. The grid
 is virtualized. Unsupported / undrawable glyphs may be hidden when the runtime can probe them.
-Styling follows `@sdxc/ui` (`mix`, semantic tokens, compound parts). Mobile keeps the picker for
+Styling is `@sdxc/u` + the shared `--ui-*` theme (see package entries above); API shape
+matches `@sdxc/ui` (`mix`, required labels, compound parts, `ui:*` events) so the picker
+sits in a dialog next to catalog controls without a visual seam. Mobile keeps the picker for
 custom emoji even when the OS emoji keyboard covers Unicode.
 
 ### First integrations (after the package)
@@ -236,7 +259,8 @@ custom emoji even when the OS emoji keyboard covers Unicode.
 - One catalog serves replace, suggest, picker, and markdown without duplicating alias tables.
 - Custom emoji share the same APIs without forcing images into plain text fields.
 - Apps control bundle weight: import the catalog, fetch JSON, or pass a tiny custom-only map.
-- UI matches the rest of the catalog: `mix`, required labels, `ui:*` events, no callback props.
+- UI matches the rest of the catalog: `mix`, required labels, `ui:*` events, no callback props,
+  and the same `@sdxc/u` / `--ui-*` theme an app already loads for `@sdxc/ui`.
 - Provenance and conflicts stay auditable through the generator.
 
 ### Negative
@@ -320,6 +344,13 @@ a `/markdown` subpath.
 
 **Rejected because**: `@sdxc/ui` uses namespaced DOM events and `mix` / `on("ui:…")`. Callbacks
 fight that model and force hydration patterns the catalog avoids on pure components.
+
+### 7. Shipping the picker inside `@sdxc/ui`
+
+**Rejected because**: the catalog would then own the shortcode table, custom-image merge rules,
+and markdown visitor — or the picker would be a hollow shell that still needs `@sdxc/emoji` for
+data. Keeping UI next to the catalog avoids that split, while requiring `@sdxc/u` and the shared
+`--ui-*` theme keeps visual parity with `@sdxc/ui` without a circular dependency.
 
 ## References
 
