@@ -96,7 +96,7 @@ export default function NewsletterHost() {
 	return () => (
 		<AuthorBand
 			id="host"
-			mix={[renderNearView(980, 1180)]}
+			mix={[renderNearView(1061, 1188)]}
 			ruled
 			portrait={<Portrait />}
 			eyebrow="Who writes it"

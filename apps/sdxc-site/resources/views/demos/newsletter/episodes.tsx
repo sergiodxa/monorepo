@@ -96,7 +96,7 @@ function EarlierEpisodes() {
  */
 export default function NewsletterEpisodes() {
 	return () => (
-		<LandingSection id="listen" ruled mix={[renderNearView(1150, 1500)]}>
+		<LandingSection id="listen" ruled mix={[renderNearView(1176, 1280)]}>
 			<LandingHeader
 				eyebrow="Listen"
 				description={

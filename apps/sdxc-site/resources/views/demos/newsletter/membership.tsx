@@ -23,7 +23,7 @@ export default function NewsletterMembership() {
 	return () => (
 		<PricingBand
 			id="membership"
-			mix={[renderNearView(900, 1150)]}
+			mix={[renderNearView(813, 1112)]}
 			eyebrow="Membership"
 			title="Free to read, kept going by members"
 			columns={2}

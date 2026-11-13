@@ -98,7 +98,7 @@ const TOPICS: readonly Topic[] = [
  */
 export default function NewsletterArchive() {
 	return () => (
-		<LandingSection id="archive" ruled mix={[renderNearView(700, 820)]}>
+		<LandingSection id="archive" ruled mix={[renderNearView(775, 735)]}>
 			<LandingHeader
 				eyebrow="The archive"
 				description={

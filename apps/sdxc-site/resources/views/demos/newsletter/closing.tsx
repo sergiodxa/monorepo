@@ -28,7 +28,7 @@ export default function NewsletterClosing() {
 				The next letter goes out Thursday
 			</LandingHeader>
 			<div mix={[raw({ marginBlockStart: "2rem" })]}>
-				<SubscribeForm label="Send me Thursday’s letter" />
+				<SubscribeForm label="Send me Thursday’s letter" confirmation="subscribed-closing" />
 			</div>
 		</LandingSection>
 	);

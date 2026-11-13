@@ -58,7 +58,7 @@ const REPLIES: readonly Reply[] = [
  */
 export default function NewsletterLetters() {
 	return () => (
-		<LandingSection id="replies" ruled mix={[renderNearView(980, 1250)]}>
+		<LandingSection id="replies" ruled mix={[renderNearView(864, 1000)]}>
 			<LandingHeader
 				eyebrow="Replies"
 				description={

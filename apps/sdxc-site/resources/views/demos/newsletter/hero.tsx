@@ -41,7 +41,7 @@ export default function NewsletterHero() {
 			}
 			actions={
 				<div id="subscribe" mix={[raw({ inlineSize: "100%" })]}>
-					<SubscribeForm label="Subscribe free" />
+					<SubscribeForm label="Subscribe free" confirmation="subscribed" />
 				</div>
 			}
 			note={

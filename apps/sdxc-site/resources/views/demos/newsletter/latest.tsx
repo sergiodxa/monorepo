@@ -25,7 +25,7 @@ import PressureFigure from "~/resources/views/demos/newsletter/pressure-figure";
  */
 export default function NewsletterLatest() {
 	return () => (
-		<LandingSection id="latest" ruled mix={[renderNearView(1900, 2600)]}>
+		<LandingSection id="latest" ruled mix={[renderNearView(1671, 2107)]}>
 			<article
 				aria-labelledby="latest-title"
 				mix={[
