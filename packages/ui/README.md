@@ -366,7 +366,7 @@ Dashboard and workspace components.
   `linearScale`, `bandScale`, `ticks`, `linePath`, `areaPath`, `arcPath`, `pieAngles` and
   `computeMarkerIndices`; `chartPalette()` and `legendToggle()` style its series.
 - `Table` — a table whose `.Column` takes a sort `href` and whose `.LoadMore` row is a link.
-- `GridList`, `Tree` — an interactive row list, and nested `<details>`. `Tree.Leaf` file rows, `Tree.Filter` and `Tree.Navigation` make it a file browser.
+- `GridList`, `Tree` — an interactive row list, and nested `<details>`. `Tree.Leaf` file rows, `Tree.Filter` (with `Tree.NoMatches`) and `Tree.Navigation` make it a file browser.
 - `DropIndicator` — the bar marking where a dragged row will land.
 - `Toast` — a notification stacked by `Toast.Region`, queued by a `Toaster`.
 - `Skeleton`, `Empty` — a loading block, and an empty-state panel; `Skeleton.Text` bars real

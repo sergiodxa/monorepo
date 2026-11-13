@@ -1,7 +1,7 @@
 /**
  * Narrows a file tree as the reader types into its filter field: leaves that miss the query
- * hide, every folder holding a match opens, and folders with none hide, so a match is never
- * stranded inside a closed or hidden branch.
+ * hide, every folder holding a match opens, folders with none hide, and a query matching no
+ * file shows the tree's no-matches line.
  * Why JS: HTML has no live filtering of other elements. No-JS baseline: the field submits its
  * GET form (`?filter=`) and the server renders the narrowed tree.
  *
@@ -43,7 +43,8 @@ export namespace TreeFilter {
 
 /**
  * Applies `query` to every row in `tree`. Folders are visited deepest first, so a folder
- * reads its subfolders' final state when it decides whether it still holds a match.
+ * reads its subfolders' final state when it decides whether it still holds a match; the
+ * tree's no-matches line shows only while a query leaves no file.
  *
  * @param tree The tree's root element.
  * @param query What the reader typed; blank restores the whole tree.
@@ -75,6 +76,10 @@ export function applyTreeFilter(tree: HTMLElement, query: string): number {
 		if (!holdsMatch) continue;
 		if (!OPEN_BEFORE_FILTER.has(folder)) OPEN_BEFORE_FILTER.set(folder, folder.open);
 		folder.open = true;
+	}
+
+	for (let note of tree.querySelectorAll<HTMLElement>("[data-tree-no-matches]")) {
+		note.hidden = !active || matches > 0;
 	}
 
 	return matches;

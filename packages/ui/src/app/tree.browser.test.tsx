@@ -101,6 +101,7 @@ function mount(options: { open?: boolean } = {}): HTMLElement {
 					/>
 				</Tree.Item>
 				<Tree.Leaf href="/blob/package.json" name="package.json" />
+				<Tree.NoMatches>No file matches</Tree.NoMatches>
 			</Tree>
 			<button type="button" id="outside">
 				Outside
@@ -209,6 +210,21 @@ describe("Tree.Filter", () => {
 		expect(document.getElementById("app")!.hidden).toBe(true);
 		expect(row(tree, "guide.md").getBoundingClientRect().height).toBeGreaterThan(0);
 		expect(row(tree, "routes.ts").getBoundingClientRect().height).toBe(0);
+	});
+
+	test("says no file matches while a query leaves none, and hides that once it clears", async () => {
+		let tree = mount();
+		let field = document.querySelector<HTMLInputElement>('input[type="search"]')!;
+		let note = tree.querySelector<HTMLElement>("[data-tree-no-matches]")!;
+
+		expect(note.checkVisibility()).toBe(false);
+		await userEvent.type(field, "zzz");
+		expect(note.checkVisibility()).toBe(true);
+		expect(note.textContent).toBe("No file matches");
+		await userEvent.clear(field);
+		expect(note.checkVisibility()).toBe(false);
+		await userEvent.type(field, "guide");
+		expect(note.checkVisibility()).toBe(false);
 	});
 
 	test("matches every term against the whole path", async () => {

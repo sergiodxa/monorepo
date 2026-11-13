@@ -179,6 +179,9 @@ export namespace Tree {
 		placeholder?: string;
 	}
 
+	/** Props accepted by {@link Tree.NoMatches}: every native `<p>` attribute. */
+	export interface NoMatchesProps extends TagProps<"p"> {}
+
 	/** Props accepted by {@link Tree.Navigation}: the key copy the help sheet lists. */
 	export interface NavigationProps {
 		labels?: TreeNavigationMixin.Labels;
@@ -242,7 +245,8 @@ function readAmbientDepth(handle: Handle<unknown, any>): number | undefined {
 /**
  * Renders the bordered `role="tree"` panel; folders open and file links work with no script.
  * Rows indent `--ui-tree-indent` per level, `frame` aims every {@link Tree.Leaf} at one frame,
- * `data-empty` centers a fallback, and {@link Tree.Filter} and {@link Tree.Navigation} add islands.
+ * `data-empty` centers a fallback, {@link Tree.NoMatches} answers a filter that matches
+ * nothing, and {@link Tree.Filter} and {@link Tree.Navigation} add islands.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the tree's markup.
@@ -681,6 +685,41 @@ Tree.Filter = function TreeFilterForm(handle: Handle<Tree.FilterProps>) {
 					placeholder={placeholder}
 				/>
 			</form>
+		);
+	};
+};
+
+/**
+ * Renders the line a tree shows while its filter matches no file, such as "No file matches".
+ * It stays hidden until {@link treeFilter} narrows the tree to nothing, and is announced then.
+ *
+ * @param handle Runtime handle carrying the paragraph's props.
+ * @returns The render function producing the hidden message.
+ * @example <Tree.NoMatches>{t("files.noMatches")}</Tree.NoMatches>
+ */
+Tree.NoMatches = function TreeNoMatches(handle: Handle<Tree.NoMatchesProps>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+		return (
+			<p
+				{...rest}
+				hidden
+				role="status"
+				data-tree-no-matches=""
+				mix={mergeMix(
+					[
+						raw({ margin: 0 }),
+						pi(2),
+						pb(3),
+						text("sm"),
+						fg("neutral.muted"),
+						when("&[hidden]", hidden()),
+					],
+					mix,
+				)}
+			>
+				{children}
+			</p>
 		);
 	};
 };
