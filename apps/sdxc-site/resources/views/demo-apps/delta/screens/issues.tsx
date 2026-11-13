@@ -185,9 +185,12 @@ function IssueRow(handle: Handle<IssueRow.Props>) {
 					mix={[
 						raw({
 							display: "grid",
+							gridTemplateRows: "1.375rem",
 							placeItems: "center",
+							alignContent: "start",
 							alignSelf: "stretch",
 							marginBlock: "-0.625rem",
+							paddingBlockStart: "0.625rem",
 							cursor: "pointer",
 						}),
 					]}
@@ -283,7 +286,7 @@ function IssueRow(handle: Handle<IssueRow.Props>) {
 								raw({
 									display: "inline-flex",
 									"& > [data-slot='delta-avatar'] + [data-slot='delta-avatar']": {
-										marginInlineStart: "-0.375rem",
+										marginInlineStart: "-0.25rem",
 										boxShadow: "0 0 0 2px var(--ui-bg, Canvas)",
 									},
 									"@media (max-width: 40rem)": { display: "none" },

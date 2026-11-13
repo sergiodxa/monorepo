@@ -684,6 +684,17 @@ describe("Delta's issues list", () => {
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 	});
 
+	test("each row's checkbox and state icon sit on its title's first line", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("delta/issues");
+		let row = root.querySelector<HTMLElement>('[data-issue="54"]')!;
+		let middle = (box: DOMRect) => box.top + box.height / 2;
+		let title = row.querySelector("a[data-row-link]")!.getBoundingClientRect();
+		let box = row.querySelector('input[name="ids"]')!.getBoundingClientRect();
+
+		expect(Math.abs(middle(box) - middle(title))).toBeLessThanOrEqual(1.5);
+	});
+
 	test("each row links to its issue and posts its checkbox with the bulk form, without script", async () => {
 		await page.viewport(1280, 800);
 		let root = await mountScreen("delta/issues");
