@@ -165,6 +165,30 @@ export function filesOf(patch: string) {
 
 Large files keep their counts for the file list and load their hunks on demand.
 
+## Performance
+
+Mean time per run against [`diff`](https://www.npmjs.com/package/diff) 9.0.0 (`structuredPatch`
+and `parsePatch`) on the same input, with word ranges off on both sides, on one development
+machine. Absolute times vary between machines; the ratio is what holds.
+
+| Input                                 | `@sdxc/diff` |   `diff` | Faster by |
+| ------------------------------------- | -----------: | -------: | --------: |
+| 10,000 lines, a few edits             |      0.81 ms |  1.26 ms |      1.5× |
+| 10,000 lines, every 50th line edited  |      4.17 ms |  8.04 ms |      1.9× |
+| 10,000 lines, a 500-line block moved  |      0.91 ms |  35.9 ms |       39× |
+| 3,000 lines, full rewrite             |      0.76 ms |   550 ms |      720× |
+| 200 kB minified one-line file         |    0.0095 ms | 0.053 ms |      5.5× |
+| 1.28 MB, 150-file patch, full parse   |      2.05 ms |  2.80 ms |      1.4× |
+| 1.28 MB, 150-file patch, headers only |      0.86 ms |  2.80 ms |      3.3× |
+
+The entry weighs about 7 KB gzipped.
+
+Run the benchmarks from a checkout of the repository:
+
+```sh
+vp test bench --run --project packages packages/diff/
+```
+
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published,
