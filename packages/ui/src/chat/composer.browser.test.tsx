@@ -210,6 +210,25 @@ describe("ComposerSubmit", () => {
 		await vi.waitFor(() => expect(input.value).toBe(""));
 	});
 
+	test("a reply named after the composer mounted, as a frame update does, still replays", async () => {
+		let { root, cleanup } = mountReply();
+		onTestFinished(cleanup);
+		let composer = (stream?: string) => (
+			<Composer>
+				<Composer.Input aria-label="Message" />
+				<ComposerSubmit labels={{ send: "Send", stop: "Stop" }} stream={stream} streamKey="2" />
+			</Composer>
+		);
+		let mounted = render(composer());
+		onTestFinished(mounted.cleanup);
+
+		mounted.root.render(composer("reply"));
+
+		await vi.waitFor(() => expect(root.getAttribute(STREAM_END_ATTRIBUTE)).toBe("done"), {
+			timeout: 3000,
+		});
+	});
+
 	test("turns into Stop while the reply streams, and Stop freezes it", async () => {
 		let { root, cleanup } = mountReply();
 		onTestFinished(cleanup);

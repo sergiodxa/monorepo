@@ -66,6 +66,8 @@ export const composerSend: MixinFactory<HTMLElement, [options: ComposerSendOptio
 >((handle) => {
 	let options: ComposerSendOptions | undefined;
 	let host: HTMLElement | undefined;
+	/** The host's lifetime, taken while it is inserted, so a replay started later still ends with it. */
+	let lifetime: AbortSignal | undefined;
 	let started: string | undefined;
 	let streaming = false;
 	let stop = () => {};
@@ -92,7 +94,7 @@ export const composerSend: MixinFactory<HTMLElement, [options: ComposerSendOptio
 			return;
 		}
 		let controller = new AbortController();
-		handle.signal.addEventListener("abort", () => controller.abort(), { once: true });
+		lifetime?.addEventListener("abort", () => controller.abort(), { once: true });
 		let reveal = revealStream(target, {
 			signal: controller.signal,
 			onEnd: () => {
@@ -107,6 +109,7 @@ export const composerSend: MixinFactory<HTMLElement, [options: ComposerSendOptio
 	handle.addEventListener("insert", ({ node }) => {
 		host = node;
 		let signal = handle.signal;
+		lifetime = signal;
 		let form = node.closest("form");
 		let input = form?.querySelector<HTMLTextAreaElement>(`[data-slot="${COMPOSER_INPUT_SLOT}"]`);
 
