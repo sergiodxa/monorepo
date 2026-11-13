@@ -118,7 +118,12 @@ export function TextArea(handle: Handle<TextArea.Props>) {
 							resize: "block",
 							fieldSizing: "content",
 						}),
-						when("&:focus", outline("none")),
+						/**
+						 * Pointer focus drops the platform outline and keyboard focus keeps the ring above:
+						 * `outline: none` is a shorthand, and from a later cascade layer it would reset the
+						 * ring's color, width and style at once.
+						 */
+						when("&:focus:not(:focus-visible)", outline("none")),
 					],
 					mix,
 				)}
