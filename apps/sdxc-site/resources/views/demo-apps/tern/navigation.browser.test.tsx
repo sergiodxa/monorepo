@@ -355,10 +355,30 @@ describe("Tern works like a single-page app", () => {
 		expect(requests.every((request) => request.target === MAIN_FRAME)).toBe(true);
 	});
 
+	test("Back to the screen the visitor landed on reloads only the pane", async () => {
+		let requests = await open("c/lisbon-offsite");
+		Reflect.set(shell(), "probe", "kept");
+		let loads = documentLoads();
+
+		document.querySelector<HTMLAnchorElement>(`a[href="${ROOT}/c/flaky-test"]`)!.click();
+		await settled(requests, 1, "flaky");
+		navigation.back();
+
+		await vi.waitFor(() => {
+			expect(location.pathname).toBe(`${ROOT}/c/lisbon-offsite`);
+			expect(document.querySelector("main h1")?.textContent).toContain("Lisbon");
+		});
+		expect(requests).toHaveLength(2);
+		expect(requests.every((request) => request.target === MAIN_FRAME)).toBe(true);
+		expect(Reflect.get(shell(), "probe")).toBe("kept");
+		expect(documentLoads()).toBe(loads);
+	});
+
 	test("sending adds no history entry, and the reply streams with Stop", async () => {
 		let requests = await open("c/lisbon-offsite");
 		let entries = navigation.entries().length;
 		let field = document.querySelector<HTMLTextAreaElement>('[data-slot="composer-input"]')!;
+		field.focus();
 
 		send("What should we pack for the trip?");
 
@@ -376,6 +396,7 @@ describe("Tern works like a single-page app", () => {
 		expect(navigation.entries().length).toBe(entries);
 		expect(requests).toHaveLength(1);
 		expect(location.pathname).toBe(`${ROOT}/c/lisbon-offsite`);
+		expect(document.activeElement?.getAttribute("data-slot")).toBe("composer-input");
 	});
 
 	test("pinning shows its toast in place, with no navigation", async () => {
