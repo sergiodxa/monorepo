@@ -15,7 +15,7 @@ import { UsageEstimate } from "@sdxc/ui/landing";
 const CODE = `<UsageEstimate
 	action="#pricing"
 	fields={
-		<TextField label="Recorded hours a month" type="number" name="hours" min="0" defaultValue="40" />
+		<TextField label="Recorded hours a month" type="number" name="hours" defaultValue="40" />
 	}
 	submitLabel="Estimate"
 	billLabel="Estimated monthly bill"
@@ -35,13 +35,7 @@ export default {
 			mix={[is("full")]}
 			action="#pricing"
 			fields={
-				<TextField
-					label="Recorded hours a month"
-					type="number"
-					name="hours"
-					min="0"
-					defaultValue="40"
-				/>
+				<TextField label="Recorded hours a month" type="number" name="hours" defaultValue="40" />
 			}
 			submitLabel="Estimate"
 			billLabel="Estimated monthly bill"
