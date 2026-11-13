@@ -16,8 +16,7 @@ import { focusVisible, hover, when } from "@sdxc/u/state";
 import { clientEntry } from "remix/component";
 
 import { Heading } from "../components/heading.js";
-
-import { episodeSync } from "./mixins/episode-sync.js";
+import { mediaSync } from "../mixins/media-sync.js";
 
 /** Translucent ink the rules draw with, the page's hairline when it sets one. */
 const HAIRLINE = "var(--ui-landing-hairline, color-mix(in oklch, CanvasText 12%, transparent))";
@@ -289,6 +288,16 @@ export function EpisodePlayer(handle: Handle<EpisodePlayer.Props>) {
 export const EpisodeSync: EntryComponent<Record<never, never>> = clientEntry(
 	"@sdxc/ui/landing/episode-player#EpisodeSync",
 	function EpisodeSync() {
-		return () => <span mix={[hidden(), episodeSync()]} />;
+		return () => (
+			<span
+				mix={[
+					hidden(),
+					mediaSync({
+						root: '[data-slot="episode-player"]',
+						marks: ['[data-slot="episode-player-chapters"] a', '[data-slot="episode-player-cue"]'],
+					}),
+				]}
+			/>
+		);
 	},
 );
