@@ -14,10 +14,12 @@ import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { font, text, weight } from "@sdxc/u/typography";
+import { text, weight } from "@sdxc/u/typography";
 import { Description, FieldError, Input, Label, TextArea } from "@sdxc/ui";
 import { SaveBar } from "@sdxc/ui/app/save-bar";
 import { StatusDot } from "@sdxc/ui/status-dot";
+
+import { EmojiBodyField } from "~/resources/components/emoji-body-field";
 
 /** Props accepted by {@link WritingColumn}. */
 interface WritingColumnProps {
@@ -102,25 +104,11 @@ export function WritingColumn(handle: Handle<WritingColumnProps>) {
 						}),
 					]}
 				/>
-				<textarea
+				<EmojiBodyField
 					name={body.name}
-					aria-label={body.label}
+					label={body.label}
 					placeholder={body.placeholder}
-					rows={16}
-					required
-					defaultValue={body.value}
-					mix={[
-						bare,
-						font("mono"),
-						fg("neutral.emphasis"),
-						raw({
-							fontSize: "0.9375rem",
-							lineHeight: "1.7",
-							resize: "none",
-							fieldSizing: "content",
-							minBlockSize: "20rem",
-						}),
-					]}
+					value={body.value}
 				/>
 				<SaveBar
 					labels={{

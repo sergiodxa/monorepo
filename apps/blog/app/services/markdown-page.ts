@@ -10,6 +10,8 @@
 import type { Result } from "@sdxc/result";
 
 import { diagram } from "@sdxc/diagram/markdown";
+import { emojis as emojiCatalog } from "@sdxc/emoji/catalog";
+import { emojis as emojiVisitor } from "@sdxc/emoji/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { isFailure, success } from "@sdxc/result";
@@ -47,7 +49,10 @@ export function parseMarkdownPage(raw: string): Result<MarkdownPage, Error> {
 	let body = Markdown.stringify(parsed.data.document);
 	if (isFailure(body)) return body;
 
-	let highlighted = Markdown.walk(parsed.data.document, Markdown.compose(diagram, highlight));
+	let highlighted = Markdown.walk(
+		parsed.data.document,
+		Markdown.compose(diagram, highlight, emojiVisitor(emojiCatalog)),
+	);
 	if (isFailure(highlighted)) return highlighted;
 
 	return success({

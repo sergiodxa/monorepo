@@ -9,6 +9,8 @@
 
 import { formatDate, parseDate } from "@sdxc/dates";
 import { createDiagramVisitor } from "@sdxc/diagram/markdown";
+import { emojis as emojiCatalog } from "@sdxc/emoji/catalog";
+import { emojis as emojiVisitor } from "@sdxc/emoji/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { embeds, youtube } from "@sdxc/markdown/plugin/embeds";
@@ -488,7 +490,12 @@ export class PostViewModel {
 
 		let highlighted = Markdown.walk(
 			parsed.data.document,
-			Markdown.compose(createDiagramVisitor({ invalid: "keep" }), highlight, embeds([youtube()])),
+			Markdown.compose(
+				createDiagramVisitor({ invalid: "keep" }),
+				highlight,
+				embeds([youtube()]),
+				emojiVisitor(emojiCatalog),
+			),
 		);
 		succeeded(highlighted, message);
 

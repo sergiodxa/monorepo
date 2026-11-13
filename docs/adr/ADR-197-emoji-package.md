@@ -450,7 +450,7 @@ data. Keeping UI next to the catalog avoids that split, while requiring `@sdxc/u
 - [x] Core APIs (`merge`, replace, tokenize, render)
 - [x] Markdown visitor
 - [x] UI compounds, mixins, event, field mixin
-- [ ] Blog / Chorus / Tern / Cairn wiring
+- [x] Blog / Chorus / Tern / Cairn wiring
 
 ## Notes
 

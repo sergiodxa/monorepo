@@ -9,6 +9,8 @@
 
 import type { Handle } from "remix/component";
 
+import { emojis } from "@sdxc/emoji/catalog";
+import { emojiInput } from "@sdxc/emoji/ui";
 import { gap, grid } from "@sdxc/u/layout";
 import { minBs } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
@@ -62,12 +64,14 @@ export const ShortField = clientEntry(
 						mix={[
 							font("mono"),
 							minBs("12rem"),
+							emojiInput({ catalog: emojis, suggest: `${id}-emoji-suggest` }),
 							on<HTMLTextAreaElement, "input">("input", (event) => {
 								content = event.currentTarget.value;
 								void handle.update();
 							}),
 						]}
 					/>
+					<div id={`${id}-emoji-suggest`} hidden popover="manual" />
 					<Description id={`${id}-count`} aria-live="polite">
 						{shortCount(budget, used)}
 					</Description>
