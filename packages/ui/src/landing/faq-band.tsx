@@ -75,8 +75,9 @@ export namespace FaqBand {
 
 /**
  * Renders a FAQ band with a chapter header and one or two accordion columns.
- * The column host is the named sizing container; an inner wrapper holds the
- * `@container` tracks so the query can restyle a descendant.
+ * Stacked columns sit `--ui-landing-faq-gap` apart (0 by default, so hairline
+ * rows read as one list); a page whose questions are cards sets it to the gap
+ * between its cards, so the seam between columns matches every other gap.
  *
  * @param handle Runtime handle carrying the band's props.
  * @returns The render function producing the band's markup.
@@ -132,7 +133,7 @@ export function FaqBand(handle: Handle<FaqBand.Props>) {
 						<div
 							mix={[
 								grid(),
-								gap(0, 8),
+								gap("var(--ui-landing-faq-gap, 0px)", 8),
 								gridTemplate({ columns: "minmax(0, 1fr)" }),
 								isTwo
 									? at(

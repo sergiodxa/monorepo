@@ -86,4 +86,65 @@ describe("FaqBand", () => {
 		expect(getComputedStyle(list).borderBlockStartWidth).toBe("1px");
 		expect(getComputedStyle(first).borderBlockStartWidth).toBe("0px");
 	});
+
+	test("keeps carded questions evenly spaced where two columns stack", () => {
+		let host = mountTwoColumns(400, "12px");
+		let [lastOfFirst, firstOfSecond] = seam(host);
+
+		expect(Math.round(firstOfSecond.top - lastOfFirst.bottom)).toBe(12);
+	});
+
+	test("leaves hairline columns touching where they stack", () => {
+		let host = mountTwoColumns(400);
+		let [lastOfFirst, firstOfSecond] = seam(host);
+
+		expect(Math.round(firstOfSecond.top - lastOfFirst.bottom)).toBe(0);
+	});
+
+	test("puts the columns side by side when the band is wide", () => {
+		let host = mountTwoColumns(1400, "12px");
+		let [lastOfFirst, firstOfSecond] = seam(host);
+
+		expect(firstOfSecond.left).toBeGreaterThan(lastOfFirst.right);
+	});
 });
+
+/** Mounts a two-column band at `width`, with `gap` as its `--ui-landing-faq-gap` when given. */
+function mountTwoColumns(width: number, gap?: string): HTMLElement {
+	let host = document.createElement("div");
+	host.style.width = `${width}px`;
+	if (gap) host.style.setProperty("--ui-landing-faq-gap", gap);
+	document.body.appendChild(host);
+	let column = (offset: number) => (
+		<Accordion>
+			{QUESTIONS.slice(offset, offset + 2).map((question) => (
+				<Accordion.Item key={question} name={`faq-${offset}`}>
+					<Accordion.Trigger>{question}</Accordion.Trigger>
+					<Accordion.Content>
+						<p>An answer.</p>
+					</Accordion.Content>
+				</Accordion.Item>
+			))}
+		</Accordion>
+	);
+	let { cleanup } = render(
+		<HeadingScope level={2}>
+			<FaqBand title="Questions" columns={2}>
+				{column(0)}
+				{column(2)}
+			</FaqBand>
+		</HeadingScope>,
+		{ container: host },
+	);
+	cleanups.push(cleanup);
+	return host;
+}
+
+/** The two accordion columns' boxes, first then second, where the two meet. */
+function seam(host: HTMLElement): [DOMRect, DOMRect] {
+	let items = host.querySelectorAll("details");
+	return [
+		items[0]!.parentElement!.getBoundingClientRect(),
+		items[2]!.parentElement!.getBoundingClientRect(),
+	];
+}
