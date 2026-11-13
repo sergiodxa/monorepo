@@ -103,6 +103,35 @@ describe("SaveStatus", () => {
 		expect(element.querySelector("time")!.hidden).toBe(false);
 	});
 
+	test("shows Saved when the page redraws it in place after a save, then decays", async () => {
+		let mounted = render(
+			<SaveStatus id="post-status" labels={LABELS} holdMs={200} savedMs={200} />,
+		);
+		cleanups.push(mounted.cleanup);
+		await wait(0);
+		let element = document.getElementById("post-status")!;
+		expect(announced(element)).toBe("");
+
+		mounted.root.render(
+			<SaveStatus
+				id="post-status"
+				labels={LABELS}
+				holdMs={200}
+				savedMs={200}
+				state="saved"
+				editedAt={new Date().toISOString()}
+			/>,
+		);
+		mounted.root.flush();
+		await wait(0);
+
+		expect(element.isConnected).toBe(true);
+		expect(announced(element)).toBe("Saved");
+		await wait(250);
+		expect(element.dataset.state).toBe("idle");
+		expect(element.querySelector("time")!.hidden).toBe(false);
+	});
+
 	test("shows a failure in the danger tone with a Retry that reports itself", async () => {
 		document.body.style.setProperty("--ui-danger-fg", "rgb(200, 30, 30)");
 		let element = await mount({ holdMs: 0 });

@@ -103,20 +103,27 @@ export const saveStatusSync: MixinFactory<HTMLElement, [options: SaveStatusSync.
 	createMixin<HTMLElement, [options: SaveStatusSync.Options]>((handle) => {
 		let options: SaveStatusSync.Options | undefined;
 		let controller: AbortController | undefined;
+		let follow: ((state: SaveStatusSync.State, editedAt?: string) => void) | undefined;
 
 		handle.addEventListener("insert", (event) => {
 			controller?.abort();
 			controller = new AbortController();
-			if (options) connect(event.node, () => options!, controller.signal);
+			if (options) follow = connect(event.node, () => options!, controller.signal);
 		});
 
 		handle.addEventListener("remove", () => {
 			controller?.abort();
 			controller = undefined;
+			follow = undefined;
 		});
 
 		return (next) => {
+			let previous = options;
 			options = next;
+			if (follow === undefined || previous === undefined) return;
+			if (previous.state === next.state && previous.editedAt === next.editedAt) return;
+			let apply = follow;
+			queueMicrotask(() => apply(next.state, next.editedAt));
 		};
 	});
 
@@ -126,8 +133,14 @@ export const saveStatusSync: MixinFactory<HTMLElement, [options: SaveStatusSync.
  * @param root The status element.
  * @param read Reads the latest options.
  * @param signal Ends every timer and listener once the status leaves the document.
+ * @returns Shows a state the page redrew the status with, such as "Saved" after a save
+ * answered in place, decaying it as a server-rendered state does.
  */
-function connect(root: HTMLElement, read: () => SaveStatusSync.Options, signal: AbortSignal): void {
+function connect(
+	root: HTMLElement,
+	read: () => SaveStatusSync.Options,
+	signal: AbortSignal,
+): (state: SaveStatusSync.State, editedAt?: string) => void {
 	let text = root.querySelector<HTMLElement>('[data-slot="save-status-text"]');
 	let edited = root.querySelector<HTMLTimeElement>('[data-slot="save-status-edited"]');
 	let retry = root.querySelector<HTMLElement>('[data-slot="save-status-retry"]');
@@ -203,4 +216,13 @@ function connect(root: HTMLElement, read: () => SaveStatusSync.Options, signal: 
 		clearTimeout(pending);
 	});
 	draw();
+
+	return (state, at) => {
+		if (signal.aborted) return;
+		clearTimeout(pending);
+		let next = at ? new Date(at) : null;
+		if (state === "saved") return settleSaved(next ?? new Date());
+		if (next) editedAt = next;
+		show(state);
+	};
 }
