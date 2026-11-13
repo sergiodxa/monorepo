@@ -209,6 +209,7 @@ function LeftNav(handle: Handle<{ current: Destination }>) {
 					type="button"
 					commandfor={COMPOSE_DIALOG}
 					command="show-modal"
+					data-compose={href("compose")}
 					aria-label="New post"
 					data-shortcut="n"
 					data-shortcut-label="New post"
@@ -545,6 +546,7 @@ export function ChorusColumn(handle: Handle<ChorusColumn.Props>) {
 						type="button"
 						commandfor={COMPOSE_DIALOG}
 						command="show-modal"
+						data-compose={href("compose")}
 						aria-label="New post"
 						data-slot="chorus-fab"
 						mix={[

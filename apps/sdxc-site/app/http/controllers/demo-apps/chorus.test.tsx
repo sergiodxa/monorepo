@@ -275,6 +275,41 @@ describe("Chorus posting", () => {
 		);
 	});
 
+	test("a reply from the dialog lands back on the page it was written on", async () => {
+		let response = await post("compose", {
+			intent: "compose",
+			text: "Same here",
+			replyTo: "p-leonids",
+			return: "explore",
+		});
+
+		expect(withoutToastNonce(response.headers.get("location"))).toMatch(
+			new RegExp(`^${href("explore")}\\?toast=replied#post-n-`),
+		);
+	});
+
+	test("the dialog's body answers for a reply, a quote and a new post", async () => {
+		let body = async (query: string) =>
+			await (await targeted(href(`compose?${query}`), "chorus-compose-body")).text();
+		let reply = await body("reply=p-leonids&return=u%2Fmeilin");
+		let quote = await body("quote=p-fieldsizing");
+		let fresh = await body("reply=nope");
+
+		expect(reply).toContain("Reply to Mei Lin");
+		expect(reply).toContain('name="replyTo" value="p-leonids"');
+		expect(reply).toMatch(/name="return" value="u\/meilin"/);
+		expect(quote).toContain('name="quote" value="p-fieldsizing"');
+		expect(fresh).toContain(">New post<");
+		expect(reply).not.toContain('data-slot="chorus"');
+	});
+
+	test("Reply and Quote are links to the compose page the dialog opens for", async () => {
+		let body = await page("");
+
+		expect(body).toMatch(/href="[^"]*compose\?reply=p-leonids"[^>]*data-compose=""/);
+		expect(body).toMatch(/href="[^"]*compose\?quote=p-leonids"[^>]*data-compose=""/);
+	});
+
 	test("every page's New post dialog returns to that page without script", async () => {
 		let body = await page("u/noorhaddad/media?toast=posted");
 

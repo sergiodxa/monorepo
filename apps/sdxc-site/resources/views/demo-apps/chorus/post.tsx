@@ -187,6 +187,7 @@ export function PostActions(handle: Handle<PostActions.Props>) {
 				<span mix={[accent("reply")]}>
 					<a
 						href={href(`compose?reply=${post.id}`)}
+						data-compose=""
 						aria-label={`Reply${post.replies > 0 ? ` (${post.replies} replies)` : ""}`}
 						title="Reply"
 						mix={[
@@ -308,7 +309,7 @@ function ShareMenu(handle: Handle<{ post: PostView; size: number }>) {
 						menu={id}
 						labels={{ copy: "Copy link", copied: "Link copied" }}
 					/>
-					<Menu.Item href={href(`compose?quote=${post.id}`)}>
+					<Menu.Item href={href(`compose?quote=${post.id}`)} data-compose="">
 						<QuoteIcon size={16} aria-hidden="true" />
 						Quote post
 					</Menu.Item>

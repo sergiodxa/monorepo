@@ -33,6 +33,7 @@ import {
 	DEMO_APP_TOAST_PARAM,
 	readToastParam,
 } from "~/resources/views/demo-apps";
+import { COMPOSE_FRAME, ComposeBody } from "~/resources/views/demo-apps/chorus/compose-dialog";
 import {
 	ARRIVALS,
 	CONVERSATIONS,
@@ -376,12 +377,30 @@ function framePart(part: string, request: DemoAppRequest): RemixNode | null {
 function targetPart(name: string, request: DemoAppRequest): RemixNode | null {
 	let state = readState(request.cookie);
 	if (name === MAIN_FRAME) return inMain(request, route(request, state) ?? notFound());
+	if (name === COMPOSE_FRAME) return composeBody(request, state);
 	if (name.startsWith(POLL_FRAME_PREFIX)) {
 		let post = postById(name.slice(POLL_FRAME_PREFIX.length), state);
 		if (!post?.poll) return null;
 		return <PollView post={post} returnTo={pageOf(request)} />;
 	}
 	return null;
+}
+
+/**
+ * The compose dialog's body for the post its address replies to or quotes, or a new post when
+ * it names neither or a post nothing has; `return` names the page a post returns to.
+ */
+function composeBody(request: DemoAppRequest, state: VisitorState): RemixNode {
+	let params = request.url.searchParams;
+	let replyId = params.get("reply");
+	let quoteId = params.get("quote");
+	return (
+		<ComposeBody
+			replyTo={replyId ? postById(replyId, state) : undefined}
+			quote={quoteId ? postById(quoteId, state) : undefined}
+			page={params.get("return") ?? ""}
+		/>
+	);
 }
 
 /** The page path a request is on, with its query and without its one-time toast and anchor. */
@@ -429,8 +448,8 @@ export function draftIssue(text: string): string | null {
 
 /**
  * Answers the composer: a post within the limit is added to the visitor's posts and lands on
- * the page it was written on, under the post it replies to, or, from the compose page and the
- * New post dialog, on the page `return` names; anything else answers the page again with why.
+ * the page `return` names (the compose dialog's), else under the post it replies to or on the
+ * page it was written on; anything else answers the page again with why.
  */
 function submitCompose(
 	form: FormData,
@@ -457,8 +476,16 @@ function submitCompose(
 	let id = `n-${generateUUID().slice(0, 8)}`;
 	let cookie = postsCookie(state, { id, text, at: Date.now(), replyTo, quote });
 	let hash = `post-${id}`;
+	if (form.has("return")) {
+		return {
+			page: returnPage(form, ""),
+			hash,
+			toast: replyTo ? "replied" : "posted",
+			cookies: [cookie],
+		};
+	}
 	if (replyTo) return { page: `post/${replyTo}`, hash, toast: "replied", cookies: [cookie] };
-	let page = request.page === "compose" ? returnPage(form, "") : pageOf(request);
+	let page = request.page === "compose" ? "" : pageOf(request);
 	return { page, hash, toast: "posted", cookies: [cookie] };
 }
 

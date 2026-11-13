@@ -23,6 +23,7 @@ import { page } from "vitest/browser";
 import { blockSize } from "~/app/test/frame-size";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import chorus from "~/resources/views/demo-apps/chorus";
+import { ComposeReturn } from "~/resources/views/demo-apps/chorus/compose-return";
 import { CopyLink } from "~/resources/views/demo-apps/chorus/copy-link";
 import { href, pollFrame } from "~/resources/views/demo-apps/chorus/data";
 import { FeedKeys } from "~/resources/views/demo-apps/chorus/feed-keys";
@@ -51,7 +52,13 @@ function themed(node: RemixNode): RemixNode {
 }
 
 /** The islands a column holds, by export name, so frame content hydrates in the test page. */
-const ISLANDS: Record<string, Function> = { CharacterCount, CopyLink, FeedKeys, OptimisticToggle };
+const ISLANDS: Record<string, Function> = {
+	CharacterCount,
+	ComposeReturn,
+	CopyLink,
+	FeedKeys,
+	OptimisticToggle,
+};
 
 /** Every frame load the page asked for, in order, with the frame name it was aimed at. */
 let requests: Array<{ src: string; target: string | undefined }> = [];
@@ -309,6 +316,34 @@ describe("Chorus's New post dialog", () => {
 		expect(dialog.matches(":modal")).toBe(true);
 		expect(document.activeElement?.id).toBe("chorus-draft-dialog");
 		expect(requests).toEqual([]);
+		expect(root.querySelector('[data-slot="chorus"] > header')).toBe(nav);
+		dialog.close();
+	});
+
+	test.each([
+		["Reply", "a[href$='compose?reply=p-leonids']", "Reply to Mei Lin", "replyTo"],
+		["Quote", "[href$='compose?quote=p-leonids']", "Quote post", "quote"],
+	])("%s opens it loaded for that post, the page staying put", async (_, trigger, title, field) => {
+		await page.viewport(1280, 860);
+		let root = await mountScreen("");
+		let nav = root.querySelector('[data-slot="chorus"] > header');
+		let dialog = root.querySelector<HTMLDialogElement>("#chorus-compose")!;
+		requests = [];
+
+		root.querySelector<HTMLElement>(trigger)!.click();
+		await until(() => dialog.open);
+
+		expect(requests).toEqual([
+			{
+				src: expect.stringContaining(field === "replyTo" ? "reply=" : "quote="),
+				target: "chorus-compose-body",
+			},
+		]);
+		expect(dialog.querySelector("h2")?.textContent).toBe(title);
+		expect(dialog.querySelector<HTMLInputElement>(`input[name='${field}']`)?.value).toBe(
+			"p-leonids",
+		);
+		expect(document.activeElement?.id).toBe("chorus-draft-dialog");
 		expect(root.querySelector('[data-slot="chorus"] > header')).toBe(nav);
 		dialog.close();
 	});

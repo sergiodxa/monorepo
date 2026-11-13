@@ -189,6 +189,7 @@ export function ProfileScreen(handle: Handle<ProfileScreen.Props>) {
 								type="button"
 								commandfor={COMPOSE_DIALOG}
 								command="show-modal"
+								data-compose={href("compose")}
 								variant="outline"
 								color="neutral"
 								size="sm"
