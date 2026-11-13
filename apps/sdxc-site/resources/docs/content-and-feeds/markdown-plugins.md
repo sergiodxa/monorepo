@@ -240,6 +240,8 @@ test.each(Object.entries(POSTS))("%s passes the content lint", (file, source) =>
 
 - [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline) — the schema,
   loader and route these passes slot into.
+- [Expand emoji shortcodes in markdown](/docs/content-and-feeds/emoji-markdown) — turn
+  `:tada:` into Unicode in the same walk.
 - [Fill markdown templates with variables](/docs/content-and-feeds/markdown-variables) — fill
   per-render values before the other plugins run.
 - [`@sdxc/markdown`](/api/markdown) — every option of each plugin and the full AST.

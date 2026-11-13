@@ -351,6 +351,8 @@ test("opens itself when the action returned issues", async () => {
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — the action
   that fills `issues`.
+- [Add an emoji picker to a composer](/docs/building-remix-apps/emoji-picker) — colon-suggest
+  and a browse picker on a field.
 - [Translate your app](/docs/building-remix-apps/translate-your-app) — replacing the literal
   copy above with messages.
 - [`@sdxc/ui`](/api/ui) — the full component catalog and its mixins.

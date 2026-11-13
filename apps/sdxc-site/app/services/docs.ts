@@ -144,7 +144,8 @@ const SECTION_DESCRIPTIONS: Readonly<Record<string, string>> = {
 	"Jobs, email & alerts": "Background jobs and cron, sending and reading mail, and notifications.",
 	"File & data formats":
 		"CSV, JSON Lines, ZIP, CBOR, JSON Pointer and other formats to read and write.",
-	Markdown: "A markdown pipeline with plugins, variables, live regions and embeds.",
+	Markdown:
+		"A markdown pipeline with plugins, emoji shortcodes, variables, live regions and embeds.",
 	"Feeds & federation": "RSS, Atom, calendar feeds, IndieWeb and ActivityPub.",
 	"Images & documents": "Social cards, QR codes, charts, diagrams, math, PDFs and ebooks.",
 	"Testing & monitoring":
