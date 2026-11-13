@@ -596,8 +596,9 @@ VideoPlayer.Screen = function VideoPlayerScreen(handle: Handle<VideoPlayer.Scree
 
 /**
  * One file the video may play, in preference order, exactly as a `<source>` inside
- * `<video>`; the first one also gives every time link its address. A `label` names it in
- * the quality menu and a `badge` marks it there and on the settings gear.
+ * `<video>`; the first one also gives every time link its address. A `label` lists it in
+ * the quality menu and a `badge` marks it there and on the gear; a source with neither is a
+ * format fallback, such as an MP4 after a WebM.
  *
  * @param handle Runtime handle carrying the `<source>`'s props.
  * @returns The render function producing the source.
@@ -1320,8 +1321,9 @@ VideoPlayer.SpeedMenu = function VideoPlayerSpeedMenu(handle: Handle<VideoPlayer
 };
 
 /**
- * The quality submenu: one row per {@link VideoPlayer.Source}, by its `label` and `badge`.
- * A choice swaps the file and resumes from the same moment, and the gear's badge follows.
+ * The quality submenu: one row per labelled {@link VideoPlayer.Source}, by its `label` and
+ * `badge`; an unlabelled source is a format fallback and stays off the menu. A choice swaps
+ * the file and resumes from the same moment, and the gear's badge follows.
  *
  * @param handle Runtime handle carrying the panel's props.
  * @returns The render function producing the submenu.
@@ -1339,16 +1341,18 @@ VideoPlayer.QualityMenu = function VideoPlayerQualityMenu(
 				label={label}
 				data-video-setting="quality"
 			>
-				{sources.map((source, index) => (
-					<VideoPlayer.SettingsOption
-						key={source.src}
-						value={String(index)}
-						checked={index === 0}
-						badge={source.badge}
-					>
-						{source.label ?? source.src.split("/").pop() ?? source.src}
-					</VideoPlayer.SettingsOption>
-				))}
+				{sources.map((source, index) =>
+					source.label === undefined ? null : (
+						<VideoPlayer.SettingsOption
+							key={source.src}
+							value={String(index)}
+							checked={index === 0}
+							badge={source.badge}
+						>
+							{source.label}
+						</VideoPlayer.SettingsOption>
+					),
+				)}
 			</VideoPlayer.SettingsMenu>
 		);
 	};

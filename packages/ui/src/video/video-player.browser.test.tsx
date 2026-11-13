@@ -454,6 +454,30 @@ describe("VideoPlayer.Settings", () => {
 		expect(chapterLinks(root)[0]!.getAttribute("href")).toBe(`${SRC}#t=0`);
 	});
 
+	test("leaves an unlabelled format fallback off the quality menu", () => {
+		let host = document.createElement("div");
+		document.body.appendChild(host);
+		render(
+			<VideoPlayer duration={60}>
+				<VideoPlayer.Screen label="Clip" captionsLabel="English" chaptersLabel="Chapters">
+					<VideoPlayer.Source src="/clip.webm" type="video/webm" label="1080p" badge="HD" />
+					<VideoPlayer.Source src="/clip.mp4" type="video/mp4" />
+					<VideoPlayer.Controls label="Video controls">
+						<VideoPlayer.Settings label="Settings">
+							<VideoPlayer.QualityMenu label="Quality" backLabel="Back" />
+						</VideoPlayer.Settings>
+					</VideoPlayer.Controls>
+				</VideoPlayer.Screen>
+			</VideoPlayer>,
+			{ container: host },
+		);
+		expect(
+			[...host.querySelectorAll("video source")].map((source) => source.getAttribute("src")),
+		).toEqual(["/clip.webm", "/clip.mp4"]);
+		let options = host.querySelectorAll<HTMLInputElement>('[data-video-setting="quality"] input');
+		expect([...options].map((option) => option.value)).toEqual(["0"]);
+	});
+
 	test("the captions menu picks a track and lights the toggle", async () => {
 		let root = mount(1024, { controls: true });
 		let video = get<HTMLVideoElement>(root, "video");
