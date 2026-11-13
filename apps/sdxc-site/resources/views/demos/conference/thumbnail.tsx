@@ -8,7 +8,15 @@
 
 import { css } from "remix/component";
 
-import { BLUE, DISPLAY, GRAIN, halftone, MONO, PINK } from "~/resources/views/demos/conference/ink";
+import {
+	BLEND,
+	BLUE,
+	DISPLAY,
+	GRAIN,
+	halftone,
+	MONO,
+	PINK,
+} from "~/resources/views/demos/conference/ink";
 
 /** Renders the miniature poster. */
 export default function ConferenceThumbnail() {
@@ -25,6 +33,9 @@ export default function ConferenceThumbnail() {
 				fontWeight: "900",
 				fontSynthesis: "none",
 				textTransform: "uppercase",
+				"--op-blend": "multiply",
+				":is(.dark) &": { "--op-blend": "screen" },
+				"@media (prefers-color-scheme: dark)": { ":is(.system) &": { "--op-blend": "screen" } },
 				"&::after": {
 					content: '""',
 					position: "absolute",
@@ -56,7 +67,7 @@ export default function ConferenceThumbnail() {
 						color: BLUE,
 						marginInlineStart: "2.5rem",
 						marginBlockStart: "-0.12em",
-						mixBlendMode: "multiply",
+						mixBlendMode: BLEND,
 					})}
 				>
 					print

@@ -177,7 +177,10 @@ export interface Tier {
 	includes: readonly string[];
 }
 
-/** The day's three releases. Only one is ever on sale; the one before it has sold out. */
+/**
+ * The day's three releases. Only one is ever on sale; the one before it has sold out. With the
+ * 40 scholarship seats they fill both halls' 780.
+ */
 export const TIERS: readonly Tier[] = [
 	{
 		id: "early",
@@ -204,8 +207,8 @@ export const TIERS: readonly Tier[] = [
 		name: "Late",
 		price: 429,
 		state: "upcoming",
-		seats: 100,
-		left: 100,
+		seats: 240,
+		left: 240,
 		window: "Released on 1 March, if any seats are left",
 		includes: ["Both stages, all day", "Lunch and the party", "Every talk on video"],
 	},

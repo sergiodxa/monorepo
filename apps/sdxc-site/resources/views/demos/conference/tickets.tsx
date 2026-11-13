@@ -36,7 +36,7 @@ export default function ConferenceTickets() {
 	return () => (
 		<LandingSection id="tickets" mix={[renderNearView(980, 1900)]}>
 			<LandingHeader
-				eyebrow="Tickets · 600 seats in three releases"
+				eyebrow={`Tickets · ${TIERS.reduce((sum, tier) => sum + tier.seats, 0)} seats in three releases`}
 				layout="split"
 				description={
 					<>
