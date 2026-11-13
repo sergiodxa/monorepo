@@ -26,9 +26,10 @@ import type {
 
 import type { CreateDraft } from "./create";
 import type { ListScope } from "./list";
+import type { RoadmapTab } from "./roadmap";
 import type { Edit, VisitorState } from "./state";
 
-import { BoardScreen } from "./board";
+import { BOARD_FRAME, BoardScreen, BoardView, SHEET_FRAME, SheetView } from "./board";
 import { CreateIssuePage, TITLE_LIMIT, blankDraft } from "./create";
 import { BurnUpChart, CycleHeader, CycleStats, CyclesScreen, cycleTitle } from "./cycles";
 import {
@@ -47,9 +48,16 @@ import {
 } from "./data";
 import { IssueDetail } from "./detail";
 import { InboxScreen } from "./inbox";
-import { IssueListScreen, SPLIT_COOKIE } from "./list";
+import {
+	ISSUE_FRAME,
+	IssueListScreen,
+	ListView,
+	OpenIssue,
+	SPLIT_COOKIE,
+	VIEW_FRAME,
+} from "./list";
 import { ProjectHeader, ProjectsScreen } from "./projects";
-import { RoadmapScreen } from "./roadmap";
+import { ROADMAP_FRAME, RoadmapScreen, RoadmapTimeline } from "./roadmap";
 import { CairnShell, SHELL_COOKIE } from "./shell";
 import {
 	allIssues,
@@ -292,15 +300,7 @@ function route(
 		if (!team) return null;
 		return {
 			title: `${team.name} board`,
-			body: (
-				<BoardScreen
-					team={team}
-					state={state}
-					issues={issues.filter((issue) => issue.team === team.id)}
-					url={url}
-					collapsed={collapsed}
-				/>
-			),
+			body: <BoardScreen team={team} state={state} url={url} collapsed={collapsed} />,
 		};
 	}
 	if (third !== undefined) return null;
@@ -313,16 +313,7 @@ function route(
 			open && scoped.some((issue) => issue.id === open) ? `${open} · ${scope.title}` : scope.title;
 		return {
 			title,
-			body: (
-				<IssueListScreen
-					scope={scope}
-					state={state}
-					url={url}
-					collapsed={collapsed}
-					layout={layout}
-					issues={scoped}
-				/>
-			),
+			body: <IssueListScreen scope={scope} state={state} url={url} collapsed={collapsed} />,
 		};
 	}
 	if (second !== undefined && first !== "issue") return null;
@@ -350,14 +341,7 @@ function route(
 	if (first === "roadmap") {
 		return {
 			title: "Roadmap",
-			body: (
-				<RoadmapScreen
-					state={state}
-					issues={issues}
-					collapsed={collapsed}
-					tab={url.searchParams.get("show") === "closed" ? "closed" : "active"}
-				/>
-			),
+			body: <RoadmapScreen state={state} collapsed={collapsed} url={url} />,
 		};
 	}
 	if (first === "cycles") {
@@ -408,6 +392,48 @@ function route(
 				</CairnShell>
 			),
 		};
+	}
+	return null;
+}
+
+/**
+ * Answers a frame a screen names, for a request to the screen's own address carrying the frame's
+ * name: a list screen's view or its open issue. `null` for a name the page holds no frame by.
+ */
+function targetFrame(name: string, request: DemoAppRequest): RemixNode | null {
+	let { page, url, cookie } = request;
+	let state = readState(cookie);
+	let issues = allIssues(state);
+	let [first = "", second, third, ...rest] = page.split("/");
+	if (rest.length > 0) return null;
+
+	if (first === "team" && third === "board" && (name === BOARD_FRAME || name === SHEET_FRAME)) {
+		let team = findTeam(second);
+		if (!team) return null;
+		let teamIssues = issues.filter((issue) => issue.team === team.id);
+		let View = name === BOARD_FRAME ? BoardView : SheetView;
+		return <View team={team} state={state} issues={teamIssues} url={url} />;
+	}
+	if (page === "roadmap" && name === ROADMAP_FRAME) {
+		let tab: RoadmapTab = url.searchParams.get("show") === "closed" ? "closed" : "active";
+		return <RoadmapTimeline issues={issues} tab={tab} />;
+	}
+	if (third === undefined && (name === VIEW_FRAME || name === ISSUE_FRAME)) {
+		let scope = listScope(first, second, issues);
+		if (!scope) return null;
+		let scoped = issues.filter(scope.includes);
+		if (name === ISSUE_FRAME) {
+			return <OpenIssue scope={scope} state={state} url={url} issues={scoped} />;
+		}
+		return (
+			<ListView
+				scope={scope}
+				state={state}
+				url={url}
+				layout={readSplitViewLayout(cookie, SPLIT_COOKIE)}
+				issues={scoped}
+			/>
+		);
 	}
 	return null;
 }
@@ -598,6 +624,7 @@ export default {
 	isPersonal,
 	toasts: TOASTS,
 	frame: (part, request) => framePart(part, request),
+	target: (name, request) => targetFrame(name, request),
 	render(request) {
 		let state = readState(request.cookie);
 		return (

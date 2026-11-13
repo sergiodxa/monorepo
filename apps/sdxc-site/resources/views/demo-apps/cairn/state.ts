@@ -85,12 +85,16 @@ export interface IssueView extends Issue {
 	fresh: boolean;
 }
 
-/** Splits a `Cookie` header into its pairs, keeping only Cairn's. */
+/**
+ * Splits a `Cookie` header into its pairs, keeping only Cairn's. A name sent twice, at Cairn's
+ * own path and at the wider `/demo` an earlier visit wrote, reads as its first value, which the
+ * browser sends for the longer path.
+ */
 function cairnCookies(header: string | null): Map<string, string> {
 	let pairs = new Map<string, string>();
 	for (let pair of (header ?? "").split(";")) {
 		let [name = "", ...value] = pair.trim().split("=");
-		if (name.startsWith(COOKIE_PREFIX)) pairs.set(name, value.join("="));
+		if (name.startsWith(COOKIE_PREFIX) && !pairs.has(name)) pairs.set(name, value.join("="));
 	}
 	return pairs;
 }

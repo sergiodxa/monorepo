@@ -140,6 +140,14 @@ describe("Cairn edits", () => {
 		expect(body).toContain('data-state="saved"');
 	});
 
+	test("an edit at Cairn's own path wins over an older one a previous visit left at /demo", async () => {
+		let fresh = "cairn.i.WEB-121=todo.3.ilse.1794519000";
+		let stale = "cairn.i.WEB-121=done.3.ilse.1794500000";
+		let body = await page("team/web", `${fresh}; ${stale}`);
+		expect(group(body, "todo")).toContain("WEB-121");
+		expect(group(body, "done")).not.toContain("WEB-121");
+	});
+
 	test("one edit keeps the fields another edit set", async () => {
 		let from = href("team/web?issue=WEB-121");
 		let first = cookiesFrom(
@@ -416,5 +424,94 @@ describe("Cairn screens", () => {
 		let body = await page("inbox?issue=PLT-214");
 		expect(body).toContain('data-issue-detail="PLT-214"');
 		expect(body).toContain("2 unread");
+	});
+});
+
+/** A page's answer for one of its frames, as a targeted link, form or reload asks for it. */
+async function frameOf(path: string, target: string, cookie = ""): Promise<string> {
+	let response = await fetchApp(href(path), {
+		headers: { cookie, "X-Remix-Frame": "true", "X-Remix-Target": target },
+	});
+	expect(response.status).toBe(200);
+	expect(response.headers.get("Vary")).toContain("X-Remix-Target");
+	return await response.text();
+}
+
+describe("Cairn frames", () => {
+	test("a list screen answers its view frame with the list and the open issue, and no shell", async () => {
+		let view = await frameOf("team/web?issue=WEB-121", "cairn-view");
+		expect(rows(view)).toContain("WEB-121");
+		expect(view).toContain('data-issue-detail="WEB-121"');
+		expect(view).not.toContain('data-slot="app-shell"');
+		expect(view).not.toContain('id="cairn-sidebar"');
+	});
+
+	test("the issue frame answers only the open issue", async () => {
+		let issue = await frameOf("team/web?issue=WEB-121", "cairn-issue");
+		expect(issue).toContain('data-issue-detail="WEB-121"');
+		expect(rows(issue)).toEqual([]);
+		expect(issue).not.toContain('data-slot="filter-bar"');
+	});
+
+	test("a board answers its board frame with the cards, and its sheet frame with only the sheet", async () => {
+		let board = await frameOf("team/web/board?issue=WEB-130", "cairn-board");
+		expect(board).toContain('data-sortable-item="WEB-130"');
+		expect(board).toContain('id="cairn-issue-sheet"');
+		expect(board).not.toContain('data-slot="app-shell"');
+
+		let sheet = await frameOf("team/web/board?issue=WEB-130", "cairn-sheet");
+		expect(sheet).toContain('id="cairn-issue-sheet"');
+		expect(sheet).not.toContain("data-sortable-item=");
+		expect(await frameOf("team/web/board", "cairn-sheet")).not.toContain("cairn-issue-sheet");
+	});
+
+	test("the roadmap answers its timeline frame per tab", async () => {
+		let closed = await frameOf("roadmap?show=closed", "cairn-roadmap");
+		expect([...closed.matchAll(/data-slot="roadmap-item"/g)]).toHaveLength(2);
+		expect(closed).not.toContain('data-slot="app-shell"');
+	});
+
+	test("a post aimed at the view frame redirects to the page, which answers that frame with the edit", async () => {
+		let from = href("team/web?issue=WEB-121");
+		let response = await fetchApp(from, {
+			method: "POST",
+			body: new URLSearchParams([
+				["issue", "WEB-121"],
+				["status", "done"],
+			]),
+			headers: { "X-Remix-Frame": "true", "X-Remix-Target": "cairn-view" },
+		});
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(from);
+
+		let view = await frameOf("team/web?issue=WEB-121", "cairn-view", cookiesFrom(response));
+		expect(group(view, "done")).toContain("WEB-121");
+		expect(view).not.toContain('data-slot="app-shell"');
+	});
+
+	test("every in-app link and form names the frame it reloads, and still works as a plain page", async () => {
+		let list = await page("team/web?issue=WEB-121");
+		expect(list).toMatch(/<a href="[^"]*issue=WEB-124"[^>]*data-rmx-target="cairn-issue"/);
+		expect(list).toMatch(
+			/<form id="cairn-issues-form" method="get"[^>]*data-rmx-target="cairn-view"/,
+		);
+		expect(list).toMatch(/<form id="cairn-props-WEB-121"[^>]*data-rmx-target="cairn-view"/);
+		expect(list).toMatch(
+			/aria-label="Next issue"[^>]*data-rmx-target="cairn-issue"|data-rmx-target="cairn-issue"[^>]*aria-label="Next issue"/,
+		);
+
+		let plain = await page("team/web");
+		expect(plain).toMatch(/<a href="[^"]*issue=WEB-124"[^>]*data-rmx-target="cairn-view"/);
+
+		let board = await page("team/web/board");
+		expect(board).toMatch(
+			/<form[^>]*data-sortable-form="WEB-130"[^>]*data-rmx-target="cairn-board"|<form[^>]*data-rmx-target="cairn-board"[^>]*data-sortable-form="WEB-130"/,
+		);
+		expect(board).toMatch(/<a href="[^"]*issue=WEB-130"[^>]*data-rmx-target="cairn-sheet"/);
+
+		let roadmap = await page("roadmap");
+		expect(roadmap).toMatch(
+			/href="\/demo\/apps\/cairn\/roadmap\?show=closed"[^>]*data-rmx-target="cairn-roadmap"/,
+		);
 	});
 });

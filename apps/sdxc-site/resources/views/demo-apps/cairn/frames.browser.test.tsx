@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { themeScope } from "@sdxc/ui/styles";
@@ -15,7 +15,7 @@ import { render } from "remix/component/test";
 import { afterAll, describe, expect, onTestFinished, test } from "vitest";
 import { page } from "vitest/browser";
 
-import { PENDING_FRAMES, blockSize } from "~/app/test/frame-size";
+import { blockSize } from "~/app/test/frame-size";
 import { demoThemeTokens } from "~/resources/components/demo-theme";
 import cairn from "~/resources/views/demo-apps/cairn";
 import {
@@ -55,8 +55,36 @@ function expectSameSize(content: number, fallback: number) {
 	expect(Math.abs(content - fallback)).toBeLessThanOrEqual(1);
 }
 
+/** The named frames a mounted screen holds, reached through a probe rendered beside it. */
+let frames: Handle["frames"] | undefined;
+
+/** Every frame a mounted screen asked for, by name, in order. */
+let requested: string[] = [];
+
+/** Renders nothing and keeps the root's frame handles for the test to reload. */
+function FrameProbe(handle: Handle) {
+	frames = handle.frames;
+	return () => null;
+}
+
 /**
- * Mounts one of Cairn's screens with its frames pending, as on first paint.
+ * Resolves Cairn's named frames as the page route does, by asking the app for the frame its
+ * name and address pick, and leaves every other frame (a cycle's parts) pending.
+ */
+function resolveCairnFrame(cookie: string | null) {
+	return (src: string, options?: { target?: string }) => {
+		let target = options?.target;
+		if (target === undefined || cairn.target === undefined) return new Promise<never>(() => {});
+		requested.push(target);
+		let url = new URL(src, "http://localhost");
+		let page = url.pathname.replace(/^\/demo\/apps\/cairn\/?/, "");
+		return cairn.target(target, { page, url, cookie }) ?? new Promise<never>(() => {});
+	};
+}
+
+/**
+ * Mounts one of Cairn's screens with its named frames answered and its parts pending, as on
+ * first paint.
  *
  * @param screen A page path with its query, as `cairn.screens` lists it.
  * @param cookie The visitor's `Cookie` header, for a screen drawn with their edits.
@@ -65,11 +93,41 @@ async function mountScreen(screen: string, cookie: string | null = null): Promis
 	let [path = "", query = ""] = screen.split("?");
 	let url = new URL(`http://localhost/demo/apps/cairn/${path}${query ? `?${query}` : ""}`);
 	let rendered = cairn.render({ page: path, url, cookie });
-	let mounted = render(themed(rendered.body), PENDING_FRAMES);
+	requested = [];
+	let mounted = render(
+		<>
+			{themed(rendered.body)}
+			<FrameProbe />
+		</>,
+		{ frameInit: { resolveFrame: resolveCairnFrame(cookie) } },
+	);
 	onTestFinished(() => mounted.cleanup());
-	await new Promise((resolve) => requestAnimationFrame(resolve));
+	await settleFrames();
 	expect(mounted.container.querySelector('[data-slot="app-shell"]'), screen).not.toBeNull();
 	return mounted.container;
+}
+
+/** Lets frame content land and the layout settle. */
+async function settleFrames(): Promise<void> {
+	for (let pass = 0; pass < 4; pass++) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+	}
+}
+
+/**
+ * Reloads one named frame at `path`, and answers which frames it asked for.
+ *
+ * @param name The frame to reload.
+ * @param path The page path with its query the frame loads.
+ */
+async function reloadFrame(name: string, path: string): Promise<string[]> {
+	let frame = frames?.get(name);
+	expect(frame, name).toBeDefined();
+	requested = [];
+	await frame!.reload({ src: `/demo/apps/cairn/${path}` });
+	await settleFrames();
+	return requested;
 }
 
 afterAll(async () => {
@@ -243,5 +301,63 @@ describe("Cairn on a tablet", () => {
 
 		expect(getComputedStyle(id).whiteSpace).toBe("nowrap");
 		expect(Math.round(id.getBoundingClientRect().height)).toBeLessThanOrEqual(20);
+	});
+});
+
+describe("Cairn's frames reload alone", () => {
+	test("opening another issue reloads only the issue frame, and the list keeps its rows", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("team/web?issue=WEB-121");
+		let sidebar = root.querySelector("#cairn-sidebar");
+		let rowsBox = root.querySelector("#cairn-rows");
+		let row = root.querySelector('[data-issue="WEB-124"]');
+
+		expect(await reloadFrame("cairn-issue", "team/web?issue=WEB-124")).toEqual(["cairn-issue"]);
+		expect(root.querySelector('[data-issue-detail="WEB-124"]')).not.toBeNull();
+		expect(root.querySelector('[data-issue-detail="WEB-121"]')).toBeNull();
+		expect(root.querySelector("#cairn-sidebar")).toBe(sidebar);
+		expect(root.querySelector("#cairn-rows")).toBe(rowsBox);
+		expect(root.querySelector('[data-issue="WEB-124"]')).toBe(row);
+	});
+
+	test("a filter reloads the view frame, and the shell around it stays", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("team/web");
+		let sidebar = root.querySelector("#cairn-sidebar");
+		let topbar = root.querySelector('[data-slot="app-shell-topbar"]');
+
+		let asked = await reloadFrame("cairn-view", "team/web?status=todo");
+		expect(asked[0]).toBe("cairn-view");
+		expect(asked.every((name) => name.startsWith("cairn-"))).toBe(true);
+		expect(root.querySelector('[data-group="started"]')).toBeNull();
+		expect(root.querySelector("#cairn-sidebar")).toBe(sidebar);
+		expect(root.querySelector('[data-slot="app-shell-topbar"]')).toBe(topbar);
+	});
+
+	test("a card opens its sheet by reloading only the sheet frame, and the columns stay", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("team/web/board");
+		let columns = root.querySelector('[data-slot="board-columns"]');
+		let card = root.querySelector('[data-sortable-item="WEB-130"]');
+
+		expect(await reloadFrame("cairn-sheet", "team/web/board?issue=WEB-130")).toEqual([
+			"cairn-sheet",
+		]);
+		expect(root.querySelector("#cairn-issue-sheet")).not.toBeNull();
+		expect(root.querySelector('[data-slot="board-columns"]')).toBe(columns);
+		expect(root.querySelector('[data-sortable-item="WEB-130"]')).toBe(card);
+	});
+
+	test("a roadmap tab reloads only the timeline frame, and the title stays", async () => {
+		await page.viewport(1280, 800);
+		let root = await mountScreen("roadmap");
+		let title = root.querySelector("h1");
+
+		expect(await reloadFrame("cairn-roadmap", "roadmap?show=closed")).toEqual(["cairn-roadmap"]);
+		expect(root.querySelectorAll('[data-slot="roadmap-item"]')).toHaveLength(2);
+		expect(root.querySelector("h1")).toBe(title);
+		expect(
+			root.querySelector('nav[aria-label="Roadmap tabs"] a[aria-current="page"]')?.textContent,
+		).toBe("Closed");
 	});
 });

@@ -25,12 +25,14 @@ import { SelectionBar } from "@sdxc/ui/app/selection-bar";
 import { SPLIT_VIEW_ITEM_ATTRIBUTE, SplitView } from "@sdxc/ui/app/split-view";
 import { TAB_BAR_BLOCK_SIZE } from "@sdxc/ui/app/tab-bar";
 import { ViewOptions } from "@sdxc/ui/app/view-options";
+import { Frame } from "remix/component";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 
 import type { PriorityId, StatusId } from "./data";
 import type { IssueView, VisitorState } from "./state";
 
+import { CurrentRow } from "./current-row";
 import {
 	LABELS,
 	LOCALE,
@@ -55,6 +57,28 @@ import { CairnShell, type ShellSection } from "./shell";
 
 /** The cookie the list's width beside an open issue is remembered in. */
 export const SPLIT_COOKIE = "cairn-split";
+
+/**
+ * The frame holding a list screen's view: the list and, beside it, the open issue. Filters,
+ * grouping, a row opening its issue, an edit and Close reload it, and nothing outside it.
+ */
+export const VIEW_FRAME = "cairn-view";
+
+/**
+ * The frame inside {@link VIEW_FRAME} holding only the open issue, which a row opened beside
+ * the list, Previous, Next and a comment reload.
+ */
+export const ISSUE_FRAME = "cairn-issue";
+
+/**
+ * The address a screen's frames load from: the screen's own path and query, without the toast
+ * parameter, so the page route answers each frame by its name.
+ */
+export function frameSrc(url: URL): string {
+	let next = new URL(url);
+	next.searchParams.delete("toast");
+	return `${next.pathname}${next.search}`;
+}
 
 /** The id the bulk form, the row checkboxes and the bulk bar share. */
 const BULK_FORM = "cairn-bulk";
@@ -331,6 +355,7 @@ function IssueRow(
 				</label>
 				<a
 					href={handle.props.href}
+					data-rmx-target={split ? ISSUE_FRAME : VIEW_FRAME}
 					data-issue-link
 					data-rmx-prefetch="intent"
 					aria-current={open ? "page" : undefined}
@@ -684,6 +709,7 @@ function IssueList(handle: Handle<IssueList.Props>) {
 					<HeadingScope level={2}>
 						<FilterBar
 							prefetch="intent"
+							target={VIEW_FRAME}
 							id="cairn-issues"
 							url={listUrl(url)}
 							locale={LOCALE}
@@ -693,6 +719,7 @@ function IssueList(handle: Handle<IssueList.Props>) {
 								<ViewOptions
 									id="cairn-view"
 									url={listUrl(url)}
+									target={VIEW_FRAME}
 									inline
 									grouping={{
 										defaultValue: "status",
@@ -765,6 +792,7 @@ function IssueList(handle: Handle<IssueList.Props>) {
 									<Empty.Action>
 										<LinkButton
 											href={clearFiltersHref(listUrl(url), FILTER_PARAMS)}
+											data-rmx-target={VIEW_FRAME}
 											size="sm"
 											variant="outline"
 											color="neutral"
@@ -830,107 +858,150 @@ namespace IssueListScreen {
 		state: VisitorState;
 		url: URL;
 		collapsed: boolean;
+	}
+}
+
+/**
+ * Renders a list screen: the shell, and the view inside it as {@link VIEW_FRAME}, loaded from
+ * this same address. Everything the view does reloads that frame, so the sidebar, top bar,
+ * command menu and dialogs stay as they are.
+ */
+export function IssueListScreen(handle: Handle<IssueListScreen.Props>) {
+	return () => {
+		let { scope, state, url, collapsed } = handle.props;
+		return (
+			<CairnShell
+				current={scope.section}
+				collapsed={collapsed}
+				crumb={scope.title}
+				state={state}
+				team={scope.team}
+				from={returnPage(scope, url)}
+				flush
+				fill
+			>
+				<Frame name={VIEW_FRAME} src={frameSrc(url)} />
+			</CairnShell>
+		);
+	};
+}
+
+namespace ListView {
+	export interface Props {
+		scope: ListScope;
+		state: VisitorState;
+		url: URL;
 		layout?: SplitView.Layout;
 		issues: IssueView[];
 	}
 }
 
 /**
- * Renders a list screen. Without an open issue the list takes the whole card; with one, the
- * list and the issue split the card, each scrolling on its own, and a phone shows one pane
- * per address with a link back to the list.
+ * The content of {@link VIEW_FRAME}. Without an open issue the list takes the whole card; with
+ * one, the list and the issue split the card, each scrolling on its own, and a phone shows one
+ * pane per address with a link back to the list. The issue is its own {@link ISSUE_FRAME}.
  */
-export function IssueListScreen(handle: Handle<IssueListScreen.Props>) {
+export function ListView(handle: Handle<ListView.Props>) {
 	return () => {
-		let { scope, state, url, collapsed, layout, issues } = handle.props;
+		let { scope, state, url, layout, issues } = handle.props;
 		let openId = url.searchParams.get("issue");
 		let open = openId === null ? undefined : issues.find((issue) => issue.id === openId);
+		let list = (
+			<IssueList scope={scope} state={state} url={url} issues={issues} split={open !== undefined} />
+		);
+
+		if (open === undefined) {
+			return (
+				<div
+					mix={[
+						raw({
+							display: "flex",
+							flexDirection: "column",
+							flex: "1 1 auto",
+							minBlockSize: `calc(100dvh - var(--ui-app-header-height, 3.5rem) - ${TAB_BAR_BLOCK_SIZE})`,
+							"@media (min-width: 48rem)": {
+								minBlockSize: "calc(100dvh - var(--ui-app-header-height, 3.5rem))",
+							},
+							"@media (min-width: 64rem)": { minBlockSize: 0 },
+						}),
+					]}
+				>
+					{list}
+				</div>
+			);
+		}
+		return (
+			<div
+				mix={[
+					raw({
+						blockSize: `calc(100dvh - var(--ui-app-header-height, 3.5rem) - ${TAB_BAR_BLOCK_SIZE})`,
+						"@media (min-width: 48rem)": {
+							blockSize:
+								"calc(100dvh - var(--ui-app-header-height, 3.5rem) - 2 * var(--ui-app-inset-gap, 0.5rem) - 2px)",
+						},
+					}),
+				]}
+			>
+				<CurrentRow />
+				<SplitView
+					cookiePath={demoAppCookiePath("cairn")}
+					id="cairn-split"
+					data-rmx-preserve-attrs="style data-collapsed"
+					list={list}
+					detail={<Frame name={ISSUE_FRAME} src={frameSrc(url)} />}
+					active="detail"
+					backHref={setParamHref(listUrl(url), "issue", null)}
+					layout={layout}
+					cookie={SPLIT_COOKIE}
+					labels={SPLIT_LABELS}
+				/>
+			</div>
+		);
+	};
+}
+
+namespace OpenIssue {
+	export interface Props {
+		scope: ListScope;
+		state: VisitorState;
+		url: URL;
+		issues: IssueView[];
+	}
+}
+
+/**
+ * The content of {@link ISSUE_FRAME}: the issue the address opens, with where it sits in the
+ * filtered list for Previous and Next. Draws nothing when the address opens no issue in scope.
+ */
+export function OpenIssue(handle: Handle<OpenIssue.Props>) {
+	return () => {
+		let { scope, state, url, issues } = handle.props;
+		let openId = url.searchParams.get("issue");
+		let open = openId === null ? undefined : issues.find((issue) => issue.id === openId);
+		if (open === undefined) return null;
 		let query = readListQuery(url);
 		let ordered = groupIssues(
 			issues.filter((issue) => matches(issue, query)),
 			query,
 		).flatMap((group) => group.issues);
-		let index = open ? ordered.findIndex((issue) => issue.id === open.id) : -1;
-		let back = setParamHref(listUrl(url), "issue", null);
-		let list = (
-			<IssueList scope={scope} state={state} url={url} issues={issues} split={open !== undefined} />
-		);
-		let page = returnPage(scope, url);
-
+		let index = ordered.findIndex((issue) => issue.id === open.id);
+		let step = (id: string | undefined) =>
+			id === undefined ? null : setParamHref(listUrl(url), "issue", id);
 		return (
-			<CairnShell
-				current={scope.section}
-				collapsed={collapsed}
-				crumb={open ? `${scope.title} › ${open.id}` : scope.title}
+			<IssueDetail
+				issue={open}
 				state={state}
-				team={scope.team}
-				from={page}
-				flush
-				fill
-			>
-				{open === undefined ? (
-					<div
-						mix={[
-							raw({
-								display: "flex",
-								flexDirection: "column",
-								flex: "1 1 auto",
-								minBlockSize: `calc(100dvh - var(--ui-app-header-height, 3.5rem) - ${TAB_BAR_BLOCK_SIZE})`,
-								"@media (min-width: 48rem)": {
-									minBlockSize: "calc(100dvh - var(--ui-app-header-height, 3.5rem))",
-								},
-								"@media (min-width: 64rem)": { minBlockSize: 0 },
-							}),
-						]}
-					>
-						{list}
-					</div>
-				) : (
-					<div
-						mix={[
-							raw({
-								blockSize: `calc(100dvh - var(--ui-app-header-height, 3.5rem) - ${TAB_BAR_BLOCK_SIZE})`,
-								"@media (min-width: 48rem)": {
-									blockSize:
-										"calc(100dvh - var(--ui-app-header-height, 3.5rem) - 2 * var(--ui-app-inset-gap, 0.5rem) - 2px)",
-								},
-							}),
-						]}
-					>
-						<SplitView
-							cookiePath={demoAppCookiePath("cairn")}
-							id="cairn-split"
-							list={list}
-							detail={
-								<IssueDetail
-									issue={open}
-									state={state}
-									returnTo={page}
-									level={2}
-									closeHref={back}
-									position={{
-										index: index + 1,
-										total: ordered.length,
-										previousHref:
-											index > 0
-												? setParamHref(listUrl(url), "issue", ordered[index - 1]!.id)
-												: null,
-										nextHref:
-											index >= 0 && index < ordered.length - 1
-												? setParamHref(listUrl(url), "issue", ordered[index + 1]!.id)
-												: null,
-									}}
-								/>
-							}
-							active="detail"
-							backHref={back}
-							layout={layout}
-							cookie={SPLIT_COOKIE}
-							labels={SPLIT_LABELS}
-						/>
-					</div>
-				)}
-			</CairnShell>
+				returnTo={returnPage(scope, url)}
+				level={2}
+				closeHref={setParamHref(listUrl(url), "issue", null)}
+				frames={{ view: VIEW_FRAME, issue: ISSUE_FRAME }}
+				position={{
+					index: index + 1,
+					total: ordered.length,
+					previousHref: index > 0 ? step(ordered[index - 1]?.id) : null,
+					nextHref: index >= 0 ? step(ordered[index + 1]?.id) : null,
+				}}
+			/>
 		);
 	};
 }

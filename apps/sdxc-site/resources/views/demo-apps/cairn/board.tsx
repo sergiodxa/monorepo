@@ -15,6 +15,7 @@ import { Button, Menu } from "@sdxc/ui";
 import { setParamHref } from "@sdxc/ui/app";
 import { Board, boardMoveFormId } from "@sdxc/ui/app/board";
 import { DetailSheet } from "@sdxc/ui/app/detail-sheet";
+import { Frame } from "remix/component";
 
 import type { StatusId, Team } from "./data";
 import type { IssueView, VisitorState } from "./state";
@@ -23,11 +24,33 @@ import { STATUSES, STATUS_NAMES, editHref, findLabel, findPerson, href } from ".
 import { IssueDetail } from "./detail";
 import { LabelChip, PersonTile, PriorityIcon, StatusIcon } from "./glyphs";
 import { SHEET_LABELS } from "./labels";
+import { frameSrc } from "./list";
 import { CREATE_ID, CairnShell } from "./shell";
 import { compareBoardRank } from "./state";
 
+/** The frame holding a board: its columns and the sheet over them, which a move reloads. */
+export const BOARD_FRAME = "cairn-board";
+
+/** The frame inside {@link BOARD_FRAME} holding only the open issue's sheet. */
+export const SHEET_FRAME = "cairn-sheet";
+
 /** The states a board lays out; canceled issues leave the board. */
 const COLUMNS: StatusId[] = STATUSES.filter((status) => status !== "canceled");
+
+/** The board's page path, with the query it carries, which every move posts to. */
+function boardPage(team: Team, url: URL): string {
+	let next = new URL(url);
+	next.searchParams.delete("toast");
+	let query = next.searchParams.toString();
+	return `team/${team.id}/board${query === "" ? "" : `?${query}`}`;
+}
+
+/** The board's cards in reading order: column by column, each in its kept order. */
+function boardOrder(issues: IssueView[]): IssueView[] {
+	return COLUMNS.flatMap((status) =>
+		issues.filter((issue) => issue.status === status).sort(compareBoardRank),
+	);
+}
 
 /** The board's id, which each card's move form id starts with. */
 function boardId(team: Team): string {
@@ -47,6 +70,7 @@ function IssueCard(handle: Handle<{ issue: IssueView; team: Team; url: URL; page
 					action: editHref(page),
 					name: "status",
 					position: "before",
+					target: BOARD_FRAME,
 					fields: { issue: issue.id },
 				}}
 			>
@@ -108,6 +132,7 @@ function IssueCard(handle: Handle<{ issue: IssueView; team: Team; url: URL; page
 					<a
 						href={setParamHref(url, "issue", issue.id)}
 						data-rmx-prefetch="intent"
+						data-rmx-target={SHEET_FRAME}
 						draggable="false"
 						mix={[
 							raw({
@@ -165,28 +190,18 @@ namespace BoardScreen {
 	export interface Props {
 		team: Team;
 		state: VisitorState;
-		issues: IssueView[];
 		url: URL;
 		collapsed: boolean;
 	}
 }
 
-/** Renders a team's board, and the open issue's sheet over its edge. */
+/**
+ * Renders a team's board screen: the shell, and the board inside it as {@link BOARD_FRAME},
+ * loaded from this same address, so a move or an edit redraws the board and nothing around it.
+ */
 export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 	return () => {
-		let { team, state, issues, collapsed } = handle.props;
-		let url = new URL(handle.props.url);
-		url.searchParams.delete("toast");
-		let search = url.searchParams.toString();
-		let page = `team/${team.id}/board${search === "" ? "" : `?${search}`}`;
-		let ordered = COLUMNS.flatMap((status) =>
-			issues.filter((issue) => issue.status === status).sort(compareBoardRank),
-		);
-		let openId = url.searchParams.get("issue");
-		let index = ordered.findIndex((issue) => issue.id === openId);
-		let open = index === -1 ? undefined : ordered[index];
-		let close = setParamHref(url, "issue", null);
-
+		let { team, state, url, collapsed } = handle.props;
 		return (
 			<CairnShell
 				current={`board:${team.id}`}
@@ -194,9 +209,37 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 				crumb={`${team.name} › Board`}
 				state={state}
 				team={team.id}
-				from={page}
+				from={boardPage(team, url)}
 				fill
 			>
+				<Frame name={BOARD_FRAME} src={frameSrc(url)} />
+			</CairnShell>
+		);
+	};
+}
+
+namespace BoardView {
+	export interface Props {
+		team: Team;
+		state: VisitorState;
+		issues: IssueView[];
+		url: URL;
+	}
+}
+
+/**
+ * The content of {@link BOARD_FRAME}: the board's title and columns, and the open issue's
+ * sheet as its own {@link SHEET_FRAME}, which a card opens without redrawing the columns.
+ */
+export function BoardView(handle: Handle<BoardView.Props>) {
+	return () => {
+		let { team, issues } = handle.props;
+		let url = new URL(handle.props.url);
+		url.searchParams.delete("toast");
+		let page = boardPage(team, url);
+		let ordered = boardOrder(issues);
+		return (
+			<>
 				<div
 					mix={[
 						raw({
@@ -288,30 +331,53 @@ export function BoardScreen(handle: Handle<BoardScreen.Props>) {
 						})}
 					</Board>
 				</div>
-				{open ? (
-					<DetailSheet
-						id="cairn-issue-sheet"
-						title={open.title}
-						description={`${open.id} · ${STATUS_NAMES[open.status]}`}
-						closeHref={close}
-						permalink={href(`issue/${open.id}`)}
-						position={{
-							index: index + 1,
-							total: ordered.length,
-							previousHref: index > 0 ? setParamHref(url, "issue", ordered[index - 1]!.id) : null,
-							nextHref:
-								index < ordered.length - 1
-									? setParamHref(url, "issue", ordered[index + 1]!.id)
-									: null,
-						}}
-						labels={SHEET_LABELS}
-						keys="sheet"
-						inset
-					>
-						<IssueDetail issue={open} state={state} returnTo={page} level={2} sheet />
-					</DetailSheet>
-				) : null}
-			</CairnShell>
+				<Frame name={SHEET_FRAME} src={frameSrc(url)} />
+			</>
+		);
+	};
+}
+
+/**
+ * The content of {@link SHEET_FRAME}: the issue the address opens in a sheet over the board's
+ * edge, with Previous and Next through the board's order. Draws nothing when none is open.
+ */
+export function SheetView(handle: Handle<BoardView.Props>) {
+	return () => {
+		let { team, state, issues } = handle.props;
+		let url = new URL(handle.props.url);
+		url.searchParams.delete("toast");
+		let ordered = boardOrder(issues);
+		let index = ordered.findIndex((issue) => issue.id === url.searchParams.get("issue"));
+		let open = index === -1 ? undefined : ordered[index];
+		if (!open) return null;
+		return (
+			<DetailSheet
+				id="cairn-issue-sheet"
+				title={open.title}
+				description={`${open.id} · ${STATUS_NAMES[open.status]}`}
+				closeHref={setParamHref(url, "issue", null)}
+				target={SHEET_FRAME}
+				permalink={href(`issue/${open.id}`)}
+				position={{
+					index: index + 1,
+					total: ordered.length,
+					previousHref: index > 0 ? setParamHref(url, "issue", ordered[index - 1]!.id) : null,
+					nextHref:
+						index < ordered.length - 1 ? setParamHref(url, "issue", ordered[index + 1]!.id) : null,
+				}}
+				labels={SHEET_LABELS}
+				keys="sheet"
+				inset
+			>
+				<IssueDetail
+					issue={open}
+					state={state}
+					returnTo={boardPage(team, url)}
+					level={2}
+					frames={{ view: BOARD_FRAME, issue: SHEET_FRAME }}
+					sheet
+				/>
+			</DetailSheet>
 		);
 	};
 }

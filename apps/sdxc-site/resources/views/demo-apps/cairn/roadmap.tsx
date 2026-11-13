@@ -15,6 +15,7 @@ import { LinkButton } from "@sdxc/ui";
 import { Roadmap } from "@sdxc/ui/app/roadmap";
 import { Sparkline } from "@sdxc/ui/app/sparkline";
 import { TAB_BAR_BLOCK_SIZE } from "@sdxc/ui/app/tab-bar";
+import { Frame } from "remix/component";
 
 import type { Project } from "./data";
 import type { IssueView, VisitorState } from "./state";
@@ -22,6 +23,7 @@ import type { IssueView, VisitorState } from "./state";
 import { LOCALE, PROJECTS, TODAY, findPerson, href } from "./data";
 import { PersonTile, ProjectGlyph } from "./glyphs";
 import { ROADMAP_LABELS } from "./labels";
+import { frameSrc } from "./list";
 import { projectPoints, share } from "./progress";
 import { HealthBadge } from "./projects";
 import { CairnShell } from "./shell";
@@ -50,48 +52,18 @@ function trend(done: number): number[] {
 	return curve.map((step) => Math.round(step * done * 100) / 100);
 }
 
-/** Renders the roadmap screen. */
+/** The frame holding the roadmap's timeline and its tabs, which a tab reloads alone. */
+export const ROADMAP_FRAME = "cairn-roadmap";
+
+/**
+ * Renders the roadmap screen: its title, and the timeline as {@link ROADMAP_FRAME}, loaded from
+ * this same address, so Active and Closed swap the timeline and nothing around it.
+ */
 export function RoadmapScreen(
-	handle: Handle<{ state: VisitorState; issues: IssueView[]; collapsed: boolean; tab: RoadmapTab }>,
+	handle: Handle<{ state: VisitorState; collapsed: boolean; url: URL }>,
 ) {
 	return () => {
-		let { state, issues, collapsed, tab } = handle.props;
-		let shown = PROJECTS.filter(
-			(project) => (project.health === "completed") === (tab === "closed"),
-		);
-		let quarters = [...new Set(shown.map(quarter))].sort((a, b) => {
-			let [qa = "", ya = ""] = a.split(" ");
-			let [qb = "", yb = ""] = b.split(" ");
-			return ya.localeCompare(yb) || qa.localeCompare(qb);
-		});
-		let tabLink = (value: RoadmapTab, label: string) => (
-			<a
-				href={href(value === "active" ? "roadmap" : "roadmap?show=closed")}
-				aria-current={tab === value ? "page" : undefined}
-				data-rmx-prefetch="intent"
-				mix={[
-					raw({
-						display: "inline-flex",
-						alignItems: "center",
-						blockSize: "1.75rem",
-						paddingInline: "0.625rem",
-						borderRadius: "var(--ui-radius-md, 0.25rem)",
-						fontSize: "0.8125rem",
-						fontWeight: "500",
-						color: "var(--ui-neutral-fg-muted)",
-						textDecoration: "none",
-						"&[aria-current='page']": {
-							color: "var(--ui-neutral-fg-emphasis)",
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed, var(--ui-neutral-bg-tint))",
-						},
-						"&:hover": { color: "var(--ui-neutral-fg-emphasis)" },
-					}),
-				]}
-			>
-				{label}
-			</a>
-		);
-
+		let { state, collapsed, url } = handle.props;
 		return (
 			<CairnShell
 				current="roadmap"
@@ -162,61 +134,111 @@ export function RoadmapScreen(
 							All projects
 						</LinkButton>
 					</header>
-					<Roadmap
-						label="Projects on a timeline"
-						start={RANGES[tab].start}
-						end={RANGES[tab].end}
-						today={TODAY}
-						locale={LOCALE}
-						labels={ROADMAP_LABELS}
-						header={
-							<nav aria-label="Roadmap tabs" mix={[raw({ display: "flex", gap: "0.25rem" })]}>
-								{tabLink("active", "Active")}
-								{tabLink("closed", "Closed")}
-							</nav>
-						}
-						mix={[raw({ flex: "1 1 auto", minBlockSize: 0 })]}
-					>
-						{quarters.map((name) => (
-							<Roadmap.Group title={name}>
-								{shown
-									.filter((project) => quarter(project) === name)
-									.map((project) => {
-										let done = share(projectPoints(project, issues));
-										return (
-											<Roadmap.Item
-												name={project.name}
-												href={href(`projects/${project.id}`)}
-												icon={<ProjectGlyph hue={project.hue} />}
-												meta={
-													<>
-														<HealthBadge health={project.health} />
-														<PersonTile person={findPerson(project.lead)} size={20} />
-													</>
-												}
-												start={project.start}
-												end={project.target}
-												progress={done}
-												projectedEnd={project.projected}
-												trailing={
-													project.health === "planned" ? null : (
-														<Sparkline
-															values={trend(done)}
-															label={`${project.name} burn-up`}
-															dot={false}
-															domain={[0, 1]}
-															parts={{ plot: [raw({ inlineSize: "2rem", blockSize: "0.875rem" })] }}
-														/>
-													)
-												}
-											/>
-										);
-									})}
-							</Roadmap.Group>
-						))}
-					</Roadmap>
+					<Frame name={ROADMAP_FRAME} src={frameSrc(url)} />
 				</div>
 			</CairnShell>
+		);
+	};
+}
+
+/**
+ * The content of {@link ROADMAP_FRAME}: the tab's projects on a timeline grouped by the quarter
+ * each starts in, with the tabs in its header so the current one is marked by the same answer.
+ */
+export function RoadmapTimeline(handle: Handle<{ issues: IssueView[]; tab: RoadmapTab }>) {
+	return () => {
+		let { issues, tab } = handle.props;
+		let shown = PROJECTS.filter(
+			(project) => (project.health === "completed") === (tab === "closed"),
+		);
+		let quarters = [...new Set(shown.map(quarter))].sort((a, b) => {
+			let [qa = "", ya = ""] = a.split(" ");
+			let [qb = "", yb = ""] = b.split(" ");
+			return ya.localeCompare(yb) || qa.localeCompare(qb);
+		});
+		let tabLink = (value: RoadmapTab, label: string) => (
+			<a
+				href={href(value === "active" ? "roadmap" : "roadmap?show=closed")}
+				data-rmx-target={ROADMAP_FRAME}
+				aria-current={tab === value ? "page" : undefined}
+				data-rmx-prefetch="intent"
+				mix={[
+					raw({
+						display: "inline-flex",
+						alignItems: "center",
+						blockSize: "1.75rem",
+						paddingInline: "0.625rem",
+						borderRadius: "var(--ui-radius-md, 0.25rem)",
+						fontSize: "0.8125rem",
+						fontWeight: "500",
+						color: "var(--ui-neutral-fg-muted)",
+						textDecoration: "none",
+						"&[aria-current='page']": {
+							color: "var(--ui-neutral-fg-emphasis)",
+							backgroundColor: "var(--ui-neutral-bg-tint-pressed, var(--ui-neutral-bg-tint))",
+						},
+						"&:hover": { color: "var(--ui-neutral-fg-emphasis)" },
+					}),
+				]}
+			>
+				{label}
+			</a>
+		);
+
+		return (
+			<Roadmap
+				label="Projects on a timeline"
+				start={RANGES[tab].start}
+				end={RANGES[tab].end}
+				today={TODAY}
+				locale={LOCALE}
+				labels={ROADMAP_LABELS}
+				header={
+					<nav aria-label="Roadmap tabs" mix={[raw({ display: "flex", gap: "0.25rem" })]}>
+						{tabLink("active", "Active")}
+						{tabLink("closed", "Closed")}
+					</nav>
+				}
+				mix={[raw({ flex: "1 1 auto", minBlockSize: 0 })]}
+			>
+				{quarters.map((name) => (
+					<Roadmap.Group title={name}>
+						{shown
+							.filter((project) => quarter(project) === name)
+							.map((project) => {
+								let done = share(projectPoints(project, issues));
+								return (
+									<Roadmap.Item
+										name={project.name}
+										href={href(`projects/${project.id}`)}
+										icon={<ProjectGlyph hue={project.hue} />}
+										meta={
+											<>
+												<HealthBadge health={project.health} />
+												<PersonTile person={findPerson(project.lead)} size={20} />
+											</>
+										}
+										start={project.start}
+										end={project.target}
+										progress={done}
+										projectedEnd={project.projected}
+										trailing={
+											project.health === "planned" ? null : (
+												<Sparkline
+													values={trend(done)}
+													label={`${project.name} burn-up`}
+													dot={false}
+													domain={[0, 1]}
+													parts={{ plot: [raw({ inlineSize: "2rem", blockSize: "0.875rem" })] }}
+												/>
+											)
+										}
+									/>
+								);
+							})}
+					</Roadmap.Group>
+				))}
+			</Roadmap>
 		);
 	};
 }

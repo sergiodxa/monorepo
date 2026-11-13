@@ -74,6 +74,12 @@ namespace IssueDetail {
 		closeHref?: string;
 		/** Drops the header and title for a sheet that draws its own, keeping the save status. */
 		sheet?: boolean;
+		/**
+		 * The frames this detail's links and forms reload: `view` holds the issue and what lists it,
+		 * so an edit or Close redraws both; `issue` holds only the issue, for Previous, Next and a
+		 * comment. Unset, each loads the whole page.
+		 */
+		frames?: { view: string; issue: string };
 		/** Where the issue sits in the list beside it. */
 		position?: {
 			index: number;
@@ -96,10 +102,16 @@ function saveStatusId(issue: string): string {
 
 /** A square ghost button for the header's controls. */
 function HeaderLink(
-	handle: Handle<{ href: string | null; label: string; shortcut?: string; children: RemixNode }>,
+	handle: Handle<{
+		href: string | null;
+		label: string;
+		shortcut?: string;
+		frame?: string;
+		children: RemixNode;
+	}>,
 ) {
 	return () => {
-		let { href: target, label, shortcut, children } = handle.props;
+		let { href: target, label, shortcut, frame, children } = handle.props;
 		let style = raw({
 			display: "inline-grid",
 			placeItems: "center",
@@ -123,6 +135,7 @@ function HeaderLink(
 				aria-label={label}
 				title={label}
 				data-rmx-prefetch="intent"
+				data-rmx-target={frame}
 				data-shortcut={shortcut}
 				data-shortcut-label={shortcut ? label : undefined}
 				data-shortcut-group={shortcut ? "Issues" : undefined}
@@ -436,9 +449,9 @@ function actorName(id: string): string {
  * The feed: creation, every change and every comment in time order, then the comment box. A
  * visitor's own entries read against the real clock, the fixtures against the demo's moment.
  */
-function Activity(handle: Handle<{ issue: IssueView; returnTo: string }>) {
+function Activity(handle: Handle<{ issue: IssueView; returnTo: string; frame?: string }>) {
 	return () => {
-		let { issue, returnTo } = handle.props;
+		let { issue, returnTo, frame } = handle.props;
 		type Entry = { at: string; node: RemixNode };
 		let now = (at: string) => (at > NOW ? new Date().toISOString() : NOW);
 		let entries: Entry[] = [
@@ -512,7 +525,8 @@ function Activity(handle: Handle<{ issue: IssueView; returnTo: string }>) {
 				<form
 					method="post"
 					action={editHref(returnTo)}
-					data-rmx-document
+					data-rmx-target={frame}
+					data-rmx-document={frame === undefined ? "" : undefined}
 					mix={[raw({ display: "flex", flexDirection: "column", gap: "0.5rem" })]}
 				>
 					<input type="hidden" name="intent" value="comment" />
@@ -545,7 +559,16 @@ function Activity(handle: Handle<{ issue: IssueView; returnTo: string }>) {
  */
 export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 	return () => {
-		let { issue, state, returnTo, level, closeHref, position, sheet = false } = handle.props;
+		let {
+			issue,
+			state,
+			returnTo,
+			level,
+			closeHref,
+			position,
+			frames,
+			sheet = false,
+		} = handle.props;
 		let team = findTeam(issue.team);
 		let children = allIssues(state).filter((candidate) => candidate.parent === issue.id);
 		let parent = issue.parent
@@ -566,7 +589,13 @@ export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 					}),
 				]}
 			>
-				<form id={propsFormId(issue.id)} method="post" action={editHref(returnTo)} hidden>
+				<form
+					id={propsFormId(issue.id)}
+					method="post"
+					action={editHref(returnTo)}
+					data-rmx-target={frames?.view}
+					hidden
+				>
 					<input type="hidden" name="issue" value={issue.id} />
 				</form>
 				<SavingSignal
@@ -634,16 +663,20 @@ export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 									<span mix={[visuallyHidden()]}>Issue </span>
 									{`${position.index} / ${position.total}`}
 								</span>
-								<HeaderLink href={position.previousHref} label="Previous issue">
+								<HeaderLink
+									href={position.previousHref}
+									label="Previous issue"
+									frame={frames?.issue}
+								>
 									<ChevronUpIcon size={16} aria-hidden="true" />
 								</HeaderLink>
-								<HeaderLink href={position.nextHref} label="Next issue">
+								<HeaderLink href={position.nextHref} label="Next issue" frame={frames?.issue}>
 									<ChevronDownIcon size={16} aria-hidden="true" />
 								</HeaderLink>
 							</>
 						) : null}
 						{closeHref ? (
-							<HeaderLink href={closeHref} label="Close issue">
+							<HeaderLink href={closeHref} label="Close issue" frame={frames?.view}>
 								<XIcon size={16} aria-hidden="true" />
 							</HeaderLink>
 						) : null}
@@ -816,7 +849,7 @@ export function IssueDetail(handle: Handle<IssueDetail.Props>) {
 						{children.length > 0 ? (
 							<SubIssues issue={issue} items={children} returnTo={returnTo} />
 						) : null}
-						<Activity issue={issue} returnTo={returnTo} />
+						<Activity issue={issue} returnTo={returnTo} frame={frames?.issue} />
 					</div>
 				</div>
 			</article>
