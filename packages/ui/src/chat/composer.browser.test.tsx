@@ -149,6 +149,39 @@ describe("ComposerSubmit", () => {
 		mounted.cleanup();
 	});
 
+	test("a sent message reaches the navigation it starts, and the field empties after", async () => {
+		let home = `${location.pathname}${location.search}`;
+		let mounted = render(
+			<Composer method="post" action={`${location.pathname}?sent`} enctype="multipart/form-data">
+				<Composer.Input name="prompt" aria-label="Message" />
+				<Composer.Toolbar>
+					<ComposerSubmit labels={{ send: "Send", stop: "Stop" }} />
+				</Composer.Toolbar>
+			</Composer>,
+		);
+		let input = mounted.container.querySelector("textarea")!;
+		let sent = new Promise<FormDataEntryValue | null | undefined>((resolve) => {
+			navigation.addEventListener(
+				"navigate",
+				(event) => {
+					resolve(event.formData?.get("prompt"));
+					event.intercept({ async handler() {} });
+				},
+				{ once: true },
+			);
+		});
+		onTestFinished(() => {
+			mounted.cleanup();
+			history.replaceState(null, "", home);
+		});
+
+		input.value = "Hello";
+		input.form!.requestSubmit();
+
+		expect(await sent).toBe("Hello");
+		await vi.waitFor(() => expect(input.value).toBe(""));
+	});
+
 	test("turns into Stop while the reply streams, and Stop freezes it", async () => {
 		let { root, cleanup } = mountReply();
 		onTestFinished(cleanup);
