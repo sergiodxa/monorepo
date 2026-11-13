@@ -669,3 +669,45 @@ describe("AppShell", () => {
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 	});
 });
+
+describe("AppShell content scroll across in-place navigations", () => {
+	/** Answers every navigation in place, as a frame router does, so the document never reloads. */
+	function interceptNavigations(): () => void {
+		let controller = new AbortController();
+		navigation.addEventListener(
+			"navigate",
+			(event) => event.intercept({ handler: async () => {} }),
+			{
+				signal: controller.signal,
+			},
+		);
+		return () => controller.abort();
+	}
+
+	/** The panel the shell's content scrolls in. */
+	function panel(): HTMLElement {
+		return document.querySelector<HTMLElement>('[data-slot="app-shell-content"]')!;
+	}
+
+	test("returns to where the visitor left a page on Back, and starts a new page at the top", async () => {
+		await page.viewport(1280, 800);
+		mountShell();
+		let stop = interceptNavigations();
+		let start = location.href;
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		panel().scrollTop = 600;
+		expect(panel().scrollTop).toBe(600);
+
+		await navigation.navigate(`${location.pathname}-next`).finished;
+		await expect.poll(() => panel().scrollTop).toBe(0);
+		panel().scrollTop = 200;
+
+		await navigation.back().finished;
+		await expect.poll(() => panel().scrollTop).toBe(600);
+		await navigation.forward().finished;
+		await expect.poll(() => panel().scrollTop).toBe(200);
+
+		await navigation.navigate(start, { history: "replace" }).finished;
+		stop();
+	});
+});

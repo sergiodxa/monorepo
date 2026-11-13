@@ -1,7 +1,7 @@
 /**
  * Why JS: writing the collapse cookie, a ⌘B shortcut, closing the phone sheet when a link is
- * followed in place, re-marking the current row and retitling the page after a frame
- * navigation and following a back row on Esc have no HTML or CSS equivalent.
+ * followed in place, re-marking the current row, retitling the page and restoring the content
+ * panel's scroll after a frame navigation and following a back row on Esc need script.
  * No-JS baseline: the checkbox still collapses the sidebar through CSS and the sheet opens and
  * closes through the Popover API; the collapse lasts until the next page load.
  *
@@ -138,9 +138,28 @@ function enhance(
 		{ signal },
 	);
 
-	doc.defaultView?.navigation?.addEventListener(
+	let navigation = doc.defaultView?.navigation;
+	let scrolls = new Map<string, number>();
+	let leaving: { type: NavigationType; path: string } | null = null;
+	let panel = () => doc.querySelector<HTMLElement>('[data-slot="app-shell-content"]');
+
+	navigation?.addEventListener(
+		"navigate",
+		(event) => {
+			let key = navigation.currentEntry?.key;
+			let element = panel();
+			if (key !== undefined && element) scrolls.set(key, element.scrollTop);
+			leaving = { type: event.navigationType, path: doc.location.pathname };
+		},
+		{ signal },
+	);
+
+	navigation?.addEventListener(
 		"navigatesuccess",
 		() => {
+			let left = leaving;
+			leaving = null;
+			doc.defaultView?.setTimeout(() => restorePanelScroll(panel(), left, scrolls, doc), 0);
 			let element = sidebar();
 			if (element) markCurrentRow(element, doc.location.pathname);
 			let title = doc.querySelector<HTMLElement>('[data-slot="app-shell-main"][data-title]')
@@ -160,6 +179,23 @@ function enhance(
 		},
 		{ signal },
 	);
+}
+
+/**
+ * Puts the content panel's scroll where the visitor expects it once an in-place navigation
+ * settles, since the panel scrolls rather than the window: Back and Forward return to where
+ * the entry was left, and a link to another path starts at the top; a query change keeps it.
+ */
+function restorePanelScroll(
+	panel: HTMLElement | null,
+	left: { type: NavigationType; path: string } | null,
+	scrolls: Map<string, number>,
+	doc: Document,
+) {
+	if (panel === null || left === null) return;
+	let key = doc.defaultView?.navigation?.currentEntry?.key;
+	if (left.type === "traverse" && key !== undefined) panel.scrollTop = scrolls.get(key) ?? 0;
+	else if (left.type === "push" && left.path !== doc.location.pathname) panel.scrollTop = 0;
 }
 
 /**
