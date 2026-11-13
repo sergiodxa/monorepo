@@ -211,6 +211,7 @@ PropertyList.Item = function PropertyListItem(handle: Handle<PropertyList.ItemPr
 								grid(),
 								pb(1),
 								items("baseline"),
+								raw({ position: "relative" }),
 								/**
 								 * The stacked and side-by-side tracks live in one rule, so the label column
 								 * holds at its width whatever order the stylesheet layers land in.
@@ -255,7 +256,7 @@ PropertyList.Item = function PropertyListItem(handle: Handle<PropertyList.ItemPr
 					]}
 				>
 					{edit ? (
-						<PropertyEdit edit={edit} empty={isEmpty}>
+						<PropertyEdit edit={edit} empty={isEmpty} labelRow={!tiles}>
 							{value}
 						</PropertyEdit>
 					) : (
@@ -271,20 +272,25 @@ PropertyList.Item = function PropertyListItem(handle: Handle<PropertyList.ItemPr
 interface PropertyEditProps {
 	edit: PropertyList.Edit;
 	empty: boolean;
+	/**
+	 * Sets the chevron at the end of the label's row while the label stacks above the value,
+	 * offset by the row's and the label's block padding so it centres on the label's line.
+	 */
+	labelRow: boolean;
 	children: RemixNode;
 }
 
 /**
  * The editable value: a full-width button naming its action before the current value, its
- * chevron on the value's first row, and the popover it opens, the row's own or the app's. As
- * the popover's invoker the button is its implicit anchor, so it opens under its row.
+ * chevron on the label's row, and the popover it opens, the row's own or the app's. As the
+ * popover's invoker the button is its implicit anchor, so it opens under its row.
  *
  * @param handle Runtime handle carrying the edit description and the rendered value.
  * @returns The render function producing the button and its popover.
  */
 function PropertyEdit(handle: Handle<PropertyEditProps>) {
 	return () => {
-		let { edit, children } = handle.props;
+		let { edit, children, labelRow } = handle.props;
 
 		return (
 			<>
@@ -329,6 +335,18 @@ function PropertyEdit(handle: Handle<PropertyEditProps>) {
 							items("center"),
 							shrink(0),
 							raw({ alignSelf: "flex-start", blockSize: "1.5rem" }),
+							labelRow
+								? raw({
+										position: "absolute",
+										insetBlockStart: "0.625rem",
+										insetInlineEnd: 0,
+										blockSize: "1.25rem",
+										[`@container ${PROPERTY_LIST_CONTAINER} (min-width: 22rem)`]: {
+											position: "static",
+											blockSize: "1.5rem",
+										},
+									})
+								: null,
 						]}
 					>
 						<ChevronDownIcon size={14} mix={[fg("neutral.muted")]} />

@@ -188,6 +188,33 @@ describe("PropertyList", () => {
 		expect(chevron.top + chevron.height / 2).toBeCloseTo(first.top + first.height / 2, 0);
 	});
 
+	test("sets an editable value's chevron at the end of its label's row once the label stacks", () => {
+		let host = mount(
+			<PropertyList>
+				<PropertyList.Item
+					label="Reviewers"
+					edit={{ id: "edit-reviewers", label: "Edit reviewers", content: <p>Picker</p> }}
+				>
+					<span style={{ display: "grid", gap: "0.5rem" }}>
+						<span style={{ blockSize: "1.5rem" }}>Kenji</span>
+						<span style={{ blockSize: "1.5rem" }}>Mara</span>
+					</span>
+				</PropertyList.Item>
+			</PropertyList>,
+			300,
+		);
+		let chevron = host.querySelector('[data-slot="property-edit"] svg')!.getBoundingClientRect();
+		let label = host.querySelector("dt")!.getBoundingClientRect();
+		let row = host.querySelector("dt")!.parentElement!.getBoundingClientRect();
+		let line =
+			label.top +
+			Number.parseFloat(getComputedStyle(host.querySelector("dt")!).paddingBlockStart) +
+			10;
+
+		expect(chevron.top + chevron.height / 2).toBeCloseTo(line, 0);
+		expect(row.right - chevron.right).toBeLessThan(6);
+	});
+
 	test("centres the chevron on a single-row value", () => {
 		let host = mount(<Monitor />);
 		let button = host.querySelector('[data-slot="property-edit"]')!.getBoundingClientRect();
