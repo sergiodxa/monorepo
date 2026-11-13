@@ -451,6 +451,7 @@ data. Keeping UI next to the catalog avoids that split, while requiring `@sdxc/u
 - [x] Markdown visitor
 - [x] UI compounds, mixins, event, field mixin
 - [x] Blog / Chorus / Tern / Cairn wiring
+- [x] sdxc-site guides (markdown, picker, custom)
 
 ## Notes
 
