@@ -17,6 +17,8 @@
 		"./color/*": "./src/color/*.tsx",
 		"./app": "./src/app/index.ts",
 		"./app/*": "./src/app/*.tsx",
+		"./video": "./src/video/index.ts",
+		"./video/*": "./src/video/*.tsx",
 		"./animations": "./src/animations/index.ts",
 		"./behaviors": "./src/behaviors/index.ts",
 		"./mixins": "./src/mixins/index.ts",

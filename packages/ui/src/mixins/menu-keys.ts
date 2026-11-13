@@ -63,6 +63,96 @@ function activeIndexOf(host: HTMLElement, items: readonly HTMLElement[]): number
 }
 
 /**
+ * Runs the WAI-ARIA menu keyboard pattern on `host` until `signal` aborts: roving tabindex,
+ * arrow keys, Home/End and typeahead across its items. Script that owns server-rendered
+ * markup calls it directly; components reach it through {@link menuKeys}.
+ *
+ * @param host The Menu surface, usually a `role="menu"` element.
+ * @param signal Ends the listeners when it aborts.
+ * @param options Item-selector override for non-standard markup.
+ * @example installMenuKeys(panel, controller.signal, { itemSelector: "[data-item]" });
+ */
+export function installMenuKeys(
+	host: HTMLElement,
+	signal: AbortSignal,
+	options: MenuKeys.Options = {},
+): void {
+	let buffer = "";
+	let resetBufferId: ReturnType<typeof setTimeout> | undefined;
+	let selector = options.itemSelector ?? DEFAULT_ITEM_SELECTOR;
+
+	let initialItems = queryItems(host, selector);
+	if (initialItems.length > 0) setRovingTabindex(initialItems, initialItems[0]!);
+
+	host.addEventListener(
+		"focusin",
+		(event) => {
+			if (!belongsToSurface(event, host)) return;
+			let target = event.target;
+			if (!(target instanceof HTMLElement)) return;
+
+			let items = queryItems(host, selector);
+			if (items.includes(target)) setRovingTabindex(items, target);
+		},
+		{ signal },
+	);
+
+	host.addEventListener(
+		"keydown",
+		(event) => {
+			if (!belongsToSurface(event, host)) return;
+
+			let items = queryItems(host, selector);
+			if (items.length === 0) return;
+
+			let index = activeIndexOf(host, items);
+
+			switch (event.key) {
+				case "ArrowDown": {
+					event.preventDefault();
+					let next = index === -1 ? items[0] : items[index + 1];
+					if (next) focusItem(items, next);
+					return;
+				}
+				case "ArrowUp": {
+					event.preventDefault();
+					let previous = index === -1 ? items[items.length - 1] : items[index - 1];
+					if (previous) focusItem(items, previous);
+					return;
+				}
+				case "Home":
+					event.preventDefault();
+					focusItem(items, items[0]!);
+					return;
+				case "End":
+					event.preventDefault();
+					focusItem(items, items[items.length - 1]!);
+					return;
+				case "Backspace":
+					buffer = buffer.slice(0, -1);
+					return;
+			}
+
+			if (!isPrintableKey(event)) return;
+
+			clearTimeout(resetBufferId);
+			buffer += event.key.toLowerCase();
+			resetBufferId = setTimeout(() => {
+				buffer = "";
+			}, TYPEAHEAD_RESET_MS);
+
+			let start = index === -1 ? 0 : index + 1;
+			let searchOrder = [...items.slice(start), ...items.slice(0, start)];
+			let match = searchOrder.find((item) => labelFor(item).startsWith(buffer));
+			if (match) focusItem(items, match);
+		},
+		{ signal },
+	);
+
+	signal.addEventListener("abort", () => clearTimeout(resetBufferId));
+}
+
+/**
  * Adapts the WAI-ARIA menu keyboard pattern — roving tabindex, arrow-key
  * navigation, Home/End, and typeahead — onto a Menu surface's
  * `[role^="menuitem"]` descendants; only manages focus, leaving activation to native semantics.
@@ -76,85 +166,10 @@ function activeIndexOf(host: HTMLElement, items: readonly HTMLElement[]): number
  * </Menu.List>
  */
 export const menuKeys: MixinFactory<HTMLElement, [options?: MenuKeys.Options], ElementProps> =
-	createMixin<HTMLElement, [options?: MenuKeys.Options], ElementProps>((_handle) => {
-		let buffer = "";
-		let resetBufferId: ReturnType<typeof setTimeout> | undefined;
-
-		return (options = {}, props = options as ElementProps) => {
-			let resolved = props === options ? {} : options;
-
-			let selector = resolved.itemSelector ?? DEFAULT_ITEM_SELECTOR;
-
-			return ref((host: HTMLElement, signal) => {
-				let initialItems = queryItems(host, selector);
-				if (initialItems.length > 0) setRovingTabindex(initialItems, initialItems[0]!);
-
-				host.addEventListener(
-					"focusin",
-					(event) => {
-						if (!belongsToSurface(event, host)) return;
-						let target = event.target;
-						if (!(target instanceof HTMLElement)) return;
-
-						let items = queryItems(host, selector);
-						if (items.includes(target)) setRovingTabindex(items, target);
-					},
-					{ signal },
-				);
-
-				host.addEventListener(
-					"keydown",
-					(event) => {
-						if (!belongsToSurface(event, host)) return;
-
-						let items = queryItems(host, selector);
-						if (items.length === 0) return;
-
-						let index = activeIndexOf(host, items);
-
-						switch (event.key) {
-							case "ArrowDown": {
-								event.preventDefault();
-								let next = index === -1 ? items[0] : items[index + 1];
-								if (next) focusItem(items, next);
-								return;
-							}
-							case "ArrowUp": {
-								event.preventDefault();
-								let previous = index === -1 ? items[items.length - 1] : items[index - 1];
-								if (previous) focusItem(items, previous);
-								return;
-							}
-							case "Home":
-								event.preventDefault();
-								focusItem(items, items[0]!);
-								return;
-							case "End":
-								event.preventDefault();
-								focusItem(items, items[items.length - 1]!);
-								return;
-							case "Backspace":
-								buffer = buffer.slice(0, -1);
-								return;
-						}
-
-						if (!isPrintableKey(event)) return;
-
-						clearTimeout(resetBufferId);
-						buffer += event.key.toLowerCase();
-						resetBufferId = setTimeout(() => {
-							buffer = "";
-						}, TYPEAHEAD_RESET_MS);
-
-						let start = index === -1 ? 0 : index + 1;
-						let searchOrder = [...items.slice(start), ...items.slice(0, start)];
-						let match = searchOrder.find((item) => labelFor(item).startsWith(buffer));
-						if (match) focusItem(items, match);
-					},
-					{ signal },
-				);
-
-				signal.addEventListener("abort", () => clearTimeout(resetBufferId));
-			});
-		};
-	});
+	createMixin<HTMLElement, [options?: MenuKeys.Options], ElementProps>(
+		(_handle) =>
+			(options = {}, props = options as ElementProps) => {
+				let resolved = props === options ? {} : options;
+				return ref((host: HTMLElement, signal) => installMenuKeys(host, signal, resolved));
+			},
+	);

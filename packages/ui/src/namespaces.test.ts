@@ -17,7 +17,7 @@ import { describe, expect, test } from "vitest";
 const SRC = dirname(fileURLToPath(import.meta.url));
 
 /** The namespaces, each a folder under `src/` and a subpath of the package. */
-const NAMESPACES = ["landing", "docs", "chat", "color", "app"];
+const NAMESPACES = ["landing", "docs", "chat", "color", "app", "video"];
 
 /** The helper subpaths every kit shares. */
 const HELPER_SUBPATHS = ["mixins", "behaviors", "styles", "animations", "utils"];

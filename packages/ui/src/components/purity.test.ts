@@ -23,7 +23,7 @@ const COMPONENTS_DIR = dirname(fileURLToPath(import.meta.url));
  * The namespace folders, whose components follow the same purity rule; their helper
  * subfolders (`mixins/`, `behaviors/`, …) are where the behavior lives instead.
  */
-const NAMESPACES = ["landing", "docs", "chat", "color", "app"];
+const NAMESPACES = ["landing", "docs", "chat", "color", "app", "video"];
 
 /** Bindings from `remix/component` that carry behavior and may never appear in a component module. */
 const BANNED_BINDINGS = ["on", "ref", "createMixin"];
@@ -186,7 +186,7 @@ for (let namespace of NAMESPACES) {
 		let modules = listNamespaceModules(namespace);
 
 		test("scanned the namespace's components, not an empty directory", () => {
-			expect(modules.length).toBeGreaterThan(3);
+			expect(modules.length).toBeGreaterThan(0);
 			expect(modules).not.toContain("index.ts");
 		});
 

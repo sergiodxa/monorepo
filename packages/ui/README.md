@@ -127,6 +127,7 @@ A page that sticks to baseline behavior ships no library JavaScript at all.
 | `@sdxc/ui/chat`        | The message log, turns, bubbles, markers and attachments.           |
 | `@sdxc/ui/color`       | Colour fields, pickers, sliders, swatches, area and wheel.          |
 | `@sdxc/ui/app`         | Dashboard and workspace components: charts, tables, lists, toasts.  |
+| `@sdxc/ui/video`       | A video player with chapters, transcript, control bar and settings. |
 | `@sdxc/ui/<ns>/<name>` | One namespace component, by its file name: `@sdxc/ui/docs/steps`.   |
 | `@sdxc/ui/mixins`      | Opt-in DOM behaviors applied through `mix`.                         |
 | `@sdxc/ui/behaviors`   | Headless state classes built on `TypedEventTarget`.                 |
@@ -390,6 +391,16 @@ Dashboard and workspace components.
 | `menubarKeys(options?)`       | `Menubar`             | The ARIA menubar pattern, handing off into each open `Menu`.       |
 | `resizeHandle(axis, session)` | `Resizable.Handle`    | Pointer resizing through a `ResizeSession`.                        |
 | `treeKeys(model)`             | `Tree`                | The ARIA tree pattern over a `SelectionModel`.                     |
+
+### Video (`@sdxc/ui/video`)
+
+- `VideoPlayer` — a native `<video>` whose chapters and transcript are written once as data and
+  feed its WebVTT tracks, `.Scrubber`, `.Chapters` and `.Transcript`; every time is a `#t=` link
+  into the first `.Source`. `.Controls` holds `.Progress`, `.Play`, `.Time`, `.CaptionsToggle`,
+  `.Settings`, `.Theater` and `.Fullscreen`, rendered `hidden` behind the native controls until the
+  `VideoPlayerSync` island swaps them. `.Settings` takes `.CaptionsMenu`, `.SpeedMenu`,
+  `.QualityMenu`, and the page's own `.SettingsToggle` checkboxes and `.SettingsMenu` radio groups,
+  which the page reads by `name` from `change` events.
 
 ### Component helpers
 
