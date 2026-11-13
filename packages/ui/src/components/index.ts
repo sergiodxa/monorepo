@@ -46,6 +46,7 @@ export * from "./image-placeholder.js";
 export * from "./input.js";
 export * from "./item.js";
 export * from "./keyboard.js";
+export * from "./label-chip.js";
 export * from "./label.js";
 export * from "./link-button.js";
 export * from "./link.js";
