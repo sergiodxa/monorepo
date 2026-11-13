@@ -339,13 +339,13 @@ export function CheckRunIcon(handle: Handle<CheckRuns.IconProps>) {
 					inlineFlex(),
 					shrink(0),
 					fg("neutral.muted"),
+					keyframes("ui-check-run-pending", {
+						"0%, 100%": { opacity: 1 },
+						"50%": { opacity: 0.35 },
+					}),
 					when('&[data-state="failure"]', fg("danger")),
 					when('&[data-state="pending"]', [
 						fg("warning"),
-						keyframes("ui-check-run-pending", {
-							"0%, 100%": { opacity: 1 },
-							"50%": { opacity: 0.35 },
-						}),
 						motionSafe(
 							animationHost("ui-check-run-pending", {
 								duration: "1.4s",

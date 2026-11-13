@@ -1,7 +1,8 @@
 /**
  * Runs the check-run list in a real browser: the summary counts by state with plural copy from
  * labels, the list opens on its own when a run failed, rows sort failures first, each state has
- * its own icon shape, and the pending icon pulses only while motion is allowed.
+ * its own icon shape, and the pending icon pulses through real keyframe stops only while motion
+ * is allowed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,6 +66,19 @@ function mount(node: JSX.Element, width = 640): HTMLElement {
 	document.body.appendChild(host);
 	render(node, { container: host });
 	return host;
+}
+
+/**
+ * Every `@keyframes` rule under `rules`, through the `@layer` and `@media` blocks the
+ * component's styles nest them in.
+ *
+ * @yields Each keyframes rule, in stylesheet order.
+ */
+function* collectKeyframes(rules: CSSRuleList): Generator<CSSKeyframesRule> {
+	for (let rule of rules) {
+		if (rule instanceof CSSKeyframesRule) yield rule;
+		else if (rule instanceof CSSGroupingRule) yield* collectKeyframes(rule.cssRules);
+	}
 }
 
 /** The rows' run names, top to bottom. */
@@ -207,6 +221,16 @@ describe("CheckRuns", () => {
 			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
 		});
 		expect(getComputedStyle(pending()).animationName).toBe("none");
+	});
+
+	test("defines the pulse's keyframes as real stops the browser can run", () => {
+		mount(<CheckRuns runs={RUNS} labels={LABELS} />);
+		let rules = [...document.styleSheets, ...document.adoptedStyleSheets].flatMap((sheet) => [
+			...collectKeyframes(sheet.cssRules),
+		]);
+		let pulse = rules.find((rule) => rule.name === "ui-check-run-pending");
+		expect(pulse?.cssRules.length).toBe(2);
+		expect(pulse?.findRule("50%")?.style.opacity).toBe("0.35");
 	});
 
 	test("fits a 375px phone without scrolling the page sideways", async () => {
