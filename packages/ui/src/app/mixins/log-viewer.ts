@@ -1,7 +1,7 @@
 /**
- * The browser half of the log viewer: searches every line (counting matches, painting them
- * through the CSS Custom Highlight API and stepping with Enter and ⇧Enter), and streams a live
- * step's lines into place while the log follows its tail. Without it, find-in-page still works.
+ * The browser half of the log viewer: opens a failed job on its first error, searches every
+ * line (painting matches through the CSS Custom Highlight API, stepping with Enter and ⇧Enter),
+ * and streams a live step's lines in while the log follows its tail.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -338,11 +338,31 @@ async function stream(step: HTMLElement, appended: () => void, signal: AbortSign
 	}
 }
 
-/** Wires one viewer: search, the tail it follows, and every live step's stream. */
+/**
+ * Brings a finished job's first error line into view, centred in the log and on the page, so
+ * a failed job opens on why it failed. An address naming a line keeps that line instead.
+ */
+function showFirstError(root: HTMLElement): void {
+	if (root.ownerDocument.location.hash !== "") return;
+	let body = root.querySelector<HTMLElement>('[data-slot="log-viewer-body"]');
+	let line = root.querySelector<HTMLElement>(
+		'details[data-state="failure"][open] [data-log-line][data-tone="danger"]',
+	);
+	if (body === null || line === null) return;
+	let offset = line.getBoundingClientRect().top - body.getBoundingClientRect().top;
+	body.scrollTop += offset - (body.clientHeight - line.offsetHeight) / 2;
+	let box = line.getBoundingClientRect();
+	let view = root.ownerDocument.defaultView;
+	if (view !== null && (box.top < 0 || box.bottom > view.innerHeight)) {
+		line.scrollIntoView({ block: "center" });
+	}
+}
+
+/** Wires one viewer: search, the first error, the tail it follows, and every live step's stream. */
 function attach(root: HTMLElement, options: LogViewerBehavior.Options, signal: AbortSignal) {
 	attachSearch(root, options, signal);
 	let steps = [...root.querySelectorAll<HTMLElement>("[data-log-stream][data-stream-pending]")];
-	if (steps.length === 0) return;
+	if (steps.length === 0) return showFirstError(root);
 	let appended = followTail(root, signal);
 	for (let step of steps) void stream(step, appended, signal);
 }

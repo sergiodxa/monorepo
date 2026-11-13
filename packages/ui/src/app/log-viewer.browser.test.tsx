@@ -204,6 +204,27 @@ describe("LogViewer", () => {
 		expect(root.querySelectorAll("[data-log-group]")).toHaveLength(1);
 	});
 
+	test("opens a failed job on its first error line, centred in the log", async () => {
+		let root = await mount({ steps: bigJob() });
+		let body = root.querySelector<HTMLElement>('[data-slot="log-viewer-body"]')!;
+		let error = step(root, 3).querySelector<HTMLElement>('[data-log-line][data-tone="danger"]')!;
+		let line = error.getBoundingClientRect();
+		let box = body.getBoundingClientRect();
+
+		expect(body.scrollTop).toBeGreaterThan(0);
+		expect(line.top).toBeGreaterThanOrEqual(box.top);
+		expect(line.bottom).toBeLessThanOrEqual(box.bottom);
+		expect(line.top).toBeGreaterThanOrEqual(0);
+		expect(line.bottom).toBeLessThanOrEqual(window.innerHeight);
+	});
+
+	test("keeps the line an address names instead of the first error", async () => {
+		history.replaceState(null, "", "#step:1:1");
+		let root = await mount({ steps: bigJob() });
+
+		expect(root.querySelector<HTMLElement>('[data-slot="log-viewer-body"]')!.scrollTop).toBe(0);
+	});
+
 	test("paints line numbers from attributes, so copying a line copies only its text", async () => {
 		let root = await mount({ steps: smallJob() });
 		let row = root.querySelector<HTMLElement>('[id="step:3:1"]')!;
