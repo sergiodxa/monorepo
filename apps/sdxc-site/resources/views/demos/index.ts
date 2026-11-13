@@ -30,6 +30,11 @@ export interface DemoLanding {
 	 * GET form on the page (a pricing calculator, a filter) renders its answer server-side.
 	 */
 	render: (url: URL) => RemixNode;
+	/**
+	 * The content of one of the page's named frames, for a request carrying its name in
+	 * `X-Remix-Target`, such as a live calculator's bill; `null` for a name the page lacks.
+	 */
+	target?: (name: string, url: URL) => RemixNode | null;
 }
 
 /**

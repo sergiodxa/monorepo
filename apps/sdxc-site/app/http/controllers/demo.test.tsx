@@ -1,7 +1,7 @@
 /**
  * Tests `GET /demo/:slug` through the real router over a fixture demo: a demo renders
- * `noindex, nofollow` with no site chrome, an unknown slug answers the site's 404, and no
- * demo reaches robots-allowed paths, the sitemap, `/llms.txt` or the search index.
+ * `noindex, nofollow` with no site chrome, a named frame answers alone, an unknown slug answers
+ * the site's 404, and no demo reaches robots-allowed paths, the sitemap, `/llms.txt` or search.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,6 +21,8 @@ const FIXTURE: DemoLanding = {
 	artDirection: "Plain and quiet.",
 	thumbnail: () => <div id="fixture-thumbnail" />,
 	render: () => <main id="fixture-demo">Fixture landing</main>,
+	target: (name, url) =>
+		name === "fixture-bill" ? <p id="fixture-bill">{url.searchParams.get("hours")} h</p> : null,
 };
 
 /** The real registry, read before the router sees the fixture in its place. */
@@ -72,6 +74,23 @@ describe("GET /demo/:slug", () => {
 		expect((await fetchApp("/demo/fixture", { headers: { "If-None-Match": tag! } })).status).toBe(
 			304,
 		);
+	});
+
+	test("answers a named frame with its content alone, varying by target", async () => {
+		let response = await fetchApp("/demo/fixture?hours=12", {
+			headers: { "X-Remix-Target": "fixture-bill", "X-Remix-Frame": "true" },
+		});
+		let body = await response.text();
+
+		expect(body).toContain('<p id="fixture-bill">12 h</p>');
+		expect(body).not.toContain("fixture-demo");
+		expect(response.headers.get("Vary")).toContain("X-Remix-Target");
+	});
+
+	test("answers a target the demo lacks with the whole landing", async () => {
+		let response = await fetchApp("/demo/fixture", { headers: { "X-Remix-Target": "nope" } });
+
+		expect(await response.text()).toContain('<main id="fixture-demo">Fixture landing</main>');
 	});
 
 	test("answers the site's 404 for a slug no demo answers to", async () => {
