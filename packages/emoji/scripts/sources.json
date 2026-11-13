@@ -1,0 +1,22 @@
+{
+	"gemoji": {
+		"url": "https://raw.githubusercontent.com/github/gemoji/master/db/emoji.json",
+		"license": "MIT",
+		"role": "GitHub aliases, tags, and categories"
+	},
+	"iamcal": {
+		"url": "https://raw.githubusercontent.com/iamcal/emoji-data/master/emoji.json",
+		"license": "MIT",
+		"role": "Extra short_names and ASCII emoticons"
+	},
+	"emojibaseGithub": {
+		"url": "https://cdn.jsdelivr.net/npm/emojibase-data@15.3.2/en/shortcodes/github.json",
+		"license": "MIT",
+		"role": "Emojibase GitHub shortcode preset keyed by hexcode"
+	},
+	"emojibaseData": {
+		"url": "https://cdn.jsdelivr.net/npm/emojibase-data@15.3.2/en/data.json",
+		"license": "MIT",
+		"role": "Unicode order and groups for hexcode → emoji"
+	}
+}

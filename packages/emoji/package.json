@@ -1,0 +1,27 @@
+{
+	"name": "@sdxc/emoji",
+	"version": "0.0.1",
+	"description": "Emoji shortcodes, tokenize and render, with a markdown visitor and picker UI",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./catalog": "./src/catalog.ts",
+		"./markdown": "./src/markdown.ts",
+		"./ui": "./src/ui.tsx"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"generate": "bun run scripts/build-catalog.ts"
+	},
+	"dependencies": {
+		"@sdxc/markdown": "workspace:*",
+		"@sdxc/u": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.2.0"
+	},
+	"peerDependencies": {
+		"remix": "3.2.0"
+	}
+}
