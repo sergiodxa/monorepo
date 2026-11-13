@@ -55,7 +55,7 @@ const WRAP_WIDTH = "40rem";
 const BLAME_WIDTH = "var(--code-view-blame-width, 22rem)";
 
 /** Width of the blame column once the view wraps. */
-const BLAME_NARROW_WIDTH = "6.5rem";
+const BLAME_NARROW_WIDTH = "5rem";
 
 /** Number of steps the age strip runs from oldest to newest. */
 const AGE_STEPS = 5;
@@ -445,11 +445,14 @@ function tableRules(digits: number, hasBlame: boolean) {
 			"&": { inlineSize: "100%", "--code-view-blame": hasBlame ? BLAME_NARROW_WIDTH : "0px" },
 			"& > tbody": {
 				gridTemplateColumns: hasBlame
-					? `var(--code-view-blame) ${numberWidth} minmax(0, 1fr)`
+					? `var(--code-view-blame) calc(${digits}ch + 1.25rem) minmax(0, 1fr)`
 					: `${numberWidth} minmax(0, 1fr)`,
 			},
 			"& td:last-child": { whiteSpace: "pre-wrap", overflowWrap: "anywhere", minInlineSize: 0 },
-			"& a[data-line-number]": { paddingInlineStart: "1.25rem" },
+			"& a[data-line-number]": hasBlame
+				? { paddingInline: "0.5rem 0.75rem" }
+				: { paddingInlineStart: "1.25rem" },
+			"& td[data-blame]": { paddingInline: "0.5rem" },
 			"& [data-slot='blame-subject'], & [data-slot='blame-author']": { display: "none" },
 		},
 	});

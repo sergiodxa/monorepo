@@ -376,6 +376,27 @@ describe("CodeView layout", () => {
 		expect(number(5).getBoundingClientRect().top).toBeCloseTo(long.top, 0);
 	});
 
+	test("gives the code most of a 375 screen beside blame, the age kept whole", async () => {
+		await page.viewport(375, 812);
+		let root = mount({
+			now: "2026-11-13",
+			blame: [
+				{
+					start: 1,
+					end: 30,
+					commit: { sha: "a", subject: "A", author: "Ann", date: "2026-11-04", href: "/a" },
+				},
+			],
+		});
+		let cell = root.querySelector<HTMLElement>("td[data-blame]")!;
+		let time = cell.querySelector("time")!;
+
+		expect(code(4).getBoundingClientRect().width).toBeGreaterThanOrEqual(
+			root.getBoundingClientRect().width * 0.6,
+		);
+		expect(time.scrollWidth).toBeLessThanOrEqual(time.clientWidth + 1);
+	});
+
 	test("scrolls long lines inside the view on a wide screen", async () => {
 		let root = mount({ code: `let line = "${"x".repeat(400)}";` });
 		let scroller = root.querySelector<HTMLElement>('[data-slot="code-view-scroll"]')!;
