@@ -163,6 +163,28 @@ describe("checkDistSpecifiers", () => {
 			"Emitted files reach outside dist/:\ndist/index.d.ts: ../../types/src/index.js",
 		);
 	});
+
+	test("rejects workspace package paths TypeScript writes for inferred return types", async () => {
+		let inferredDir = join(stagingRoot, "inferred");
+		await mkdir(join(inferredDir, "dist"), { recursive: true });
+		await writeFile(
+			join(inferredDir, "dist/index.d.ts"),
+			[
+				'export declare function a(): import("packages/u/src").Mixin;',
+				'export declare function b(): import("packages/u/src/index.js").Mixin;',
+			].join("\n"),
+		);
+
+		let result = await checkDistSpecifiers(inferredDir);
+
+		expect(isFailure(result) && result.error.message).toBe(
+			[
+				"Emitted files reach outside dist/:",
+				"dist/index.d.ts: packages/u/src",
+				"dist/index.d.ts: packages/u/src/index.js",
+			].join("\n"),
+		);
+	});
 });
 
 describe("checkExportTargets", () => {
