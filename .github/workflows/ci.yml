@@ -43,9 +43,13 @@ jobs:
       signed: ${{ steps.verify.outputs.signed }}
 
     steps:
+      # Full history: apps/sdxc-site's Delta extractor reads git log/blame for the demo, and a
+      # shallow clone leaves those documents empty while still writing the file tree.
       - &checkout
         name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - &setup-bun
         name: Setup Bun
