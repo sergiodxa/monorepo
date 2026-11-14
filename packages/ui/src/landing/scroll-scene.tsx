@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UtilityMixin } from "@sdxc/u";
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { animation } from "@sdxc/u/animation";
@@ -129,7 +130,7 @@ export function sceneMotion(
 	keyframes: ScrollScene.Keyframes,
 	range: string = DEFAULT_RANGE,
 	easing = "linear",
-) {
+): UtilityMixin {
 	return supports(
 		TIMELINE_SUPPORT,
 		media(
