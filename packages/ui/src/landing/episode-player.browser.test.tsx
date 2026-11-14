@@ -55,6 +55,16 @@ function chapterLinks(root: HTMLElement): HTMLAnchorElement[] {
 	return [...root.querySelectorAll<HTMLAnchorElement>('[data-slot="episode-player-chapters"] a')];
 }
 
+/**
+ * Fires a plain click on a time link without following its `href`. `HTMLElement.click()` would
+ * navigate Vitest Browser Mode's iframe to the media file when the seek handler is late.
+ */
+function clickTimeLink(link: HTMLAnchorElement): MouseEvent {
+	let click = new MouseEvent("click", { bubbles: true, cancelable: true });
+	link.dispatchEvent(click);
+	return click;
+}
+
 describe("EpisodePlayer", () => {
 	test("writes times as m:ss under an hour and h:mm:ss from one", () => {
 		expect(formatEpisodeTime(0)).toBe("0:00");
@@ -80,7 +90,7 @@ describe("EpisodePlayer", () => {
 	test("a chapter link seeks the player and becomes the current chapter", () => {
 		let root = mountPlayer();
 		let [, second] = chapterLinks(root);
-		second!.click();
+		expect(clickTimeLink(second!).defaultPrevented).toBe(true);
 		expect(audioOf(root).currentTime).toBe(112);
 		expect(second!.getAttribute("aria-current")).toBe("true");
 		expect(chapterLinks(root).filter((link) => link.hasAttribute("aria-current"))).toHaveLength(1);

@@ -99,6 +99,24 @@ function chapterLinks(root: HTMLElement): HTMLAnchorElement[] {
 	return [...root.querySelectorAll<HTMLAnchorElement>('[data-slot="video-player-chapters"] a')];
 }
 
+/**
+ * Fires a plain click on a time link without following its `href`. `HTMLElement.click()` would
+ * navigate Vitest Browser Mode's iframe to the media file when the seek handler is late.
+ */
+function clickTimeLink(link: HTMLAnchorElement): MouseEvent {
+	let click = new MouseEvent("click", { bubbles: true, cancelable: true });
+	link.dispatchEvent(click);
+	return click;
+}
+
+/**
+ * Stops Vitest Browser Mode from treating the next unprevented link click as a navigation out
+ * of the test iframe, so a modified-click assertion can leave the seek handler alone.
+ */
+function ignoreNextNavigation(): void {
+	document.addEventListener("click", (event) => event.preventDefault(), { once: true });
+}
+
 /** The first element under `root` matching `selector`, failing the test when there is none. */
 function get<T extends Element = HTMLElement>(root: Element, selector: string): T {
 	let found = root.querySelector<T>(selector);
@@ -202,7 +220,7 @@ describe("VideoPlayer", () => {
 	test("a chapter link seeks the video and becomes the current chapter", () => {
 		let root = mount(1024);
 		let second = chapterLinks(root)[1]!;
-		second.click();
+		expect(clickTimeLink(second).defaultPrevented).toBe(true);
 		expect(get<HTMLVideoElement>(root, "video").currentTime).toBe(72);
 		expect(second.getAttribute("aria-current")).toBe("true");
 		expect(chapterLinks(root).filter((link) => link.hasAttribute("aria-current"))).toHaveLength(1);
@@ -212,8 +230,9 @@ describe("VideoPlayer", () => {
 		let root = mount(1024);
 		let link = chapterLinks(root)[1]!;
 		let click = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey: true });
+		ignoreNextNavigation();
 		link.dispatchEvent(click);
-		expect(click.defaultPrevented).toBe(false);
+		expect(get<HTMLVideoElement>(root, "video").currentTime).toBe(0);
 		expect(link.hasAttribute("aria-current")).toBe(false);
 	});
 
