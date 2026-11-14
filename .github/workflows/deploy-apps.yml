@@ -173,8 +173,12 @@ jobs:
         working-directory: apps/${{ matrix.app }}
 
     steps:
+      # Full history: sdxc-site's build runs extract-delta, which needs non-shallow git log/blame
+      # so the Delta demo ships commits rather than an empty shallow history.
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
