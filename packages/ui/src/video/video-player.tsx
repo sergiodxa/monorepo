@@ -454,7 +454,6 @@ export function VideoPlayer(handle: Handle<VideoPlayer.Props, VideoPlayer.Contex
 					mix,
 				)}
 			>
-				<VideoPlayerSync />
 				<div
 					data-slot="video-player-layout"
 					mix={[
@@ -482,6 +481,7 @@ export function VideoPlayer(handle: Handle<VideoPlayer.Props, VideoPlayer.Contex
 					</div>
 					{side}
 				</div>
+				<VideoPlayerSync />
 			</figure>
 		);
 	};
@@ -1806,7 +1806,8 @@ function optionBadge() {
 /**
  * The island inside every {@link VideoPlayer}: a hidden marker that seeks from time links,
  * marks what plays, and swaps the native controls for a {@link VideoPlayer.Controls} bar.
- * It loads from `@sdxc/ui/video/video-player`, which the browser entry maps to an import.
+ * It sits after the screen's `<video>` so its insert handler can find that element. It loads
+ * from `@sdxc/ui/video/video-player`, which the browser entry maps to an import.
  */
 export const VideoPlayerSync: EntryComponent<Record<never, never>> = clientEntry(
 	"@sdxc/ui/video/video-player#VideoPlayerSync",
