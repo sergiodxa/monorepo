@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UtilityMixin } from "@sdxc/u";
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { raw, mergeMix } from "@sdxc/u/general";
@@ -79,6 +80,6 @@ export function PhoneFrame(handle: Handle<PhoneFrame.Props>) {
  * @example
  * <img src={shot} alt="" mix={[screenCorners()]} />
  */
-export function screenCorners() {
+export function screenCorners(): UtilityMixin {
 	return raw({ overflow: "hidden", borderRadius: "12.5% / 5.8%" });
 }

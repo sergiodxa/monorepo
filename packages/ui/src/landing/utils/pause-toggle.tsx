@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UtilityMixin } from "@sdxc/u";
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { PauseIcon, PlayIcon } from "@sdxc/icons";
@@ -56,7 +57,7 @@ export function PauseToggle(handle: Handle<PauseToggle.Props>) {
  * @param target A descendant selector that also pauses on hover and focus.
  * @returns A `css()` mixin for the element that holds both the toggle and the loop.
  */
-export function pausedWhenChecked(target?: string) {
+export function pausedWhenChecked(target?: string): UtilityMixin {
 	let paused = raw({ animationPlayState: "paused" });
 
 	let checked = '&:has([data-slot="pause-toggle"] :checked)';

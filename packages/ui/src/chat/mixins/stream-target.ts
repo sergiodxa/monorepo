@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UtilityMixin } from "@sdxc/u";
+
 import { keyframes } from "@sdxc/u/animation";
 import { raw } from "@sdxc/u/general";
 import { media } from "@sdxc/u/responsive";
@@ -28,7 +30,7 @@ const FALLBACK_DELAY = "2.5s";
  * @returns The mixins to spread into the reply's `mix`.
  * @example <div id="reply-7" data-stream-pending mix={[streamTarget()]}>…</div>
  */
-export function streamTarget() {
+export function streamTarget(): UtilityMixin[] {
 	return [
 		keyframes(FALLBACK_KEYFRAMES, { to: { visibility: "visible" } }),
 		when(`& [${STREAM_HIDDEN_ATTRIBUTE}]`, raw({ display: "none" })),
