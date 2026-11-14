@@ -244,9 +244,13 @@ async function walk(dir: string): Promise<string[]> {
 	return nested.flat();
 }
 
-/** A specifier that names a source tree, or a relative one that resolves above `dist/`. */
+/**
+ * A specifier that names a workspace source tree (`…/src/…`, `…/src`, or a bare `packages/…`
+ * path TypeScript writes when a return type is inferred across a workspace link), or a
+ * relative one that resolves above `dist/`.
+ */
 function escapesDist(specifier: string, file: string, distDir: string): boolean {
-	if (specifier.includes("/src/")) return true;
+	if (specifier.startsWith("packages/") || /(?:^|\/)src(?:\/|$)/.test(specifier)) return true;
 	if (!specifier.startsWith(".")) return false;
 	return relative(distDir, resolve(dirname(file), specifier)).startsWith("..");
 }
