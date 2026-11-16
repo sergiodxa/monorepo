@@ -440,4 +440,35 @@ describe("LogViewer", () => {
 		await expect.element(refresh).toBeVisible();
 		expect(refresh.element().getAttribute("href")).toBe("/runs/8");
 	});
+
+	test("links a streamed line only to an http(s) address", async () => {
+		WORKER.use(
+			http.get("/runs/9/log", () => HttpResponse.text("safe\n")),
+			http.get("/runs/10/log", () => HttpResponse.text("unsafe\n")),
+		);
+		let root = await mount({
+			steps: [
+				{
+					name: "Safe",
+					state: "running",
+					lines: lines(2),
+					stream: { src: "/runs/9/log", refresh: "/runs/9" },
+				},
+				{
+					name: "Unsafe",
+					state: "running",
+					lines: lines(2),
+					stream: { src: "/runs/10/log", refresh: "/runs/10" },
+				},
+			],
+			lineHref: (index, n) => (index === 1 ? `/lines/${n}` : `javascript:alert(${n})`),
+		});
+		await until(() => step(root, 2).getAttribute("data-stream-end") === "done");
+		await until(() => step(root, 1).getAttribute("data-stream-end") === "done");
+		let safe = step(root, 1).querySelector<HTMLAnchorElement>('a[data-n="3"]')!;
+		let unsafe = step(root, 2).querySelector<HTMLAnchorElement>('a[data-n="3"]')!;
+
+		expect(safe.href).toBe(new URL("/lines/3", location.href).href);
+		expect(unsafe.hasAttribute("href")).toBe(false);
+	});
 });

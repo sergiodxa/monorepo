@@ -200,6 +200,17 @@ interface LiveStep {
 }
 
 /**
+ * Resolves a streamed line's link against the page, keeping only http(s) targets: the template
+ * comes from the DOM, so a `javascript:` or `data:` one leaves the line number unlinked.
+ */
+function webHref(href: string, base: string): string | undefined {
+	let url = URL.parse(href, base);
+	if (url === null) return undefined;
+	if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+	return url.href;
+}
+
+/**
  * Builds one streamed line in the markup the server draws: a row holding its number link and
  * its spans, or a fold whose summary is the row. An `##[endgroup]` closes the innermost fold.
  */
@@ -222,7 +233,8 @@ function appendLine(live: LiveStep, raw: string): void {
 	if (hash !== -1) row.id = decodeURIComponent(href.slice(hash + 1));
 	if (marker !== undefined && !isGroup) row.setAttribute("data-tone", marker);
 	let link = document.createElement("a");
-	link.href = href;
+	let target = webHref(href, document.baseURI);
+	if (target !== undefined) link.href = target;
 	link.dataset["n"] = String(n);
 	if (ts !== undefined) link.dataset["ts"] = formatLogTime(ts);
 	link.tabIndex = -1;
