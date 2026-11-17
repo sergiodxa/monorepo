@@ -379,6 +379,7 @@ Dashboard and workspace components.
 - `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
   pointer-positioned menu.
 - `PageHeader` — a screen's title row and tabs; tabs that overflow fold into a More menu.
+- `ProfilePicker` — a shared account's "who is using this?" grid; each `.Profile` is a submit button.
 - `CommandPalette` — a ⌘K command list; `CommandPalette.Finder` is a fuzzy file finder page.
 - `FilterMenu` — a filterable popover of links, radios or checkboxes, posted as a form on close.
 - `CheckRuns`, `MergeBox` — a commit's checks summarised by state, and a merge box that says why it is blocked.
@@ -423,6 +424,8 @@ Dashboard and workspace components.
   buttons at its edges.
 - `EpisodeList` — a season as an `<ol>` of `.Item` links with a still, number, runtime, synopsis
   and watched bar.
+- `TitleHero` — a title's art edge to edge under the top bar, faded into the page, with
+  `.Eyebrow`, `.Title`, `.Facts`, `.Rating`, `.Summary` and `.Actions`.
 
 ### Component helpers
 

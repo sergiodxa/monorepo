@@ -82,6 +82,7 @@ export * from "./mixins/tree-filter.js";
 export { TREE_NAVIGATION_ROW_SELECTOR, treeNavigation } from "./mixins/tree-navigation.js";
 export * from "./optimistic-toggle.js";
 export * from "./page-header.js";
+export * from "./profile-picker.js";
 export * from "./range-picker.js";
 export * from "./resizable.js";
 export * from "./gantt.js";
