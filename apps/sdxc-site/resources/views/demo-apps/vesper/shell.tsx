@@ -16,6 +16,7 @@ import {
 	ClapperboardIcon,
 	HouseIcon,
 	PencilIcon,
+	RotateCcwIcon,
 	SearchIcon,
 	TvIcon,
 } from "@sdxc/icons";
@@ -190,6 +191,14 @@ function ProfileMenu(handle: Handle<{ viewer: Viewer }>) {
 					</span>
 				</Menu.Item>
 				<Menu.Separator />
+				<form method="post" action={actionHref("reset")} mix={[raw({ display: "contents" })]}>
+					<Menu.Item type="submit">
+						<span mix={[raw({ display: "inline-flex", alignItems: "center", gap: "0.75rem" })]}>
+							<RotateCcwIcon aria-hidden="true" size={18} />
+							Reset the demo
+						</span>
+					</Menu.Item>
+				</form>
 				<Menu.Item href={routes.demos.href()}>Sign out of Vesper</Menu.Item>
 			</Menu>
 		);

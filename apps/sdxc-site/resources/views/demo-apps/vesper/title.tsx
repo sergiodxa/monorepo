@@ -9,7 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { ChevronDownIcon } from "@sdxc/icons";
+import { CheckIcon, ChevronDownIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -573,9 +573,22 @@ function SeasonPicker(handle: Handle<{ title: Title; season: Season; seasons: Se
 					Season {season.number}
 					<ChevronDownIcon aria-hidden="true" size={18} />
 				</button>
-				<Menu id={menu} placement="bottom-end" aria-label="Seasons">
+				<Menu id={menu} placement="bottom-start" aria-label="Seasons">
 					{seasons.map((entry) => (
-						<Menu.Item href={href(`title/${title.id}?tab=episodes&season=${entry.number}`)}>
+						<Menu.Item
+							href={href(`title/${title.id}?tab=episodes&season=${entry.number}`)}
+							aria-current={entry.number === season.number ? "page" : undefined}
+						>
+							<CheckIcon
+								aria-hidden="true"
+								size={16}
+								mix={[
+									raw({
+										marginInlineEnd: "0.5rem",
+										opacity: entry.number === season.number ? "1" : "0",
+									}),
+								]}
+							/>
 							{`Season ${entry.number}`}
 							<span
 								mix={[

@@ -42,7 +42,7 @@ import Home from "./home";
 import { Blank, Gutter, LIST_FRAME_PREFIX, ListButton } from "./parts";
 import WhoIsWatching from "./profiles";
 import VesperShell, { LoadingBar } from "./shell";
-import { isPersonal, listCookie, profileCookie, readViewer } from "./state";
+import { isPersonal, listCookie, profileCookie, readViewer, resetCookies } from "./state";
 import { VesperThumbnail } from "./thumbnail";
 import TitlePage, { titleTab } from "./title";
 import WatchPage from "./watch";
@@ -138,6 +138,14 @@ const TOASTS: DemoApp["toasts"] = Object.fromEntries([
 			},
 		],
 	]),
+	[
+		"reset",
+		{
+			color: "neutral",
+			title: "Demo reset",
+			description: "Profiles and lists are back to how they started.",
+		},
+	],
 	...[
 		["profile-noa", "Watching as Noa"],
 		["profile-theo", "Watching as Theo"],
@@ -393,6 +401,8 @@ export default {
 		);
 	},
 	submit(page, form, request) {
+		if (page === "reset")
+			return { page: "", toast: "reset", cookies: resetCookies(request.cookie) };
 		let [first, second, third, extra] = page.split("/");
 		if (extra !== undefined || second === undefined) return null;
 		if (first === "profiles" && third === undefined) {

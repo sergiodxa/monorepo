@@ -111,3 +111,15 @@ export function listCookie(viewer: Viewer, title: string, add: boolean): string 
 	let next = add ? [title, ...rest] : rest;
 	return cookieHeader(listCookieName(viewer.profile.id), encodeURIComponent(next.join(",")));
 }
+
+/**
+ * The cookies that put the demo back as it started: every Vesper cookie the request carries,
+ * expired, so the profile and each profile's list return to their starting state.
+ *
+ * @param header The request's `Cookie` header.
+ */
+export function resetCookies(header: string | null): string[] {
+	return [...vesperCookies(header).keys()].map(
+		(name) => `${name}=; Path=${demoAppCookiePath(SLUG)}; Max-Age=0; SameSite=Lax; HttpOnly`,
+	);
+}
