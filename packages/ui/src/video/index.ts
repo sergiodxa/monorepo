@@ -1,7 +1,7 @@
 /**
- * Barrel for `@sdxc/ui/video`: a video player and its parts, from the screen and the
- * chapter list to the control bar and its settings menu, with the helpers only they use.
- * The player also imports on its own as `@sdxc/ui/video/video-player`.
+ * Barrel for `@sdxc/ui/video`: a video player and its parts, and the catalogue pieces a
+ * video library browses with (cards, shelves, episode lists), with the helpers only they use.
+ * Each module also imports on its own, as `@sdxc/ui/video/video-player`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,4 +9,7 @@
 
 export * from "./mixins/video-player-sync.js";
 export * from "./utils/timeline.js";
+export * from "./episode-list.js";
+export * from "./video-card.js";
 export * from "./video-player.js";
+export * from "./video-shelf.js";

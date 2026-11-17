@@ -118,24 +118,24 @@ A page that sticks to baseline behavior ships no library JavaScript at all.
 
 ## API
 
-| Import                 | Contains                                                            |
-| ---------------------- | ------------------------------------------------------------------- |
-| `@sdxc/ui`             | The general components, usable on any page, and their parts.        |
-| `@sdxc/ui/<name>`      | One general component, by its file name: `@sdxc/ui/youtube-embed`.  |
-| `@sdxc/ui/landing`     | Landing bands, composition craft and animated visuals.              |
-| `@sdxc/ui/docs`        | The docs shell, navigation and content blocks.                      |
-| `@sdxc/ui/chat`        | The message log, turns, bubbles, markers and attachments.           |
-| `@sdxc/ui/color`       | Colour fields, pickers, sliders, swatches, area and wheel.          |
-| `@sdxc/ui/app`         | Dashboard and workspace components: charts, tables, lists, toasts.  |
-| `@sdxc/ui/video`       | A video player with chapters, transcript, control bar and settings. |
-| `@sdxc/ui/<ns>/<name>` | One namespace component, by its file name: `@sdxc/ui/docs/steps`.   |
-| `@sdxc/ui/mixins`      | Opt-in DOM behaviors applied through `mix`.                         |
-| `@sdxc/ui/behaviors`   | Headless state classes built on `TypedEventTarget`.                 |
-| `@sdxc/ui/animations`  | CSS-only motion factories and the `durations`/`easings` tokens.     |
-| `@sdxc/ui/styles`      | Style recipes composed inside a `mix` array.                        |
-| `@sdxc/ui/utils`       | Framework-free color, chart, geometry, key and DOM helpers; types.  |
-| `@sdxc/ui/reset.css`   | The base reset in `@layer base`.                                    |
-| `@sdxc/ui/theme.css`   | The `--ui-*` semantic variables and the `--ui-chart-1`…`8` palette. |
+| Import                 | Contains                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `@sdxc/ui`             | The general components, usable on any page, and their parts.                      |
+| `@sdxc/ui/<name>`      | One general component, by its file name: `@sdxc/ui/youtube-embed`.                |
+| `@sdxc/ui/landing`     | Landing bands, composition craft and animated visuals.                            |
+| `@sdxc/ui/docs`        | The docs shell, navigation and content blocks.                                    |
+| `@sdxc/ui/chat`        | The message log, turns, bubbles, markers and attachments.                         |
+| `@sdxc/ui/color`       | Colour fields, pickers, sliders, swatches, area and wheel.                        |
+| `@sdxc/ui/app`         | Dashboard and workspace components: charts, tables, lists, toasts.                |
+| `@sdxc/ui/video`       | A video player, plus the cards, shelves and episode lists a library browses with. |
+| `@sdxc/ui/<ns>/<name>` | One namespace component, by its file name: `@sdxc/ui/docs/steps`.                 |
+| `@sdxc/ui/mixins`      | Opt-in DOM behaviors applied through `mix`.                                       |
+| `@sdxc/ui/behaviors`   | Headless state classes built on `TypedEventTarget`.                               |
+| `@sdxc/ui/animations`  | CSS-only motion factories and the `durations`/`easings` tokens.                   |
+| `@sdxc/ui/styles`      | Style recipes composed inside a `mix` array.                                      |
+| `@sdxc/ui/utils`       | Framework-free color, chart, geometry, key and DOM helpers; types.                |
+| `@sdxc/ui/reset.css`   | The base reset in `@layer base`.                                                  |
+| `@sdxc/ui/theme.css`   | The `--ui-*` semantic variables and the `--ui-chart-1`…`8` palette.               |
 
 A namespace builds on the general components and never on another namespace, and exports the
 mixins, behaviors and styles only its components use; the shared helper subpaths hold the rest.
@@ -418,6 +418,11 @@ Dashboard and workspace components.
   `VideoPlayerSync` island swaps them. `.Settings` takes `.CaptionsMenu`, `.SpeedMenu`,
   `.QualityMenu`, and the page's own `.SettingsToggle` checkboxes and `.SettingsMenu` radio groups,
   which the page reads by `name` from `change` events.
+- `VideoCard` — a title as one link: 16:9 or 2:3 art, a badge, a watched bar, its name and meta.
+- `VideoShelf` — a titled row of `.Item`s that scrolls sideways; `VideoShelfSync` reveals paging
+  buttons at its edges.
+- `EpisodeList` — a season as an `<ol>` of `.Item` links with a still, number, runtime, synopsis
+  and watched bar.
 
 ### Component helpers
 
