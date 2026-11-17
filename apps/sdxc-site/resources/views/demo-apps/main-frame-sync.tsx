@@ -53,6 +53,8 @@ export const MainFrameSync = clientEntry(
 		let scrolls = new Map<string, number>();
 		let lastNavigation: string | null = null;
 		let leftPath = "";
+		/** The address of the in-app link last clicked, to find it again after a swap redraws it. */
+		let pressedHref: string | null = null;
 		/**
 		 * The form and button of the last post, kept until the next navigation: a reload can
 		 * settle before the frame swaps, so focus is restored again once the swap lands.
@@ -135,6 +137,9 @@ export const MainFrameSync = clientEntry(
 			let source = event.target instanceof Element ? event.target : null;
 			let element = source?.closest<HTMLAnchorElement | HTMLFormElement>("a[href], form");
 			if (element === null || element === undefined) return;
+			if (event.type === "click" && element instanceof HTMLAnchorElement) {
+				pressedHref = element.getAttribute("href");
+			}
 			let owned = element.hasAttribute("data-main-target");
 			if (!owned && element.hasAttribute("data-rmx-target")) return;
 			let address = element instanceof HTMLAnchorElement ? element.href : element.action;
@@ -176,6 +181,7 @@ export const MainFrameSync = clientEntry(
 			if (frame === undefined) return;
 			event.preventDefault();
 			let body = new FormData(form, submitter instanceof HTMLElement ? submitter : null);
+			let postedFrom = location.pathname;
 			setLoading(true);
 			void frame.reload({ src: action, method: "post", encType: form.enctype, body }).then(
 				() => {
@@ -183,6 +189,7 @@ export const MainFrameSync = clientEntry(
 					let used = submitter instanceof HTMLElement ? submitter : null;
 					form.reset();
 					sync("action");
+					if (location.pathname !== postedFrom) scroller().scrollTop = 0;
 					posted = { form, submitter: used };
 					restoreFocus(form, used);
 				},
@@ -262,7 +269,9 @@ export const MainFrameSync = clientEntry(
 				document.activeElement !== document.body && document.activeElement?.isConnected;
 			let moveFocus = cause === "action" ? !screen.contains(document.activeElement) : !samePath;
 			if (moveFocus || !focusKept) {
-				focusHeading(screen);
+				let pressed = samePath && cause !== "action" ? pressedLink(screen) : null;
+				if (pressed === null) focusHeading(screen);
+				else pressed.focus({ preventScroll: true, focusVisible: false });
 			}
 			announce(title ?? "");
 		}
@@ -290,6 +299,16 @@ export const MainFrameSync = clientEntry(
 		}
 
 		/**
+		 * The link the visitor pressed to filter or switch tabs on the same screen, as the swap
+		 * redrew it, so focus stays where they were working; `null` when the new screen has none.
+		 */
+		function pressedLink(screen: HTMLElement): HTMLElement | null {
+			if (pressedHref === null) return null;
+			let link = screen.querySelector<HTMLElement>(`a[href="${CSS.escape(pressedHref)}"]`);
+			return link !== null && link.checkVisibility() ? link : null;
+		}
+
+		/**
 		 * Moves focus to the screen's first visible heading, so a reader starts at the new content;
 		 * a screen whose heading is hidden (a list pane on a phone) takes focus itself.
 		 */
@@ -299,7 +318,7 @@ export const MainFrameSync = clientEntry(
 					(candidate) => candidate.getClientRects().length > 0,
 				) ?? screen;
 			heading.tabIndex = -1;
-			heading.focus({ preventScroll: true });
+			heading.focus({ preventScroll: true, focusVisible: false });
 		}
 
 		/** The part of the document title after the screen's own, such as " — Pulse". */

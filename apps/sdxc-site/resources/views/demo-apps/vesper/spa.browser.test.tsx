@@ -185,6 +185,34 @@ describe("Vesper as a single-page app", () => {
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 	});
 
+	test("keeps focus on the genre chip it pressed rather than the heading", async () => {
+		mounted = await mountApp(vesper, "vesper", "series");
+		let chip = document.querySelector<HTMLElement>(
+			'a[href="/demo/apps/vesper/series?genre=comedy"]',
+		);
+		chip?.focus();
+		await press(chip);
+		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/series?genre=comedy"));
+		await vi.waitFor(() =>
+			expect(document.activeElement?.getAttribute("href")).toBe(
+				"/demo/apps/vesper/series?genre=comedy",
+			),
+		);
+		expect(document.activeElement?.tagName).not.toBe("H1");
+	});
+
+	test("starts at the top after a profile switch posted from far down a page", async () => {
+		mounted = await mountApp(vesper, "vesper", "series");
+		let scroller = document.scrollingElement ?? document.documentElement;
+		document.body.style.minBlockSize = "4000px";
+		scroller.scrollTop = 1200;
+		expect(scroller.scrollTop).toBeGreaterThan(0);
+
+		await press(document.querySelector('form[action$="/profiles/theo"] button'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper"));
+		await vi.waitFor(() => expect(scroller.scrollTop).toBe(0));
+	});
+
 	test("reveals each shelf's paging buttons once the island runs", async () => {
 		mounted = await mountApp(vesper, "vesper", "");
 
