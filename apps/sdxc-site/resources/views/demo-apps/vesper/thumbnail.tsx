@@ -52,7 +52,7 @@ export function VesperThumbnail() {
 						}),
 					]}
 				>
-					<KeyArt title={featured} variant="thumb-hero" named={false} />
+					<KeyArt title={featured} named={false} />
 				</div>
 				<div
 					mix={[
@@ -165,7 +165,7 @@ export function VesperThumbnail() {
 									}),
 								]}
 							>
-								<KeyArt title={title} variant="thumb" />
+								<KeyArt title={title} />
 							</span>
 						);
 					})}

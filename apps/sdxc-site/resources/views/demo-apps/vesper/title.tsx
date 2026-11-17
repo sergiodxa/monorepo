@@ -15,9 +15,9 @@ import { EpisodeList } from "@sdxc/ui/video";
 import type { Progress, Season, Title } from "./data";
 import type { Viewer } from "./state";
 
-import { KeyArt } from "./art";
+import { KeyArt, stillFrame } from "./art";
 import { CONTINUE, genreNames, similarTitles, visibleTitles, watchHref } from "./data";
-import { Billboard, Chips, Gutter, ListButton, PlayButton, TitleShelf } from "./parts";
+import { Billboard, Chips, Gutter, ListFrame, PlayButton, TitleShelf } from "./parts";
 
 namespace TitlePage {
 	export interface Props {
@@ -97,7 +97,7 @@ export default function TitlePage(handle: Handle<TitlePage.Props>) {
 					actions={
 						<>
 							<PlayButton href={action.href} label={action.label} />
-							<ListButton title={title} viewer={viewer} back={back} />
+							<ListFrame title={title} back={back} />
 						</>
 					}
 				>
@@ -184,8 +184,7 @@ function Episodes(handle: Handle<Episodes.Props>) {
 									still={
 										<KeyArt
 											title={title}
-											variant={`s${season.number}e${episode.number}`}
-											frame={season.number * 10 + episode.number}
+											frame={stillFrame(season.number, episode.number)}
 											named={false}
 										/>
 									}

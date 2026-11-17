@@ -25,7 +25,7 @@ import {
 	visibleTitles,
 	watchHref,
 } from "./data";
-import { Billboard, InfoButton, ListButton, PlayButton, ResumeCard, TitleShelf } from "./parts";
+import { Billboard, InfoButton, ListFrame, PlayButton, ResumeCard, TitleShelf } from "./parts";
 
 /** The genre shelves home shows, in order. */
 const GENRE_SHELVES = ["thriller", "drama", "documentary", "comedy", "family"];
@@ -58,7 +58,7 @@ export default function Home(handle: Handle<{ viewer: Viewer }>) {
 						<>
 							<PlayButton href={watchHref(featured)} label="Play" />
 							<InfoButton href={href(`title/${featured.id}`)} />
-							<ListButton title={featured} viewer={viewer} back="" compact />
+							<ListFrame title={featured} back="" compact />
 						</>
 					}
 				>

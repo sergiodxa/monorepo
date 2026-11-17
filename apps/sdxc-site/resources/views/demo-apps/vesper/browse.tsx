@@ -10,15 +10,18 @@
 import type { Handle } from "remix/component";
 
 import { SearchIcon } from "@sdxc/icons";
+import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { LinkButton } from "@sdxc/ui";
+import { Frame } from "remix/component";
 
 import type { Genre, Title } from "./data";
 import type { Viewer } from "./state";
 
 import { GENRES, TRENDING, findTitle, href, searchTitles, visibleTitles } from "./data";
 import { Blank, Chips, Gutter, PosterGrid, ScreenHeading } from "./parts";
+import { SearchLive } from "./search-live";
 
 namespace Catalogue {
 	export interface Props {
@@ -64,7 +67,6 @@ export function Catalogue(handle: Handle<Catalogue.Props>) {
 					) : (
 						<PosterGrid
 							titles={shown}
-							variant={`${page}-grid`}
 							label={genre === undefined ? heading : `${heading}, ${genre.name}`}
 						/>
 					)}
@@ -95,7 +97,7 @@ export function GenrePage(handle: Handle<{ viewer: Viewer; genre: Genre }>) {
 							The Kids profile shows titles rated for all ages only.
 						</Blank>
 					) : (
-						<PosterGrid titles={titles} variant="genre-grid" label={genre.name} />
+						<PosterGrid titles={titles} label={genre.name} />
 					)}
 				</Gutter>
 			</>
@@ -103,10 +105,20 @@ export function GenrePage(handle: Handle<{ viewer: Viewer; genre: Genre }>) {
 	};
 }
 
+/** The name of the frame holding search results, which typing reloads. */
+export const SEARCH_FRAME = "vesper-search-results";
+
+/** The search form's id, which the live results island watches. */
+const SEARCH_FORM = "vesper-search";
+
+/** The polite status the live results speak their count through. */
+const SEARCH_STATUS = "vesper-search-status";
+
 /** The search screen's box: a GET form that puts the query in the address. */
 function SearchForm(handle: Handle<{ query: string }>) {
 	return () => (
 		<form
+			id={SEARCH_FORM}
 			method="get"
 			action={href("search")}
 			role="search"
@@ -163,7 +175,30 @@ function SearchForm(handle: Handle<{ query: string }>) {
  * Search: before a query, genres to browse and what is popular; after, the matches by name
  * first, or an empty state that offers the genres instead.
  */
-export function SearchPage(handle: Handle<{ viewer: Viewer; query: string }>) {
+export function SearchPage(handle: Handle<{ query: string }>) {
+	return () => {
+		let { query } = handle.props;
+		let source = query.trim() === "" ? "search" : `search?q=${encodeURIComponent(query)}`;
+		return (
+			<>
+				<ScreenHeading title="Search">
+					<SearchForm query={query} />
+				</ScreenHeading>
+				<Gutter>
+					<Frame name={SEARCH_FRAME} src={href(source)} />
+				</Gutter>
+				<span id={SEARCH_STATUS} role="status" mix={[visuallyHidden()]} />
+				<SearchLive form={SEARCH_FORM} frame={SEARCH_FRAME} status={SEARCH_STATUS} />
+			</>
+		);
+	};
+}
+
+/**
+ * What a query finds for the viewer, the content of the results frame: browsing before a query,
+ * then the matches by name first, or an empty state offering the genres instead.
+ */
+export function SearchResults(handle: Handle<{ viewer: Viewer; query: string }>) {
 	return () => {
 		let { query, viewer } = handle.props;
 		let pool = visibleTitles(viewer.profile);
@@ -178,21 +213,22 @@ export function SearchPage(handle: Handle<{ viewer: Viewer; query: string }>) {
 			(title): title is Title => title !== undefined,
 		);
 		return (
-			<>
-				<ScreenHeading title="Search">
-					<SearchForm query={query} />
-				</ScreenHeading>
-				<Gutter>
-					<SearchBody
-						query={query}
-						results={results}
-						chips={chips}
-						popular={popular.length > 0 ? popular : pool}
-					/>
-				</Gutter>
-			</>
+			<div data-search-count={countLabel(query, results.length)}>
+				<SearchBody
+					query={query}
+					results={results}
+					chips={chips}
+					popular={popular.length > 0 ? popular : pool}
+				/>
+			</div>
 		);
 	};
+}
+
+/** What the status says after a search: the count of results, or nothing before a query. */
+function countLabel(query: string, count: number): string {
+	if (query.trim() === "") return "";
+	return `${count} ${count === 1 ? "result" : "results"}`;
 }
 
 namespace SearchBody {
@@ -224,7 +260,7 @@ function SearchBody(handle: Handle<SearchBody.Props>) {
 						mix={[raw({ display: "grid", gap: "0.75rem" })]}
 					>
 						<SubHeading id="vesper-popular">Popular on Vesper</SubHeading>
-						<PosterGrid titles={popular} variant="popular" label="Popular on Vesper" />
+						<PosterGrid titles={popular} label="Popular on Vesper" />
 					</section>
 				</div>
 			);
@@ -244,7 +280,7 @@ function SearchBody(handle: Handle<SearchBody.Props>) {
 				<SubHeading id="vesper-results">
 					{results.length} {results.length === 1 ? "result" : "results"} for “{query.trim()}”
 				</SubHeading>
-				<PosterGrid titles={results} variant="results" label="Results" />
+				<PosterGrid titles={results} label="Results" />
 			</section>
 		);
 	};
@@ -288,7 +324,7 @@ export function MyList(handle: Handle<{ viewer: Viewer }>) {
 							Press My List on any title to keep it here for later.
 						</Blank>
 					) : (
-						<PosterGrid titles={titles} variant="my-list-grid" label="My List" />
+						<PosterGrid titles={titles} label="My List" />
 					)}
 				</Gutter>
 			</>

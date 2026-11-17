@@ -22,10 +22,11 @@ import {
 	MainScreen,
 	mainSource,
 } from "~/resources/views/demo-apps/main-frame";
+import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 
 import type { Destination } from "./shell";
 
-import { Catalogue, GenrePage, MyList, SearchPage } from "./browse";
+import { Catalogue, GenrePage, MyList, SEARCH_FRAME, SearchPage, SearchResults } from "./browse";
 import {
 	GENRES,
 	TITLES,
@@ -38,9 +39,9 @@ import {
 	visibleTitles,
 } from "./data";
 import Home from "./home";
-import { Blank, Gutter } from "./parts";
-import ProfilePicker from "./profiles";
-import VesperShell from "./shell";
+import { Blank, Gutter, LIST_FRAME_PREFIX, ListButton } from "./parts";
+import WhoIsWatching from "./profiles";
+import VesperShell, { LoadingBar } from "./shell";
 import { isPersonal, listCookie, profileCookie, readViewer } from "./state";
 import { VesperThumbnail } from "./thumbnail";
 import TitlePage from "./title";
@@ -117,7 +118,7 @@ const TOASTS: DemoApp["toasts"] = Object.fromEntries([
 					label: "Undo",
 					form: {
 						action: actionHref(`title/${title.id}/list`),
-						fields: { on: "false", back: "my-list" },
+						fields: { on: "false", back: `title/${title.id}` },
 					},
 				},
 			},
@@ -131,7 +132,7 @@ const TOASTS: DemoApp["toasts"] = Object.fromEntries([
 					label: "Undo",
 					form: {
 						action: actionHref(`title/${title.id}/list`),
-						fields: { on: "true", back: "my-list" },
+						fields: { on: "true", back: `title/${title.id}` },
 					},
 				},
 			},
@@ -276,14 +277,43 @@ function topScreen(
 		return {
 			title: query.trim() === "" ? "Search" : `Search: ${query.trim()}`,
 			current: "search",
-			content: <SearchPage viewer={viewer} query={query} />,
+			content: <SearchPage query={query} />,
 		};
 	}
 	if (page === "my-list")
 		return { title: "My List", current: "my-list", content: <MyList viewer={viewer} /> };
 	if (page === "profiles")
-		return { title: "Who's watching?", current: null, content: <ProfilePicker viewer={viewer} /> };
+		return { title: "Who's watching?", current: null, content: <WhoIsWatching viewer={viewer} /> };
 	return undefined;
+}
+
+/**
+ * Answers a named frame inside a screen other than `main`: search results for the address's
+ * query, or one title's My List button drawn for the page the frame was loaded with. Any other name answers `null`, and the whole screen.
+ */
+function targetPart(name: string, request: DemoAppRequest): RemixNode | null {
+	if (name === SEARCH_FRAME) {
+		let query = request.url.searchParams.get("q") ?? "";
+		return <SearchResults viewer={readViewer(request.cookie)} query={query} />;
+	}
+	if (!name.startsWith(LIST_FRAME_PREFIX)) return null;
+	let rest = name.slice(LIST_FRAME_PREFIX.length);
+	let compact = rest.startsWith("icon-");
+	let title = findTitle(compact ? rest.slice("icon-".length) : rest);
+	let viewer = readViewer(request.cookie);
+	if (title === undefined || !visibleTitles(viewer.profile).includes(title)) return null;
+	let key = request.url.searchParams.get(DEMO_APP_TOAST_PARAM);
+	let page = new URL(mainSource(request.url), request.url);
+	let back = `${request.page}${page.search}`;
+	return (
+		<ListButton
+			title={title}
+			viewer={viewer}
+			back={back}
+			compact={compact}
+			toast={key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined}
+		/>
+	);
 }
 
 /** Every title page, every genre and series filter, so a test can walk each screen. */
@@ -323,33 +353,37 @@ export default {
 	toasts: TOASTS,
 	render(request) {
 		let screen = route(request);
-		let viewer = readViewer(request.cookie);
 		return {
 			title: screen.title,
 			status: screen.status,
-			body:
-				screen.current === null ? (
-					screen.content
-				) : (
-					<VesperShell viewer={viewer} current={screen.current}>
-						<MainFrame src={mainSource(request.url)} />
-					</VesperShell>
-				),
+			body: (
+				<>
+					<LoadingBar />
+					<MainFrame src={mainSource(request.url)} />
+					<MainFrameSync root={href()} />
+				</>
+			),
 		};
 	},
 	target(name, request) {
-		if (name !== MAIN_FRAME) return null;
 		let screen = route(request);
-		if (screen.current === null) return null;
+		if (name !== MAIN_FRAME) return targetPart(name, request);
+		let viewer = readViewer(request.cookie);
 		let key = request.url.searchParams.get(DEMO_APP_TOAST_PARAM);
 		return (
 			<MainScreen
 				title={screen.title}
-				nav={screen.current}
+				nav={screen.current ?? undefined}
 				url={request.url}
 				toast={key !== null && Object.hasOwn(TOASTS, key) ? TOASTS[key] : undefined}
 			>
-				{screen.content}
+				{screen.current === null ? (
+					screen.content
+				) : (
+					<VesperShell viewer={viewer} current={screen.current}>
+						{screen.content}
+					</VesperShell>
+				)}
 			</MainScreen>
 		);
 	},

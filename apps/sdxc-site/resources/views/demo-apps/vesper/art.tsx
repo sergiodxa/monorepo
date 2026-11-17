@@ -1,6 +1,6 @@
 /**
  * Vesper's key art, drawn rather than licensed: each title gets a scene from its motif and
- * palette (a harbour at dusk, a sleeper train, a station over an ice moon) with its name set
+ * palette, written once to an SVG file the pages load as an image, with its name set over it
  * in its own lettering. One square scene crops to a still, a poster or a full-bleed hero.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -611,35 +611,121 @@ function stillBox(frame: number | undefined): string {
 	return `${x.toFixed(1)} ${y.toFixed(1)} ${size.toFixed(1)} ${size.toFixed(1)}`;
 }
 
-namespace KeyArt {
+/** Where the drawn art is served from, one file per title and per episode still. */
+const ART_ROOT = "/demos/vesper/art";
+
+/**
+ * The address of a title's key art, or of one episode's still when `frame` is given.
+ *
+ * @example artSrc(tidewater) // "/demos/vesper/art/tidewater.svg"
+ * @example artSrc(tidewater, 23) // "/demos/vesper/art/tidewater-23.svg"
+ */
+export function artSrc(title: Title, frame?: number): string {
+	return `${ART_ROOT}/${title.id}${frame === undefined ? "" : `-${frame}`}.svg`;
+}
+
+/**
+ * The frame number a series episode's still is drawn from.
+ *
+ * @example stillFrame(2, 3) // 23
+ */
+export function stillFrame(season: number, episode: number): number {
+	return season * 10 + episode;
+}
+
+/**
+ * Every art file the app serves: each title's key art and a still for every episode, with the
+ * file name each is written to under `public/demos/vesper/art/`.
+ */
+export function artFiles(titles: Title[]): Array<{ file: string; title: Title; frame?: number }> {
+	return titles.flatMap((title) => [
+		{ file: `${title.id}.svg`, title },
+		...(title.seasons ?? []).flatMap((season) =>
+			season.episodes.map((episode) => {
+				let frame = stillFrame(season.number, episode.number);
+				return { file: `${title.id}-${frame}.svg`, title, frame };
+			}),
+		),
+	]);
+}
+
+namespace SceneSvg {
 	export interface Props {
 		title: Title;
-		/** Distinguishes two drawings of one title on a page, so their gradient ids never clash. */
-		variant: string;
-		/** Sets the title's name over the scene, as its artwork would. Default: `true`. */
-		named?: boolean;
-		/**
-		 * Draws a still from inside the scene rather than the key art: each frame number reseeds
-		 * the scene's details and crops a different part of it, so a season's episodes differ.
-		 */
+		/** The still to draw; the whole key art when omitted. */
 		frame?: number;
 	}
 }
 
 /**
- * Draws a title's key art, filling the positioned frame that holds it. It is decorative
- * (`aria-hidden`), since the card or heading around it already names the title.
+ * The scene as a standalone SVG document, the content of one art file: the sky, the title's
+ * motif and a vignette. Each frame number reseeds the details and crops a different part, so a
+ * season's episodes differ.
  */
-export function KeyArt(handle: Handle<KeyArt.Props>) {
+export function SceneSvg(handle: Handle<SceneSvg.Props>) {
 	return () => {
-		let { frame, named = true, title, variant } = handle.props;
-		let uid = `vesper-${title.id}-${variant}`;
+		let { frame, title } = handle.props;
+		let uid = "v";
 		let scene: Scene = {
 			...title.palette,
 			random: seeded(frame === undefined ? title.id : `${title.id}:${frame}`),
 			uid,
 		};
 		let Motif = MOTIFS[title.motif];
+		return (
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox={stillBox(frame)}
+				width="600"
+				height="600"
+				preserveAspectRatio="xMidYMid slice"
+			>
+				<defs>
+					<linearGradient id={`${uid}-sky`} x1="0" y1="0" x2="0" y2="1">
+						<stop offset="0" stop-color={shade(title.palette.sky, "black", 0.35)} />
+						<stop offset="0.62" stop-color={title.palette.horizon} />
+						<stop offset="1" stop-color={shade(title.palette.horizon, "black", 0.3)} />
+					</linearGradient>
+					<radialGradient id={`${uid}-halo`}>
+						<stop offset="0" stop-color={title.palette.light} stop-opacity="0.55" />
+						<stop offset="1" stop-color={title.palette.light} stop-opacity="0" />
+					</radialGradient>
+					<radialGradient id={`${uid}-vignette`} cx="0.5" cy="0.45" r="0.75">
+						<stop offset="0.55" stop-color="black" stop-opacity="0" />
+						<stop offset="1" stop-color="black" stop-opacity="0.55" />
+					</radialGradient>
+				</defs>
+				<rect width={SIZE} height={SIZE} fill={`url(#${uid}-sky)`} />
+				<Motif scene={scene} />
+				<rect width={SIZE} height={SIZE} fill={`url(#${uid}-vignette)`} />
+			</svg>
+		);
+	};
+}
+
+namespace KeyArt {
+	export interface Props {
+		title: Title;
+		/** Sets the title's name over the scene, as its artwork would. Default: `true`. */
+		named?: boolean;
+		/** Shows one episode's still rather than the key art; see {@link stillFrame}. */
+		frame?: number;
+		/**
+		 * Loads the picture first and at once, for the art a screen opens on (its hero); every
+		 * other picture loads lazily as it nears the viewport.
+		 */
+		priority?: boolean;
+	}
+}
+
+/**
+ * A title's key art or still as an image file, filling the positioned frame that holds it, on
+ * the title's own sky colour until it loads. It is decorative, since the card or heading around
+ * it already names the title.
+ */
+export function KeyArt(handle: Handle<KeyArt.Props>) {
+	return () => {
+		let { frame, named = true, priority = false, title } = handle.props;
 		return (
 			<span
 				aria-hidden="true"
@@ -652,30 +738,26 @@ export function KeyArt(handle: Handle<KeyArt.Props>) {
 						inset: "0",
 						overflow: "clip",
 						backgroundColor: title.palette.sky,
-						"& > svg": { position: "absolute", inset: "0", inlineSize: "100%", blockSize: "100%" },
+						"& > img": {
+							position: "absolute",
+							inset: "0",
+							inlineSize: "100%",
+							blockSize: "100%",
+							objectFit: "cover",
+							objectPosition: "50% 62%",
+						},
 					}),
 				]}
 			>
-				<svg viewBox={stillBox(frame)} preserveAspectRatio="xMidYMid slice">
-					<defs>
-						<linearGradient id={`${uid}-sky`} x1="0" y1="0" x2="0" y2="1">
-							<stop offset="0" stop-color={shade(title.palette.sky, "black", 0.35)} />
-							<stop offset="0.62" stop-color={title.palette.horizon} />
-							<stop offset="1" stop-color={shade(title.palette.horizon, "black", 0.3)} />
-						</linearGradient>
-						<radialGradient id={`${uid}-halo`}>
-							<stop offset="0" stop-color={title.palette.light} stop-opacity="0.55" />
-							<stop offset="1" stop-color={title.palette.light} stop-opacity="0" />
-						</radialGradient>
-						<radialGradient id={`${uid}-vignette`} cx="0.5" cy="0.45" r="0.75">
-							<stop offset="0.55" stop-color="black" stop-opacity="0" />
-							<stop offset="1" stop-color="black" stop-opacity="0.55" />
-						</radialGradient>
-					</defs>
-					<rect width={SIZE} height={SIZE} fill={`url(#${uid}-sky)`} />
-					<Motif scene={scene} />
-					<rect width={SIZE} height={SIZE} fill={`url(#${uid}-vignette)`} />
-				</svg>
+				<img
+					src={artSrc(title, frame)}
+					alt=""
+					width="600"
+					height="600"
+					decoding="async"
+					loading={priority ? "eager" : "lazy"}
+					fetchpriority={priority ? "high" : undefined}
+				/>
 				{named ? <TitleMark title={title} /> : null}
 			</span>
 		);

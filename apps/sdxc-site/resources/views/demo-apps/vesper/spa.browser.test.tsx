@@ -1,7 +1,7 @@
 /**
- * Runs Vesper like a visitor's browser does: moving between screens and adding a title to
- * My List keep the top bar mounted and never load a document, the nav follows the screen in
- * main, Back returns to the last screen, and each shelf's paging buttons appear and step.
+ * Runs Vesper like a visitor's browser does: every screen, the watch page and a profile switch
+ * included, swaps into `main` without loading a document; My List redraws only its button's
+ * frame; typing a search reloads only the results; Back returns to the last screen.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,10 +24,10 @@ afterEach(() => {
 	mounted = undefined;
 });
 
-/** The top bar a test marks to prove it is never replaced. */
+/** The main region a test marks to prove the document is never replaced. */
 function bar(): Element {
-	let element = document.querySelector("[data-vesper-bar]");
-	if (element === null) throw new Error("Vesper drew no top bar");
+	let element = document.querySelector("[data-main-region]");
+	if (element === null) throw new Error("Vesper drew no main region");
 	return element;
 }
 
@@ -94,7 +94,12 @@ describe("Vesper as a single-page app", () => {
 
 		expect(bar()).toBe(marker);
 		expect(navigation.currentEntry?.index ?? 0).toBe(start);
-		expect(mounted.requests.at(-1)).toBe("POST /demo/apps/vesper/title/signal-fire/list main");
+		expect(mounted.requests.at(-1)).toBe(
+			"POST /demo/apps/vesper/title/signal-fire/list vesper-list-signal-fire",
+		);
+		expect(document.querySelector("[data-main-screen]")?.getAttribute("data-url")).toBe(
+			"/demo/apps/vesper/title/signal-fire",
+		);
 	});
 
 	test("goes back to the previous screen without loading a document", async () => {
@@ -108,6 +113,55 @@ describe("Vesper as a single-page app", () => {
 
 		expect(bar()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("opens the watch page and comes back without loading a document", async () => {
+		mounted = await mountApp(vesper, "vesper", "title/tidewater");
+		let marker = bar();
+
+		await press(document.querySelector('a[href="/demo/apps/vesper/watch/tidewater/2-3"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/watch/tidewater/2-3"));
+		expect(document.querySelector("[data-slot=video-player]")).not.toBeNull();
+		expect(document.querySelector("[data-vesper-bar]")).toBeNull();
+
+		await press(document.querySelector('a[href="/demo/apps/vesper/title/tidewater"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/title/tidewater"));
+		expect(bar()).toBe(marker);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("switches profile from the picker in main, landing on home with its toast", async () => {
+		mounted = await mountApp(vesper, "vesper", "profiles");
+
+		await press(document.querySelector('button[formaction$="/profiles/theo"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper"));
+		await vi.waitFor(() =>
+			expect(document.querySelector('[data-slot="toast-item"]')?.textContent).toContain(
+				"Watching as Theo",
+			),
+		);
+		expect(mounted.requests.at(-1)).toBe("POST /demo/apps/vesper/profiles/theo main");
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+	});
+
+	test("reloads only the results as a search is typed, keeping one history entry", async () => {
+		mounted = await mountApp(vesper, "vesper", "search");
+		let start = navigation.currentEntry?.index ?? 0;
+		let field = document.querySelector<HTMLInputElement>('#vesper-search input[name="q"]')!;
+
+		field.value = "halcyon";
+		field.dispatchEvent(new Event("input", { bubbles: true }));
+		await vi.waitFor(() => expect(location.search).toBe("?q=halcyon"));
+
+		expect(mounted.requests.at(-1)).toBe(
+			"GET /demo/apps/vesper/search?q=halcyon vesper-search-results",
+		);
+		expect(
+			document.querySelector("#vesper-search-results, [data-search-count]")?.textContent,
+		).toContain("Halcyon Station");
+		expect(document.getElementById("vesper-search-status")?.textContent).toBe("1 result");
+		expect(navigation.currentEntry?.index ?? 0).toBe(start);
+		expect(field.isConnected).toBe(true);
 	});
 
 	test("reveals each shelf's paging buttons once the island runs", async () => {

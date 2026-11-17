@@ -1,7 +1,7 @@
 /**
- * Vesper's frame: a top bar that floats over each screen's hero and darkens as it fills, with
+ * Vesper's chrome: a top bar that floats over each screen's hero and darkens as it fills, with
  * the destinations, search and the profile menu; on a phone, the destinations move to a tab
- * bar under the thumb. The main area between them is the swappable `main` frame.
+ * bar under the thumb. It renders inside the `main` frame, so a profile switch redraws it too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +16,6 @@ import { when } from "@sdxc/u/state";
 import { Menu } from "@sdxc/ui";
 import { TabBar } from "@sdxc/ui/app/tab-bar";
 
-import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 import routes from "~/routes/web";
 
 import type { Profile } from "./data";
@@ -32,9 +31,6 @@ export const TOP_BAR = "4rem";
 
 /** The page gutter, which the shelves' first cards line up with. */
 export const GUTTER = "clamp(1rem, 4vw, 3.5rem)";
-
-/** The screens a link into or out of reloads the whole page for, since each draws its own frame. */
-export const VESPER_SHELLS = ["watch", "profiles"];
 
 /** Which destination a screen belongs to. */
 export type Destination = "home" | "series" | "films" | "search" | "my-list" | "none";
@@ -140,7 +136,7 @@ export function ProfileAvatar(handle: Handle<ProfileAvatar.Props>) {
 
 /**
  * The menu behind the avatar: every profile to switch to, each a post that sets the profile and
- * reloads the whole page, since the bar shows who is watching; then managing them and leaving.
+ * redraws the screen with the bar around it as that profile; then managing them and leaving.
  */
 function ProfileMenu(handle: Handle<{ viewer: Viewer }>) {
 	return () => {
@@ -151,7 +147,6 @@ function ProfileMenu(handle: Handle<{ viewer: Viewer }>) {
 					<form
 						method="post"
 						action={actionHref(`profiles/${profile.id}`)}
-						data-rmx-document=""
 						mix={[raw({ display: "contents" })]}
 					>
 						<Menu.Item type="submit">
@@ -406,9 +401,9 @@ function TopBar(handle: Handle<{ current: Destination; viewer: Viewer }>) {
 namespace VesperShell {
 	export interface Props {
 		viewer: Viewer;
-		/** The destination the bars mark on first paint; the sync island keeps it current after. */
+		/** The destination the bars mark as current. */
 		current: Destination;
-		/** The `main` frame. */
+		/** The screen's content. */
 		children: RemixNode;
 	}
 }
@@ -488,8 +483,49 @@ export default function VesperShell(handle: Handle<VesperShell.Props>) {
 						);
 					})}
 				</TabBar>
-				<MainFrameSync root={href()} shells={VESPER_SHELLS} />
 			</div>
 		);
 	};
+}
+
+/**
+ * A thin ember bar across the top of the window while a screen or post is loading in `main`.
+ * It waits a beat before showing, so a fast swap never flashes it, then creeps toward the end
+ * until the swap lands; under reduced motion it shows as a steady line.
+ */
+export function LoadingBar() {
+	return () => (
+		<span
+			aria-hidden="true"
+			data-vesper-loading=""
+			mix={[
+				raw({
+					position: "fixed",
+					insetBlockStart: "0",
+					insetInline: "0",
+					zIndex: "60",
+					blockSize: "2px",
+					transformOrigin: "0 50%",
+					backgroundColor: "var(--ui-color-brand-500)",
+					boxShadow: "0 0 8px var(--ui-color-brand-500)",
+					opacity: "0",
+					scale: "0 1",
+					pointerEvents: "none",
+					"@keyframes vesper-loading": {
+						"0%": { opacity: "0", scale: "0 1" },
+						"10%": { opacity: "1", scale: "0.15 1" },
+						"100%": { opacity: "1", scale: "0.9 1" },
+					},
+					":root[data-main-loading] &": {
+						animation: "vesper-loading 8s cubic-bezier(0.1, 0.6, 0.2, 1) 150ms both",
+					},
+				}),
+				motionReduce(
+					raw({
+						":root[data-main-loading] &": { animation: "none", opacity: "1", scale: "1 1" },
+					}),
+				),
+			]}
+		/>
+	);
 }

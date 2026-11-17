@@ -10,8 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
-import { motionSafe } from "@sdxc/u/responsive";
-import { when } from "@sdxc/u/state";
+import { ProfilePicker } from "@sdxc/ui/app/profile-picker";
 
 import type { Viewer } from "./state";
 
@@ -19,7 +18,7 @@ import { PROFILES, actionHref } from "./data";
 import { ProfileAvatar, VesperMark } from "./shell";
 
 /** Renders the picker, the current profile marked. */
-export default function ProfilePicker(handle: Handle<{ viewer: Viewer }>) {
+export default function WhoIsWatching(handle: Handle<{ viewer: Viewer }>) {
 	return () => {
 		let { viewer } = handle.props;
 		return (
@@ -59,114 +58,25 @@ export default function ProfilePicker(handle: Handle<{ viewer: Viewer }>) {
 						raw({
 							display: "grid",
 							alignContent: "center",
-							justifyItems: "center",
-							gap: "2.5rem",
-							paddingInline: "1rem",
 							paddingBlockEnd: "12vh",
 						}),
 					]}
 				>
-					<h1
-						mix={[
-							raw({
-								margin: "0",
-								fontSize: "clamp(1.75rem, 4vw, 3rem)",
-								fontWeight: "600",
-								letterSpacing: "-0.02em",
-								color: "var(--ui-neutral-fg-emphasis)",
-								textAlign: "center",
-							}),
-						]}
-					>
-						Who's watching?
-					</h1>
-					<ul
-						mix={[
-							raw({
-								display: "grid",
-								gridTemplateColumns: "repeat(2, minmax(0, 8.5rem))",
-								gap: "1.75rem clamp(1rem, 3vw, 2.5rem)",
-								margin: "0",
-								padding: "0",
-								listStyle: "none",
-								"@media (min-width: 40rem)": {
-									gridTemplateColumns: "repeat(4, minmax(0, 9.5rem))",
-								},
-							}),
-						]}
-					>
-						{PROFILES.map((profile) => {
-							let current = viewer.picked && profile.id === viewer.profile.id;
-							return (
-								<li>
-									<form method="post" action={actionHref(`profiles/${profile.id}`)}>
-										<button
-											type="submit"
-											aria-current={current ? "true" : undefined}
-											mix={[
-												raw({
-													display: "grid",
-													justifyItems: "center",
-													gap: "0.75rem",
-													inlineSize: "100%",
-													padding: "0",
-													border: "0",
-													background: "transparent",
-													font: "inherit",
-													fontSize: "1rem",
-													color: "var(--ui-neutral-fg)",
-													cursor: "pointer",
-													"& > [aria-hidden]": {
-														transition: "box-shadow 160ms ease, translate 160ms ease",
-													},
-												}),
-												when(
-													"&:hover",
-													raw({
-														color: "var(--ui-neutral-fg-emphasis)",
-														"& > [aria-hidden]": {
-															boxShadow: "0 0 0 3px var(--ui-color-neutral-100)",
-														},
-													}),
-												),
-												motionSafe(when("&:hover > [aria-hidden]", raw({ translate: "0 -3px" }))),
-												when(
-													"&:focus-visible",
-													raw({
-														outline: "none",
-														"& > [aria-hidden]": { boxShadow: "0 0 0 3px var(--ui-brand-ring)" },
-													}),
-												),
-												when(
-													"&[aria-current]",
-													raw({
-														"& > [aria-hidden]": {
-															boxShadow: "0 0 0 3px var(--ui-color-brand-500)",
-														},
-													}),
-												),
-											]}
-										>
-											<ProfileAvatar profile={profile} size="fill" />
-											<span>{profile.name}</span>
-										</button>
-									</form>
-								</li>
-							);
-						})}
-					</ul>
-					<p
-						mix={[
-							raw({
-								margin: "0",
-								color: "var(--ui-neutral-fg-muted)",
-								fontSize: "0.875rem",
-								textAlign: "center",
-							}),
-						]}
-					>
-						Each profile keeps its own list and its own place in every show.
-					</p>
+					<form method="post">
+						<ProfilePicker
+							title="Who's watching?"
+							footer="Each profile keeps its own list and its own place in every show."
+						>
+							{PROFILES.map((profile) => (
+								<ProfilePicker.Profile
+									name={profile.name}
+									avatar={<ProfileAvatar profile={profile} size="fill" />}
+									formAction={actionHref(`profiles/${profile.id}`)}
+									current={viewer.picked && profile.id === viewer.profile.id}
+								/>
+							))}
+						</ProfilePicker>
+					</form>
 				</main>
 			</div>
 		);

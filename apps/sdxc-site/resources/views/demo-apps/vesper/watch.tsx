@@ -17,7 +17,7 @@ import { EpisodeList, VideoPlayer } from "@sdxc/ui/video";
 import type { Episode, Season, Title } from "./data";
 import type { Viewer } from "./state";
 
-import { KeyArt } from "./art";
+import { KeyArt, stillFrame } from "./art";
 import { formatMinutes, href, nextEpisode, watchHref } from "./data";
 import { GUTTER, VesperMark } from "./shell";
 import { progressFor } from "./title";
@@ -160,13 +160,13 @@ export default function WatchPage(handle: Handle<WatchPage.Props>) {
 							<VideoPlayer.Frame>
 								<KeyArt
 									title={title}
-									variant="screen"
 									frame={
 										playing === undefined
 											? undefined
-											: playing.season.number * 10 + playing.episode.number
+											: stillFrame(playing.season.number, playing.episode.number)
 									}
 									named={false}
+									priority
 								/>
 							</VideoPlayer.Frame>
 							<VideoPlayer.Source src={source.webm} type="video/webm" label="1080p" badge="HD" />
@@ -325,8 +325,7 @@ function NextUp(handle: Handle<NextUp.Props>) {
 				>
 					<KeyArt
 						title={title}
-						variant="next"
-						frame={next.season.number * 10 + next.episode.number}
+						frame={stillFrame(next.season.number, next.episode.number)}
 						named={false}
 					/>
 				</span>
@@ -387,8 +386,7 @@ function SeasonList(
 							still={
 								<KeyArt
 									title={title}
-									variant={`list-${episode.number}`}
-									frame={playing.season.number * 10 + episode.number}
+									frame={stillFrame(playing.season.number, episode.number)}
 									named={false}
 								/>
 							}

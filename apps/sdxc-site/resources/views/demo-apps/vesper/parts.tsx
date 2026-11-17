@@ -7,13 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Toast } from "@sdxc/ui/app";
 import type { Handle, RemixNode } from "remix/component";
 
 import { BookmarkIcon, CheckIcon, InfoIcon, PlayIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
+import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 import { Button, LinkButton } from "@sdxc/ui";
-import { VideoCard, VideoShelf } from "@sdxc/ui/video";
+import { TitleHero, VideoCard, VideoShelf } from "@sdxc/ui/video";
+import { generateUUID } from "@sdxc/uuid/v4";
+import { Frame } from "remix/component";
 
 import type { Progress, Title } from "./data";
 import type { Viewer } from "./state";
@@ -41,8 +45,6 @@ export function cardMeta(title: Title): string {
 namespace TitleCard {
 	export interface Props {
 		title: Title;
-		/** Distinguishes two cards of one title on a page, for the art's gradient ids. */
-		variant: string;
 		shape?: VideoCard.Shape;
 	}
 }
@@ -50,17 +52,101 @@ namespace TitleCard {
 /** A title as a card linking to its page, with its art, badge and meta line. */
 export function TitleCard(handle: Handle<TitleCard.Props>) {
 	return () => {
-		let { shape = "landscape", title, variant } = handle.props;
+		let { shape = "landscape", title } = handle.props;
 		return (
 			<VideoCard
 				href={href(`title/${title.id}`)}
 				title={title.name}
 				shape={shape}
-				art={<KeyArt title={title} variant={variant} />}
+				art={
+					<span>
+						<KeyArt title={title} />
+						<CardPeek title={title} />
+					</span>
+				}
 				meta={cardMeta(title)}
 				badge={title.badge}
 				data-rmx-prefetch="intent"
 			/>
+		);
+	};
+}
+
+/**
+ * What a card shows under a hovering pointer or keyboard focus: the title's line and facts
+ * rising over the foot of its art, so a row can be skimmed without opening each title. It is
+ * decorative, since the page the card opens says the same, and stays away on touch screens.
+ */
+function CardPeek(handle: Handle<{ title: Title }>) {
+	return () => {
+		let { title } = handle.props;
+		return (
+			<span
+				aria-hidden="true"
+				mix={[
+					raw({
+						position: "absolute",
+						insetInline: "0",
+						insetBlockEnd: "0",
+						display: "grid",
+						gap: "0.375rem",
+						padding: "2.5rem 0.75rem 0.75rem",
+						background:
+							"linear-gradient(to top, rgb(8 6 12 / 0.96) 0%, rgb(8 6 12 / 0.85) 55%, rgb(8 6 12 / 0))",
+						color: "oklch(0.96 0.005 300)",
+						textAlign: "start",
+						opacity: "0",
+						translate: "0 0.5rem",
+						transition: "opacity 200ms ease, translate 240ms cubic-bezier(0.2, 0.7, 0.2, 1)",
+						"@media (hover: none)": { display: "none" },
+						"[data-slot=video-card]:is(:hover, :focus-visible) &": {
+							opacity: "1",
+							translate: "0 0",
+						},
+					}),
+					motionReduce(raw({ transition: "none", translate: "0 0" })),
+				]}
+			>
+				<span
+					mix={[
+						raw({
+							display: "-webkit-box",
+							WebkitLineClamp: "2",
+							WebkitBoxOrient: "vertical",
+							overflow: "hidden",
+							fontSize: "0.8125rem",
+							lineHeight: "1.25rem",
+							fontWeight: "550",
+						}),
+					]}
+				>
+					{title.tagline}
+				</span>
+				<span
+					mix={[
+						raw({
+							display: "flex",
+							alignItems: "center",
+							gap: "0.5rem",
+							fontSize: "0.75rem",
+							color: "oklch(0.8 0.01 300)",
+						}),
+					]}
+				>
+					<span
+						mix={[
+							raw({
+								paddingInline: "0.3rem",
+								borderRadius: "0.25rem",
+								boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.4)",
+							}),
+						]}
+					>
+						{title.rating}
+					</span>
+					{lengthLabel(title)}
+				</span>
+			</span>
 		);
 	};
 }
@@ -93,7 +179,7 @@ export function ResumeCard(handle: Handle<ResumeCard.Props>) {
 			<VideoCard
 				href={watchHref(title, progress.season, progress.episode)}
 				title={title.name}
-				art={<KeyArt title={title} variant="resume" />}
+				art={<KeyArt title={title} />}
 				meta={meta}
 				progress={progress.share}
 				progressLabel={`${percent}% watched`}
@@ -128,7 +214,7 @@ export function TitleShelf(handle: Handle<TitleShelf.Props>) {
 			>
 				{titles.map((entry) => (
 					<VideoShelf.Item>
-						<TitleCard title={entry} variant={id} shape={shape} />
+						<TitleCard title={entry} shape={shape} />
 					</VideoShelf.Item>
 				))}
 			</VideoShelf>
@@ -166,8 +252,6 @@ function SeeAll(handle: Handle<{ page: string }>) {
 namespace PosterGrid {
 	export interface Props {
 		titles: Title[];
-		/** Prefixes each card's art ids. */
-		variant: string;
 		/** The grid's name, such as "Series, Drama". */
 		label: string;
 	}
@@ -176,7 +260,7 @@ namespace PosterGrid {
 /** Titles as a wrapping grid of posters, as many to a row as fit. */
 export function PosterGrid(handle: Handle<PosterGrid.Props>) {
 	return () => {
-		let { label, titles, variant } = handle.props;
+		let { label, titles } = handle.props;
 		return (
 			<ul
 				aria-label={label}
@@ -193,7 +277,7 @@ export function PosterGrid(handle: Handle<PosterGrid.Props>) {
 			>
 				{titles.map((title) => (
 					<li>
-						<TitleCard title={title} variant={variant} shape="poster" />
+						<TitleCard title={title} shape="poster" />
 					</li>
 				))}
 			</ul>
@@ -293,6 +377,18 @@ export function InfoButton(handle: Handle<{ href: string }>) {
 	);
 }
 
+/** Names the frame one title's My List button lives in, apart for the icon-only one. */
+export const LIST_FRAME_PREFIX = "vesper-list-";
+
+/**
+ * The name of the frame a title's My List button lives in on a page.
+ *
+ * @example listFrameName("tidewater", true) // "vesper-list-icon-tidewater"
+ */
+export function listFrameName(id: string, compact: boolean): string {
+	return `${LIST_FRAME_PREFIX}${compact ? "icon-" : ""}${id}`;
+}
+
 namespace ListButton {
 	export interface Props {
 		title: Title;
@@ -301,7 +397,21 @@ namespace ListButton {
 		back: string;
 		/** Draws only the icon, named for assistive tech. */
 		compact?: boolean;
+		/** The toast the post that redrew the button named, raised once by the browser. */
+		toast?: Omit<Toast.Flash, "id">;
 	}
+}
+
+/**
+ * The My List button in its own frame, loaded with the page it sits on: a post reloads only
+ * this frame, so the button flips and its toast rises while the page, its scroll and every
+ * shelf stay put. Without script the post loads the page again.
+ */
+export function ListFrame(handle: Handle<Omit<ListButton.Props, "toast" | "viewer">>) {
+	return () => {
+		let { back, compact = false, title } = handle.props;
+		return <Frame name={listFrameName(title.id, compact)} src={href(back)} />;
+	};
 }
 
 /**
@@ -310,20 +420,23 @@ namespace ListButton {
  */
 export function ListButton(handle: Handle<ListButton.Props>) {
 	return () => {
-		let { back, compact = false, title, viewer } = handle.props;
+		let { back, compact = false, title, toast, viewer } = handle.props;
 		let listed = viewer.list.includes(title.id);
 		let label = listed ? "On My List" : "My List";
 		return (
 			<form
 				method="post"
 				action={actionHref(`title/${title.id}/list`)}
+				data-rmx-target={listFrameName(title.id, compact)}
+				data-rmx-reset-scroll="manual"
+				data-rmx-reset-focus="manual"
 				mix={[raw({ display: "contents" })]}
 			>
 				<input type="hidden" name="back" value={back} />
 				<input type="hidden" name="on" value={listed ? "false" : "true"} />
 				<Button
 					type="submit"
-					id={`vesper-list-${title.id}`}
+					id={`vesper-list-${compact ? "icon-" : ""}${title.id}`}
 					color="neutral"
 					variant="surface"
 					size="lg"
@@ -338,6 +451,9 @@ export function ListButton(handle: Handle<ListButton.Props>) {
 					{listed ? <CheckIcon aria-hidden="true" /> : <BookmarkIcon aria-hidden="true" />}
 					{compact ? null : label}
 				</Button>
+				{toast === undefined ? null : (
+					<template data-main-toast={generateUUID()} data-toast={JSON.stringify(toast)} />
+				)}
 			</form>
 		);
 	};
@@ -360,105 +476,50 @@ namespace Billboard {
 }
 
 /**
- * The full-bleed hero: the title's art behind the top bar, faded into the page at its foot
- * and toward its text, with the name in the title's own lettering, its facts and its actions.
+ * A title's hero: its art behind the top bar, with the name in the title's own lettering, its
+ * rating, year, length and genres, and its actions.
  */
 export function Billboard(handle: Handle<Billboard.Props>) {
 	return () => {
 		let { actions, children, eyebrow, level, size = "feature", title } = handle.props;
-		let feature = size === "feature";
+		let id = `vesper-hero-${title.id}`;
 		return (
-			<section
-				aria-labelledby={`vesper-hero-${title.id}`}
+			<TitleHero
+				size={size}
+				aria-labelledby={id}
+				art={<KeyArt title={title} named={false} priority />}
 				mix={[
 					raw({
-						position: "relative",
-						isolation: "isolate",
-						display: "grid",
-						alignContent: "end",
-						marginBlockStart: `calc(-1 * ${TOP_BAR})`,
-						minBlockSize: feature ? "min(88svh, 52rem)" : "min(70svh, 40rem)",
-						paddingInline: GUTTER,
-						paddingBlock: `calc(${TOP_BAR} + 2rem) clamp(2rem, 6vh, 4.5rem)`,
-						overflow: "clip",
+						"--ui-title-hero-offset": TOP_BAR,
+						"--ui-title-hero-inset": GUTTER,
+						"--ui-title-hero-accent": "var(--ui-color-brand-300)",
 					}),
 				]}
 			>
-				<div
-					mix={[
-						raw({
-							position: "absolute",
-							inset: "0",
-							zIndex: "-1",
-							"& > [data-key-art]": { position: "absolute", inset: "0" },
-							"&::after": {
-								content: '""',
-								position: "absolute",
-								inset: "0",
-								background:
-									"linear-gradient(to top, var(--ui-bg) 0%, color-mix(in oklch, var(--ui-bg), transparent 30%) 22%, transparent 55%), linear-gradient(to right, color-mix(in oklch, var(--ui-bg), transparent 15%) 0%, transparent 62%)",
-							},
-						}),
-					]}
+				{eyebrow === undefined ? null : <TitleHero.Eyebrow>{eyebrow}</TitleHero.Eyebrow>}
+				<TitleHero.Title
+					id={id}
+					level={level}
+					mix={[raw({ color: "oklch(0.98 0.01 85)", ...HERO_LETTERING[title.lettering] })]}
 				>
-					<KeyArt title={title} variant={`hero-${size}`} named={false} />
-				</div>
-				<div mix={[raw({ display: "grid", gap: "1rem", maxInlineSize: "38rem" })]}>
-					{eyebrow === undefined ? null : (
-						<span
-							mix={[
-								raw({
-									display: "inline-flex",
-									alignItems: "center",
-									gap: "0.5rem",
-									fontSize: "0.75rem",
-									fontWeight: "700",
-									letterSpacing: "0.28em",
-									textTransform: "uppercase",
-									color: "var(--ui-color-brand-300)",
-								}),
-							]}
-						>
-							{eyebrow}
-						</span>
-					)}
-					<TitleName title={title} level={level} />
-					<FactRow title={title} />
-					{children === undefined ? null : (
-						<p
-							mix={[
-								raw({
-									margin: "0",
-									fontSize: "clamp(0.9375rem, 1.3vw, 1.0625rem)",
-									lineHeight: "1.6",
-									color: "var(--ui-neutral-fg)",
-									textWrap: "pretty",
-									textShadow: "0 1px 8px rgb(0 0 0 / 0.5)",
-								}),
-							]}
-						>
-							{children}
-						</p>
-					)}
-					<div
-						mix={[
-							raw({
-								display: "flex",
-								flexWrap: "wrap",
-								gap: "0.625rem",
-								marginBlockStart: "0.25rem",
-							}),
-						]}
-					>
-						{actions}
-					</div>
-				</div>
-			</section>
+					{title.name}
+				</TitleHero.Title>
+				<TitleHero.Facts>
+					<TitleHero.Rating>{title.rating}</TitleHero.Rating>
+					<span>{title.year}</span>
+					<span>{lengthLabel(title)}</span>
+					<span mix={[raw({ color: "var(--ui-neutral-fg)" })]}>
+						{genreNames(title).join(" · ")}
+					</span>
+				</TitleHero.Facts>
+				{children === undefined ? null : <TitleHero.Summary>{children}</TitleHero.Summary>}
+				<TitleHero.Actions>{actions}</TitleHero.Actions>
+			</TitleHero>
 		);
 	};
 }
 
-/** The type each lettering sets a name in on the hero, larger and tighter than on a card. */
+/** The type each lettering sets a name in on the hero, sized against the hero's width. */
 const HERO_LETTERING: Record<Title["lettering"], Record<string, string>> = {
 	serif: {
 		fontFamily: "Didot, 'Bodoni 72', 'Bodoni MT', 'Playfair Display', Georgia, serif",
@@ -471,14 +532,14 @@ const HERO_LETTERING: Record<Title["lettering"], Record<string, string>> = {
 		fontWeight: "600",
 		textTransform: "uppercase",
 		letterSpacing: "0.22em",
-		fontSize: "clamp(1.75rem, 4.2vw, 3.5rem)",
+		fontSize: "clamp(1.75rem, 6cqi, 3.5rem)",
 	},
 	condensed: {
 		fontFamily: "'Avenir Next Condensed', 'Arial Narrow', 'Roboto Condensed', sans-serif",
 		fontWeight: "800",
 		textTransform: "uppercase",
 		letterSpacing: "0",
-		fontSize: "clamp(2.75rem, 7vw, 5.5rem)",
+		fontSize: "clamp(2.75rem, 10cqi, 5.5rem)",
 	},
 	script: {
 		fontFamily: "Georgia, 'Iowan Old Style', 'Palatino Linotype', serif",
@@ -491,77 +552,9 @@ const HERO_LETTERING: Record<Title["lettering"], Record<string, string>> = {
 		fontWeight: "500",
 		textTransform: "uppercase",
 		letterSpacing: "0.16em",
-		fontSize: "clamp(1.75rem, 4.2vw, 3.25rem)",
+		fontSize: "clamp(1.75rem, 6cqi, 3.25rem)",
 	},
 };
-
-/** The title's name as the hero's heading, in its own lettering. */
-function TitleName(handle: Handle<{ title: Title; level: 1 | 2 }>) {
-	return () => {
-		let { level, title } = handle.props;
-		let mix = [
-			raw({
-				margin: "0",
-				fontSize: "clamp(2.25rem, 6vw, 4.75rem)",
-				lineHeight: "0.95",
-				color: "oklch(0.98 0.01 85)",
-				textWrap: "balance",
-				textShadow: "0 2px 24px rgb(0 0 0 / 0.45)",
-				...HERO_LETTERING[title.lettering],
-			}),
-		];
-		let id = `vesper-hero-${title.id}`;
-		return level === 1 ? (
-			<h1 id={id} mix={mix}>
-				{title.name}
-			</h1>
-		) : (
-			<h2 id={id} mix={mix}>
-				{title.name}
-			</h2>
-		);
-	};
-}
-
-/** The hero's facts: rating, year, length and genres, the rating boxed. */
-export function FactRow(handle: Handle<{ title: Title }>) {
-	return () => {
-		let { title } = handle.props;
-		return (
-			<p
-				mix={[
-					raw({
-						display: "flex",
-						flexWrap: "wrap",
-						alignItems: "center",
-						gap: "0.375rem 0.75rem",
-						margin: "0",
-						fontSize: "0.9375rem",
-						color: "var(--ui-neutral-fg-emphasis)",
-						fontVariantNumeric: "tabular-nums",
-					}),
-				]}
-			>
-				<span
-					mix={[
-						raw({
-							paddingInline: "0.375rem",
-							borderRadius: "0.25rem",
-							boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.45)",
-							fontSize: "0.8125rem",
-							fontWeight: "600",
-						}),
-					]}
-				>
-					{title.rating}
-				</span>
-				<span>{title.year}</span>
-				<span>{lengthLabel(title)}</span>
-				<span mix={[raw({ color: "var(--ui-neutral-fg)" })]}>{genreNames(title).join(" · ")}</span>
-			</p>
-		);
-	};
-}
 
 namespace Blank {
 	export interface Props {
