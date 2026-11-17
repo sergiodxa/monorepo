@@ -52,7 +52,12 @@ export default function DemoAppDocument(handle: Handle<DemoAppDocument.Props>) {
 				robots={NOINDEX_NOFOLLOW}
 				siteFooter={false}
 			>
-				<DemoTheme brand={app.theme.brand} neutral={app.theme.neutral} tokens={app.theme.tokens}>
+				<DemoTheme
+					brand={app.theme.brand}
+					neutral={app.theme.neutral}
+					tokens={app.theme.tokens}
+					scheme={app.theme.scheme}
+				>
 					{screen.body}
 					<Toasts labels={TOAST_LABELS} initial={flashes} />
 				</DemoTheme>

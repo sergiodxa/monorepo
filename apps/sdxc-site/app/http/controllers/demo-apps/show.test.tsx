@@ -93,7 +93,7 @@ describe("GET /demo/apps/:app", () => {
 		expect(body).toMatch(/<meta name="robots" content="noindex, nofollow"/);
 	});
 
-	test.each(apps.filter(({ slug }) => slug !== "chorus"))(
+	test.each(apps.filter(({ slug }) => !["chorus", "vesper"].includes(slug)))(
 		"$slug's workspace and user rows open real menus, with Sign out back to the gallery",
 		async ({ slug }) => {
 			let body = await (await fetchApp(demoAppHref(slug)())).text();

@@ -51,6 +51,7 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/docs/page-actions": () => import("@sdxc/ui/docs/page-actions"),
 	"@sdxc/ui/docs/table-of-contents": () => import("@sdxc/ui/docs/table-of-contents"),
 	"@sdxc/ui/relative-time": () => import("@sdxc/ui/relative-time"),
+	"@sdxc/ui/video/video-shelf": () => import("@sdxc/ui/video/video-shelf"),
 	"file:resources/views/demo-apps/main-frame-sync.tsx": () =>
 		import("~/resources/views/demo-apps/main-frame-sync"),
 	"file:resources/views/demo-apps/pulse/services-table.tsx": () =>

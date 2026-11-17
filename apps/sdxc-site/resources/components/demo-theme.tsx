@@ -38,6 +38,11 @@ export interface DemoPalette {
 	neutral?: PaletteScale;
 	/** Custom properties set last, over the palettes: faces, CTA radius, display max. */
 	tokens?: Record<`--${string}`, string>;
+	/**
+	 * `dark` keeps the demo in its dark scheme whatever the visitor's own, for a product that
+	 * only comes in one; the visitor's preference when omitted.
+	 */
+	scheme?: "dark";
 }
 
 namespace DemoTheme {
@@ -121,6 +126,7 @@ export default function DemoTheme(handle: Handle<DemoTheme.Props>) {
 		return (
 			<div
 				data-slot="demo-theme"
+				class={handle.props.scheme === "dark" ? "dark" : undefined}
 				mix={[
 					themeScope(),
 					raw({
