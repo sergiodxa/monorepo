@@ -162,10 +162,9 @@ export const MainFrameSync = clientEntry(
 		}
 
 		/**
-		 * Sends an in-app post through a frame reload, which follows the redirect and renders it
-		 * without adding a history entry: the frame the form or its submitter names in
-		 * `data-rmx-target` when it is mounted, `main` otherwise. The address settles afterwards,
-		 * and the form's fields return to what the server rendered, as a whole-page post leaves them.
+		 * Sends an in-app post through a frame reload into the frame `data-rmx-target` names, or
+		 * `main`, with no history entry. A redirect to another page, or a form marked
+		 * `data-main-scroll-top` (such as a switch of account), starts the page at the top.
 		 */
 		function submit(event: SubmitEvent) {
 			let form = event.target;
@@ -189,7 +188,9 @@ export const MainFrameSync = clientEntry(
 					let used = submitter instanceof HTMLElement ? submitter : null;
 					form.reset();
 					sync("action");
-					if (location.pathname !== postedFrom) scroller().scrollTop = 0;
+					if (location.pathname !== postedFrom || form.hasAttribute("data-main-scroll-top")) {
+						scroller().scrollTop = 0;
+					}
 					posted = { form, submitter: used };
 					restoreFocus(form, used);
 				},

@@ -87,7 +87,7 @@ export default function WhoIsWatching(handle: Handle<{ viewer: Viewer }>) {
 						}),
 					]}
 				>
-					<form method="post">
+					<form method="post" data-main-scroll-top="">
 						<ProfilePicker
 							title="Who's watching?"
 							footer="Each profile keeps its own list and its own place in every show."

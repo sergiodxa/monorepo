@@ -213,6 +213,37 @@ describe("Vesper as a single-page app", () => {
 		await vi.waitFor(() => expect(scroller.scrollTop).toBe(0));
 	});
 
+	test("starts at the top after a profile switch that lands back on the page it left", async () => {
+		mounted = await mountApp(vesper, "vesper", "");
+		let scroller = document.scrollingElement ?? document.documentElement;
+		document.body.style.minBlockSize = "6000px";
+		scroller.scrollTop = 1500;
+		expect(scroller.scrollTop).toBeGreaterThan(0);
+
+		await press(document.querySelector('form[action$="/profiles/ines"] button'));
+		await vi.waitFor(() =>
+			expect(document.querySelector('[data-slot="toast-item"]')?.textContent).toContain(
+				"Watching as Ines",
+			),
+		);
+		await vi.waitFor(() => expect(scroller.scrollTop).toBe(0));
+	});
+
+	test("keeps the scroll where it was after a My List post on the same page", async () => {
+		mounted = await mountApp(vesper, "vesper", "title/signal-fire");
+		let scroller = document.scrollingElement ?? document.documentElement;
+		document.body.style.minBlockSize = "6000px";
+		scroller.scrollTop = 300;
+
+		await press(document.getElementById("vesper-list-icon-signal-fire"));
+		await vi.waitFor(() =>
+			expect(document.querySelector('[data-slot="toast-item"]')?.textContent).toContain(
+				"Signal Fire added to My List",
+			),
+		);
+		expect(scroller.scrollTop).toBe(300);
+	});
+
 	test("reveals each shelf's paging buttons once the island runs", async () => {
 		mounted = await mountApp(vesper, "vesper", "");
 
