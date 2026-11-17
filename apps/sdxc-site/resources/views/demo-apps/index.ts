@@ -264,13 +264,18 @@ export function demoAppStreamHref(slug: string): (part: string) => string {
 }
 
 /**
- * The address a screen's forms post to, which answers by redirecting back.
+ * The address a screen's forms post to, which answers by redirecting back. The home screen's
+ * forms post to the app's bare path, which has no trailing slash.
  *
  * @param slug The demo's folder name.
  * @returns A function from the page path the form acts on to the action's address.
+ * @example demoAppActionHref("chorus")("") // "/demo/apps/chorus"
  */
 export function demoAppActionHref(slug: string): (page: string) => string {
-	return (page) => routes.demoApps.action.href({ app: slug, page });
+	return (page) =>
+		page === ""
+			? routes.demoApps.action.href({ app: slug })
+			: routes.demoApps.action.href({ app: slug, page });
 }
 
 /**

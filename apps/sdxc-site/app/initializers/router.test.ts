@@ -1,7 +1,7 @@
 /**
- * Tests that the router gives every request a trace — the request's wide event carries
- * `trace_id` and `span_id`, and a caller's `traceparent` is continued — and that a URL no
- * route matches answers with the site's own not-found document.
+ * Tests that the router gives every request a trace (the wide event carries `trace_id` and
+ * `span_id`, and a caller's `traceparent` is continued), that a trailing slash redirects to the
+ * bare path, and that a URL no route matches answers with the site's own not-found document.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,5 +58,20 @@ describe("unmatched requests", () => {
 
 		expect(response.status).toBe(404);
 		expect(await response.text()).toContain("The requested page does not exist.");
+	});
+});
+
+describe("trailing slashes", () => {
+	test("redirect a page with a trailing slash to the same page without one", async () => {
+		let response = await fetchApp("https://sdxc.dev/demo/?tab=apps");
+
+		expect(response.status).toBe(308);
+		expect(response.headers.get("location")).toBe("https://sdxc.dev/demo?tab=apps");
+	});
+
+	test("serve the home page at the bare root", async () => {
+		let response = await fetchApp("https://sdxc.dev/");
+
+		expect(response.status).toBe(200);
 	});
 });

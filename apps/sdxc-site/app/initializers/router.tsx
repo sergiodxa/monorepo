@@ -20,6 +20,7 @@ import { cspPatch } from "@sdxc/security-headers/csp-patch";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { userAgent } from "@sdxc/user-agent/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -66,6 +67,7 @@ export function createWebRouter() {
 			log(logger),
 			trace(),
 			canonicalHost(),
+			trailingSlash(),
 			frameTransforms(),
 			socialCards((request): Promise<Response> => router.fetch(request)),
 			userAgent(),

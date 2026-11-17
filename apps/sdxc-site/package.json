@@ -52,6 +52,7 @@
 		"@sdxc/seo": "workspace:*",
 		"@sdxc/sitemap": "workspace:*",
 		"@sdxc/trace-context": "workspace:*",
+		"@sdxc/trailing-slash-middleware": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/user-agent": "workspace:*",
