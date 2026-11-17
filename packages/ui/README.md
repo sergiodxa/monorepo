@@ -419,7 +419,12 @@ Dashboard and workspace components.
   `VideoPlayerSync` island swaps them. `.Settings` takes `.CaptionsMenu`, `.SpeedMenu`,
   `.QualityMenu`, and the page's own `.SettingsToggle` checkboxes and `.SettingsMenu` radio groups,
   which the page reads by `name` from `change` events.
-- `VideoCard` — a title as one link: 16:9 or 2:3 art, a badge, a watched bar, its name and meta.
+  `layout="stage"` fills the box it is given for a film or episode: `.Overlay` floats over the top,
+  the bar and overlay fade while it plays and the pointer rests, and `.Group` (`start`, `center`,
+  `end`), `.Skip`, `.Mute` and `.Heading` arrange the bar; the page's keys play, skip, mute and
+  go full screen.
+- `VideoCard` — a title as one link: 16:9 or 2:3 art, a badge at the top or foot, a watched bar,
+  its name and meta.
 - `VideoShelf` — a titled row of `.Item`s that scrolls sideways; `VideoShelfSync` reveals paging
   buttons at its edges.
 - `EpisodeList` — a season as an `<ol>` of `.Item` links with a still, number, runtime, synopsis

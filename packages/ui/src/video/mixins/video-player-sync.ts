@@ -15,6 +15,12 @@ import { installMediaSync, markPlaying } from "../../mixins/media-sync.js";
 import { installMenuKeys } from "../../mixins/menu-keys.js";
 import { formatVideoTime, playedShare } from "../utils/timeline.js";
 
+/** How long the pointer rests on a playing stage before its bar and overlay fade. */
+const IDLE_MS = 2500;
+
+/** How far the arrow keys move a stage's video, in seconds. */
+const SKIP_SECONDS = 10;
+
 /** Items the top level of a settings menu walks: its rows, and none inside a submenu. */
 const MENU_ITEMS = '[data-video-item]:not([data-slot="video-player-submenu-panel"] *)';
 
@@ -119,12 +125,77 @@ class VideoControls {
 		root.addEventListener("change", (event) => this.onChange(event), { signal });
 		root.addEventListener("input", (event) => this.onInput(event), { signal });
 		root.addEventListener("keydown", (event) => this.onKeydown(event), { signal });
-		for (let type of ["play", "pause", "ended", "timeupdate", "durationchange", "ratechange"]) {
+		for (let type of [
+			"play",
+			"pause",
+			"ended",
+			"timeupdate",
+			"durationchange",
+			"ratechange",
+			"volumechange",
+		]) {
 			video.addEventListener(type, () => this.render(), { signal });
 		}
+		if (root.dataset.layout === "stage") this.installStage();
 		document.addEventListener("fullscreenchange", () => this.render(), { signal });
 		for (let menu of this.all('[data-slot="video-player-settings"]')) this.installMenu(menu);
 		this.showCaptions(this.checkedCaptions());
+		this.render();
+	}
+
+	/**
+	 * A stage's extras: the bar and overlay fade after the pointer rests a moment while the video
+	 * plays and come back on any movement, press or key, and the page's keys drive the player
+	 * (Space or K plays and pauses, the arrows skip ten seconds, F is full screen, M mutes).
+	 */
+	installStage(): void {
+		let { root, signal, video } = this;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		let wake = () => {
+			root.removeAttribute("data-idle");
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				let menuOpen = root.querySelector(":popover-open") !== null;
+				if (!video.paused && !menuOpen) root.setAttribute("data-idle", "");
+			}, IDLE_MS);
+		};
+		for (let type of ["pointermove", "pointerdown", "focusin", "keydown"]) {
+			root.addEventListener(type, wake, { signal, passive: true });
+		}
+		video.addEventListener("play", wake, { signal });
+		video.addEventListener("pause", () => root.removeAttribute("data-idle"), { signal });
+		signal.addEventListener("abort", () => {
+			clearTimeout(timer);
+			root.removeAttribute("data-idle");
+		});
+		document.addEventListener("keydown", (event) => this.onStageKey(event), { signal });
+	}
+
+	/** Plays the page's keys on a stage, leaving every field, menu and modified key alone. */
+	onStageKey(event: KeyboardEvent): void {
+		if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+		let target = event.target instanceof Element ? event.target : null;
+		if (target?.closest("input, textarea, select, [contenteditable], [role='menu'], dialog")) {
+			return;
+		}
+		let key = event.key.toLowerCase();
+		let onButton =
+			target?.closest("button, a") !== null && target?.closest("button, a") !== undefined;
+		if ((key === " " && !onButton) || key === "k") this.togglePlay();
+		else if (key === "arrowleft") this.skip(-SKIP_SECONDS);
+		else if (key === "arrowright") this.skip(SKIP_SECONDS);
+		else if (key === "f") void this.toggleFullscreen();
+		else if (key === "m") this.video.muted = !this.video.muted;
+		else return;
+		event.preventDefault();
+	}
+
+	/** Moves the video by `seconds`, held within its length. */
+	skip(seconds: number): void {
+		let { video } = this;
+		let length = lengthOf(video, this.root.querySelector('[data-slot="video-player-progress"]'));
+		video.currentTime = Math.min(Math.max(0, video.currentTime + seconds), length);
+		syncVideo(this.root, video.currentTime);
 		this.render();
 	}
 
@@ -178,6 +249,12 @@ class VideoControls {
 				`${length > 0 ? (video.currentTime / length) * 100 : 0}%`,
 			);
 		}
+		root.toggleAttribute("data-muted", video.muted);
+		for (let button of this.all('[data-video-action="mute"]')) {
+			button.setAttribute("aria-pressed", String(video.muted));
+			let label = video.muted ? button.dataset.labelUnmute : button.dataset.labelMute;
+			if (label) button.setAttribute("aria-label", label);
+		}
 		let screen = root.querySelector('[data-slot="video-player-screen"]');
 		let fullscreen = screen !== null && document.fullscreenElement === screen;
 		for (let button of this.all('[data-video-action="fullscreen"]')) {
@@ -216,6 +293,12 @@ class VideoControls {
 			}
 			case "fullscreen":
 				void this.toggleFullscreen();
+				return;
+			case "skip":
+				this.skip(Number(button.dataset.seconds ?? "0"));
+				return;
+			case "mute":
+				this.video.muted = !this.video.muted;
 				return;
 			case "open":
 				this.openPanel(button);

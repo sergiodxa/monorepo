@@ -12,7 +12,7 @@ import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { combine, mergeMix, raw } from "@sdxc/u/general";
 import { container, hidden } from "@sdxc/u/layout";
-import { at, motionSafe } from "@sdxc/u/responsive";
+import { at, motionReduce, motionSafe } from "@sdxc/u/responsive";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { clientEntry } from "remix/component";
 
@@ -78,6 +78,13 @@ const TONES: Record<VideoPlayer.Tone, Record<`--${string}`, string>> = {
 /** Surface of the settings menu over the picture. */
 const MENU_BG = "var(--ui-video-player-menu-bg, rgb(28 28 30 / 0.96))";
 
+/** How each {@link VideoPlayer.Group} alignment lays its controls out along the bar. */
+const GROUP_JUSTIFY: Record<"start" | "center" | "end", string> = {
+	start: "flex-start",
+	center: "center",
+	end: "flex-end",
+};
+
 /** Colour scheme of a player that names none. */
 const DEFAULT_TONE: VideoPlayer.Tone = "plain";
 
@@ -91,6 +98,13 @@ const DEFAULT_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 export namespace VideoPlayer {
 	/** `plain` follows the page's scheme; `theater` is a dark screening room in either. */
 	export type Tone = "plain" | "theater";
+
+	/**
+	 * `page` sets the screen at 16:9 in a framed card with room for a side column, as a lesson
+	 * or talk sits on a page; `stage` fills the box it is given with the picture, its bar and
+	 * overlay floating over it and fading while it plays, as a film or episode is watched.
+	 */
+	export type Layout = "page" | "stage";
 
 	/** One chapter, from its start to the next chapter's start or the video's end. */
 	export interface Chapter {
@@ -125,6 +139,8 @@ export namespace VideoPlayer {
 		current?: number;
 		/** Colour scheme of the player. @default "plain" */
 		tone?: Tone;
+		/** How the player sits on the page. @default "page" */
+		layout?: Layout;
 		/** The parts, in reading order; a {@link VideoPlayer.Side} becomes the second column. */
 		children: RemixNode;
 	}
@@ -163,6 +179,8 @@ export namespace VideoPlayer {
 		sources: readonly SourceInfo[];
 		/** The captions tracks in the order the video holds them. */
 		captions: readonly CaptionsInfo[];
+		/** The player's layout. */
+		layout?: Layout;
 	}
 
 	/** Props accepted by {@link VideoPlayer.Screen}. */
@@ -224,6 +242,27 @@ export namespace VideoPlayer {
 	export interface ButtonProps extends Omit<TagProps<"button">, "children" | "type"> {
 		/** The button's accessible name. */
 		label: string;
+	}
+
+	/** Props accepted by {@link VideoPlayer.Skip}. */
+	export interface SkipProps extends ButtonProps {
+		/** Seconds to move: negative steps back, positive steps forward. */
+		seconds: number;
+	}
+
+	/** Props accepted by {@link VideoPlayer.Group}. */
+	export interface GroupProps extends TagProps<"div"> {
+		/**
+		 * Where the group sits on the bar: `start` and `end` share the space either side, so a
+		 * `center` group between them stays centred whatever they hold. @default "start"
+		 */
+		align?: "start" | "center" | "end";
+	}
+
+	/** Props accepted by {@link VideoPlayer.Mute}. */
+	export interface MuteProps extends ButtonProps {
+		/** The name while the sound is off; `label` is the name while it plays. */
+		unmuteLabel: string;
 	}
 
 	/** Props accepted by {@link VideoPlayer.Play}. */
@@ -406,10 +445,12 @@ export function VideoPlayer(handle: Handle<VideoPlayer.Props, VideoPlayer.Contex
 			current,
 			duration,
 			mix,
+			layout = "page",
 			tone = DEFAULT_TONE,
 			transcript = [],
 			...rest
 		} = handle.props;
+		let stage = layout === "stage";
 		let sources = findAll(children, VideoPlayer.Source).map((source) => ({
 			src: text(source.props.src) ?? "",
 			label: text(source.props.label),
@@ -423,6 +464,7 @@ export function VideoPlayer(handle: Handle<VideoPlayer.Props, VideoPlayer.Contex
 			href: sources[0]?.src,
 			sources,
 			captions: captionsOf(children, transcript),
+			layout,
 		});
 
 		let parts = flatten(children);
@@ -434,22 +476,42 @@ export function VideoPlayer(handle: Handle<VideoPlayer.Props, VideoPlayer.Contex
 				{...rest}
 				data-slot="video-player"
 				data-tone={tone}
+				data-layout={layout}
 				mix={mergeMix(
 					[
 						container(CONTAINER),
-						raw({
-							...TONES[tone],
-							margin: "0",
-							padding: "clamp(0.75rem, 2.5cqi, 1.5rem)",
-							boxSizing: "border-box",
-							inlineSize: "100%",
-							colorScheme: tone === "theater" ? "dark" : "inherit",
-							color: "var(--ui-video-player-body)",
-							backgroundColor: "var(--ui-video-player-bg)",
-							borderRadius: RADIUS,
-							boxShadow: "var(--ui-video-player-shadow)",
-							textAlign: "start",
-						}),
+						stage
+							? raw({
+									...TONES[tone],
+									position: "relative",
+									margin: "0",
+									padding: "0",
+									boxSizing: "border-box",
+									inlineSize: "100%",
+									blockSize: "100%",
+									colorScheme: "dark",
+									color: ON_VIDEO,
+									backgroundColor: "black",
+									"& [data-slot='video-player-layout'], & [data-slot='video-player-main']": {
+										blockSize: "100%",
+									},
+								})
+							: [],
+						stage
+							? []
+							: raw({
+									...TONES[tone],
+									margin: "0",
+									padding: "clamp(0.75rem, 2.5cqi, 1.5rem)",
+									boxSizing: "border-box",
+									inlineSize: "100%",
+									colorScheme: tone === "theater" ? "dark" : "inherit",
+									color: "var(--ui-video-player-body)",
+									backgroundColor: "var(--ui-video-player-bg)",
+									borderRadius: RADIUS,
+									boxShadow: "var(--ui-video-player-shadow)",
+									textAlign: "start",
+								}),
 					],
 					mix,
 				)}
@@ -520,12 +582,16 @@ VideoPlayer.Screen = function VideoPlayerScreen(handle: Handle<VideoPlayer.Scree
 			poster,
 			...rest
 		} = handle.props;
-		let { chapters, duration, transcript } = timeline(handle);
+		let { chapters, duration, layout, transcript } = timeline(handle);
 		let nodes = flatten(children);
 		let frames = nodes.filter((node) => isElementOf(node, VideoPlayer.Frame)) as RemixNode[];
 		let bars = nodes.filter((node) => isElementOf(node, VideoPlayer.Controls)) as RemixNode[];
+		let overlays = nodes.filter((node) => isElementOf(node, VideoPlayer.Overlay)) as RemixNode[];
 		let sources = nodes.filter(
-			(node) => !isElementOf(node, VideoPlayer.Frame) && !isElementOf(node, VideoPlayer.Controls),
+			(node) =>
+				!isElementOf(node, VideoPlayer.Frame) &&
+				!isElementOf(node, VideoPlayer.Controls) &&
+				!isElementOf(node, VideoPlayer.Overlay),
 		) as RemixNode[];
 
 		return (
@@ -541,6 +607,10 @@ VideoPlayer.Screen = function VideoPlayerScreen(handle: Handle<VideoPlayer.Scree
 							borderRadius: `max(0px, calc(${RADIUS} - 0.375rem))`,
 							backgroundColor: "black",
 						}),
+						layout === "stage"
+							? raw({ aspectRatio: "auto", blockSize: "100%", borderRadius: "0" })
+							: [],
+						when("[data-playing][data-idle] &", raw({ cursor: "none" })),
 						when(
 							"& > video, & > [data-slot='video-player-frame']",
 							raw({ position: "absolute", inset: "0", inlineSize: "100%", blockSize: "100%" }),
@@ -589,6 +659,7 @@ VideoPlayer.Screen = function VideoPlayerScreen(handle: Handle<VideoPlayer.Scree
 					/>
 				</video>
 				{bars}
+				{overlays}
 			</div>
 		);
 	};
@@ -896,6 +967,18 @@ VideoPlayer.Controls = function VideoPlayerControls(handle: Handle<VideoPlayer.C
 							backgroundImage: "linear-gradient(to top, rgb(0 0 0 / 0.72), transparent)",
 						}),
 						when("&:not([hidden])", raw({ display: "flex" })),
+						when(
+							"[data-layout='stage'] &",
+							raw({
+								padding: "6rem clamp(0.75rem, 3cqi, 2.5rem) clamp(0.75rem, 2.5cqi, 1.75rem)",
+								columnGap: "0.5rem",
+								backgroundImage: "linear-gradient(to top, rgb(0 0 0 / 0.85), transparent)",
+								"& > button, & > [data-slot='video-player-group'] > button:not([data-video-action='play'])":
+									{ inlineSize: "3rem", blockSize: "3rem" },
+								"--ui-video-player-icon-size": "1.875rem",
+							}),
+						),
+						idleFade(),
 					],
 					mix,
 				)}
@@ -968,6 +1051,14 @@ VideoPlayer.Play = function VideoPlayerPlay(handle: Handle<VideoPlayer.PlayProps
 				mix={mergeMix(
 					[
 						barButton(),
+						when(
+							"[data-slot='video-player-group'][data-align='center'] > &",
+							raw({
+								inlineSize: "4rem",
+								blockSize: "4rem",
+								"--ui-video-player-icon-size": "2.75rem",
+							}),
+						),
 						when("& > [data-icon='pause']", raw({ display: "none" })),
 						when("[data-playing] & > [data-icon='play']", raw({ display: "none" })),
 						when("[data-playing] & > [data-icon='pause']", raw({ display: "block" })),
@@ -1006,6 +1097,10 @@ VideoPlayer.Time = function VideoPlayerTime(handle: Handle<Omit<TagProps<"span">
 							fontVariantNumeric: "tabular-nums",
 							whiteSpace: "nowrap",
 						}),
+						when(
+							"[data-slot='video-player-controls']:has(> [data-slot='video-player-heading']) > &",
+							raw({ marginInline: "0.375rem 0" }),
+						),
 					],
 					mix,
 				)}
@@ -1428,6 +1523,190 @@ VideoPlayer.Fullscreen = function VideoPlayerFullscreen(handle: Handle<VideoPlay
 	};
 };
 
+/**
+ * Content over the top of the screen, such as the way back and what is playing, on a shade so
+ * it reads over any picture. It shows without script, and on a stage it fades with the bar
+ * while the video plays and the pointer rests.
+ *
+ * @param handle Runtime handle carrying the `<div>`'s props.
+ * @returns The render function producing the overlay.
+ * @example <VideoPlayer.Overlay><a href="/title/tidewater">Back</a></VideoPlayer.Overlay>
+ */
+VideoPlayer.Overlay = function VideoPlayerOverlay(handle: Handle<TagProps<"div">>) {
+	return () => {
+		let { mix, ...rest } = handle.props;
+		return (
+			<div
+				{...rest}
+				data-slot="video-player-overlay"
+				mix={mergeMix(
+					[
+						raw({
+							position: "absolute",
+							insetInline: "0",
+							insetBlockStart: "0",
+							zIndex: "1",
+							display: "flex",
+							alignItems: "center",
+							gap: "0.75rem",
+							padding: "clamp(0.75rem, 2.5cqi, 1.5rem) clamp(0.75rem, 3cqi, 2.5rem) 4rem",
+							colorScheme: "dark",
+							color: ON_VIDEO,
+							backgroundImage: "linear-gradient(to bottom, rgb(0 0 0 / 0.7), transparent)",
+						}),
+						idleFade(),
+					],
+					mix,
+				)}
+			/>
+		);
+	};
+};
+
+/**
+ * A cluster of bar controls placed together, so a bar can keep its playback controls centred
+ * between what sits at either end; a centred group draws its Play button larger, and on a
+ * narrow player takes a row of its own under the rest.
+ *
+ * @param handle Runtime handle carrying the `<div>`'s props.
+ * @returns The render function producing the group.
+ * @example <VideoPlayer.Group align="center"><VideoPlayer.Play label="Play" pauseLabel="Pause" /></VideoPlayer.Group>
+ */
+VideoPlayer.Group = function VideoPlayerGroup(handle: Handle<VideoPlayer.GroupProps>) {
+	return () => {
+		let { align = "start", mix, ...rest } = handle.props;
+		return (
+			<div
+				{...rest}
+				data-slot="video-player-group"
+				data-align={align}
+				mix={mergeMix(
+					[
+						raw({
+							display: "flex",
+							alignItems: "center",
+							gap: "0.25rem",
+							minInlineSize: "0",
+							flex: align === "center" ? "0 0 auto" : "1 1 0",
+							justifyContent: GROUP_JUSTIFY[align],
+						}),
+						align === "center"
+							? raw({
+									gap: "clamp(0.5rem, 3cqi, 2rem)",
+									[`@container ${CONTAINER} (max-width: 36rem)`]: {
+										order: "2",
+										flex: "1 1 100%",
+										paddingBlockStart: "0.5rem",
+									},
+								})
+							: [],
+					],
+					mix,
+				)}
+			/>
+		);
+	};
+};
+
+/**
+ * Steps back or forward by `seconds`, ten by convention; the glyph shows the direction and the
+ * count, and the accessible name says it in words.
+ *
+ * @param handle Runtime handle carrying the button's props.
+ * @returns The render function producing the button.
+ * @example <VideoPlayer.Skip seconds={-10} label="Back 10 seconds" />
+ */
+VideoPlayer.Skip = function VideoPlayerSkip(handle: Handle<VideoPlayer.SkipProps>) {
+	return () => {
+		let { label, mix, seconds, ...rest } = handle.props;
+		return (
+			<button
+				{...rest}
+				type="button"
+				aria-label={label}
+				data-video-action="skip"
+				data-seconds={String(seconds)}
+				mix={mergeMix([barButton()], mix)}
+			>
+				<SkipIcon seconds={seconds} />
+			</button>
+		);
+	};
+};
+
+/**
+ * Turns the sound off and on; `aria-pressed` says whether it is off, and the name says what a
+ * press does next.
+ *
+ * @param handle Runtime handle carrying the button's props.
+ * @returns The render function producing the button.
+ * @example <VideoPlayer.Mute label="Mute" unmuteLabel="Unmute" />
+ */
+VideoPlayer.Mute = function VideoPlayerMute(handle: Handle<VideoPlayer.MuteProps>) {
+	return () => {
+		let { label, mix, unmuteLabel, ...rest } = handle.props;
+		return (
+			<button
+				{...rest}
+				type="button"
+				aria-label={label}
+				aria-pressed="false"
+				data-label-mute={label}
+				data-label-unmute={unmuteLabel}
+				data-video-action="mute"
+				mix={mergeMix(
+					[
+						barButton(),
+						when("& > [data-icon='muted']", raw({ display: "none" })),
+						when("&[aria-pressed='true'] > [data-icon='volume']", raw({ display: "none" })),
+						when("&[aria-pressed='true'] > [data-icon='muted']", raw({ display: "block" })),
+					],
+					mix,
+				)}
+			>
+				<VideoIcon name="volume" />
+				<VideoIcon name="muted" />
+			</button>
+		);
+	};
+};
+
+/**
+ * What is playing, centred in the bar between the playback controls and the rest, such as a
+ * series' name and the episode; it truncates rather than pushing a control off the bar.
+ *
+ * @param handle Runtime handle carrying the `<span>`'s props.
+ * @returns The render function producing the heading.
+ * @example <VideoPlayer.Heading>Tidewater · E3 Lee Shore</VideoPlayer.Heading>
+ */
+VideoPlayer.Heading = function VideoPlayerHeading(handle: Handle<TagProps<"span">>) {
+	return () => {
+		let { mix, ...rest } = handle.props;
+		return (
+			<span
+				{...rest}
+				data-slot="video-player-heading"
+				mix={mergeMix(
+					[
+						raw({
+							flex: "1 1 0",
+							minInlineSize: "0",
+							overflow: "hidden",
+							paddingInline: "0.75rem",
+							textAlign: "center",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+							fontSize: "0.9375rem",
+							fontWeight: "600",
+						}),
+					],
+					mix,
+				)}
+			/>
+		);
+	};
+};
+
 /** The glyphs the bar and the menu draw. */
 type IconName =
 	| "play"
@@ -1438,7 +1717,9 @@ type IconName =
 	| "fullscreen"
 	| "exit-fullscreen"
 	| "next"
-	| "back";
+	| "back"
+	| "volume"
+	| "muted";
 
 /** A 24px glyph in the current colour, decorative because its button carries the name. */
 function VideoIcon(handle: Handle<{ name: IconName }>) {
@@ -1456,7 +1737,13 @@ function VideoIcon(handle: Handle<{ name: IconName }>) {
 				viewBox="0 0 24 24"
 				aria-hidden="true"
 				data-icon={name}
-				mix={[raw({ inlineSize: "1.5rem", blockSize: "1.5rem", flexShrink: "0" })]}
+				mix={[
+					raw({
+						inlineSize: "var(--ui-video-player-icon-size, 1.5rem)",
+						blockSize: "var(--ui-video-player-icon-size, 1.5rem)",
+						flexShrink: "0",
+					}),
+				]}
 			>
 				{name === "play" ? <path d="M8 5.5v13l11-6.5z" fill="currentColor" /> : null}
 				{name === "pause" ? (
@@ -1493,6 +1780,18 @@ function VideoIcon(handle: Handle<{ name: IconName }>) {
 				) : null}
 				{name === "next" ? <path d="M9 6l6 6-6 6" {...stroke} /> : null}
 				{name === "back" ? <path d="M15 6l-6 6 6 6" {...stroke} /> : null}
+				{name === "volume" ? (
+					<>
+						<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />
+						<path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" {...stroke} />
+					</>
+				) : null}
+				{name === "muted" ? (
+					<>
+						<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />
+						<path d="M16 9.5l5 5M21 9.5l-5 5" {...stroke} />
+					</>
+				) : null}
 			</svg>
 		);
 	};
@@ -1637,6 +1936,65 @@ function barButton() {
 	return combine([barButtonShape(), when("&:not([hidden])", raw({ display: "inline-grid" }))]);
 }
 
+/**
+ * Fades a stage's bar and overlay while the video plays and the pointer rests, and keeps them
+ * out of the way of clicks until the pointer moves again; under reduced motion they vanish.
+ */
+function idleFade() {
+	return combine([
+		raw({ transition: "opacity 300ms ease" }),
+		when(
+			"[data-layout='stage'][data-playing][data-idle] &",
+			raw({ opacity: "0", pointerEvents: "none" }),
+		),
+		motionReduce(raw({ transition: "none" })),
+	]);
+}
+
+/**
+ * A skip glyph: a circular arrow turning back or forward with the count inside, so a ten
+ * second step reads at a glance.
+ */
+function SkipIcon(handle: Handle<{ seconds: number }>) {
+	return () => {
+		let { seconds } = handle.props;
+		let back = seconds < 0;
+		return (
+			<svg
+				viewBox="0 0 24 24"
+				aria-hidden="true"
+				mix={[
+					raw({
+						inlineSize: "var(--ui-video-player-icon-size, 1.625rem)",
+						blockSize: "var(--ui-video-player-icon-size, 1.625rem)",
+						flexShrink: "0",
+					}),
+				]}
+			>
+				<path
+					d={back ? "M5 12a7 7 0 1 0 2.2-5.1M5 4v4h4" : "M19 12a7 7 0 1 1-2.2-5.1M19 4v4h-4"}
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+				<text
+					x="12"
+					y="15.2"
+					text-anchor="middle"
+					font-size="7.5"
+					font-weight="700"
+					fill="currentColor"
+					font-family="system-ui, sans-serif"
+				>
+					{Math.abs(seconds)}
+				</text>
+			</svg>
+		);
+	};
+}
+
 /** The look of a bar button, leaving when it shows to the caller. */
 function barButtonShape() {
 	return combine([
@@ -1685,6 +2043,7 @@ function gearBadge() {
 function menuSurface() {
 	return raw({
 		positionTryFallbacks: "flip-block, top span-all, bottom span-all",
+		"--ui-video-player-icon-size": "1.5rem",
 		colorScheme: "dark",
 		color: ON_VIDEO,
 		backgroundColor: MENU_BG,

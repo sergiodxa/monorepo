@@ -71,6 +71,26 @@ describe("VideoCard", () => {
 		expect(host.querySelector("[data-slot=video-card-badge]")?.textContent).toBe("New");
 	});
 
+	test("sets the badge at the foot of the art when asked, clear of the watched bar", () => {
+		let host = mount(
+			320,
+			<VideoCard
+				href="/title/tidewater"
+				title="Tidewater"
+				art={<Art />}
+				badge="New season"
+				badgePlacement="bottom"
+				progress={0.5}
+				progressLabel="50% watched"
+			/>,
+		);
+		let art = host.querySelector("[data-slot=video-card-art]")!.getBoundingClientRect();
+		let badge = host.querySelector("[data-slot=video-card-badge]")!.getBoundingClientRect();
+		let bar = host.querySelector("[data-slot=video-card-progress]")!.getBoundingClientRect();
+		expect(badge.bottom).toBeLessThan(bar.top);
+		expect(badge.top).toBeGreaterThan(art.top + art.height / 2);
+	});
+
 	test("draws a poster at 2:3 and leaves the bar out without progress", () => {
 		let host = mount(
 			200,

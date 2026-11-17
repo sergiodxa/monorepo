@@ -31,8 +31,10 @@ export namespace VideoCard {
 		shape?: Shape;
 		/** A short second line, such as "S2 · E4 · 38 min" or "2026 · Drama". */
 		meta?: RemixNode;
-		/** A label on the art's top corner, such as "New episodes". */
+		/** A label on the art, such as "New episodes". */
 		badge?: RemixNode;
+		/** Which corner of the art the badge sits in. Default: `"top"` (the start of the top edge). */
+		badgePlacement?: "top" | "bottom";
 		/** The share watched, from 0 to 1, drawn as a bar along the art's foot. */
 		progress?: number;
 		/** What a screen reader hears for the bar, such as "38% watched"; required with `progress`. */
@@ -72,6 +74,7 @@ export function VideoCard(handle: Handle<VideoCard.Props>) {
 		let {
 			art,
 			badge,
+			badgePlacement = "top",
 			href,
 			meta,
 			mix,
@@ -144,7 +147,11 @@ export function VideoCard(handle: Handle<VideoCard.Props>) {
 					]}
 				>
 					{art}
-					{badge === undefined ? null : <CardBadge>{badge}</CardBadge>}
+					{badge === undefined ? null : (
+						<CardBadge placement={badgePlacement} raised={watched !== null}>
+							{badge}
+						</CardBadge>
+					)}
 					{watched === null ? null : <CardProgress value={watched} />}
 				</span>
 				<span mix={[raw({ display: "grid", gap: "0.125rem", minInlineSize: "0" })]}>
@@ -191,15 +198,28 @@ export function VideoCard(handle: Handle<VideoCard.Props>) {
 	};
 }
 
-/** The label on the art's top corner, on a dark glass so it reads over any artwork. */
-function CardBadge(handle: Handle<{ children: RemixNode }>) {
+/** How far above the art's foot a badge sits: clear of the watched bar, or not at the foot. */
+function badgeFoot(placement: "top" | "bottom", raised: boolean): string {
+	if (placement === "top") return "auto";
+	return raised ? "0.75rem" : "0.5rem";
+}
+
+/**
+ * The label on one corner of the art, on a dark glass so it reads over any artwork; at the foot
+ * it sits clear of the watched bar.
+ */
+function CardBadge(
+	handle: Handle<{ placement: "top" | "bottom"; raised: boolean; children: RemixNode }>,
+) {
 	return () => (
 		<span
 			data-slot="video-card-badge"
+			data-placement={handle.props.placement}
 			mix={[
 				raw({
 					position: "absolute",
-					insetBlockStart: "0.5rem",
+					insetBlockStart: handle.props.placement === "top" ? "0.5rem" : "auto",
+					insetBlockEnd: badgeFoot(handle.props.placement, handle.props.raised),
 					insetInlineStart: "0.5rem",
 					paddingInline: "0.4375rem",
 					paddingBlock: "0.125rem",
