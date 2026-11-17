@@ -122,7 +122,7 @@ function SearchForm(handle: Handle<{ query: string }>) {
 			method="get"
 			action={href("search")}
 			role="search"
-			mix={[raw({ position: "relative", maxInlineSize: "40rem" })]}
+			mix={[raw({ position: "relative", inlineSize: "100%", maxInlineSize: "40rem" })]}
 		>
 			<SearchIcon
 				aria-hidden="true"

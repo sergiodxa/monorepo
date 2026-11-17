@@ -69,8 +69,12 @@ describe("Vesper as a single-page app", () => {
 	test("picks a season through the address without leaving the title", async () => {
 		mounted = await mountApp(vesper, "vesper", "title/tidewater");
 
-		await press(document.querySelector('a[href="/demo/apps/vesper/title/tidewater?season=2"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/title/tidewater?season=2"));
+		await press(
+			document.querySelector('a[href="/demo/apps/vesper/title/tidewater?tab=episodes&season=2"]'),
+		);
+		await vi.waitFor(() =>
+			expect(screenUrl()).toBe("/demo/apps/vesper/title/tidewater?tab=episodes&season=2"),
+		);
 
 		let episodes = [...document.querySelectorAll("[data-slot=episode-title]")];
 		expect(episodes[0]?.textContent).toContain("Spring Tide");
@@ -82,7 +86,7 @@ describe("Vesper as a single-page app", () => {
 		let marker = bar();
 		let start = navigation.currentEntry?.index ?? 0;
 
-		let button = document.getElementById("vesper-list-signal-fire");
+		let button = document.getElementById("vesper-list-icon-signal-fire");
 		expect(button?.getAttribute("aria-pressed")).toBe("false");
 		button?.focus();
 		await press(button);
@@ -95,7 +99,7 @@ describe("Vesper as a single-page app", () => {
 		expect(bar()).toBe(marker);
 		expect(navigation.currentEntry?.index ?? 0).toBe(start);
 		expect(mounted.requests.at(-1)).toBe(
-			"POST /demo/apps/vesper/title/signal-fire/list vesper-list-signal-fire",
+			"POST /demo/apps/vesper/title/signal-fire/list vesper-list-icon-signal-fire",
 		);
 		expect(document.querySelector("[data-main-screen]")?.getAttribute("data-url")).toBe(
 			"/demo/apps/vesper/title/signal-fire",
@@ -162,6 +166,23 @@ describe("Vesper as a single-page app", () => {
 		expect(document.getElementById("vesper-search-status")?.textContent).toBe("1 result");
 		expect(navigation.currentEntry?.index ?? 0).toBe(start);
 		expect(field.isConnected).toBe(true);
+	});
+
+	test("switches a title's tab through the address without leaving the page", async () => {
+		mounted = await mountApp(vesper, "vesper", "title/tidewater");
+		let start = navigation.currentEntry?.index ?? 0;
+
+		await press(document.querySelector('a[href="/demo/apps/vesper/title/tidewater?tab=details"]'));
+		await vi.waitFor(() =>
+			expect(screenUrl()).toBe("/demo/apps/vesper/title/tidewater?tab=details"),
+		);
+
+		expect(document.querySelector('section[aria-label="Details"]')?.textContent).toContain(
+			"Maren Holt",
+		);
+		expect(document.querySelector('a[aria-current="page"][href$="tab=details"]')).not.toBeNull();
+		expect((navigation.currentEntry?.index ?? 0) - start).toBe(1);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 	});
 
 	test("reveals each shelf's paging buttons once the island runs", async () => {

@@ -52,7 +52,6 @@ export default function Home(handle: Handle<{ viewer: Viewer }>) {
 				<h1 mix={[visuallyHidden()]}>Home</h1>
 				<Billboard
 					title={featured}
-					level={2}
 					eyebrow={featured.original ? "Vesper Original" : undefined}
 					actions={
 						<>
@@ -70,7 +69,6 @@ export default function Home(handle: Handle<{ viewer: Viewer }>) {
 							position: "relative",
 							display: "grid",
 							gap: "clamp(1.75rem, 3vw, 2.75rem)",
-							marginBlockStart: "clamp(-5rem, -6vw, -1rem)",
 						}),
 					]}
 				>
@@ -87,7 +85,7 @@ export default function Home(handle: Handle<{ viewer: Viewer }>) {
 							))}
 						</VideoShelf>
 					)}
-					<TitleShelf id="trending" title="Trending this week" titles={trending} />
+					<TitleShelf id="trending" title="Trending this week" titles={trending} ranked />
 					<TitleShelf id="my-list" title="My List" titles={listed} more="my-list" />
 					<TitleShelf
 						id="originals"

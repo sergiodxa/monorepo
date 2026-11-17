@@ -9,7 +9,16 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { BookmarkIcon, ClapperboardIcon, HouseIcon, SearchIcon, TvIcon } from "@sdxc/icons";
+import {
+	BellIcon,
+	BookmarkIcon,
+	ChevronDownIcon,
+	ClapperboardIcon,
+	HouseIcon,
+	PencilIcon,
+	SearchIcon,
+	TvIcon,
+} from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -21,7 +30,8 @@ import routes from "~/routes/web";
 import type { Profile } from "./data";
 import type { Viewer } from "./state";
 
-import { PROFILES, actionHref, href } from "./data";
+import { KeyArt } from "./art";
+import { PROFILES, UPDATES, actionHref, findTitle, href, visibleTitles } from "./data";
 
 /** From here the destinations sit in the top bar and the tab bar goes. */
 export const WIDE = "(min-width: 48rem)";
@@ -136,7 +146,7 @@ export function ProfileAvatar(handle: Handle<ProfileAvatar.Props>) {
 
 /**
  * The menu behind the avatar: every profile to switch to, each a post that sets the profile and
- * redraws the screen with the bar around it as that profile; then managing them and leaving.
+ * redraws the screen with the bar around it as that profile, then managing them and leaving.
  */
 function ProfileMenu(handle: Handle<{ viewer: Viewer }>) {
 	return () => {
@@ -150,24 +160,43 @@ function ProfileMenu(handle: Handle<{ viewer: Viewer }>) {
 						mix={[raw({ display: "contents" })]}
 					>
 						<Menu.Item type="submit">
-							<span mix={[raw({ display: "inline-flex", alignItems: "center", gap: "0.625rem" })]}>
-								<ProfileAvatar profile={profile} size={1.5} />
+							<span
+								mix={[
+									raw({
+										display: "inline-flex",
+										alignItems: "center",
+										gap: "0.75rem",
+										paddingBlock: "0.125rem",
+									}),
+								]}
+							>
+								<ProfileAvatar profile={profile} size={2} />
 								{profile.name}
 							</span>
 						</Menu.Item>
 					</form>
 				))}
 				<Menu.Separator />
-				<Menu.Item href={href("profiles")}>Switch profiles</Menu.Item>
-				<Menu.Item href={href("my-list")}>My List</Menu.Item>
+				<Menu.Item href={href("profiles")}>
+					<span mix={[raw({ display: "inline-flex", alignItems: "center", gap: "0.75rem" })]}>
+						<PencilIcon aria-hidden="true" size={18} />
+						Manage profiles
+					</span>
+				</Menu.Item>
+				<Menu.Item href={href("my-list")}>
+					<span mix={[raw({ display: "inline-flex", alignItems: "center", gap: "0.75rem" })]}>
+						<BookmarkIcon aria-hidden="true" size={18} />
+						My List
+					</span>
+				</Menu.Item>
 				<Menu.Separator />
-				<Menu.Item href={routes.demos.href()}>Leave the demo</Menu.Item>
+				<Menu.Item href={routes.demos.href()}>Sign out of Vesper</Menu.Item>
 			</Menu>
 		);
 	};
 }
 
-/** A destination link in the wide top bar, underlined by the brand when current. */
+/** A destination link in the wide top bar, filled as a pill when current. */
 function NavLink(handle: Handle<{ id: string; page: string; label: string; current: boolean }>) {
 	return () => {
 		let { current, id, label, page } = handle.props;
@@ -179,28 +208,16 @@ function NavLink(handle: Handle<{ id: string; page: string; label: string; curre
 				aria-current={current ? "page" : undefined}
 				mix={[
 					raw({
-						position: "relative",
 						display: "inline-flex",
 						alignItems: "center",
 						blockSize: "2.5rem",
-						paddingInline: "0.75rem",
-						borderRadius: "var(--ui-radius-md)",
+						paddingInline: "1rem",
+						borderRadius: "999px",
 						fontSize: "0.9375rem",
 						fontWeight: "500",
 						color: "var(--ui-neutral-fg)",
 						textDecoration: "none",
-						transition: "color 140ms ease",
-						"&::after": {
-							content: '""',
-							position: "absolute",
-							insetInline: "0.75rem",
-							insetBlockEnd: "0.3125rem",
-							blockSize: "2px",
-							borderRadius: "2px",
-							backgroundColor: "var(--ui-color-brand-500)",
-							scale: "0 1",
-							transition: "scale 180ms ease",
-						},
+						transition: "color 140ms ease, background-color 140ms ease",
 					}),
 					when("&:hover", raw({ color: "var(--ui-neutral-fg-emphasis)" })),
 					when(
@@ -208,20 +225,178 @@ function NavLink(handle: Handle<{ id: string; page: string; label: string; curre
 						raw({
 							color: "var(--ui-neutral-fg-emphasis)",
 							fontWeight: "650",
-							"&::after": { scale: "1 1" },
+							backgroundColor: "rgb(255 255 255 / 0.14)",
 						}),
 					),
 					when(
 						"&:focus-visible",
 						raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "0" }),
 					),
-					motionReduce(raw({ transition: "none", "&::after": { transition: "none" } })),
+					motionReduce(raw({ transition: "none" })),
 				]}
 			>
 				{label}
 			</a>
 		);
 	};
+}
+
+/** A round icon button in the top bar, such as the bell. */
+function barIconButton() {
+	return [
+		raw({
+			position: "relative",
+			display: "inline-grid",
+			placeItems: "center",
+			inlineSize: "2.75rem",
+			blockSize: "2.75rem",
+			padding: "0",
+			border: "0",
+			borderRadius: "999px",
+			color: "var(--ui-neutral-fg-emphasis)",
+			background: "transparent",
+			cursor: "pointer",
+		}),
+		when("&:hover", raw({ backgroundColor: "rgb(255 255 255 / 0.1)" })),
+		when("&:focus-visible", raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "0" })),
+	];
+}
+
+/** The id of the panel listing what is new, which the bell opens. */
+const UPDATES_PANEL = "vesper-updates";
+
+/**
+ * The bell and what it opens: the titles that are new or have new episodes for this profile,
+ * each with its still, what changed and when, linking to the title. A dot marks the bell while
+ * there is anything to see. It opens and closes without script.
+ */
+function Updates(handle: Handle<{ viewer: Viewer }>) {
+	return () => {
+		let { viewer } = handle.props;
+		let items = UPDATES.filter((update) =>
+			visibleTitles(viewer.profile).some((title) => title.id === update.title),
+		);
+		return (
+			<>
+				<button
+					type="button"
+					popovertarget={UPDATES_PANEL}
+					aria-label={`What's new, ${items.length} updates`}
+					mix={[
+						barIconButton(),
+						raw({ display: "none", [`@media ${WIDE}`]: { display: "inline-grid" } }),
+					]}
+				>
+					<BellIcon aria-hidden="true" size={22} />
+					{items.length === 0 ? null : (
+						<span
+							aria-hidden="true"
+							mix={[
+								raw({
+									position: "absolute",
+									insetBlockStart: "0.625rem",
+									insetInlineEnd: "0.625rem",
+									inlineSize: "0.5rem",
+									blockSize: "0.5rem",
+									borderRadius: "999px",
+									backgroundColor: "var(--ui-color-brand-500)",
+									boxShadow: "0 0 0 2px rgb(6 5 10)",
+								}),
+							]}
+						/>
+					)}
+				</button>
+				<div
+					id={UPDATES_PANEL}
+					popover="auto"
+					aria-label="What's new"
+					mix={[
+						dropPanel(),
+						raw({ inlineSize: "min(24rem, calc(100vw - 2rem))", padding: "0.5rem" }),
+					]}
+				>
+					<ul mix={[raw({ display: "grid", margin: "0", padding: "0", listStyle: "none" })]}>
+						{items.map((update) => {
+							let title = findTitle(update.title)!;
+							return (
+								<li>
+									<a
+										href={href(`title/${title.id}`)}
+										mix={[
+											raw({
+												display: "grid",
+												gridTemplateColumns: "7.5rem minmax(0, 1fr)",
+												alignItems: "center",
+												gap: "0.875rem",
+												padding: "0.625rem",
+												borderRadius: "0.5rem",
+												color: "inherit",
+												textDecoration: "none",
+											}),
+											when(
+												"&:hover, &:focus-visible",
+												raw({ backgroundColor: "rgb(255 255 255 / 0.08)" }),
+											),
+											when("&:focus-visible", raw({ outline: "2px solid var(--ui-brand-ring)" })),
+										]}
+									>
+										<span
+											mix={[
+												raw({
+													position: "relative",
+													aspectRatio: "16 / 9",
+													overflow: "clip",
+													borderRadius: "0.375rem",
+												}),
+											]}
+										>
+											<KeyArt title={title} />
+										</span>
+										<span mix={[raw({ display: "grid", gap: "0.125rem", lineHeight: "1.3" })]}>
+											<strong
+												mix={[
+													raw({ fontSize: "0.9375rem", color: "var(--ui-neutral-fg-emphasis)" }),
+												]}
+											>
+												{update.what}
+											</strong>
+											<span mix={[raw({ fontSize: "0.875rem", color: "var(--ui-neutral-fg)" })]}>
+												{title.name}
+											</span>
+											<span
+												mix={[raw({ fontSize: "0.8125rem", color: "var(--ui-neutral-fg-muted)" })]}
+											>
+												{update.when}
+											</span>
+										</span>
+									</a>
+								</li>
+							);
+						})}
+					</ul>
+				</div>
+			</>
+		);
+	};
+}
+
+/** The surface a top-bar panel opens on, under its button's end edge. */
+function dropPanel() {
+	return raw({
+		position: "fixed",
+		inset: "auto",
+		insetBlockStart: `calc(${TOP_BAR} - 0.25rem)`,
+		insetInlineEnd: GUTTER,
+		margin: "0",
+		maxBlockSize: `calc(100dvh - ${TOP_BAR} - 1rem)`,
+		overflow: "auto",
+		border: "0",
+		borderRadius: "0.75rem",
+		color: "var(--ui-neutral-fg)",
+		backgroundColor: "oklch(0.2 0.012 295)",
+		boxShadow: "0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 60px -12px rgb(0 0 0 / 0.75)",
+		colorScheme: "dark",
+	});
 }
 
 /** The wide bar's search box: a plain GET form to the search screen, so it works without script. */
@@ -367,6 +542,7 @@ function TopBar(handle: Handle<{ current: Destination; viewer: Viewer }>) {
 				</nav>
 				<span mix={[raw({ flex: "1 1 auto" })]} />
 				<SearchBox />
+				<Updates viewer={viewer} />
 				<button
 					type="button"
 					commandfor={PROFILE_MENU}
@@ -374,11 +550,11 @@ function TopBar(handle: Handle<{ current: Destination; viewer: Viewer }>) {
 					aria-label={`Profile: ${viewer.profile.name}`}
 					mix={[
 						raw({
-							display: "inline-grid",
-							placeItems: "center",
-							inlineSize: "2.75rem",
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "0.375rem",
 							blockSize: "2.75rem",
-							padding: "0",
+							padding: "0 0.25rem",
 							border: "0",
 							borderRadius: "var(--ui-radius-md)",
 							background: "transparent",
@@ -391,6 +567,17 @@ function TopBar(handle: Handle<{ current: Destination; viewer: Viewer }>) {
 					]}
 				>
 					<ProfileAvatar profile={viewer.profile} size={2} />
+					<ChevronDownIcon
+						aria-hidden="true"
+						size={16}
+						mix={[
+							raw({
+								display: "none",
+								color: "var(--ui-neutral-fg)",
+								[`@media ${WIDE}`]: { display: "block" },
+							}),
+						]}
+					/>
 				</button>
 				<ProfileMenu viewer={viewer} />
 			</header>
@@ -426,6 +613,7 @@ export default function VesperShell(handle: Handle<VesperShell.Props>) {
 						minBlockSize: "100dvh",
 						backgroundColor: "var(--ui-bg)",
 						"--ui-video-shelf-inset": GUTTER,
+						"--ui-video-card-badge-bg": "var(--ui-color-brand-600)",
 					}),
 				]}
 			>

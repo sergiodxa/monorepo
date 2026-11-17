@@ -44,7 +44,7 @@ import WhoIsWatching from "./profiles";
 import VesperShell, { LoadingBar } from "./shell";
 import { isPersonal, listCookie, profileCookie, readViewer } from "./state";
 import { VesperThumbnail } from "./thumbnail";
-import TitlePage from "./title";
+import TitlePage, { titleTab } from "./title";
 import WatchPage from "./watch";
 
 /** An ember at hue 45, the warm light of a screen in a dark room. */
@@ -217,6 +217,7 @@ function detailScreen(
 				title={title}
 				viewer={viewer}
 				season={season}
+				tab={titleTab(title, request.url.searchParams.get("tab"))}
 				back={`${request.page}${request.url.search}`}
 			/>
 		),
@@ -332,6 +333,10 @@ const SCREENS = [
 	"my-list",
 	...TITLES.map((title) => `title/${title.id}`),
 	"title/tidewater?season=2",
+	"title/tidewater?tab=more",
+	"title/tidewater?tab=details",
+	"title/tidewater?tab=episodes&season=2",
+	"title/signal-fire?tab=details",
 	"watch/tidewater/2-3",
 	"watch/halcyon-station/1-1",
 	"watch/the-quiet-hours",

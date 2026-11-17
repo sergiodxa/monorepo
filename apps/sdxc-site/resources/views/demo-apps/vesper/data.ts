@@ -675,6 +675,21 @@ export const TRENDING = [
 	"second-spring",
 ];
 
+/** What is new on Vesper, newest first, as the bell's panel lists it. */
+export const UPDATES: Array<{ title: string; what: string; when: string }> = [
+	{ title: "halcyon-station", what: "New episodes", when: "Today" },
+	{ title: "signal-fire", what: "New arrival", when: "2 days ago" },
+	{ title: "tidewater", what: "Season 2 is here", when: "1 week ago" },
+	{ title: "kitchen-table", what: "New arrival", when: "2 weeks ago" },
+	{ title: "starling-and-finch", what: "New arrival", when: "3 weeks ago" },
+];
+
+/** The rank each of the week's most watched titles holds, by id. */
+export function trendingRank(id: string): number | undefined {
+	let index = TRENDING.indexOf(id);
+	return index === -1 ? undefined : index + 1;
+}
+
 /** My List as a profile finds it before changing it. */
 export const DEFAULT_LIST = ["ember-line", "low-country", "paper-moons", "glasshouse"];
 

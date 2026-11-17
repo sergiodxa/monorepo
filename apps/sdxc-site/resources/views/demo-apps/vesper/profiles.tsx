@@ -14,7 +14,8 @@ import { ProfilePicker } from "@sdxc/ui/app/profile-picker";
 
 import type { Viewer } from "./state";
 
-import { PROFILES, actionHref } from "./data";
+import { KeyArt } from "./art";
+import { PROFILES, TITLES, actionHref, visibleTitles } from "./data";
 import { ProfileAvatar, VesperMark } from "./shell";
 
 /** Renders the picker, the current profile marked. */
@@ -25,15 +26,39 @@ export default function WhoIsWatching(handle: Handle<{ viewer: Viewer }>) {
 			<div
 				mix={[
 					raw({
+						position: "relative",
+						isolation: "isolate",
 						flex: "1 1 auto",
 						display: "grid",
 						gridTemplateRows: "auto 1fr",
 						minBlockSize: "100dvh",
-						background:
-							"radial-gradient(ellipse at 50% 0%, color-mix(in oklch, var(--ui-color-brand-900), transparent 55%), transparent 60%), var(--ui-bg)",
+						overflow: "clip",
+						backgroundColor: "var(--ui-bg)",
 					}),
 				]}
 			>
+				<div
+					aria-hidden="true"
+					mix={[
+						raw({
+							position: "absolute",
+							inset: "0",
+							zIndex: "-1",
+							opacity: "0.55",
+							filter: "blur(3px) saturate(1.1)",
+							scale: "1.03",
+							"&::after": {
+								content: '""',
+								position: "absolute",
+								inset: "0",
+								background:
+									"linear-gradient(to bottom, rgb(6 5 10 / 0.55), rgb(6 5 10 / 0.35) 40%, rgb(6 5 10 / 0.9))",
+							},
+						}),
+					]}
+				>
+					<KeyArt title={visibleTitles(viewer.profile)[0] ?? TITLES[0]!} named={false} priority />
+				</div>
 				<div mix={[raw({ padding: "1.25rem clamp(1rem, 4vw, 3.5rem)" })]}>
 					<span
 						mix={[

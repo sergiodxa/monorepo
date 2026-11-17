@@ -29,10 +29,12 @@ import {
 	findTitle,
 	genreNames,
 	href,
+	formatMinutes,
 	lengthLabel,
+	trendingRank,
 	watchHref,
 } from "./data";
-import { GUTTER, TOP_BAR } from "./shell";
+import { GUTTER } from "./shell";
 
 /** The shelves' paging button names. */
 const SHELF_LABELS: VideoShelf.Labels = { previous: "Previous titles", next: "More titles" };
@@ -46,13 +48,16 @@ namespace TitleCard {
 	export interface Props {
 		title: Title;
 		shape?: VideoCard.Shape;
+		/** Shows the title's rank this week on its art's corner, for the trending row. */
+		ranked?: boolean;
 	}
 }
 
 /** A title as a card linking to its page, with its art, badge and meta line. */
 export function TitleCard(handle: Handle<TitleCard.Props>) {
 	return () => {
-		let { shape = "landscape", title } = handle.props;
+		let { ranked = false, shape = "landscape", title } = handle.props;
+		let rank = ranked ? trendingRank(title.id) : undefined;
 		return (
 			<VideoCard
 				href={href(`title/${title.id}`)}
@@ -61,6 +66,19 @@ export function TitleCard(handle: Handle<TitleCard.Props>) {
 				art={
 					<span>
 						<KeyArt title={title} />
+						{rank === undefined ? null : (
+							<span
+								mix={[
+									raw({
+										position: "absolute",
+										insetBlockStart: "0.5rem",
+										insetInlineEnd: "0.5rem",
+									}),
+								]}
+							>
+								<RankMark rank={rank} size={1.625} />
+							</span>
+						)}
 						<CardPeek title={title} />
 					</span>
 				}
@@ -170,10 +188,10 @@ export function ResumeCard(handle: Handle<ResumeCard.Props>) {
 			progress.season === undefined || progress.episode === undefined
 				? undefined
 				: findEpisode(title, progress.season, progress.episode);
+		let minutes = found?.episode.minutes ?? title.minutes ?? 0;
+		let left = `${formatMinutes(Math.max(1, Math.round(minutes * (1 - progress.share))))} left`;
 		let meta =
-			found === undefined
-				? lengthLabel(title)
-				: `S${found.season.number}:E${found.episode.number} · ${found.episode.title}`;
+			found === undefined ? left : `S${found.season.number}:E${found.episode.number} · ${left}`;
 		let percent = Math.round(progress.share * 100);
 		return (
 			<VideoCard
@@ -196,13 +214,15 @@ namespace TitleShelf {
 		shape?: VideoCard.Shape;
 		/** A "See all" link's page path. */
 		more?: string;
+		/** Marks each card with its rank this week. */
+		ranked?: boolean;
 	}
 }
 
 /** A shelf of title cards, with a "See all" link when the shelf has a page of its own. */
 export function TitleShelf(handle: Handle<TitleShelf.Props>) {
 	return () => {
-		let { id, more, shape = "landscape", title, titles } = handle.props;
+		let { id, more, ranked = false, shape = "landscape", title, titles } = handle.props;
 		if (titles.length === 0) return null;
 		return (
 			<VideoShelf
@@ -214,7 +234,7 @@ export function TitleShelf(handle: Handle<TitleShelf.Props>) {
 			>
 				{titles.map((entry) => (
 					<VideoShelf.Item>
-						<TitleCard title={entry} shape={shape} />
+						<TitleCard title={entry} shape={shape} ranked={ranked} />
 					</VideoShelf.Item>
 				))}
 			</VideoShelf>
@@ -257,7 +277,7 @@ namespace PosterGrid {
 	}
 }
 
-/** Titles as a wrapping grid of posters, as many to a row as fit. */
+/** Titles as a wrapping grid of landscape cards, as many to a row as fit. */
 export function PosterGrid(handle: Handle<PosterGrid.Props>) {
 	return () => {
 		let { label, titles } = handle.props;
@@ -267,7 +287,7 @@ export function PosterGrid(handle: Handle<PosterGrid.Props>) {
 				mix={[
 					raw({
 						display: "grid",
-						gridTemplateColumns: "repeat(auto-fill, minmax(min(9.5rem, 42%), 1fr))",
+						gridTemplateColumns: "repeat(auto-fill, minmax(min(15rem, 100%), 1fr))",
 						gap: "1.5rem 0.875rem",
 						margin: "0",
 						padding: "0",
@@ -277,7 +297,7 @@ export function PosterGrid(handle: Handle<PosterGrid.Props>) {
 			>
 				{titles.map((title) => (
 					<li>
-						<TitleCard title={title} shape="poster" />
+						<TitleCard title={title} />
 					</li>
 				))}
 			</ul>
@@ -299,9 +319,12 @@ export function ScreenHeading(handle: Handle<{ title: string; children?: RemixNo
 			mix={[
 				raw({
 					display: "grid",
-					gap: "0.75rem",
+					justifyItems: "center",
+					gap: "1.5rem",
 					paddingInline: GUTTER,
-					paddingBlock: "0.5rem 1.5rem",
+					paddingBlock: "clamp(0.5rem, 3vh, 2rem) 2rem",
+					textAlign: "center",
+					"& nav ul": { justifyContent: "center" },
 				}),
 			]}
 		>
@@ -309,7 +332,7 @@ export function ScreenHeading(handle: Handle<{ title: string; children?: RemixNo
 				mix={[
 					raw({
 						margin: "0",
-						fontSize: "clamp(1.75rem, 3vw, 2.5rem)",
+						fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
 						lineHeight: "1.1",
 						fontWeight: "700",
 						letterSpacing: "-0.02em",
@@ -350,10 +373,14 @@ export function PlayButton(handle: Handle<PlayButton.Props>) {
 	return () => (
 		<LinkButton
 			href={handle.props.href}
-			color="brand"
+			color="neutral"
 			variant="solid"
 			size="lg"
-			mix={[heroButton()]}
+			mix={[
+				heroButton(),
+				raw({ backgroundColor: "oklch(0.98 0 0)", color: "oklch(0.12 0.01 295)" }),
+				when("&:hover", raw({ backgroundColor: "oklch(0.86 0 0)" })),
+			]}
 		>
 			<PlayIcon aria-hidden="true" fill="currentColor" />
 			{handle.props.label}
@@ -462,56 +489,51 @@ export function ListButton(handle: Handle<ListButton.Props>) {
 namespace Billboard {
 	export interface Props {
 		title: Title;
-		/** The level of the title's heading: 1 on a title's page, 2 on home under its own heading. */
-		level: 1 | 2;
 		/** The eyebrow over the name, such as "Vesper Original". */
 		eyebrow?: string;
-		/** Synopsis or tagline under the meta row. */
+		/** Synopsis or tagline under the facts. */
 		children?: RemixNode;
 		/** The buttons. */
 		actions: RemixNode;
-		/** Taller on home, shorter on a title's page where the episodes follow. */
-		size?: "feature" | "title";
 	}
 }
 
 /**
- * A title's hero: its art behind the top bar, with the name in the title's own lettering, its
- * rating, year, length and genres, and its actions.
+ * The home's featured title as a rounded card set in from the page's edges: its art, the name
+ * in the title's own lettering, its facts, where it ranks this week and its actions.
  */
 export function Billboard(handle: Handle<Billboard.Props>) {
 	return () => {
-		let { actions, children, eyebrow, level, size = "feature", title } = handle.props;
+		let { actions, children, eyebrow, title } = handle.props;
 		let id = `vesper-hero-${title.id}`;
 		return (
 			<TitleHero
-				size={size}
+				size="feature"
 				aria-labelledby={id}
 				art={<KeyArt title={title} named={false} priority />}
 				mix={[
 					raw({
-						"--ui-title-hero-offset": TOP_BAR,
-						"--ui-title-hero-inset": GUTTER,
+						"--ui-title-hero-offset": "0px",
+						"--ui-title-hero-inset": "clamp(1.25rem, 4cqi, 3.5rem)",
 						"--ui-title-hero-accent": "var(--ui-color-brand-300)",
+						"--ui-title-hero-feature-size": "min(74svh, 46rem)",
+						"--ui-title-hero-fade": "oklch(0.1 0.012 295)",
+						marginInline: GUTTER,
+						borderRadius: "1rem",
+						boxShadow: "0 0 0 1px rgb(255 255 255 / 0.06), 0 30px 60px -30px rgb(0 0 0 / 0.8)",
 					}),
 				]}
 			>
 				{eyebrow === undefined ? null : <TitleHero.Eyebrow>{eyebrow}</TitleHero.Eyebrow>}
 				<TitleHero.Title
 					id={id}
-					level={level}
+					level={2}
 					mix={[raw({ color: "oklch(0.98 0.01 85)", ...HERO_LETTERING[title.lettering] })]}
 				>
 					{title.name}
 				</TitleHero.Title>
-				<TitleHero.Facts>
-					<TitleHero.Rating>{title.rating}</TitleHero.Rating>
-					<span>{title.year}</span>
-					<span>{lengthLabel(title)}</span>
-					<span mix={[raw({ color: "var(--ui-neutral-fg)" })]}>
-						{genreNames(title).join(" · ")}
-					</span>
-				</TitleHero.Facts>
+				<DottedFacts title={title} />
+				<RankLine title={title} />
 				{children === undefined ? null : <TitleHero.Summary>{children}</TitleHero.Summary>}
 				<TitleHero.Actions>{actions}</TitleHero.Actions>
 			</TitleHero>
@@ -519,8 +541,94 @@ export function Billboard(handle: Handle<Billboard.Props>) {
 	};
 }
 
+/** A title's kind, first genre, year, length and rating as one line, dotted between. */
+export function DottedFacts(handle: Handle<{ title: Title }>) {
+	return () => {
+		let { title } = handle.props;
+		let facts = [
+			title.kind === "film" ? "Film" : "Series",
+			genreNames(title)[0] ?? "",
+			String(title.year),
+			lengthLabel(title),
+			title.rating,
+		].filter((fact) => fact !== "");
+		return (
+			<TitleHero.Facts mix={[raw({ fontWeight: "600" })]}>
+				{facts.map((fact, index) => (
+					<>
+						{index === 0 ? null : (
+							<span aria-hidden="true" mix={[raw({ color: "var(--ui-neutral-fg-muted)" })]}>
+								•
+							</span>
+						)}
+						<span>{fact}</span>
+					</>
+				))}
+			</TitleHero.Facts>
+		);
+	};
+}
+
+/** Where a title ranks this week, beside a small ember mark, for the titles that rank at all. */
+export function RankLine(handle: Handle<{ title: Title }>) {
+	return () => {
+		let { title } = handle.props;
+		let rank = trendingRank(title.id);
+		if (rank === undefined) return null;
+		return (
+			<p
+				mix={[
+					raw({
+						display: "flex",
+						alignItems: "center",
+						gap: "0.625rem",
+						margin: "0",
+						fontSize: "1.0625rem",
+						fontWeight: "700",
+						color: "var(--ui-neutral-fg-emphasis)",
+					}),
+				]}
+			>
+				<RankMark rank={rank} />
+				{`#${rank} in ${title.kind === "film" ? "films" : "series"} this week`}
+			</p>
+		);
+	};
+}
+
+/** A small ember square holding a rank, Vesper's mark for the week's most watched. */
+export function RankMark(handle: Handle<{ rank: number; size?: number }>) {
+	return () => {
+		let { rank, size = 1.75 } = handle.props;
+		return (
+			<span
+				aria-hidden="true"
+				mix={[
+					raw({
+						display: "inline-grid",
+						placeItems: "center",
+						inlineSize: `${size}rem`,
+						blockSize: `${size}rem`,
+						flexShrink: "0",
+						borderRadius: "0.3rem",
+						fontSize: `${size * 0.5}rem`,
+						fontWeight: "800",
+						lineHeight: "1",
+						color: "oklch(0.18 0.03 40)",
+						background:
+							"linear-gradient(160deg, var(--ui-color-brand-300), var(--ui-color-brand-600))",
+						boxShadow: "0 2px 8px rgb(0 0 0 / 0.4)",
+					}),
+				]}
+			>
+				{`#${rank}`}
+			</span>
+		);
+	};
+}
+
 /** The type each lettering sets a name in on the hero, sized against the hero's width. */
-const HERO_LETTERING: Record<Title["lettering"], Record<string, string>> = {
+export const HERO_LETTERING: Record<Title["lettering"], Record<string, string>> = {
 	serif: {
 		fontFamily: "Didot, 'Bodoni 72', 'Bodoni MT', 'Playfair Display', Georgia, serif",
 		fontWeight: "400",
