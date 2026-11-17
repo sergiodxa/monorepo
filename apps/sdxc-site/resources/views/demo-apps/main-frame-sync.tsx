@@ -60,6 +60,14 @@ export const MainFrameSync = clientEntry(
 		let posted: { form: HTMLFormElement; submitter: HTMLElement | null } | null = null;
 
 		/**
+		 * Marks the document while a navigation or post is in flight, so an app can show that
+		 * the main area is loading (`:root[data-main-loading]`) without a script of its own.
+		 */
+		function setLoading(loading: boolean) {
+			document.documentElement.toggleAttribute("data-main-loading", loading);
+		}
+
+		/**
 		 * The element the main area scrolls in: the nearest scrolling ancestor of the region,
 		 * such as an app shell's content panel, or the page itself.
 		 */
@@ -168,15 +176,20 @@ export const MainFrameSync = clientEntry(
 			if (frame === undefined) return;
 			event.preventDefault();
 			let body = new FormData(form, submitter instanceof HTMLElement ? submitter : null);
+			setLoading(true);
 			void frame.reload({ src: action, method: "post", encType: form.enctype, body }).then(
 				() => {
+					setLoading(false);
 					let used = submitter instanceof HTMLElement ? submitter : null;
 					form.reset();
 					sync("action");
 					posted = { form, submitter: used };
 					restoreFocus(form, used);
 				},
-				() => form.submit(),
+				() => {
+					setLoading(false);
+					form.submit();
+				},
 			);
 		}
 
@@ -369,6 +382,7 @@ export const MainFrameSync = clientEntry(
 					leftPath = location.pathname;
 					lastNavigation = event.navigationType;
 					posted = null;
+					if (event.canIntercept && !event.hashChange) setLoading(true);
 				},
 				{ signal },
 			);
@@ -376,11 +390,16 @@ export const MainFrameSync = clientEntry(
 				"navigatesuccess",
 				() =>
 					setTimeout(() => {
+						setLoading(false);
 						restoreScroll();
 						sync("settled");
 					}, 0),
 				{ signal },
 			);
+			globalThis.navigation?.addEventListener("navigateerror", () => setLoading(false), {
+				signal,
+			});
+			signal.addEventListener("abort", () => setLoading(false));
 		});
 
 		return () => <span hidden data-main-frame-sync="" />;
