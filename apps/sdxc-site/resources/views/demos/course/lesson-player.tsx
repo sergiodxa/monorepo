@@ -21,18 +21,19 @@ import {
 	PREVIEW,
 	TRANSCRIPT,
 } from "~/resources/views/demos/course/data";
+import routes from "~/routes/web";
 
 /**
  * A transparent WebM exactly as long as the lesson, served by the site, so the native
  * player, the custom bar, the chapters and the captions all run over the drawn frame.
  */
-export const LESSON_CLIP = "/demos/video/lesson.webm";
+export const LESSON_CLIP = routes.demoMedia.href({ file: "video/lesson.webm" });
 
 /**
  * The same length in H.264 for browsers without WebM. An MP4 carries no alpha, so it sits on
  * a solid ground the colour of the wheel frame's backdrop.
  */
-export const LESSON_CLIP_MP4 = "/demos/video/lesson.mp4";
+export const LESSON_CLIP_MP4 = routes.demoMedia.href({ file: "video/lesson.mp4" });
 
 /**
  * A one-pixel transparent GIF as the poster, so Chrome paints nothing over the drawn frame

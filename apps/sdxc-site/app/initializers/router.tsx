@@ -348,6 +348,10 @@ export function createWebRouter() {
 		routes.demoStreams.app,
 		lazy(() => import("~/app/http/controllers/demo-apps/stream")),
 	);
+	router.map(
+		routes.demoMedia,
+		lazy(() => import("~/app/http/controllers/demo-media")),
+	);
 
 	return router;
 }

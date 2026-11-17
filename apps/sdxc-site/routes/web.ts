@@ -214,4 +214,5 @@ export default route({
 	demoStreams: {
 		app: get("/demo/apps/:app/streams/*part"),
 	},
+	demoMedia: get("/demo/media/*file"),
 });

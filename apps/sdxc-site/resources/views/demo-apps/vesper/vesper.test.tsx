@@ -77,6 +77,23 @@ describe("Vesper's posts", () => {
 		expect(away.headers.get("Location")).toMatch(/^\/demo\/apps\/vesper\/title\/tidewater\?toast=/);
 	});
 
+	test("reset expires every Vesper cookie and lands on home with a toast", async () => {
+		let response = await post(
+			"reset",
+			{},
+			"vesper.profile=theo; vesper.list.theo=tidewater; other=1",
+		);
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toMatch(/^\/demo\/apps\/vesper\?toast=reset\./);
+		let cleared = response.headers.getSetCookie();
+		expect(
+			cleared
+				.map((cookie) => cookie.split(";")[0])
+				.sort((a, b) => (a ?? "").localeCompare(b ?? "")),
+		).toEqual(["vesper.list.theo=", "vesper.profile="]);
+		expect(cleared.every((cookie) => cookie.includes("Max-Age=0"))).toBe(true);
+	});
+
 	test("rejects a post for a title Vesper lacks or a list choice it cannot read", async () => {
 		expect((await post("title/nope/list", { on: "true" })).status).toBe(400);
 		expect((await post("title/tidewater/list", { on: "maybe" })).status).toBe(400);
@@ -110,10 +127,10 @@ describe("Vesper's catalogue", () => {
 	test("resumes an episode at the time the profile left it, with a clip as long as it", async () => {
 		let body = await (await fetchApp("/demo/apps/vesper/watch/tidewater/2-3")).text();
 		let start = Math.round(0.42 * 50 * 60);
-		expect(body).toContain(`/demos/video/vesper/50.webm#t=${start}`);
-		expect(body).toContain(`/demos/video/vesper/50.mp4#t=${start}`);
+		expect(body).toContain(`/demo/media/video/vesper/50.webm#t=${start}`);
+		expect(body).toContain(`/demo/media/video/vesper/50.mp4#t=${start}`);
 		let fresh = await (await fetchApp("/demo/apps/vesper/watch/tidewater/1-1")).text();
-		expect(fresh).toContain('/demos/video/vesper/52.webm"');
+		expect(fresh).toContain('/demo/media/video/vesper/52.webm"');
 	});
 
 	test("ships a clip for every running time in the catalogue", () => {
@@ -129,7 +146,7 @@ describe("Vesper's catalogue", () => {
 		for (let length of minutes) {
 			for (let kind of ["webm", "mp4"]) {
 				let file = fileURLToPath(
-					new URL(`../../../../public/demos/video/vesper/${length}.${kind}`, import.meta.url),
+					new URL(`../../../media/video/vesper/${length}.${kind}`, import.meta.url),
 				);
 				expect(existsSync(file), `${length}.${kind}`).toBe(true);
 			}

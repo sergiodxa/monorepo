@@ -14,6 +14,8 @@ import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { EpisodeList, VideoPlayer } from "@sdxc/ui/video";
 
+import routes from "~/routes/web";
+
 import type { Episode, Season, Title } from "./data";
 import type { Viewer } from "./state";
 
@@ -36,8 +38,8 @@ const CLEAR_POSTER =
 function clip(minutes: number, start: number | undefined): { webm: string; mp4: string } {
 	let from = start === undefined ? "" : `#t=${start}`;
 	return {
-		webm: `/demos/video/vesper/${minutes}.webm${from}`,
-		mp4: `/demos/video/vesper/${minutes}.mp4${from}`,
+		webm: `${routes.demoMedia.href({ file: `video/vesper/${minutes}.webm` })}${from}`,
+		mp4: `${routes.demoMedia.href({ file: `video/vesper/${minutes}.mp4` })}${from}`,
 	};
 }
 
@@ -172,7 +174,7 @@ export default function WatchPage(handle: Handle<WatchPage.Props>) {
 							<a
 								href={href(`title/${title.id}`)}
 								aria-label={`Back to ${title.name}`}
-								mix={[overlayButton()]}
+								mix={[overlayButton(), raw({ inlineSize: "2.75rem", paddingInline: "0" })]}
 							>
 								<ArrowLeftIcon aria-hidden="true" size={22} />
 							</a>

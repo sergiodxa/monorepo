@@ -101,6 +101,7 @@ export default createAction(routes.sitemap, async (ctx) => {
 		demoApps: false,
 		demoFrames: false,
 		demoStreams: false,
+		demoMedia: false,
 	});
 
 	return await withBundleCache(ctx.request, xml(sitemap.toString()));
