@@ -184,6 +184,20 @@ describe("VideoPlayer on a stage", () => {
 		expect(skip.top).toBeGreaterThanOrEqual(time.bottom);
 	});
 
+	test("wires itself again when a frame redraw puts back the native controls and new sources", async () => {
+		let root = mount();
+		let video = get<HTMLVideoElement>(root, "video");
+		let bar = get(root, "[data-slot=video-player-controls]");
+		await vi.waitFor(() => expect(bar.hidden).toBe(false));
+		let load = vi.spyOn(video, "load");
+		video.controls = true;
+		bar.hidden = true;
+		get(root, "source").setAttribute("src", "/episodes/204.mp4");
+		await vi.waitFor(() => expect(bar.hidden).toBe(false));
+		expect(video.controls).toBe(false);
+		expect(load).toHaveBeenCalledTimes(1);
+	});
+
 	test("leaves the page's keys alone while a field has focus", async () => {
 		let root = mount();
 		let video = get<HTMLVideoElement>(root, "video");

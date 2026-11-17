@@ -483,6 +483,28 @@ class VideoControls {
 	}
 }
 
+/** The addresses a video's sources name, in order, which change when it is given a new file. */
+function sourcesOf(video: HTMLVideoElement): string {
+	return [...video.querySelectorAll("source")]
+		.map((source) => source.getAttribute("src"))
+		.join("|");
+}
+
+/**
+ * Whether a player was redrawn under its wiring, as a frame reload that reuses the elements
+ * does: its video replaced or given new sources, or the native controls back over a hidden bar.
+ */
+function needsRewire(
+	root: HTMLElement,
+	wired: { video: HTMLVideoElement; sources: string } | undefined,
+): boolean {
+	let video = root.querySelector("video");
+	if (!video) return false;
+	if (wired?.video !== video || wired.sources !== sourcesOf(video)) return true;
+	let bar = root.querySelector<HTMLElement>('[data-slot="video-player-controls"]');
+	return bar !== null && bar.hidden && video.hasAttribute("controls");
+}
+
 /**
  * Wires one player until `signal` aborts: time links seek in place, the marks follow the
  * video, and a control bar, when the player has one, replaces the native controls.
@@ -510,18 +532,44 @@ export const videoPlayerSync: MixinFactory<HTMLElement, [], ElementProps> = crea
 	ElementProps
 >((handle) => {
 	let controller: AbortController | undefined;
+	let observer: MutationObserver | undefined;
 
 	handle.addEventListener("insert", (event) => {
 		controller?.abort();
+		observer?.disconnect();
 		let root = event.node.closest<HTMLElement>('[data-slot="video-player"]');
-		let video = root?.querySelector("video");
-		if (!root || !video) return;
-		controller = new AbortController();
-		wirePlayer(root, video, controller.signal);
+		if (!root) return;
+		let player = root;
+		let wired: { video: HTMLVideoElement; sources: string } | undefined;
+
+		/** Wires the player's current video, reloading it when its sources changed under it. */
+		function wire() {
+			controller?.abort();
+			let video = player.querySelector("video");
+			if (!video) return;
+			let sources = sourcesOf(video);
+			if (wired?.video === video && wired.sources !== sources) video.load();
+			wired = { video, sources };
+			controller = new AbortController();
+			wirePlayer(player, video, controller.signal);
+		}
+
+		wire();
+		observer = new MutationObserver(() => {
+			if (needsRewire(player, wired)) wire();
+		});
+		observer.observe(player, {
+			subtree: true,
+			childList: true,
+			attributes: true,
+			attributeFilter: ["controls", "hidden", "src"],
+		});
 	});
 
 	handle.addEventListener("remove", () => {
 		controller?.abort();
 		controller = undefined;
+		observer?.disconnect();
+		observer = undefined;
 	});
 });
