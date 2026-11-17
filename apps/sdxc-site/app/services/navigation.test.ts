@@ -137,7 +137,13 @@ describe("namespace groups", () => {
 		);
 		expect(titles("Color")).toEqual(expect.arrayContaining(["ColorPicker", "ColorWheel"]));
 		expect(titles("App")).toEqual(expect.arrayContaining(["Chart", "Table", "Toast"]));
-		expect(titles("Video")).toEqual(["Foundations", "VideoPlayer"]);
+		expect(titles("Video")).toEqual([
+			"Foundations",
+			"EpisodeList",
+			"VideoCard",
+			"VideoPlayer",
+			"VideoShelf",
+		]);
 		expect(
 			["Landing", "Docs", "Chat", "Color", "App"].map(
 				(section) => titles(section).filter((title) => title !== "Foundations").length,
