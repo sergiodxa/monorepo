@@ -31,8 +31,8 @@ const CODE = `<span hidden mix={[reactionSync()]} />
 	</form>
 </ReactionBar>`;
 
-/** Where the preview's chips post: the team chat demo's own reactions, which answer with a redirect. */
-const ACTION = "/demo/apps/parley/c/general";
+/** Where the preview's chips post: an example address that redirects back to the page. */
+const ACTION = "/examples/messages/42/reactions";
 
 /** One chip and the form it posts. */
 function Chip(
@@ -42,8 +42,6 @@ function Chip(
 		let { emoji, label, count, pressed, title } = handle.props;
 		return (
 			<form method="post" action={ACTION}>
-				<input type="hidden" name="intent" value="react" />
-				<input type="hidden" name="id" value="g5" />
 				<input type="hidden" name="emoji" value={emoji} />
 				<ReactionBar.Reaction
 					emoji={emoji}
