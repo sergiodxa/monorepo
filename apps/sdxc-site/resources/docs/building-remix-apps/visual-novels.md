@@ -252,8 +252,8 @@ checks below list it per locale.
 
 Where a game is kept is yours to decide. The novel emits each save and every change to its
 persistent data (lines read, options taken, endings, chapters, unlocked pictures and tracks) as
-JSON, and the player hands you its settings whenever the reader changes one. This module keeps
-all three in the browser:
+JSON, and the player dispatches a `novel:settings` event whenever the reader changes a setting.
+This module keeps all three in the browser:
 
 ```typescript {% title="resources/novel/storage.ts" %}
 import type { GameState } from "@sdxc/novel";
@@ -318,10 +318,11 @@ import type { Stored } from "~/resources/novel/storage";
 import { createI18n } from "@sdxc/i18n";
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { NovelPlayer } from "@sdxc/novel/ui";
-import { clientEntry, css } from "remix/component";
+import { clientEntry, css, on } from "remix/component";
 
 import { novel } from "~/app/initializers/novel";
 import en from "~/resources/locales/en";
+import { LatteArt } from "~/resources/components/latte-art";
 import { readStored, storeSettings } from "~/resources/novel/storage";
 
 const RESOURCES = { en };
@@ -345,13 +346,20 @@ export const Game = clientEntry(
 				<div mix={css({ blockSize: "100dvh" })}>
 					{stored === undefined ? null : (
 						<IntlProvider intl={i18n}>
-							<NovelPlayer
+							<NovelPlayer.Default
 								novel={novel}
 								start={{ persistent: stored.persistent }}
 								saves={stored.saves}
 								settings={stored.settings}
-								onSettingsChange={storeSettings}
-							/>
+								mix={on("novel:settings", (event) =>
+									storeSettings(event.settings),
+								)}
+							>
+								<NovelPlayer.Interaction
+									name="latteArt"
+									component={LatteArt}
+								/>
+							</NovelPlayer.Default>
 						</IntlProvider>
 					)}
 				</div>
@@ -368,7 +376,41 @@ The player fills its parent with a 16:9 stage, letterboxed. Its screens are buil
 advances with a click, Space or Enter, toggles auto with `a`, skips with `k` or a held Control,
 rolls back with ↑ or the wheel, and opens the backlog with `l`, the save and load screens with
 `s` and `o`, quick save and load with `q` and `w`, and the settings with Escape; touch and gamepads work too, and `labels` translates the
-player's own words.
+player's own words. The player also dispatches `novel:save` and `novel:ending`, which bubble, so
+any ancestor can listen with `on()`.
+
+`NovelPlayer.Default` is the whole player in one component. `NovelPlayer` itself is a provider
+that draws the parts you place inside it, and the keyboard, touch and gamepad controls are mixins
+you apply to it, so a game composes only what it uses:
+
+```tsx
+<NovelPlayer novel={novel} mix={[keyboardControls(), touchControls()]}>
+	<NovelPlayer.Stage>
+		<NovelPlayer.Textbox />
+		<NovelPlayer.Choices />
+		<NovelPlayer.QuickMenu />
+	</NovelPlayer.Stage>
+	<NovelPlayer.Backlog />
+	<NovelPlayer.Saves slots={3} />
+	<NovelPlayer.Settings />
+</NovelPlayer>
+```
+
+A part of your own reads the same state and actions with `handle.context.get(NovelPlayer)`:
+`player.frame`, `player.answer(reply)`, `player.advance()`, and the reveal, auto, skip, backlog,
+saves and settings models a built-in part uses. Every color, image and size the parts draw is a
+`--novel-*` variable, listed in `NOVEL_THEME_VARIABLES`, so restyling the textbox is a `css()`
+mixin on the player:
+
+```tsx
+css({
+	"--novel-textbox-background": "rgb(30 20 10 / 0.85)",
+	"--novel-textbox-border-image-source": "url(/ui/frame.png)",
+	"--novel-textbox-border-image-slice": "24",
+	"--novel-textbox-border-image-width": "24px",
+	"--novel-accent": "#e8a55c",
+});
+```
 
 `Game` is a client entry in your own `resources/`, so the browser entry that
 [Load content as readers reach it](/docs/building-remix-apps/load-content-as-readers-reach-it#register-the-client-entry)
@@ -557,17 +599,18 @@ export default createScene(SCENES.prologue.counter, (ctx) => [
 ]);
 ```
 
-The player renders the frame with your component, passed as `renderInteraction`, and the
-component answers through `respond(frame.complete(output))`. With several interactions, narrow
-on `frame.interaction` first:
+The player renders the frame with your component through
+`<NovelPlayer.Interaction name="latteArt" component={LatteArt} />`, as the `Game` entry above
+does, and the component answers through `respond(frame.complete(output))`. `name` is typed from
+your declared interactions, and so is the frame the component receives:
 
 ```tsx {% title="resources/components/latte-art.tsx" %}
-import type { NovelPlayer } from "@sdxc/novel/ui";
+import type { Interaction } from "@sdxc/novel/ui";
 import type { Handle } from "remix/component";
 
 import { on } from "remix/component";
 
-export function LatteArt(handle: Handle<NovelPlayer.InteractionProps>) {
+export function LatteArt(handle: Handle<Interaction.ComponentProps<"latteArt">>) {
 	return () => {
 		let { frame, respond } = handle.props;
 		return (
@@ -594,9 +637,10 @@ let report = await explore(novel, {
 ## Show the extras on a title screen
 
 The player's Extras menu opens Memories (each scene's lines as read), the CG gallery, the music
-room, the endings list, chapter select and scene replay, all read from persistent data;
-`extras={false}` removes it and `musicTitles` names each track by a message key. Each screen is
-also a component from `@sdxc/novel/ui` that a title screen places itself:
+room, the endings list, chapter select and scene replay, all read from persistent data. In a
+composed player, `NovelPlayer.Extras` offers the screens you give it as children, such as
+`<MusicRoom titles={{ "music.theme": "tracks.theme" }} />` to name each track by a message key.
+Each screen is also a component from `@sdxc/novel/ui` that a title screen places itself:
 
 ```tsx {% title="resources/components/title-screen.tsx" %}
 <>
@@ -673,7 +717,7 @@ export const DevGame = clientEntry(
 			});
 			return (
 				<IntlProvider intl={i18n}>
-					<NovelPlayer key={restarts} novel={novel} start={start} />
+					<NovelPlayer.Default key={restarts} novel={novel} start={start} />
 					<NovelDevTools devtools={devtools} />
 				</IntlProvider>
 			);
