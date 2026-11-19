@@ -7,8 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle, RemixElement } from "remix/component";
+
 import { renderToString } from "remix/component/server";
 import { describe, expect, expectTypeOf, test } from "vitest";
+
+import type { MessageValues } from "../lib/i18n.js";
 
 import { createI18n } from "../lib/i18n.js";
 
@@ -126,5 +130,25 @@ describe("Trans.ValuesProp", () => {
 		expectTypeOf<Trans.ValuesProp<[values?: Record<string, unknown>]>>().toEqualTypeOf<{
 			values?: Record<string, unknown>;
 		}>();
+	});
+});
+
+describe("Trans markup option types", () => {
+	test("requires the variables a markup option reads", () => {
+		interface Bundle {
+			link: "See {#link href=$url}docs{/link}";
+		}
+		expectTypeOf<MessageValues<Bundle, "link">>().toEqualTypeOf<[values: { url: unknown }]>();
+	});
+
+	test("accepts elements and markup components in components", () => {
+		/** A markup component reading its options. */
+		function Pause(handle: Handle<Trans.MarkupProps>) {
+			return () => <span data-ms={String(handle.props.options.ms)} />;
+		}
+		expectTypeOf(Pause).toExtend<Trans.MarkupComponent>();
+		expectTypeOf<{ b: RemixElement; pause: typeof Pause }>().toExtend<
+			NonNullable<Trans.KeyProps<string>["components"]>
+		>();
 	});
 });

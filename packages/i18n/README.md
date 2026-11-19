@@ -219,7 +219,7 @@ From `@sdxc/i18n/ui`. Renders a message with markup: `{#name}…{/name}` becomes
 
 - `i18nKey`: The message key (`key` is reserved by `remix/component`)
 - `values`: The message's variables, required and typed by its text once the app declares `I18nTypes`
-- `components`: Elements keyed by markup name; markup without an entry renders its content unwrapped and reports through `onError`
+- `components`: Elements or components keyed by markup name; markup without an entry renders its content unwrapped and reports through `onError`. Markup options (`{#link href=$url}`, `{#pause ms=400/}`) become props an element does not already set (plain attributes only on a host element), and a component receives them as `{ name, options, children }` (`Trans.MarkupProps`)
 - `intl`: The translator to use; defaults to `intl(handle)`
 
 ### Types
