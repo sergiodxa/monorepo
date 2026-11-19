@@ -1,6 +1,6 @@
 /**
  * Public surface of the dates package: `Intl`-only formatting, calendar operations that
- * always take their zone, day grids, day ranges, day keys and the runtime's zone list.
+ * always take their zone, day grids, day ranges, day keys, repeating events and zones.
  * The raw zone math lives on the `@sdxc/dates/zone` subpath, and every format draws its
  * locale data from the runtime's own `Intl` implementation.
  *
@@ -33,6 +33,7 @@ export type { FormatRelativeOptions } from "./format-relative.js";
 export type { GroupByWeekOptions, LastNDaysOptions, MonthGridDay } from "./grid.js";
 export type { DayRangeProblem } from "./invalid-day-range-error.js";
 export type { ZonedDateTimeProblem } from "./invalid-zoned-date-time-error.js";
+export type { Frequency, Occurrence, Recurrence, TimeSpan } from "./recurrence.js";
 export type { TimeZoneGroup } from "./time-zones.js";
 export type { ValidateDayRangeOptions } from "./day-range.js";
 export type {
@@ -78,6 +79,7 @@ export { InvalidDayRangeError } from "./invalid-day-range-error.js";
 export { InvalidZonedDateTimeError } from "./invalid-zoned-date-time-error.js";
 export { addMonths, endOfMonth, endOfQuarter, startOfMonth, startOfQuarter } from "./month.js";
 export { parseDate } from "./parse-date.js";
+export { expandRecurrence } from "./recurrence.js";
 export {
 	isSupportedTimeZone,
 	supportedTimeZones,
