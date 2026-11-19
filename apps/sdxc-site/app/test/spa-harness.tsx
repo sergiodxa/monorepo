@@ -53,12 +53,18 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/docs/page-actions": () => import("@sdxc/ui/docs/page-actions"),
 	"@sdxc/ui/docs/table-of-contents": () => import("@sdxc/ui/docs/table-of-contents"),
 	"@sdxc/ui/relative-time": () => import("@sdxc/ui/relative-time"),
+	"@sdxc/ui/video/reel-feed": () => import("@sdxc/ui/video/reel-feed"),
+	"@sdxc/ui/video/story-viewer": () => import("@sdxc/ui/video/story-viewer"),
 	"@sdxc/ui/video/video-player": () => import("@sdxc/ui/video/video-player"),
 	"@sdxc/ui/video/video-shelf": () => import("@sdxc/ui/video/video-shelf"),
 	"file:resources/views/demo-apps/main-frame-sync.tsx": () =>
 		import("~/resources/views/demo-apps/main-frame-sync"),
 	"file:resources/views/demo-apps/vesper/search-live.tsx": () =>
 		import("~/resources/views/demo-apps/vesper/search-live"),
+	"file:resources/views/demo-apps/pinhole/carousel-sync.tsx": () =>
+		import("~/resources/views/demo-apps/pinhole/carousel-sync"),
+	"file:resources/views/demo-apps/pinhole/reel-title.tsx": () =>
+		import("~/resources/views/demo-apps/pinhole/reel-title"),
 	"file:resources/views/demo-apps/pulse/services-table.tsx": () =>
 		import("~/resources/views/demo-apps/pulse/services-table"),
 };
