@@ -50,6 +50,7 @@ export * from "./item.js";
 export * from "./keyboard.js";
 export * from "./label-chip.js";
 export * from "./label.js";
+export * from "./letterbox.js";
 export * from "./lightbox.js";
 export * from "./link-button.js";
 export * from "./link.js";

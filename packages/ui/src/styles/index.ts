@@ -19,3 +19,4 @@ export * from "./range-thumb-appearance.js";
 export * from "./segmented-control.js";
 export * from "./semantic-color-panel.js";
 export * from "./surface-control.js";
+export * from "./typewriter-text.js";

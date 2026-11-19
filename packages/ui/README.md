@@ -231,6 +231,9 @@ Every export carries JSDoc, so the editor shows each full signature.
   set.
   `Carousel.Dots` and `Carousel.Count` show the position, and `CarouselSync`, placed inside the
   root, runs the arrows, dots and count without a page-written island.
+- `Letterbox` — a frame that centres a fixed-ratio `.Surface` (16:9 unless `ratio` says otherwise)
+  in any box, barring the sides it leaves empty; the surface is a size container, so content on it
+  sized in `cqw`/`cqh` scales with it.
 - `MediaGrid` — square photo and video tiles as links, three to a row; `.Item` can stand
   `tall`, carry a `badge` and show an `overlay` on hover or focus.
 - `YouTubeEmbed` — a lazy-loaded 16:9 YouTube player (`videoId`, `start?`, `title`) served from
@@ -529,13 +532,13 @@ Booking a stay or a trip.
 - `TripTimeline` — a whole trip on a rail: `.Day` headings over `.Item`s (flight, stay, car, activity, note)
   with time, details, status and actions.
 
-
 ### Finance (`@sdxc/ui/finance`)
 
 Banking, budgeting and wallets.
 
 - `Ledger` — money movements grouped by day, each day headed by its total, each row one link.
 - `PaymentCard` — a drawn card face with a masked number, a chip or "Virtual" tag, and a frozen state.
+
 ### Schedule (`@sdxc/ui/schedule`)
 
 Calendars, schedules and finding a time together.
@@ -650,7 +653,8 @@ opacity fade under reduced motion.
 
 Recipes for a `mix` array: `floatingSurface()`, `surfaceInset()`, `hitArea()`, `panelChrome()`,
 `semanticColorPanel()`, `interactiveTransition()`, `fieldStackLayout()`, `outputCaptionText()`,
-`rangeThumbAppearance(sizeVar, borderWidthVar)`.
+`rangeThumbAppearance(sizeVar, borderWidthVar)`, and `typewriterText()`, which hides the text a
+`Typewriter` has not revealed yet.
 
 Landing recipes (same entry), shared because general components use them too: `landingContainer()`,
 `landingSectionSpace("hero" | "normal" | "compact")`,
@@ -673,6 +677,14 @@ handled there — no separate landing animation system.
 - **DOM** — `asCommandEvent`, `dispatchChange`, `isNewPrimaryPress`, `isPrintableKey`, `focusItem`,
   `queryItems`, `setRovingTabindex`, `labelFor`, `hasAccessibleText`, `glyphEdges`, `mergeStyle`, `prefersReducedMotion`, `writeCookie(name, value, { maxAgeSeconds?, path? })`,
   `DISABLED_SELECTOR`, `DEFAULT_ICON_ARIA_HIDDEN`, `ONE_YEAR_SECONDS`.
+- **Input** — `moveFocus(root, 1 | -1)` steps focus through a container's visible controls for a
+  D-pad or remote, `gamepadPresses(previous, current)` reports the gamepad buttons that went down
+  between two polls, and `swipeDirection(dx, dy, threshold?)` reads a pointer's travel as a swipe
+  or a tap (`null`).
+- **Typing** — `new Typewriter(element)` hides an element's text through the `ui-typewriter` CSS
+  highlight and `start(charactersPerSecond)` reveals it with the DOM untouched, so the layout holds
+  and a screen reader gets the whole text; `finish()`, `dispose()` and `done` end it. Elements
+  marked `data-typewriter-pause="ms"` hold the typing and `data-typewriter-speed="0.5"` scales it.
 - **Code** — `codeLines(runs)` splits a highlighter's runs into lines, and `fileIcon(path)` picks a file's icon.
 - **Accessibility checks** — `warnIfNoAccessibleName(props, children, message)` and
   `warnIfNoAccessibleLabel(props, message)`, development-only warnings.

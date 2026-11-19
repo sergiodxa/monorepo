@@ -45,6 +45,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 - [x] OverlayArrow — static styling
 - [x] ImagePlaceholder — static styling
 - [x] AspectRatio — static styling
+- [x] Letterbox — static styling; a fixed-ratio `.Surface` centred and barred inside any box, sized in container query units so its content scales with it
 - [x] ColorSwatch — static styling; a color preview box rendering its background from a color value prop, checkerboard-backed for translucent values
 - [x] Label — native form elements; date/time fields ride `<input type="date|time">`
 - [x] Description — native form elements
