@@ -328,7 +328,7 @@ const CATALOGUE = [
 	{ slug: "scroll-scene", module: "landing" },
 	{ slug: "search-field", module: "components" },
 	{ slug: "section", module: "components" },
-	{ slug: "section-bar", module: "app" },
+	{ slug: "section-bar", module: "components" },
 	{ slug: "segmented-stage", module: "landing" },
 	{ slug: "select", module: "components" },
 	{ slug: "selection-bar", module: "app" },

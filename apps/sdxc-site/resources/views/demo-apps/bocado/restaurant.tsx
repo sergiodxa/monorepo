@@ -21,7 +21,7 @@ import { iife } from "@sdxc/iife";
 import { raw } from "@sdxc/u/general";
 import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
-import { SECTION_BAR_BLOCK_SIZE, SectionBar } from "@sdxc/ui/app/section-bar";
+import { SECTION_BAR_BLOCK_SIZE, SectionBar } from "@sdxc/ui/section-bar";
 
 import type { MenuItem, OptionGroup, Restaurant } from "./data";
 import type { Visitor } from "./state";

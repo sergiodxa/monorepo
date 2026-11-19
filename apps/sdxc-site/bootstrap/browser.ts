@@ -50,7 +50,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/app/gantt": () => import("@sdxc/ui/app/gantt"),
 	"@sdxc/ui/app/save-bar": () => import("@sdxc/ui/app/save-bar"),
 	"@sdxc/ui/app/save-status": () => import("@sdxc/ui/app/save-status"),
-	"@sdxc/ui/app/section-bar": () => import("@sdxc/ui/app/section-bar"),
+	"@sdxc/ui/section-bar": () => import("@sdxc/ui/section-bar"),
 	"@sdxc/ui/app/selection-bar": () => import("@sdxc/ui/app/selection-bar"),
 	"@sdxc/ui/app/settings-section": () => import("@sdxc/ui/app/settings-section"),
 	"@sdxc/ui/app/split-view": () => import("@sdxc/ui/app/split-view"),

@@ -7,7 +7,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { SECTION_BAR_BLOCK_SIZE, SectionBar } from "@sdxc/ui/app/section-bar";
+import { SECTION_BAR_BLOCK_SIZE, SectionBar } from "@sdxc/ui/section-bar";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<SectionBar
