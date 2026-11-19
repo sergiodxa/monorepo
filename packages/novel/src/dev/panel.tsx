@@ -22,11 +22,11 @@ export namespace NovelDevTools {
 	export interface Props extends Omit<TagProps<"aside">, "children"> {
 		devtools: DevTools;
 	}
+}
 
-	/** Props every tool section receives. */
-	export interface SectionProps {
-		devtools: DevTools;
-	}
+/** Props every tool section receives. */
+interface SectionProps {
+	devtools: DevTools;
 }
 
 /**
@@ -77,7 +77,7 @@ export function NovelDevTools(handle: Handle<NovelDevTools.Props>) {
 }
 
 /** Where the followed play stands and its story state. */
-function PlaySection(handle: Handle<NovelDevTools.SectionProps>) {
+function PlaySection(handle: Handle<SectionProps>) {
 	return () => {
 		let game = handle.props.devtools.state;
 		return (
@@ -107,7 +107,7 @@ function PlaySection(handle: Handle<NovelDevTools.SectionProps>) {
  * Starts any mapped scene with state edited as JSON. The editor holds the reader's edit until a
  * jump succeeds; until then, and after, it shows the play's current state.
  */
-function JumpSection(handle: Handle<NovelDevTools.SectionProps>) {
+function JumpSection(handle: Handle<SectionProps>) {
 	let draft: string | undefined;
 	let error: string | undefined;
 	return () => {
@@ -179,7 +179,7 @@ function JumpSection(handle: Handle<NovelDevTools.SectionProps>) {
 }
 
 /** Persistent data, with buttons that clear seen lines and unlocks. */
-function PersistentSection(handle: Handle<NovelDevTools.SectionProps>) {
+function PersistentSection(handle: Handle<SectionProps>) {
 	return () => {
 		let { devtools } = handle.props;
 		let persistent = devtools.persistent;
@@ -228,7 +228,7 @@ function PersistentSection(handle: Handle<NovelDevTools.SectionProps>) {
 }
 
 /** The scene graph, drawn on request since reading it imports every lazy scene. */
-function FlowchartSection(handle: Handle<NovelDevTools.SectionProps>) {
+function FlowchartSection(handle: Handle<SectionProps>) {
 	let source: string | undefined;
 	return () => (
 		<Disclosure>
@@ -256,7 +256,7 @@ function FlowchartSection(handle: Handle<NovelDevTools.SectionProps>) {
 }
 
 /** The event log, newest first. */
-function EventsSection(handle: Handle<NovelDevTools.SectionProps>) {
+function EventsSection(handle: Handle<SectionProps>) {
 	return () => {
 		let { devtools } = handle.props;
 		let events = [...devtools.events].reverse();
@@ -299,7 +299,7 @@ function EventsSection(handle: Handle<NovelDevTools.SectionProps>) {
 }
 
 /** `check()`'s problems and the missing messages, read on request. */
-function ProblemsSection(handle: Handle<NovelDevTools.SectionProps>) {
+function ProblemsSection(handle: Handle<SectionProps>) {
 	let problems: DevProblems | undefined;
 	return () => (
 		<Disclosure>

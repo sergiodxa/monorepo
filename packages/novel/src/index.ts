@@ -133,6 +133,7 @@ export type {
 	PathAccepting,
 	PathValue,
 	PlayTools,
+	SchemaInput,
 	StateCallback,
 	StatePath,
 	StateRecord,

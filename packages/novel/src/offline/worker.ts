@@ -1,7 +1,7 @@
 /**
  * The `@sdxc/novel/offline/worker` entry: `serveOffline()`, called once at the top of the app's
- * own worker script, wires install, activation, the page's message with the declared URLs, and
- * fetches to an `OfflineCache`. It imports nothing but the platform and the cache policy.
+ * own worker script, wires install, activation, the page's message with the declared URLs (read
+ * by `declaredUrls()`), and fetches to an `OfflineCache`. It imports only the platform and policy.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

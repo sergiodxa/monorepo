@@ -25,7 +25,7 @@ export interface Lazy<Target> {
  *
  * @param load - A function returning the module's `import()`; the module default-exports what `createScene()` returns.
  * @returns A binding `novel.map()` accepts wherever it takes a scene module.
- * @example novel.map(scenes.prologue.opening, lazy(() => import("~/novel/scenes/prologue/opening")));
+ * @example novel.map(scenes.prologue.opening, lazy(() => import("./scenes/prologue/opening.js")));
  */
 export function lazy<Target>(load: () => Promise<{ default: Target }>): Lazy<Target> {
 	return { [LAZY]: true, load };

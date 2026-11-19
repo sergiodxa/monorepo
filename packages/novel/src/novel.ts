@@ -250,7 +250,7 @@ export class Novel {
 	 * @param scene - The declared scene.
 	 * @param module - What `createScene()` returned for it, or the module that default-exports it.
 	 * @throws When the scene is already mapped.
-	 * @example novel.map(scenes.prologue.opening, lazy(() => import("~/novel/scenes/prologue/opening")));
+	 * @example novel.map(scenes.prologue.opening, lazy(() => import("./scenes/prologue/opening.js")));
 	 */
 	map<Declaration extends SceneDeclaration>(
 		scene: Declaration,
