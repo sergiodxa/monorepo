@@ -34,6 +34,7 @@ export type {
 	MessageFormatOptions,
 	ResolvedMessageFormatOptions,
 } from "./message-format.js";
+export type { MessageParams } from "./params.js";
 export type {
 	Direction,
 	MessageBidiIsolationPart,

@@ -62,6 +62,18 @@ message.format({}, (error) => errors.push(error)); // "Hello {$name}!"
 A placeholder that fails formats as its fallback, such as `{$name}`, and the error goes to the
 optional `onError` callback. Formatting never throws.
 
+### Type a message's values
+
+```typescript
+import type { MessageParams } from "@sdxc/messageformat";
+
+type Values = MessageParams<"{$count :number} new posts by {$author}">;
+// { count: number | bigint; author: string | number | bigint }
+```
+
+`MessageParams` reads a message's variables from its text as a string literal type, leaving out
+`.local` names; a widened `string` reads `Record<string, unknown>`.
+
 ### Check a message without throwing
 
 ```typescript
@@ -141,6 +153,9 @@ An unannotated variable holding a number formats as `:number`, and one holding a
 
 ### Types
 
+- `MessageParams<Source>`: the values a message reads, typed by their functions: `:number` and
+  `:integer` take `number | bigint`, `:string` and an unannotated variable take
+  `string | number | bigint`, and option values and custom functions' operands take `unknown`.
 - `MessageFormatOptions`, `ResolvedMessageFormatOptions`: the constructor's options and the
   settled ones.
 - `MessageErrorHandler`: `(error: Error) => void`, the `onError` callback.
