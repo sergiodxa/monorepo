@@ -11,6 +11,7 @@
 import type { EntryComponent, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import { gap, hidden, inlineFlex, items } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
@@ -105,6 +106,11 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 						gap(1.5),
 						when('&[data-pressed] [data-toggle-content="off"]', hidden()),
 						when('&:not([data-pressed]) [data-toggle-content="on"]', hidden()),
+						/**
+						 * The live region stays in the document so a refusal is announced, and out of the
+						 * row while it says nothing, so the control centres on its button alone.
+						 */
+						when("& > [role=status]:empty", raw({ position: "absolute" })),
 					]}
 				>
 					{Object.entries(fields ?? {}).map(([field, value]) => (

@@ -88,6 +88,16 @@ describe("OptimisticToggle", () => {
 		expect(button(form).innerText).toBe("Star");
 	});
 
+	test("is exactly as wide as its button while it has nothing to say", async () => {
+		let form = await mount(false);
+
+		expect(form.getBoundingClientRect().width).toBeCloseTo(
+			button(form).getBoundingClientRect().width,
+			1,
+		);
+		expect(form.querySelector('[role="status"]')).not.toBeNull();
+	});
+
 	test("flips before the server answers and posts in the background", async () => {
 		answer(200, 300);
 		let form = await mount(false);
