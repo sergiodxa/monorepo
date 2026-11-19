@@ -64,6 +64,18 @@ describe("StepIndicator", () => {
 		expect(steps[2]!.querySelector("a")).toBeNull();
 	});
 
+	test("fills the done and current markers with the theme's brand colour", () => {
+		document.documentElement.style.setProperty("--ui-brand-bg-solid", "rgb(200, 80, 40)");
+		let host = mount(640);
+		let markers = [...host.querySelectorAll<HTMLElement>('[data-slot="step-indicator-marker"]')];
+		expect(markers.map((marker) => getComputedStyle(marker).backgroundColor)).toEqual([
+			"rgb(200, 80, 40)",
+			"rgb(200, 80, 40)",
+			"rgba(0, 0, 0, 0)",
+		]);
+		document.documentElement.removeAttribute("style");
+	});
+
 	test("keeps every name visible where the row fits", () => {
 		let host = mount(640);
 		for (let label of host.querySelectorAll<HTMLElement>('[data-slot="step-indicator-label"]')) {

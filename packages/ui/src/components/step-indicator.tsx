@@ -157,8 +157,8 @@ StepIndicator.Step = function StepIndicatorStep(handle: Handle<StepIndicator.Ste
 						when(
 							"&[data-state='complete'] [data-slot='step-indicator-marker'], &[data-state='current'] [data-slot='step-indicator-marker']",
 							raw({
-								backgroundColor: "var(--ui-brand-solid, LinkText)",
-								borderColor: "var(--ui-brand-solid, LinkText)",
+								backgroundColor: "var(--ui-brand-bg-solid, LinkText)",
+								borderColor: "var(--ui-brand-bg-solid, LinkText)",
 								color: "var(--ui-brand-fg-on-solid, white)",
 							}),
 						),

@@ -223,7 +223,7 @@ Ledger.Entry = function LedgerEntry(handle: Handle<Ledger.EntryProps>) {
 						mix={[
 							row,
 							hover(bg("neutral.bg-tint-hover")),
-							focusVisible(raw({ outline: "2px solid var(--ui-brand-solid, Highlight)" })),
+							focusVisible(raw({ outline: "2px solid var(--ui-brand-bg-solid, Highlight)" })),
 						]}
 					>
 						{body}
