@@ -38,7 +38,7 @@ describe("GET /demo", () => {
 		);
 		for (let demo of landings) {
 			expect(body).toContain(`href="/demo/${demo.slug}"`);
-			expect(body).toContain(demo.kind);
+			expect(body).toContain(escape(demo.kind));
 			expect(body).toContain(escape(demo.tagline));
 			expect(body).toContain(escape(demo.artDirection));
 			expect((await fetchApp(`/demo/${demo.slug}`)).status).toBe(200);
@@ -55,7 +55,7 @@ describe("GET /demo", () => {
 		for (let site of sites) {
 			let href = demoDocsHref(site.slug)();
 			expect(body).toContain(`href="${href}"`);
-			expect(body).toContain(site.kind);
+			expect(body).toContain(escape(site.kind));
 			expect(body).toContain(escape(site.tagline));
 			expect(body).toContain(escape(site.artDirection));
 			expect((await fetchApp(href)).status).toBe(200);
@@ -73,7 +73,7 @@ describe("GET /demo", () => {
 		for (let app of apps) {
 			let href = demoAppHref(app.slug)();
 			expect(body).toContain(`href="${href}"`);
-			expect(body).toContain(app.kind);
+			expect(body).toContain(escape(app.kind));
 			expect(body).toContain(escape(app.tagline));
 			expect(body).toContain(escape(app.artDirection));
 			expect((await fetchApp(href)).status).toBe(200);
