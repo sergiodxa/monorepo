@@ -55,8 +55,8 @@ export interface ComposerSendOptions {
 
 /**
  * Put on an element inside a composer's form, around its send and stop buttons. It finds the
- * form's `Composer.Input`, and a click on a `[data-slot="composer-stop"]` inside it stops the
- * replay.
+ * form's `Composer.Input`; a click on a `[data-slot="composer-stop"]` inside it stops the replay,
+ * and a key another listener already cancelled (Enter picking a mention) is left to that listener.
  *
  * @example <span mix={[composerSend({ stream: "reply-7", onStreamingChange: (on) => … })]}>…</span>
  */
@@ -116,6 +116,7 @@ export const composerSend: MixinFactory<HTMLElement, [options: ComposerSendOptio
 		input?.addEventListener(
 			"keydown",
 			(event) => {
+				if (event.defaultPrevented) return;
 				if (event.key === "Escape" && streaming) return stop();
 				if (event.key !== "Enter" || event.shiftKey || event.altKey || event.isComposing) return;
 				event.preventDefault();

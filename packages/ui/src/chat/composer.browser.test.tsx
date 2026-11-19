@@ -149,6 +149,30 @@ describe("ComposerSubmit", () => {
 		mounted.cleanup();
 	});
 
+	test("an Enter another listener cancelled first, as a mention menu does, sends nothing", () => {
+		let mounted = render(
+			<Composer>
+				<Composer.Input aria-label="Message" />
+				<Composer.Toolbar>
+					<ComposerSubmit labels={{ send: "Send", stop: "Stop" }} />
+				</Composer.Toolbar>
+			</Composer>,
+		);
+		onTestFinished(mounted.cleanup);
+		let form = mounted.container.querySelector("form")!;
+		let input = form.querySelector("textarea")!;
+		let sent = vi.fn((event: Event) => event.preventDefault());
+		form.addEventListener("submit", sent);
+		form.addEventListener("keydown", (event) => event.preventDefault(), { capture: true });
+
+		input.value = "Hello @an";
+		input.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }),
+		);
+
+		expect(sent).not.toHaveBeenCalled();
+	});
+
 	test("a sent message reaches the navigation it starts, and the field empties after", async () => {
 		let home = `${location.pathname}${location.search}`;
 		let mounted = render(
