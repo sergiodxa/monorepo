@@ -37,9 +37,9 @@ import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { Dialog, HeadingScope } from "@sdxc/ui";
 import { Lightbox } from "@sdxc/ui/lightbox";
-import { PriceBreakdown } from "@sdxc/ui/price-breakdown";
+import { PriceBreakdown } from "@sdxc/ui/travel/price-breakdown";
 import { RangeMonths } from "@sdxc/ui/range-months";
-import { RatingBreakdown } from "@sdxc/ui/rating-breakdown";
+import { RatingBreakdown } from "@sdxc/ui/travel/rating-breakdown";
 
 import type { Amenity, Stay } from "./data";
 import type { Screen } from "./screen";

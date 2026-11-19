@@ -21,7 +21,7 @@ import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { Checkbox, Popover, HeadingScope } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
-import { MapCanvas, MapCanvasSync } from "@sdxc/ui/map-canvas";
+import { MapCanvas, MapCanvasSync } from "@sdxc/ui/map/map-canvas";
 
 import type { Stay } from "./data";
 import type { Search } from "./query";

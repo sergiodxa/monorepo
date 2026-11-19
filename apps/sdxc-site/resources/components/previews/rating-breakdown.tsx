@@ -16,7 +16,7 @@ import {
 	TagIcon,
 } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
-import { RatingBreakdown } from "@sdxc/ui/rating-breakdown";
+import { RatingBreakdown } from "@sdxc/ui/travel/rating-breakdown";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<RatingBreakdown score={4.86} count="128 reviews">

@@ -62,6 +62,8 @@ const NAMESPACES = [
 	"video",
 	"audio",
 	"commerce",
+	"map",
+	"travel",
 ] as const;
 
 /**

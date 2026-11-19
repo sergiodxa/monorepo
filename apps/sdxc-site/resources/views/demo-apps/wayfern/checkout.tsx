@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 import { ChevronLeftIcon, LockIcon, ShieldCheckIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
-import { PriceBreakdown } from "@sdxc/ui/price-breakdown";
+import { PriceBreakdown } from "@sdxc/ui/travel/price-breakdown";
 
 import type { SavedCard, Stay } from "./data";
 import type { RequestProblem } from "./pricing";

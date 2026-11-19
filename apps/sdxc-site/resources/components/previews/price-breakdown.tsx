@@ -8,7 +8,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { PriceBreakdown } from "@sdxc/ui/price-breakdown";
+import { PriceBreakdown } from "@sdxc/ui/travel/price-breakdown";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<PriceBreakdown note="You won't be charged yet">

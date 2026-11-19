@@ -123,7 +123,9 @@ type ModuleKind =
 	| "color"
 	| "video"
 	| "commerce"
-	| "audio";
+	| "audio"
+	| "map"
+	| "travel";
 
 /** Quiet stage wash in the site's brand hue — one step off the card, like DemoMiniature. */
 const WASH = {
@@ -293,7 +295,7 @@ const CATALOGUE = [
 	{ slug: "logo", module: "components" },
 	{ slug: "logo-cloud", module: "landing" },
 	{ slug: "logo-sentence", module: "landing" },
-	{ slug: "map-canvas", module: "components" },
+	{ slug: "map-canvas", module: "map" },
 	{ slug: "marker", module: "chat" },
 	{ slug: "marquee", module: "landing" },
 	{ slug: "media-tile", module: "audio" },
@@ -328,7 +330,7 @@ const CATALOGUE = [
 	{ slug: "plan-notice", module: "docs" },
 	{ slug: "player-bar", module: "audio" },
 	{ slug: "popover", module: "components" },
-	{ slug: "price-breakdown", module: "components" },
+	{ slug: "price-breakdown", module: "travel" },
 	{ slug: "price-list", module: "landing" },
 	{ slug: "pricing-band", module: "landing" },
 	{ slug: "product-frame", module: "landing" },
@@ -342,7 +344,7 @@ const CATALOGUE = [
 	{ slug: "rails", module: "landing" },
 	{ slug: "range-calendar", module: "components" },
 	{ slug: "range-months", module: "components" },
-	{ slug: "rating-breakdown", module: "components" },
+	{ slug: "rating-breakdown", module: "travel" },
 	{ slug: "range-picker", module: "app" },
 	{ slug: "reaction-bar", module: "chat" },
 	{ slug: "reel-feed", module: "video" },

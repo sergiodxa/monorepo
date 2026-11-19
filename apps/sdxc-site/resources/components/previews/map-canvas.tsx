@@ -8,7 +8,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { MapCanvas } from "@sdxc/ui/map-canvas";
+import { MapCanvas } from "@sdxc/ui/map/map-canvas";
 
 /** The source the page shows, matching the markup below apart from the drawn town. */
 const CODE = `<MapCanvas label="Stays in Porto Novo" art={<Town />}>

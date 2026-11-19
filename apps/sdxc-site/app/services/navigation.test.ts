@@ -103,12 +103,14 @@ describe("buildComponentsNav", () => {
 			"Video",
 			"Commerce",
 			"Audio",
+			"Map",
+			"Travel",
 			"Mixins",
 			"Behaviors",
 			"Animations",
 			"Styles",
 		]);
-		expect(tree.sections.at(10)?.entries).toContainEqual({
+		expect(tree.sections.at(12)?.entries).toContainEqual({
 			title: "hotkey",
 			href: "/api/ui/mixins/hotkey",
 		});

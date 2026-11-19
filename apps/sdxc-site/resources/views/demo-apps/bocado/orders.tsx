@@ -22,7 +22,7 @@ import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { LinkButton } from "@sdxc/ui";
 import { OrderLive, OrderSteps } from "@sdxc/ui/commerce/order-tracker";
-import { MapCanvas } from "@sdxc/ui/map-canvas";
+import { MapCanvas } from "@sdxc/ui/map/map-canvas";
 
 import type { Address, Order, Restaurant } from "./data";
 import type { Visitor } from "./state";

@@ -21,7 +21,7 @@ import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { Dialog, HeadingScope } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
-import { PriceBreakdown } from "@sdxc/ui/price-breakdown";
+import { PriceBreakdown } from "@sdxc/ui/travel/price-breakdown";
 
 import type { Screen } from "./screen";
 import type { Trip } from "./state";

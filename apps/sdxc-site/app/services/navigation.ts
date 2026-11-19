@@ -153,6 +153,8 @@ const COMPONENT_GROUPS: Array<{ module: ComponentModule; title: string }> = [
 	{ module: "video", title: "Video" },
 	{ module: "commerce", title: "Commerce" },
 	{ module: "audio", title: "Audio" },
+	{ module: "map", title: "Map" },
+	{ module: "travel", title: "Travel" },
 ];
 
 /**
