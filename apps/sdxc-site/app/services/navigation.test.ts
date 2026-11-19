@@ -149,7 +149,7 @@ describe("namespace groups", () => {
 			["Landing", "Docs", "Chat", "Color", "App"].map(
 				(section) => titles(section).filter((title) => title !== "Foundations").length,
 			),
-		).toEqual([51, 24, 8, 7, 50]);
+		).toEqual([51, 24, 8, 7, 51]);
 		expect(titles("Components")).toEqual(
 			expect.arrayContaining(["Accordion", "CtaGroup", "DialogDismiss", "Sidebar"]),
 		);

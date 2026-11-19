@@ -187,6 +187,7 @@ export const FACE_KIND = {
 	"scroll-scene": "landing-stage",
 	"search-field": "search",
 	section: "card",
+	"section-bar": "tabs",
 	"segmented-stage": "landing-stage",
 	select: "select",
 	"selection-bar": "selection-bar",
