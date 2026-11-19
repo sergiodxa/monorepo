@@ -114,6 +114,7 @@ export const PACKAGES_WITHOUT_COMMAND_LINES: readonly string[] = [
 	"messaging",
 	"microformats",
 	"micropub",
+	"natural-dates",
 	"newsletter",
 	"no-www-middleware",
 	"opml",
