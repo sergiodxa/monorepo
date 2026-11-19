@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MessagePart } from "@sdxc/messageformat";
+import type { MessageParams, MessagePart } from "@sdxc/messageformat";
 
 import { MessageFormat } from "@sdxc/messageformat";
 
@@ -39,26 +39,63 @@ type LeafKey<K extends string, V> = V extends string
 export type I18nErrorHandler = (error: Error, key: string) => void;
 
 /**
+ * The values argument for the message at `K` in `R`: required and typed by the message's
+ * variables when its text is a string literal type, absent when it reads none, and any
+ * values when the text widens to `string`. A union of keys takes values every message accepts.
+ *
+ * @template R - The bundle the message is read from.
+ * @template K - The message's dotted key.
+ */
+export type MessageValues<R, K extends string> = ValuesArgument<
+	UnionToIntersection<K extends string ? ParamsOf<MessageAt<R, K>> : never>
+>;
+
+/** The message at dotted key `K` in `R`. */
+type MessageAt<R, K extends string> = K extends keyof R
+	? R[K]
+	: K extends `${infer Head}.${infer Tail}`
+		? Head extends keyof R
+			? MessageAt<R[Head], Tail>
+			: never
+		: never;
+
+/** The values a message's text reads; text that is not a string reads any values. */
+type ParamsOf<Text> = Text extends string ? MessageParams<Text> : Record<string, unknown>;
+
+/** One object type every member of a union is assignable to. */
+type UnionToIntersection<U> = (U extends unknown ? (value: U) => void : never) extends (
+	value: infer I,
+) => void
+	? I
+	: never;
+
+/** The rest parameters taking `P`: optional when it has no named keys, forbidden keys when empty. */
+type ValuesArgument<P> = [keyof P] extends [never]
+	? [values?: Record<string, never>]
+	: string extends keyof P
+		? [values?: P]
+		: [values: P];
+
+/**
  * Formats the message at `key` as plain text; values interpolate raw, so escaping is the
  * renderer's job. A key with no message in any language of the chain returns the key.
+ * With a typed bundle, `values` is typed by the message's text; see {@link MessageValues}.
  *
- * @template R - The bundle the key union is derived from.
+ * @template R - The bundle the key union and values are derived from.
  */
-export type Translate<R = Messages> = (
-	key: MessageKey<R>,
-	values?: Record<string, unknown>,
-) => string;
+export type Translate<R = Messages> = string extends keyof R
+	? (key: string, values?: Record<string, unknown>) => string
+	: <K extends MessageKey<R>>(key: K, ...values: MessageValues<R, K>) => string;
 
 /**
  * Formats the message at `key` to MessageFormat parts, markup included, for a caller that
  * renders markup itself. A missing key yields one text part holding the key.
  *
- * @template R - The bundle the key union is derived from.
+ * @template R - The bundle the key union and values are derived from.
  */
-export type TranslateParts<R = Messages> = (
-	key: MessageKey<R>,
-	values?: Record<string, unknown>,
-) => MessagePart[];
+export type TranslateParts<R = Messages> = string extends keyof R
+	? (key: string, values?: Record<string, unknown>) => MessagePart[]
+	: <K extends MessageKey<R>>(key: K, ...values: MessageValues<R, K>) => MessagePart[];
 
 /**
  * A translator fixed to one language. It holds no mutable state, so one instance serves a
@@ -131,7 +168,7 @@ export function createI18n<
 		return compiled;
 	}
 
-	return {
+	let i18n: I18n = {
 		locale,
 		onError,
 		t(key, values) {
@@ -143,6 +180,7 @@ export function createI18n<
 			return message(key)?.formatToParts(values, report) ?? [{ type: "text", value: key }];
 		},
 	};
+	return i18n as I18n<Resources[Fallback]>;
 }
 
 /**

@@ -1,7 +1,7 @@
 /**
  * Covers `createI18n` against the behaviors every app relies on: the lookup chain through
  * regional locales and the fallback, missing keys echoed back, CLDR plural selection, raw
- * interpolation, per-bundle compiled-message caching, error reporting, and typed keys.
+ * interpolation, per-bundle compiled-message caching, error reporting, and typed keys and values.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -205,5 +205,53 @@ describe("typed keys", () => {
 	test("untyped bundles accept any key", () => {
 		expectTypeOf<Translate>().parameter(0).toEqualTypeOf<string>();
 		expectTypeOf<Translate<Messages>>().toEqualTypeOf<Translate>();
+	});
+});
+
+/** A bundle typed by its literal text, so each message's variables type its values. */
+const TYPED = {
+	cart: {
+		total: "{$count :number} items for {$price}",
+		empty: "Your cart is empty",
+		link: "{#link href=$url}Checkout{/link}",
+	},
+	unread: UNREAD,
+	widened: "Hello {$name}" as string,
+} as const;
+
+describe("typed values", () => {
+	let i18n = createI18n({ locale: "en", fallbackLanguage: "en", resources: { en: TYPED } });
+
+	test("types values by the message at the key", () => {
+		expect(i18n.t("cart.total", { count: 3, price: "$5" })).toBe("3 items for $5");
+		expect(i18n.t("unread", { count: 1 })).toBe("1 message");
+		expect(i18n.parts("cart.link", { url: "/checkout" })[0]).toMatchObject({ name: "link" });
+	});
+
+	test("takes no values for a message without variables", () => {
+		expect(i18n.t("cart.empty")).toBe("Your cart is empty");
+		// @ts-expect-error -- the message reads no variables
+		i18n.t("cart.empty", { count: 3 });
+	});
+
+	test("rejects a missing, misnamed or mistyped value", () => {
+		// @ts-expect-error -- the message reads `count` and `price`
+		i18n.t("cart.total");
+		// @ts-expect-error -- the message reads `count`, not `amount`
+		i18n.t("cart.total", { amount: 3, price: "$5" });
+		// @ts-expect-error -- `:number` formats numbers
+		i18n.t("unread", { count: "3" });
+	});
+
+	test("takes values every message of a key union reads", () => {
+		let key = Math.random() > 0.5 ? ("cart.total" as const) : ("unread" as const);
+		expect(i18n.t(key, { count: 1, price: "$5" })).toMatch(/^1 (items for \$5|message)$/);
+		// @ts-expect-error -- `cart.total` also reads `price`
+		i18n.t(key, { count: 3 });
+	});
+
+	test("takes any values for a message whose text widens to string", () => {
+		expect(i18n.t("widened", { name: "Ana" })).toBe("Hello Ana");
+		expect(i18n.t("widened")).toBe("Hello {$name}");
 	});
 });

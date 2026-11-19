@@ -12,6 +12,7 @@ export type {
 	I18nErrorHandler,
 	I18nOptions,
 	MessageKey,
+	MessageValues,
 	Messages,
 	Translate,
 	TranslateParts,

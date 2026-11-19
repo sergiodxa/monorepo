@@ -205,9 +205,19 @@ interface I18n<R = Messages> {
 
 `parts` returns `@sdxc/messageformat` parts, markup included, for a renderer of your own; a missing key yields one text part holding the key.
 
-#### `Messages` and `MessageKey<R>`
+#### `Messages`, `MessageKey<R>` and `MessageValues<R, K>`
 
-`Messages` is a bundle: `{ [key: string]: string | Messages }`. `MessageKey<R>` is the union of dotted paths to `R`'s string leaves, so with typed bundles `t("inbox.unraed")` is a type error. Keys are typed by `resources[fallbackLanguage]` when the fallback is a literal; bundles typed as `Record<string, Messages>` give string keys. `IntlProvider`, `setIntl` and `Trans` accept `I18n<any>`. Variables are untyped.
+`Messages` is a bundle: `{ [key: string]: string | Messages }`. `MessageKey<R>` is the union of dotted paths to `R`'s string leaves, so with typed bundles `t("inbox.unraed")` is a type error. Keys are typed by `resources[fallbackLanguage]` when the fallback is a literal; bundles typed as `Record<string, Messages>` give string keys. `IntlProvider`, `setIntl` and `Trans` accept `I18n<any>`.
+
+`MessageValues<R, K>` types `values` by the message's text when the bundle is declared `as const`, through `MessageParams` from `@sdxc/messageformat`; a message whose text widens to `string` takes any values.
+
+```typescript
+const en = { cart: { total: "{$count :number} items" } } as const;
+let { t } = createI18n({ locale: "en", fallbackLanguage: "en", resources: { en } });
+
+t("cart.total", { count: 3 }); // "3 items"
+t("cart.total", { count: "3" }); // type error: `:number` takes number | bigint
+```
 
 #### `LanguageDetectorOptions` and `DetectionMethod`
 
