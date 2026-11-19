@@ -1958,6 +1958,10 @@
         "remix": "3.2.0",
       },
     },
+    "packages/money": {
+      "name": "@sdxc/money",
+      "version": "0.0.1",
+    },
     "packages/newsletter": {
       "name": "@sdxc/newsletter",
       "version": "0.0.1",
@@ -3537,6 +3541,8 @@
     "@sdxc/microformats": ["@sdxc/microformats@workspace:packages/microformats"],
 
     "@sdxc/micropub": ["@sdxc/micropub@workspace:packages/micropub"],
+
+    "@sdxc/money": ["@sdxc/money@workspace:packages/money"],
 
     "@sdxc/newsletter": ["@sdxc/newsletter@workspace:packages/newsletter"],
 

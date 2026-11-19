@@ -1,0 +1,13 @@
+{
+	"name": "@sdxc/money",
+	"version": "0.0.1",
+	"description": "Money in integer minor units: parse typed amounts, split, convert and format with Intl",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	}
+}

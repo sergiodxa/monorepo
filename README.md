@@ -336,6 +336,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/dates](packages/dates)                             | Zone-aware date operations with Intl-only formatting                                                           |
 | [@sdxc/duration](packages/duration)                       | Typed duration strings converted to milliseconds or seconds                                                    |
 | [@sdxc/iife](packages/iife)                               | Immediately invoke a callback where an expression is needed                                                    |
+| [@sdxc/money](packages/money)                             | Money in integer minor units: parse typed amounts, split, convert and format with Intl                         |
 | [@sdxc/random](packages/random)                           | Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state              |
 | [@sdxc/bench](packages/bench)                             | Bundle-weight and HTTP latency budgets for packages and running apps                                           |
 | [@sdxc/ci](packages/ci)                                   | CI as a TypeScript script that runs the same on a laptop and a CI host, and signs a green commit off on GitHub |
