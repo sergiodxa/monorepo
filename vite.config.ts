@@ -818,16 +818,6 @@ export default defineConfig({
 			},
 			{
 				/**
-				 * A novel's menu option names its directives `then`, an array an `await` reads
-				 * as a plain value, so the thenable hazard the rule guards against cannot occur.
-				 */
-				files: ["packages/novel/**"],
-				rules: {
-					"unicorn/no-thenable": "allow",
-				},
-			},
-			{
-				/**
 				 * App controllers and views still carry page-sized functions and deep JSX.
 				 * Packages keep the full size caps; apps keep nesting, params and hygiene,
 				 * and take the stricter limits as those screens are split (ADR-171).

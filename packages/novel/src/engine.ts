@@ -338,7 +338,7 @@ export class PlayEngine {
 		switch (directive.type) {
 			case "when": {
 				let holds = call(directive.condition, work.state, tools);
-				work.cursor.path = [...path, holds ? "then" : "otherwise", 0];
+				work.cursor.path = [...path, holds ? "do" : "otherwise", 0];
 				return null;
 			}
 			case "set": {

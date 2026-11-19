@@ -79,6 +79,18 @@ declare module "@sdxc/novel" {
 }
 ```
 
+A menu option that needs more than its directives is an object whose directives go in `do`:
+
+```typescript
+ctx.choose({
+	"cafe.flirt": {
+		when: (state) => state.charm >= 50,
+		visibility: "disabled",
+		do: [ctx.goto(SCENES.date)],
+	},
+});
+```
+
 `play.state` is the play as JSON for a save, `novel.start({ from })` validates a save and resumes it, and `play.rollback()` returns to the previous stop.
 
 ## Entry points

@@ -10,7 +10,7 @@
 import type { ChooseDirective, Directive, SceneModule } from "./directives.js";
 
 /**
- * Where the engine stands in a scene: `[index, branch, index, …]`, where a branch is `then`,
+ * Where the engine stands in a scene: `[index, branch, index, …]`, where a branch is `do`,
  * `otherwise` or `option:<key>`, and the last index names the next directive to run.
  */
 export type Path = (number | string)[];
@@ -59,10 +59,10 @@ function walkList(list: readonly Directive[], prefix: Path, walk: AnchorWalk): v
 			let anchor = menuAnchor(directive);
 			if (anchor !== undefined) record(walk, anchor, path);
 			for (let option of directive.options) {
-				walkList(option.then, [...path, `${OPTION_PREFIX}${option.key}`], walk);
+				walkList(option.do, [...path, `${OPTION_PREFIX}${option.key}`], walk);
 			}
 		} else if (directive.type === "when") {
-			walkList(directive.then, [...path, "then"], walk);
+			walkList(directive.do, [...path, "do"], walk);
 			walkList(directive.otherwise, [...path, "otherwise"], walk);
 		} else if (
 			directive.type === "wait" ||
@@ -118,12 +118,12 @@ export function directiveAt(directives: readonly Directive[], path: Path): Direc
  * The list a branch selector names inside a directive.
  *
  * @param directive - A `when` or a `choose`.
- * @param selector - `then`, `otherwise` or `option:<key>`.
+ * @param selector - `do`, `otherwise` or `option:<key>`.
  * @returns The branch's directives, or `undefined` when the directive has no such branch.
  */
 export function branchOf(directive: Directive, selector: string): readonly Directive[] | undefined {
-	if (directive.type === "when") return selector === "then" ? directive.then : directive.otherwise;
-	if (directive.type === "choose") return optionOf(directive, selector)?.then;
+	if (directive.type === "when") return selector === "do" ? directive.do : directive.otherwise;
+	if (directive.type === "choose") return optionOf(directive, selector)?.do;
 	return undefined;
 }
 

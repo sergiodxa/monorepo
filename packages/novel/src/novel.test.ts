@@ -144,20 +144,20 @@ const OPENING = createScene(SCENES.prologue.opening, (ctx) => [
 	ctx.play(ASSETS.sounds.door),
 	ctx.choose(
 		{
-			"opening.askName": { once: true, then: [ctx.say(CAST.mika, "opening.answerName")] },
-			"opening.askJob": { once: true, then: [ctx.say(CAST.mika, "opening.answerJob")] },
+			"opening.askName": { once: true, do: [ctx.say(CAST.mika, "opening.answerName")] },
+			"opening.askJob": { once: true, do: [ctx.say(CAST.mika, "opening.answerJob")] },
 			"opening.flirt": {
 				when: (state) => state.charm >= 50,
 				visibility: "disabled",
 				reason: "opening.needCharm",
-				then: [ctx.set("affection.mika", (value) => value + 10)],
+				do: [ctx.set("affection.mika", (value) => value + 10)],
 			},
 			"opening.secret": {
 				when: (state) => state.affection.mika >= 40,
 				once: true,
-				then: [ctx.say(CAST.mika, "opening.answerSecret")],
+				do: [ctx.say(CAST.mika, "opening.answerSecret")],
 			},
-			"opening.done": { done: true, then: [] },
+			"opening.done": { done: true, do: [] },
 		},
 		{ prompt: "opening.ask", repeat: true },
 	),

@@ -108,7 +108,8 @@ export interface ChoiceOptionDirective {
 	reason?: string;
 	once: boolean;
 	done: boolean;
-	then: Directive[];
+	/** The directives the option runs when taken. */
+	do: Directive[];
 }
 
 /** A menu; a stop. */
@@ -125,7 +126,8 @@ export interface ChooseDirective {
 export interface WhenDirective {
 	type: "when";
 	condition: StoredCallback<boolean>;
-	then: Directive[];
+	/** The directives run when the condition holds. */
+	do: Directive[];
 	otherwise: Directive[];
 }
 
@@ -268,7 +270,8 @@ export interface ChoiceOption {
 	once?: boolean;
 	/** Ends a repeating menu: after this option's directives the play continues past the menu. */
 	done?: boolean;
-	then: Directive[];
+	/** The directives the option runs when taken. */
+	do: Directive[];
 }
 
 /** A menu's options keyed by label: a list of directives, or an option object. */
@@ -332,10 +335,10 @@ export interface SceneContext {
 		options: Options,
 		menu?: MenuOptions<Options>,
 	): ChooseDirective;
-	/** Runs `then` when the condition holds, and `otherwise` when it does not. */
+	/** Runs `directives` when the condition holds, and `otherwise` when it does not. */
 	when(
 		condition: (state: Readonly<NovelState>, tools: PlayTools) => boolean,
-		then: Directive[],
+		directives: Directive[],
 		otherwise?: Directive[],
 	): WhenDirective;
 	/** Sets state at a path, to a value or to what a function makes of the current one. */
@@ -390,14 +393,14 @@ function withTransition<Value extends object>(
 /** Normalizes one menu option to its object form. */
 function normalizeOption(key: string, option: Directive[] | ChoiceOption): ChoiceOptionDirective {
 	if (Array.isArray(option)) {
-		return { key, visibility: "hidden", once: false, done: false, then: option };
+		return { key, visibility: "hidden", once: false, done: false, do: option };
 	}
 	let normalized: ChoiceOptionDirective = {
 		key,
 		visibility: option.visibility ?? "hidden",
 		once: option.once ?? false,
 		done: option.done ?? false,
-		then: option.then,
+		do: option.do,
 	};
 	if (option.when !== undefined) normalized.when = option.when as StoredCallback<boolean>;
 	if (option.reason !== undefined) normalized.reason = option.reason;
@@ -469,8 +472,13 @@ const sceneContext: SceneContext = {
 		if (menu.default !== undefined) directive.default = menu.default;
 		return directive;
 	},
-	when(condition, then, otherwise = []) {
-		return { type: "when", condition: condition as StoredCallback<boolean>, then, otherwise };
+	when(condition, directives, otherwise = []) {
+		return {
+			type: "when",
+			condition: condition as StoredCallback<boolean>,
+			do: directives,
+			otherwise,
+		};
 	},
 	set(path, update) {
 		return { type: "set", path, update };

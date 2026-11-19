@@ -241,7 +241,7 @@ ctx.choose({
 		when: (state) => state.charm >= 50,
 		visibility: "disabled",
 		reason: "choices.needCharm",
-		then: [ctx.set("affection.mika", (value) => value + 10), ctx.goto(scenes.spring.cafe.date)],
+		do: [ctx.set("affection.mika", (value) => value + 10), ctx.goto(scenes.spring.cafe.date)],
 	},
 	"cafe.meeting.leave": [ctx.goto(scenes.spring.cafe.leave)],
 });
