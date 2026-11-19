@@ -29,6 +29,7 @@ export * from "./hotkey.js";
 export * from "./image-fallback.js";
 export * from "./invoker-fields.js";
 export * from "./keymap.js";
+export * from "./lightbox-controls.js";
 export * from "./listbox-keys.js";
 export * from "./live-frame.js";
 export * from "./long-press.js";

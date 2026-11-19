@@ -29,6 +29,7 @@ export * from "./merge-style.js";
 export * from "./paired-range-inputs.js";
 export * from "./placement.js";
 export * from "./prefers-reduced-motion.js";
+export * from "./range-months.js";
 export * from "./resolve-field-wiring.js";
 export * from "./resolve-fill-percent.js";
 export * from "./round-precision.js";
