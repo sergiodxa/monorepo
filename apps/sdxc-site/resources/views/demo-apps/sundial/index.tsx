@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { JSCalendar } from "@sdxc/jscalendar";
 import type { Toast } from "@sdxc/ui/app";
 import type { RemixNode } from "remix/component";
 
@@ -36,13 +37,23 @@ import type { Draft, DraftIssues } from "./event";
 import type { Entry } from "./model";
 import type { Changes, Visitor } from "./state";
 import type { Instance } from "./time";
-import type { ViewContext, ViewId } from "./views";
+import type { Screen as ScreenId, ViewContext } from "./views";
 
-import { CALENDARS, ZONES, actionHref, findPerson, href, shiftDate } from "./data";
+import { CALENDARS, ME, ZONES, actionHref, findPerson, href, shiftDate } from "./data";
 import { answer, create, edit, remove, reschedule, skip, store } from "./edits";
 import { EventDialog, blankDraft, draftOf, eventFields, readDraft } from "./event";
-import { DEFAULT_WITH, FindScreen, LENGTHS } from "./find";
-import { DOMAIN, durationOf, isAllDay, isEditable, localDateTime } from "./model";
+import { DEFAULT_WITH, FindScreen, LENGTHS, availability } from "./find";
+import { IMPORT_CALENDAR, fileOf, invite, readCalendar } from "./ics";
+import { ImportScreen } from "./import";
+import {
+	DOMAIN,
+	durationOf,
+	guestsOf,
+	isAllDay,
+	isEditable,
+	localDateTime,
+	organizerOf,
+} from "./model";
 import { SundialShell, rangeTitle } from "./shell";
 import {
 	SHELL_COOKIE,
@@ -102,16 +113,17 @@ const TOKENS = {
 } as const;
 
 /** The pages a post may return to, so a post can never send the visitor elsewhere. */
-const BACK = /^(|days|day|month|agenda|find)\?[\w=&%.,~-]*$/;
+const BACK = /^(|days|day|month|agenda|find|import)\?[\w=&%.,~:-]*$/;
 
 /** The calendar screens every path answers with. */
-const PAGES: Record<string, ViewId | "find"> = {
+const PAGES: Record<string, ScreenId> = {
 	"": "week",
 	[VIEW_PATHS.days]: "days",
 	[VIEW_PATHS.day]: "day",
 	[VIEW_PATHS.month]: "month",
 	[VIEW_PATHS.agenda]: "agenda",
 	find: "find",
+	import: "import",
 };
 
 /** The Undo every change's toast offers, posting to the action that restores the last change. */
@@ -122,6 +134,18 @@ const TOASTS: DemoApp["toasts"] = {
 	created: { color: "neutral", title: "Event created", action: UNDO },
 	moved: { color: "neutral", title: "Event moved", action: UNDO },
 	saved: { color: "neutral", title: "Event saved", action: UNDO },
+	invited: {
+		color: "neutral",
+		title: "Invitations sent",
+		description: "Each guest's answer is on the event.",
+		action: UNDO,
+	},
+	imported: {
+		color: "neutral",
+		title: "Calendar imported",
+		description: "Its events are in Travel.",
+		action: UNDO,
+	},
 	deleted: { color: "neutral", title: "Event deleted", action: UNDO },
 	rsvp: { color: "neutral", title: "Answer sent", action: UNDO },
 	undone: { color: "neutral", title: "Change undone" },
@@ -157,7 +181,7 @@ interface Scene {
 }
 
 /** Reads the visitor, the clock and the screen's day from a request. */
-function sceneOf(request: DemoAppRequest, view: ViewId | "find"): Scene {
+function sceneOf(request: DemoAppRequest, view: ScreenId): Scene {
 	let visitor = readVisitor(request.cookie);
 	let at = Date.now();
 	let now = nowIn(visitor.zone, at);
@@ -322,6 +346,14 @@ function route(
 		if (view === "day") return <DaysView context={context} count={1} />;
 		if (view === "month") return <MonthScreen context={context} />;
 		if (view === "agenda") return <AgendaScreen context={context} />;
+		if (view === "import")
+			return (
+				<ImportScreen
+					origin={request.url.origin}
+					back={context.back}
+					problem={request.url.searchParams.has("problem")}
+				/>
+			);
 		return (
 			<FindScreen
 				context={context}
@@ -426,15 +458,78 @@ function submitEvent(
 	let { visitor } = scene;
 	let seeds = seedsOf(scene);
 	if (target === "new") {
-		let event = create(newId(visitor.changes), checked.fields);
+		let event = sendInvitations(create(newId(visitor.changes), checked.fields), scene);
 		let next = store(visitor.changes, seeds, { calendar: checked.fields.calendar, event });
-		return { page: back, toast: "created", cookies: changesCookies(visitor, next, back) };
+		let invited = guestsOf(event).some((guest) => guest !== ME);
+		return {
+			page: back,
+			toast: invited ? "invited" : "created",
+			cookies: changesCookies(visitor, next, back),
+		};
 	}
 	let instance = findInstance(scene.everything, target, scene.context.zone);
 	if (!instance || !isEditable(instance.calendar)) return null;
 	let event = edit(instance, checked.fields, draft.scope);
+	if (organizerOf(event) === ME) event = sendInvitations(event, scene);
 	let next = store(visitor.changes, seeds, { calendar: checked.fields.calendar, event });
 	return { page: back, toast: "saved", cookies: changesCookies(visitor, next, back) };
+}
+
+/**
+ * Invites the event's guests who have not answered: an iTIP REQUEST goes out, and each guest's
+ * REPLY comes back from whether they are free and working then, read in their own zone.
+ */
+function sendInvitations(event: JSCalendar.Event, scene: Scene): JSCalendar.Event {
+	let [first] = instancesIn(
+		[{ calendar: "work", event }],
+		event.start.slice(0, 10),
+		2,
+		scene.context.zone,
+	);
+	if (!first) return event;
+	let pending = new Set(
+		Object.entries(event.participants ?? {})
+			.filter(([, participant]) => participant.participationStatus === "needs-action")
+			.map(([id]) => id),
+	);
+	let { event: answered } = invite(event, (guest) => {
+		let person = findPerson(guest);
+		if (!person || !pending.has(guest)) return "ACCEPTED";
+		return availability(
+			person,
+			first.start.getTime(),
+			first.end.getTime(),
+			scene.context.zone,
+			scene.everything,
+		);
+	});
+	let participants = Object.fromEntries(
+		Object.entries(answered.participants ?? {}).map(([id, participant]) => [
+			id,
+			pending.has(id) ? participant : (event.participants?.[id] ?? participant),
+		]),
+	);
+	return { ...answered, participants };
+}
+
+/** Adds an uploaded or posted calendar's events to Travel, replacing earlier imports of the same uids. */
+async function submitImport(form: FormData, scene: Scene): Promise<DemoAppRedirect> {
+	let upload = form.get("file");
+	let text = upload instanceof File ? await upload.text() : field(form, "group");
+	let read = readCalendar(text.slice(0, 200_000));
+	if ("problem" in read || read.events.length === 0)
+		return { page: `import?d=${scene.context.anchor}&problem=1` };
+	let seeds = seedsOf(scene);
+	let fresh = read.events.filter((event) => !seeds.has(event.uid));
+	if (fresh.length === 0)
+		return { page: `?d=${read.events[0]?.start.slice(0, 10) ?? scene.context.today}` };
+	let next = fresh.reduce(
+		(changes, event) => store(changes, seeds, { calendar: IMPORT_CALENDAR, event }),
+		scene.visitor.changes,
+	);
+	let [first] = [...fresh].sort((a, b) => a.start.localeCompare(b.start));
+	let page = `?d=${first?.start.slice(0, 10) ?? scene.context.today}`;
+	return { page, toast: "imported", cookies: changesCookies(scene.visitor, next, page) };
 }
 
 /** Moves or resizes an occurrence to a day and minutes on the viewer's clock, as the grid posts. */
@@ -497,6 +592,7 @@ const SCREENS = [
 	"agenda",
 	"find",
 	"find?with=priya,aiko&length=60",
+	"import",
 	"?new=1",
 	"?date=2026-11-18&start=600&end=660",
 ];
@@ -514,6 +610,10 @@ export default {
 	cookies: [SHELL_COOKIE],
 	isPersonal,
 	toasts: TOASTS,
+	file(part, request) {
+		let visitor = readVisitor(request.cookie);
+		return fileOf(part, eventsOf(visitor, nowIn(visitor.zone, Date.now()).date));
+	},
 	render(request) {
 		let { screen } = route(request);
 		return {
@@ -547,6 +647,7 @@ export default {
 			};
 		}
 		if (page === "move") return submitMove(form, scene);
+		if (page === "import") return submitImport(form, scene);
 		if (page === "calendars") {
 			let shown = form.getAll("show").map(String);
 			let hidden = CALENDARS.map((calendar) => calendar.id).filter((id) => !shown.includes(id));

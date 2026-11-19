@@ -37,6 +37,9 @@ import {
 /** The calendar screens, by the path each lives at. */
 export type ViewId = "week" | "days" | "day" | "month" | "agenda";
 
+/** Every screen with a day in its address: the calendar views, Find a time, and Import and export. */
+export type Screen = ViewId | "find" | "import";
+
 /** Each view's path under the app; the week is the home screen. */
 export const VIEW_PATHS: Record<ViewId, string> = {
 	week: "",
@@ -48,7 +51,7 @@ export const VIEW_PATHS: Record<ViewId, string> = {
 
 /** What every screen reads: who is looking, when, at which day, and their visible events. */
 export interface ViewContext {
-	view: ViewId | "find";
+	view: Screen;
 	/** The day the screen is set around, `YYYY-MM-DD` on the viewer's clock. */
 	anchor: string;
 	today: string;
@@ -61,15 +64,20 @@ export interface ViewContext {
 	back: string;
 }
 
+/** A screen's path under the app. */
+function pathOf(view: Screen): string {
+	return view === "find" || view === "import" ? view : VIEW_PATHS[view];
+}
+
 /** The address of a view at a day, with any extra query. */
-export function viewHref(view: ViewId | "find", anchor: string, extra = ""): string {
-	let path = view === "find" ? "find" : VIEW_PATHS[view];
+export function viewHref(view: Screen, anchor: string, extra = ""): string {
+	let path = pathOf(view);
 	return href(`${path}?d=${anchor}${extra === "" ? "" : `&${extra}`}`);
 }
 
 /** The page path and query of a view, as a post's `back` field carries it. */
-export function viewPage(view: ViewId | "find", anchor: string, extra = ""): string {
-	let path = view === "find" ? "find" : VIEW_PATHS[view];
+export function viewPage(view: Screen, anchor: string, extra = ""): string {
+	let path = pathOf(view);
 	return `${path}?d=${anchor}${extra === "" ? "" : `&${extra}`}`;
 }
 

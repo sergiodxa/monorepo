@@ -49,6 +49,7 @@ import {
 	findCalendar,
 	findPerson,
 } from "./data";
+import { fileHref } from "./import";
 import {
 	durationOf,
 	eventColor,
@@ -516,6 +517,26 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 						))}
 					</form>
 				) : null}
+				<div mix={[raw({ display: "flex", gap: "0.75rem", fontSize: "0.75rem" })]}>
+					<a
+						href={fileHref(`events/${encodeURIComponent(instance.uid)}.ics`)}
+						download="event.ics"
+						data-rmx-document=""
+						mix={[raw({ color: "var(--ui-brand-fg)", fontWeight: "600" })]}
+					>
+						Download .ics
+					</a>
+					{invited && rsvp !== undefined && rsvp !== "pending" ? (
+						<a
+							href={fileHref(`replies/${encodeURIComponent(instance.uid)}.ics`)}
+							download="reply.ics"
+							data-rmx-document=""
+							mix={[raw({ color: "var(--ui-brand-fg)", fontWeight: "600" })]}
+						>
+							Your iTIP reply
+						</a>
+					) : null}
+				</div>
 				{readOnly ? null : (
 					<div mix={[raw({ display: "flex", gap: "0.5rem", justifyContent: "flex-end" })]}>
 						<form

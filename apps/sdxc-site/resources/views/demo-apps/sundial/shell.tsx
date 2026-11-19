@@ -10,6 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import {
+	ArrowDownUpIcon,
 	CalendarDaysIcon,
 	CalendarRangeIcon,
 	ChevronLeftIcon,
@@ -167,7 +168,7 @@ function SidebarExtras(handle: Handle<{ context: ViewContext; hidden: string[] }
 				(instance) => instance.days?.first ?? clockAt(instance.start.getTime(), context.zone).date,
 			),
 		);
-		let view: ViewId = context.view === "find" ? "week" : context.view;
+		let view: ViewId = context.view === "find" || context.view === "import" ? "week" : context.view;
 		let back = context.back;
 		return (
 			<div
@@ -357,6 +358,7 @@ export function rangeTitle(context: ViewContext): string {
 			Date.parse(`${value}T00:00:00Z`),
 		);
 	if (context.view === "month") return date(context.anchor, { month: "long", year: "numeric" });
+	if (context.view === "import") return "Import and export";
 	if (context.view === "day" || context.view === "find")
 		return date(context.anchor, { weekday: "long", month: "long", day: "numeric" });
 	let span = viewSpan(context.view, context.anchor);
@@ -373,6 +375,11 @@ export function rangeTitle(context: ViewContext): string {
 
 /** Where the arrows lead: a view's previous and next range. */
 function arrows(context: ViewContext): { previous: string; next: string } {
+	if (context.view === "import")
+		return {
+			previous: viewHref("week", shiftDate(context.anchor, -7)),
+			next: viewHref("week", shiftDate(context.anchor, 7)),
+		};
 	if (context.view === "find")
 		return {
 			previous: viewHref("find", shiftDate(context.anchor, -1)),
@@ -408,7 +415,7 @@ export function SundialShell(handle: Handle<SundialShell.Props>) {
 	return () => {
 		let { context, hidden, collapsed, children } = handle.props;
 		let { previous, next } = arrows(context);
-		let currentView = context.view === "find" ? null : context.view;
+		let currentView = context.view === "find" || context.view === "import" ? null : context.view;
 		let newHref = viewHref(currentView ?? "week", context.anchor, "new=1");
 		return (
 			<AppShell
@@ -463,6 +470,13 @@ export function SundialShell(handle: Handle<SundialShell.Props>) {
 								icon={<UsersIcon />}
 								label="Find a time"
 								current={context.view === "find"}
+							/>
+							<AppShell.Item
+								data-rmx-prefetch="intent"
+								href={viewHref("import", context.anchor)}
+								icon={<ArrowDownUpIcon />}
+								label="Import and export"
+								current={context.view === "import"}
 							/>
 						</AppShell.Group>
 						<SidebarExtras context={context} hidden={hidden} />

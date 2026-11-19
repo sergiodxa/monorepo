@@ -142,6 +142,32 @@ function busyOf(person: Person, day: string, zone: string, events: Entry[]): Spa
 }
 
 /**
+ * How a teammate answers an invitation: declined when they are busy then, tentative when it
+ * falls outside their working day (read in their own zone), accepted otherwise.
+ *
+ * @param person The invited teammate.
+ * @param start The event's start, as an instant.
+ * @param end The event's end, as an instant.
+ * @param zone The viewer's zone, whose days the comparison is read on.
+ * @param entries The shared calendar, which holds the teammate's other meetings.
+ */
+export function availability(
+	person: Person,
+	start: number,
+	end: number,
+	zone: string,
+	entries: Entry[],
+): "ACCEPTED" | "TENTATIVE" | "DECLINED" {
+	let at = clockAt(start, zone);
+	let until = Math.min(1440, at.minute + Math.round((end - start) / 60_000));
+	let busy = busyOf(person, at.date, zone, entries);
+	if (busy.some((span) => span.start < until && span.end > at.minute)) return "DECLINED";
+	let working = workingSpans(person, at.date, zone);
+	if (!working.some((span) => span.start <= at.minute && span.end >= until)) return "TENTATIVE";
+	return "ACCEPTED";
+}
+
+/**
  * The stretches every chosen person is working and free for at least `length` minutes, in
  * steps of 15, merged into runs.
  */

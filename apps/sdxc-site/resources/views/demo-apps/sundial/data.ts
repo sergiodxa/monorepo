@@ -70,6 +70,7 @@ export const CALENDARS: Calendar[] = [
 	{ id: "team", name: "Product team", color: "plum" },
 	{ id: "personal", name: "Personal", color: "fern" },
 	{ id: "fitness", name: "Training", color: "clay" },
+	{ id: "travel", name: "Travel", color: "rose" },
 	{ id: "holidays", name: "US holidays", color: "lagoon", subscribed: true },
 	{ id: "birthdays", name: "Birthdays", color: "marigold", subscribed: true },
 ];
