@@ -1,7 +1,7 @@
 /**
  * The row of emoji reactions under a message: each a chip with its emoji and count, pressed
- * when the reader is among those who reacted, and a slot at the end for adding one. Chips are
- * submit buttons, so a reaction posts as a plain form before any script loads.
+ * when the reader is among those who reacted, a slot for adding one, and a template for chips
+ * added in place. Chips are submit buttons, so a reaction posts before any script loads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,6 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { visuallyHidden } from "@sdxc/u/a11y";
 import { rounded } from "@sdxc/u/effects";
 import { mergeMix, raw } from "@sdxc/u/general";
 import { hstack, inlineFlex } from "@sdxc/u/layout";
@@ -23,35 +24,64 @@ export namespace ReactionBar {
 	export interface Props extends Omit<TagProps<"div">, "aria-label"> {
 		/** Names the row for assistive technology, such as "Reactions". */
 		"aria-label": string;
-		/** {@link ReactionBar.Reaction} chips, then an optional {@link ReactionBar.Add}. */
+		/**
+		 * One form per {@link ReactionBar.Reaction}, then an optional {@link ReactionBar.Add}
+		 * and {@link ReactionBar.Template}. The row hides while it holds no reaction.
+		 */
 		children: RemixNode;
 	}
 
+	/** The field a chip submits: its name, and the value that adds or removes the reaction. */
+	export interface Toggle {
+		name: string;
+		on: string;
+		off: string;
+	}
+
 	/** Props accepted by {@link ReactionBar.Reaction}. */
-	export interface ReactionProps extends Omit<TagProps<"button">, "children" | "aria-label"> {
+	export interface ReactionProps extends Omit<
+		TagProps<"button">,
+		"children" | "aria-label" | "name" | "value"
+	> {
+		/** The emoji, or the shortcode of a custom one drawn from `image`. */
 		emoji: string;
+		/** A custom emoji's image, drawn in place of the emoji's text. */
+		image?: string;
+		/** What the emoji is called, such as "Party popper"; a screen reader hears it before the count. */
+		label: string;
 		count: number;
 		/** Whether the reader reacted with this emoji; the chip draws pressed. */
 		pressed?: boolean;
-		/** The full name a screen reader hears, such as "Party popper, 3 reactions, including you". */
-		"aria-label": string;
+		/** @default { name: "on", on: "1", off: "0" } */
+		toggle?: Toggle;
 	}
 
 	/** Props accepted by {@link ReactionBar.Add}. */
 	export interface AddProps extends TagProps<"span"> {
-		/** The add-reaction control, such as an emoji picker in submit mode. */
+		/** The add-reaction control, such as a button opening an emoji picker. */
+		children: RemixNode;
+	}
+
+	/** Props accepted by {@link ReactionBar.Template}. */
+	export interface TemplateProps {
+		/**
+		 * The form a new reaction posts with, holding an `<input data-reaction-emoji>` for its
+		 * emoji and one {@link ReactionBar.Reaction}; `reactionSync()` clones and fills it.
+		 */
 		children: RemixNode;
 	}
 }
 
+/** The field a chip submits when the caller names none. */
+const DEFAULT_TOGGLE: ReactionBar.Toggle = { name: "on", on: "1", off: "0" };
+
 /**
  * Renders the row as a `role="group"` that wraps onto a second line when a message collects
- * many reactions.
+ * many reactions, and hides itself while it holds no chip.
  *
  * @example
  * <ReactionBar aria-label="Reactions">
- * 	<form method="post" action="/react"><ReactionBar.Reaction name="emoji" value="🎉" emoji="🎉" count={3} pressed aria-label="Party popper, 3, including you" /></form>
- * 	<ReactionBar.Add><EmojiPicker id="add-1" name="emoji" labels={…} /></ReactionBar.Add>
+ * 	<form method="post" action="/messages/42/react"><input type="hidden" name="emoji" value="🎉" /><ReactionBar.Reaction emoji="🎉" label="Party popper" count={3} pressed /></form>
  * </ReactionBar>
  */
 export function ReactionBar(handle: Handle<ReactionBar.Props>) {
@@ -66,6 +96,7 @@ export function ReactionBar(handle: Handle<ReactionBar.Props>) {
 						attrs({ role: "group" }),
 						hstack({ gap: 1, align: "center" }),
 						raw({ flexWrap: "wrap", "& > form": { display: "contents" } }),
+						when("&:not(:has([data-slot=reaction]:not(template *)))", raw({ display: "none" })),
 					],
 					mix,
 				)}
@@ -77,18 +108,34 @@ export function ReactionBar(handle: Handle<ReactionBar.Props>) {
 }
 
 /**
- * Renders one reaction chip: a submit button by default, `aria-pressed` while the reader is
- * among its reactors, and its count in tabular figures so the row never shifts as it changes.
+ * Renders one reaction chip: a submit button sending the toggle that flips the reader's
+ * reaction, `aria-pressed` while they are among its reactors, and its count in tabular figures
+ * so the row never shifts. Its accessible name is the emoji's label and the count.
  */
 ReactionBar.Reaction = function ReactionBarReaction(handle: Handle<ReactionBar.ReactionProps>) {
 	return () => {
-		let { emoji, count, pressed = false, mix, type = "submit", ...rest } = handle.props;
+		let {
+			emoji,
+			image,
+			label,
+			count,
+			pressed = false,
+			toggle = DEFAULT_TOGGLE,
+			mix,
+			type = "submit",
+			...rest
+		} = handle.props;
 		return (
 			<button
 				{...rest}
 				type={type}
+				name={toggle.name}
+				value={pressed ? toggle.off : toggle.on}
 				aria-pressed={pressed ? "true" : "false"}
 				data-slot="reaction"
+				data-emoji={emoji}
+				data-toggle-on={toggle.on}
+				data-toggle-off={toggle.off}
 				mix={mergeMix(
 					[
 						inlineFlex(),
@@ -107,7 +154,16 @@ ReactionBar.Reaction = function ReactionBarReaction(handle: Handle<ReactionBar.R
 							lineHeight: "1",
 							cursor: "pointer",
 							transition: "background-color 120ms, border-color 120ms",
-							"& > [data-emoji]": { fontSize: "0.9375rem" },
+							"& > [data-reaction-emoji-glyph]": {
+								display: "inline-grid",
+								placeItems: "center",
+								fontSize: "0.9375rem",
+							},
+							"& > [data-reaction-emoji-glyph] > img": {
+								inlineSize: "1.0625rem",
+								blockSize: "1.0625rem",
+								objectFit: "contain",
+							},
 						}),
 						tabularNums(),
 						when(
@@ -134,18 +190,21 @@ ReactionBar.Reaction = function ReactionBarReaction(handle: Handle<ReactionBar.R
 					mix,
 				)}
 			>
-				<span data-emoji="" aria-hidden="true">
-					{emoji}
+				<span data-reaction-emoji-glyph="" aria-hidden="true">
+					{image === undefined ? emoji : <img src={image} alt="" draggable="false" />}
 				</span>
-				<span aria-hidden="true">{count}</span>
+				<span data-reaction-label="" mix={[visuallyHidden()]}>
+					{label}
+				</span>
+				<span data-reaction-count="">{count}</span>
 			</button>
 		);
 	};
 };
 
 /**
- * Renders the trailing slot for adding a reaction, faded until the row or its message is
- * hovered or focused, so a quiet message keeps a quiet row.
+ * Renders the trailing slot for adding a reaction, where an emoji picker's trigger sits. Its
+ * controls are pill-sized to match the chips beside them.
  */
 ReactionBar.Add = function ReactionBarAdd(handle: Handle<ReactionBar.AddProps>) {
 	return () => {
@@ -158,7 +217,7 @@ ReactionBar.Add = function ReactionBarAdd(handle: Handle<ReactionBar.AddProps>) 
 					[
 						inlineFlex(),
 						raw({
-							"& button": {
+							"& :is(button, a)": {
 								blockSize: "1.625rem",
 								minInlineSize: "1.625rem",
 								borderRadius: "999px",
@@ -172,4 +231,12 @@ ReactionBar.Add = function ReactionBarAdd(handle: Handle<ReactionBar.AddProps>) 
 			</span>
 		);
 	};
+};
+
+/**
+ * Renders the inert `<template>` a new chip is cloned from, so a reaction picked from an emoji
+ * picker appears in the row at once, posting through the same form a server-drawn chip uses.
+ */
+ReactionBar.Template = function ReactionBarTemplate(handle: Handle<ReactionBar.TemplateProps>) {
+	return () => <template data-reaction-template="">{handle.props.children}</template>;
 };

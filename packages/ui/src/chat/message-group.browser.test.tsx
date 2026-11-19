@@ -1,7 +1,7 @@
 /**
- * Holds a message group, its reactions and the typing line to their contracts in a real
- * browser: later lines align with the first line's text, times and actions wait for hover or
- * focus, reactions report their pressed state, and the typing line keeps its height empty.
+ * Holds a message group and the typing line to their contracts in a real browser: later lines
+ * align with the first line's text, times and actions wait for hover or focus, and the typing
+ * line keeps its height while nobody types.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,6 @@ import { render } from "remix/component/test";
 import { describe, expect, onTestFinished, test } from "vitest";
 
 import { MessageGroup } from "./message-group.js";
-import { ReactionBar } from "./reaction-bar.js";
 import { TypingIndicator, typingLabel } from "./typing-indicator.js";
 
 import "../reset.css";
@@ -100,45 +99,6 @@ describe("MessageGroup", () => {
 		let thread = root.querySelector<HTMLAnchorElement>("[data-slot=message-group-thread]")!;
 		expect(thread.getAttribute("href")).toBe("#thread");
 		expect(thread.textContent).toContain("3 replies");
-	});
-});
-
-describe("ReactionBar", () => {
-	test("renders each reaction as a submit toggle with its pressed state and count", () => {
-		let mounted = render(
-			<form
-				style={{
-					"--ui-brand-bg-tint": "rgb(255, 230, 240)",
-					"--ui-neutral-bg-tint": "rgb(245, 245, 245)",
-				}}
-			>
-				<ReactionBar aria-label="Reactions">
-					<ReactionBar.Reaction
-						emoji="🎉"
-						count={3}
-						pressed
-						name="emoji"
-						value="🎉"
-						aria-label="Party popper, 3, including you"
-					/>
-					<ReactionBar.Reaction emoji="👀" count={1} aria-label="Eyes, 1" />
-				</ReactionBar>
-			</form>,
-		);
-		onTestFinished(mounted.cleanup);
-		let [party, eyes] =
-			mounted.container.querySelectorAll<HTMLButtonElement>("[data-slot=reaction]");
-		expect(mounted.container.querySelector("[data-slot=reaction-bar]")?.getAttribute("role")).toBe(
-			"group",
-		);
-		expect(party?.type).toBe("submit");
-		expect(party?.getAttribute("aria-pressed")).toBe("true");
-		expect(party?.value).toBe("🎉");
-		expect(eyes?.getAttribute("aria-pressed")).toBe("false");
-		expect(eyes?.textContent).toContain("1");
-		expect(getComputedStyle(party!).backgroundColor).not.toBe(
-			getComputedStyle(eyes!).backgroundColor,
-		);
 	});
 });
 

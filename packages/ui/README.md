@@ -348,8 +348,10 @@ one the page uses in the browser entry.
   `.Note`, `.Steps` and `.Step` (an icon, a running state, output it opens onto).
 - `Composer` — the message form, with `.Input` (grows to twelve lines), `.Toolbar` and `.Hint`;
   `ComposerSubmit` is its send button, Enter to send, and Stop while a reply streams.
-- `ComposerFormat`, `EmojiPicker`, `MentionMenu` — composer islands: Markdown buttons and shortcuts
-  (`applyFormat`), an emoji grid that inserts or submits (`EMOJI`), and `@` suggestions (`mentionQuery`).
+- `ComposerFormat`, `MentionMenu` — composer islands: Markdown buttons and shortcuts (`applyFormat`)
+  and `@` suggestions (`mentionQuery`). Emoji pickers come from `@sdxc/emoji/ui`.
+- `MessageGroup`, `ReactionBar`, `TypingIndicator` — a team chat's runs of messages, reaction chips
+  that post as forms (`reactionSync()` flips them in place), and who is typing.
 - `revealStream(root)` — replays a server-rendered reply word by word; `streamTarget()` styles it.
 
 | Helper                  | Host                                       | Adds                                                  |
