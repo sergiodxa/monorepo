@@ -53,14 +53,11 @@ function stepButton() {
 			border: "0",
 			borderRadius: "999px",
 			color: "var(--ui-neutral-fg-emphasis)",
-			backgroundColor: "var(--ui-neutral-bg-subtle)",
+			backgroundColor: "var(--ui-neutral-bg-tint)",
 			cursor: "pointer",
 			"& > svg": { inlineSize: "0.9375rem", blockSize: "0.9375rem" },
 		}),
-		when(
-			"&:hover",
-			raw({ backgroundColor: "var(--ui-neutral-bg-muted, var(--ui-neutral-bg-subtle))" }),
-		),
+		when("&:hover", raw({ backgroundColor: "var(--ui-neutral-bg-tint-hover)" })),
 		when(
 			"&:focus-visible",
 			raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "1px" }),

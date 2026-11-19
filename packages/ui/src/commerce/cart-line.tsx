@@ -49,7 +49,7 @@ export function CartLine(handle: Handle<CartLine.Props>) {
 							alignItems: "center",
 							gap: "0.75rem",
 							paddingBlock: "0.75rem",
-							borderBlockEnd: "1px solid var(--ui-neutral-border-subtle, var(--ui-neutral-border))",
+							borderBlockEnd: "1px solid var(--ui-neutral-border)",
 						}),
 					],
 					mix,
@@ -68,7 +68,7 @@ export function CartLine(handle: Handle<CartLine.Props>) {
 								boxSizing: "border-box",
 								borderRadius: "0.75rem",
 								overflow: "clip",
-								backgroundColor: mediaBackground ?? "var(--ui-neutral-bg-subtle)",
+								backgroundColor: mediaBackground ?? "var(--ui-neutral-bg-tint)",
 							}),
 						]}
 					>

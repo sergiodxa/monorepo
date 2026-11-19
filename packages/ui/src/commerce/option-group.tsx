@@ -147,8 +147,7 @@ export function OptionGroup(handle: Handle<OptionGroup.Props>) {
 								gap: "0.75rem",
 								minBlockSize: "2.75rem",
 								paddingInline: "0.25rem",
-								borderBlockEnd:
-									"1px solid var(--ui-neutral-border-subtle, var(--ui-neutral-border))",
+								borderBlockEnd: "1px solid var(--ui-neutral-border)",
 								cursor: "pointer",
 								"&:has(input:disabled)": { opacity: "0.5", cursor: "not-allowed" },
 								"& input": {

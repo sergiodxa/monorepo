@@ -135,7 +135,7 @@ export function ItemOptionsDialog(handle: Handle<ItemOptionsDialog.Props>) {
 									display: "grid",
 									placeItems: "center",
 									minBlockSize: props.media === undefined ? "3.5rem" : "11rem",
-									backgroundColor: props.mediaBackground ?? "var(--ui-neutral-bg-subtle)",
+									backgroundColor: props.mediaBackground ?? "var(--ui-neutral-bg-tint)",
 									"& > [data-slot=item-options-media]": { inlineSize: "9rem" },
 								}),
 							]}

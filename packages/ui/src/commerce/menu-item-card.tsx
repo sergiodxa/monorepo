@@ -84,7 +84,7 @@ export function MenuItemCard(handle: Handle<MenuItemCard.Props>) {
 						"&:hover",
 						raw({
 							boxShadow:
-								"inset 0 0 0 1px var(--ui-neutral-border-strong, var(--ui-neutral-fg-subtle))",
+								"inset 0 0 0 1px var(--ui-neutral-border-strong, var(--ui-neutral-fg-muted))",
 						}),
 					),
 					when(
@@ -161,7 +161,7 @@ export function MenuItemCard(handle: Handle<MenuItemCard.Props>) {
 								padding: "0.5rem",
 								boxSizing: "border-box",
 								borderRadius: "0.875rem",
-								backgroundColor: mediaBackground ?? "var(--ui-neutral-bg-subtle)",
+								backgroundColor: mediaBackground ?? "var(--ui-neutral-bg-tint)",
 							}),
 						]}
 					>
