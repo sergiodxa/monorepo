@@ -35,7 +35,7 @@ export const COMPARISON_SLUGS = ["feedly", "inoreader", "feedbin", "newsblur"] a
 export type ComparisonSlug = (typeof COMPARISON_SLUGS)[number];
 
 /** The translation key segment each feature slug's copy lives under. */
-export const FEATURE_KEYS: Record<FeatureSlug, string> = {
+export const FEATURE_KEYS = {
 	freshness: "freshness",
 	filters: "filters",
 	articles: "articles",
@@ -44,7 +44,7 @@ export const FEATURE_KEYS: Record<FeatureSlug, string> = {
 	organize: "organize",
 	"your-data": "yourData",
 	agents: "agents",
-};
+} as const satisfies Record<FeatureSlug, string>;
 
 /** Whether a route segment names a page in `slugs`, narrowing it to that family's slug. */
 export function isSlug<Slug extends string>(

@@ -16,6 +16,7 @@ import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 
+import { bindFigures } from "~/resources/components/marketing/landing-translate";
 import Feeds, { TOC } from "~/resources/docs/pages/en/feeds";
 import GettingStarted from "~/resources/docs/pages/en/getting-started";
 import DocsLayout from "~/resources/layouts/docs";
@@ -53,7 +54,7 @@ afterEach(async () => {
 
 /** Mounts the feeds guide, which carries steps, a scene and a table, inside the shell. */
 function mountGuide() {
-	let { t } = translate("en");
+	let t = bindFigures(translate("en").t, FIGURES);
 	mounted = render(
 		<DocsLayout t={t} isSignedIn={false} activePath="/docs/feeds" toc={TOC}>
 			<DocsPageHeader
@@ -72,7 +73,7 @@ function mountGuide() {
 
 /** Mounts the quickstart, whose steps run straight into a tip, ending on its next pages. */
 function mountQuickstart() {
-	let { t } = translate("en");
+	let t = bindFigures(translate("en").t, FIGURES);
 	let card = (title: string) => ({
 		title,
 		href: "/docs/x",
@@ -95,7 +96,7 @@ function mountQuickstart() {
 
 /** Mounts the hub, whose chips and cards are lists the page's prose rules must leave alone. */
 function mountHub() {
-	let { t } = translate("en");
+	let t = bindFigures(translate("en").t, FIGURES);
 	let card = (title: string) => ({ title, href: "/docs/x", description: "One line about it." });
 	mounted = render(
 		<DocsLayout t={t} isSignedIn={false} activePath="/docs">
@@ -246,7 +247,7 @@ describe("help shell", () => {
 
 	test("keeps two blocks in a row one gap apart, never doubling it", async () => {
 		await page.viewport(1280, 900);
-		let { t } = translate("en");
+		let t = bindFigures(translate("en").t, FIGURES);
 		mounted = render(
 			<DocsLayout t={t} isSignedIn={false} activePath="/docs/feeds">
 				<aside data-slot="first">One</aside>

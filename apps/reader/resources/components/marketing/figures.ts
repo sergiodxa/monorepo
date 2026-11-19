@@ -11,6 +11,8 @@ import type { Translate } from "@sdxc/i18n";
 
 import { DAY_MS } from "@sdxc/dates/zone";
 
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
+
 import tools from "~/app/mcp/tools";
 import { GRACE_PERIOD_MS, TIER_LIMITS } from "~/app/services/entitlement";
 import { HISTORY_ENTRY_LIMIT } from "~/app/services/history";
@@ -18,13 +20,14 @@ import { EMAIL_GAP_MS } from "~/app/services/notify";
 import { MAX_SUMMARY_LENGTH } from "~/app/services/refresh";
 import { POLL_FLOOR_MS } from "~/database/feed-schema";
 import { TAG_LIMIT } from "~/database/schema";
+import { bindFigures } from "~/resources/components/marketing/landing-translate";
 import { formatInterval } from "~/resources/components/marketing/scenes";
 
 /**
  * The figures as message variables. Every page passes the whole set to every message it
  * renders, so a sentence may quote any of them without its controller knowing which.
  */
-export function landingFigures(locale: string): Record<string, string> {
+export function landingFigures(locale: string) {
 	let count = (value: number) => value.toLocaleString(locale);
 	let interval = (ms: number | null) => (ms === null ? "" : formatInterval(ms));
 
@@ -51,13 +54,15 @@ export function landingFigures(locale: string): Record<string, string> {
 	};
 }
 
+/** Every figure a public page's copy may quote, by the variable name messages read it as. */
+export type LandingFigures = ReturnType<typeof landingFigures>;
+
 /**
  * The request's translator with {@link landingFigures} bound in, so every message on a
  * public page can quote any figure, and a value a call site passes still wins.
  *
  * @example let t = landingTranslate(ctx.intl, ctx.locale);
  */
-export function landingTranslate(intl: { t: Translate }, locale: string): Translate {
-	let figures = landingFigures(locale);
-	return (key, values) => intl.t(key, { ...figures, ...values });
+export function landingTranslate(intl: { t: Translate }, locale: string): LandingTranslate {
+	return bindFigures(intl.t, landingFigures(locale));
 }

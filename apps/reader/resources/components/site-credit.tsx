@@ -7,17 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
 import { mf } from "@sdxc/microformats/ui";
+
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import { PUBLISHER } from "~/config/site";
 
 namespace SiteCredit {
 	export interface Props {
 		/** The public pages' translator, which already has the landing figures bound. */
-		t: Translate;
+		t: LandingTranslate;
 	}
 }
 

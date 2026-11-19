@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import {
@@ -32,6 +31,7 @@ import { SiteFooter, SiteHeader } from "@sdxc/ui/landing";
 import { landingContainer } from "@sdxc/ui/styles";
 
 import type { FeatureSlug, UseCaseSlug } from "~/config/marketing";
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import { COMPARISON_SLUGS, FEATURE_KEYS, FEATURE_SLUGS, USE_CASE_SLUGS } from "~/config/marketing";
 import SiteCredit from "~/resources/components/site-credit";
@@ -87,7 +87,7 @@ const USE_CASE_ICONS: Record<UseCaseSlug, RemixNode> = {
 
 namespace MarketingLayout {
 	export interface Props {
-		t: Translate;
+		t: LandingTranslate;
 		/** Whether the visitor is signed in, which turns the sign-in into a way back to reading. */
 		isSignedIn: boolean;
 		/**
@@ -256,7 +256,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
  * The footer's help column: the hub, the first two tasks, the plan reference and the door
  * to fixing a problem, which are the pages a visitor deciding whether to sign in reaches for.
  */
-function helpLinks(t: Translate): SiteFooter.Link[] {
+function helpLinks(t: LandingTranslate): SiteFooter.Link[] {
 	let page = (slug: string) => routes.docs.show.href({ slug });
 	return [
 		{ label: t("docs.title"), href: routes.docs.index.href() },

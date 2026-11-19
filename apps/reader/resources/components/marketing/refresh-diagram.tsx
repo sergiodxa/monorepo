@@ -7,11 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
 import { ClockIcon, UsersIcon } from "@sdxc/icons";
 import { FanOutDiagram } from "@sdxc/ui/landing";
+
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import { POLL_FLOOR_MS } from "~/database/feed-schema";
 import { SAMPLE_FEEDS } from "~/resources/components/marketing/sample-data";
@@ -27,7 +28,7 @@ const REQUEST = 'GET /feed.xml  If-None-Match: "a1f3"';
  * Renders the fan-out. Without motion every queue shows filled, so the static picture is
  * the delivered fetch.
  */
-export default function RefreshDiagram(handle: Handle<{ t: Translate }>) {
+export default function RefreshDiagram(handle: Handle<{ t: LandingTranslate }>) {
 	return () => {
 		let { t } = handle.props;
 		let harbor = SAMPLE_FEEDS.find((feed) => feed.title === "Harbor Daily");

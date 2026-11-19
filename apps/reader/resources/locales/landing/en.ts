@@ -1290,4 +1290,4 @@ export default {
 		title: "Bring your OPML and start reading",
 		description: "Sign in, import your list or follow a feed, and read newest first.",
 	},
-};
+} as const;

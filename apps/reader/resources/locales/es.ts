@@ -7,6 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { LocaleMessages } from "@sdxc/i18n";
+
+import type en from "~/resources/locales/en";
+
 import landing from "~/resources/locales/landing/es";
 
 export default {
@@ -730,6 +734,8 @@ export default {
 			updated: "Filtro guardado.",
 			deleted: "Filtro eliminado. No se quitó ninguna entrada.",
 			limit: "Tienes tantos filtros como permite tu plan. Elimina uno para añadir otro.",
+			notEntitled:
+				"Los filtros son parte de un plan de pago. Los filtros que tienes siguen donde están.",
 			invalidValue: "Un filtro necesita un texto de hasta 100 caracteres para buscar.",
 			invalidField: "Esa no es una de las partes de una entrada que un filtro puede leer.",
 			invalidAction: "Eso no es una de las cosas que un filtro puede hacer.",
@@ -1287,4 +1293,4 @@ export default {
 		description: "La página que buscas no existe.",
 		goBackHome: "Volver al inicio",
 	},
-};
+} satisfies LocaleMessages<typeof en>;

@@ -6,6 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { FolderPlusIcon, PencilIcon, TrashIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
@@ -55,7 +57,8 @@ const Params = s.object({ folder: s.string() });
 
 /** One line of copy the page says an action's outcome in, and the tone it wears. */
 interface Note {
-	key: string;
+	/** The sentence in the reader's language, from the request's translator. */
+	text: (t: Translate) => string;
 	color: "success" | "warning";
 }
 
@@ -67,10 +70,10 @@ interface Note {
  * @param outcome - The redirect's `folder` parameter, as it arrived.
  */
 function folderNote(outcome: string | null): Note | null {
-	if (outcome === "created") return { key: "folders.created", color: "success" };
-	if (outcome === "renamed") return { key: "folders.renamed", color: "success" };
-	if (outcome === "duplicate") return { key: "folders.duplicate", color: "warning" };
-	if (outcome === "invalid") return { key: "folders.invalid", color: "warning" };
+	if (outcome === "created") return { text: (t) => t("folders.created"), color: "success" };
+	if (outcome === "renamed") return { text: (t) => t("folders.renamed"), color: "success" };
+	if (outcome === "duplicate") return { text: (t) => t("folders.duplicate"), color: "warning" };
+	if (outcome === "invalid") return { text: (t) => t("folders.invalid"), color: "warning" };
 	return null;
 }
 
@@ -396,7 +399,7 @@ export default createAction(routes.folder, {
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>
-							<Alert.Description>{ctx.intl.t(note.key)}</Alert.Description>
+							<Alert.Description>{note.text(ctx.intl.t)}</Alert.Description>
 						</Alert>
 					)}
 

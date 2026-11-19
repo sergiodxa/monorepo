@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import {
@@ -28,6 +27,7 @@ import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { ProductFrame } from "@sdxc/ui/landing";
 
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 import type { SamplePost } from "~/resources/components/marketing/sample-data";
 
 import {
@@ -66,7 +66,7 @@ namespace ReaderWindow {
 		title: string;
 		/** The path the address bar shows after the reader's host. */
 		path: string;
-		t: Translate;
+		t: LandingTranslate;
 		/** Which sidebar entry is the page on screen. */
 		active?: "reading" | "saved" | "feed";
 		children: RemixNode;
@@ -198,7 +198,7 @@ function RailHeading(handle: Handle<{ label: string }>) {
  * The sidebar: the search box, the queue and the saved shelf, then the feeds — pinned
  * first, then each folder, then the unfiled ones, and the quiet ones last.
  */
-function Sidebar(handle: Handle<{ t: Translate; active: "reading" | "saved" | "feed" }>) {
+function Sidebar(handle: Handle<{ t: LandingTranslate; active: "reading" | "saved" | "feed" }>) {
 	return () => {
 		let { active, t } = handle.props;
 		let unread = SAMPLE_FEEDS.reduce((total, feed) => total + feed.unread, 0);
@@ -348,7 +348,7 @@ function Control(handle: Handle<{ children: RemixNode; pressed?: boolean }>) {
 namespace QueueRows {
 	export interface Props {
 		posts: SamplePost[];
-		t: Translate;
+		t: LandingTranslate;
 		/** Whether rows name their feed, which a single feed's page leaves out. */
 		showSource?: boolean;
 	}
@@ -482,7 +482,7 @@ export function QueueRows(handle: Handle<QueueRows.Props>) {
 
 namespace QueueView {
 	export interface Props {
-		t: Translate;
+		t: LandingTranslate;
 		/** The posts the queue holds; the sample account's morning when omitted. */
 		posts?: SamplePost[];
 		/** Feeds the page knows have posts on the way, said under the heading. */
@@ -543,7 +543,7 @@ export function QueueView(handle: Handle<QueueView.Props>) {
  * One post read in place: where it came from, its title and byline, and the article the
  * reader fetched from the publisher, set in the reading face with the original a click away.
  */
-export function ArticleView(handle: Handle<{ t: Translate }>) {
+export function ArticleView(handle: Handle<{ t: LandingTranslate }>) {
 	return () => {
 		let { t } = handle.props;
 		return (
@@ -628,7 +628,7 @@ export function ArticleView(handle: Handle<{ t: Translate }>) {
  * One feed's own page: its name and when it was last checked, the span its posts stay for,
  * and the app's suggestion for a busy feed that keeps everything, over its newest posts.
  */
-export function FeedView(handle: Handle<{ t: Translate }>) {
+export function FeedView(handle: Handle<{ t: LandingTranslate }>) {
 	return () => {
 		let { t } = handle.props;
 		let harbor = SAMPLE_FEEDS.find((feed) => feed.title === "Harbor Daily");

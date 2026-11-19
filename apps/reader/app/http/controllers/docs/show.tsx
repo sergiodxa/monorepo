@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { I18n, Translate } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
 import { Trans } from "@sdxc/i18n/ui";
@@ -27,7 +27,8 @@ import {
 } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
-import type { DocPage } from "~/resources/docs/registry";
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
+import type { DocPage, DocSlug } from "~/resources/docs/registry";
 
 import { SUPPORT_FROM_PARAM } from "~/app/http/controllers/support";
 import { isAuthenticated } from "~/app/http/middleware/auth";
@@ -52,7 +53,7 @@ import routes from "~/routes/web";
 export const FEEDBACK_SENT_PARAM = "feedback";
 
 /** The pages a 404 offers, which are the ones people arrive at docs looking for. */
-const NOT_FOUND_SLUGS = ["getting-started", "import-opml", "plans", "feed-not-updating"];
+const NOT_FOUND_SLUGS: DocSlug[] = ["getting-started", "import-opml", "plans", "feed-not-updating"];
 
 export default createAction(routes.docs.show, async (ctx) => {
 	let t = landingTranslate(ctx.intl, ctx.locale);
@@ -199,7 +200,7 @@ function PlanRequirement(handle: Handle<{ intl: I18n; plan: "paid" | "premium" }
 
 namespace PageEnd {
 	export interface Props {
-		t: Translate;
+		t: LandingTranslate;
 		intl: I18n;
 		page: DocPage;
 	}

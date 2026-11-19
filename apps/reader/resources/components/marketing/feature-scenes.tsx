@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { CodeStage, DrawnChart } from "@sdxc/ui/landing";
 
 import type { FeatureSlug } from "~/config/marketing";
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import { POLL_BANDS, POLL_DORMANT_MS, POLL_FLOOR_MS } from "~/database/feed-schema";
 import {
@@ -42,7 +42,9 @@ import {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A scene component that takes the translator and nothing else. */
-type SceneComponent = (handle: Handle<{ t: Translate; framed?: boolean }>) => () => RemixNode;
+type SceneComponent = (
+	handle: Handle<{ t: LandingTranslate; framed?: boolean }>,
+) => () => RemixNode;
 
 /** The scene each feature's card shows on the home and on the pages that link to it. */
 export const FEATURE_CARD_SCENES: Record<FeatureSlug, SceneComponent> = {
@@ -104,7 +106,7 @@ const SEARCH_SH = `curl https://reader.sergiodxa.com/mcp \\
 
 namespace PageWindow {
 	export interface Props {
-		t: Translate;
+		t: LandingTranslate;
 		label: string;
 		title: string;
 		path: string;
@@ -159,7 +161,7 @@ function PageWindow(handle: Handle<PageWindow.Props>) {
 }
 
 /** The search syntax as the reader explains it: each form, and what it finds. */
-function SyntaxScene(handle: Handle<{ t: Translate }>) {
+function SyntaxScene(handle: Handle<{ t: LandingTranslate }>) {
 	return () => {
 		let { t } = handle.props;
 		let forms = [
@@ -212,7 +214,7 @@ function SyntaxScene(handle: Handle<{ t: Translate }>) {
 }
 
 /** The browsers a reader allowed, as the notifications settings list them. */
-function DevicesScene(handle: Handle<{ t: Translate }>) {
+function DevicesScene(handle: Handle<{ t: LandingTranslate }>) {
 	return () => {
 		let { t } = handle.props;
 		let devices = [
@@ -256,7 +258,7 @@ function DevicesScene(handle: Handle<{ t: Translate }>) {
 }
 
 /** The window a feature page opens on, one per feature. */
-export const FEATURE_HEROES: Record<FeatureSlug, (t: Translate) => RemixNode> = {
+export const FEATURE_HEROES: Record<FeatureSlug, (t: LandingTranslate) => RemixNode> = {
 	freshness: (t) => (
 		<ReaderWindow
 			t={t}
@@ -363,7 +365,7 @@ export const FEATURE_HEROES: Record<FeatureSlug, (t: Translate) => RemixNode> = 
 };
 
 /** The visual each feature page's steps sit beside, a different screen from its hero. */
-export const FEATURE_STEP_VISUALS: Record<FeatureSlug, (t: Translate) => RemixNode> = {
+export const FEATURE_STEP_VISUALS: Record<FeatureSlug, (t: LandingTranslate) => RemixNode> = {
 	freshness: (t) => (
 		<DrawnChart
 			aria-label={t("landing.freshness.chart.label")}

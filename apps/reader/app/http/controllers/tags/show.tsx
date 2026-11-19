@@ -6,6 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { redirect } from "@sdxc/http/response";
 import { PencilIcon, TrashIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
@@ -59,7 +61,8 @@ const Params = s.object({ tag: s.string() });
 
 /** One line of copy the page says an action's outcome in, and the tone it wears. */
 interface Note {
-	key: string;
+	/** The sentence in the reader's language, from the request's translator. */
+	text: (t: Translate) => string;
 	color: "success" | "warning";
 }
 
@@ -70,14 +73,14 @@ interface Note {
  * @param outcome - The redirect's `tag` parameter, as it arrived.
  */
 function tagNote(outcome: string | null): Note | null {
-	if (outcome === "created") return { key: "tags.created", color: "success" };
-	if (outcome === "renamed") return { key: "tags.renamed", color: "success" };
-	if (outcome === "duplicate") return { key: "tags.duplicate", color: "warning" };
-	if (outcome === "tag-exists") return { key: "tags.duplicate", color: "warning" };
-	if (outcome === "tag-name-invalid") return { key: "tags.invalid", color: "warning" };
-	if (outcome === "tag-limit") return { key: "tags.full", color: "warning" };
-	if (outcome === "not-entitled") return { key: "tags.notEntitled", color: "warning" };
-	if (outcome === "switched-off") return { key: "tags.switchedOff", color: "warning" };
+	if (outcome === "created") return { text: (t) => t("tags.created"), color: "success" };
+	if (outcome === "renamed") return { text: (t) => t("tags.renamed"), color: "success" };
+	if (outcome === "duplicate") return { text: (t) => t("tags.duplicate"), color: "warning" };
+	if (outcome === "tag-exists") return { text: (t) => t("tags.duplicate"), color: "warning" };
+	if (outcome === "tag-name-invalid") return { text: (t) => t("tags.invalid"), color: "warning" };
+	if (outcome === "tag-limit") return { text: (t) => t("tags.full"), color: "warning" };
+	if (outcome === "not-entitled") return { text: (t) => t("tags.notEntitled"), color: "warning" };
+	if (outcome === "switched-off") return { text: (t) => t("tags.switchedOff"), color: "warning" };
 	return null;
 }
 
@@ -357,7 +360,7 @@ export default createAction(routes.tag, {
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>
-							<Alert.Description>{ctx.intl.t(note.key)}</Alert.Description>
+							<Alert.Description>{note.text(ctx.intl.t)}</Alert.Description>
 						</Alert>
 					)}
 

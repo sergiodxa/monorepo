@@ -7,6 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { LocaleMessages } from "@sdxc/i18n";
+
+import type en from "~/resources/locales/landing/en";
+
 export default {
 	meta: {
 		title: "Reader — todos los feeds que sigues, en una cola tranquila",
@@ -1309,4 +1313,4 @@ export default {
 		title: "Trae tu OPML y empieza a leer",
 		description: "Inicia sesión, importa tu lista o sigue un feed, y lee lo más reciente primero.",
 	},
-};
+} satisfies LocaleMessages<typeof en>;

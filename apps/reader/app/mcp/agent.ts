@@ -126,7 +126,10 @@ function presented(ctx: RequestContext): string | null {
  * @param ctx - The request being refused, read for its dictionary.
  * @param reason - What the object said.
  */
-function refusal(ctx: RequestContext, reason: string): Response {
+function refusal(
+	ctx: RequestContext,
+	reason: Extract<UserStore.AgentAuthorization, { ok: false }>["reason"],
+): Response {
 	if (reason === "tier") {
 		return refuse(
 			403,

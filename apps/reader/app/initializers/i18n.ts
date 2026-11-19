@@ -19,6 +19,13 @@ export const SUPPORTED_LANGUAGES = ["en", "es"];
 /** The language that answers a request asking for none the app speaks, and any key Spanish lacks. */
 export const FALLBACK_LANGUAGE = "en";
 
+declare module "@sdxc/i18n" {
+	/** Types every translator's keys and values by the English dictionary, which Spanish mirrors. */
+	interface I18nTypes {
+		messages: typeof en;
+	}
+}
+
 /** The dictionaries, one per supported language. */
 export const RESOURCES = { en, es };
 

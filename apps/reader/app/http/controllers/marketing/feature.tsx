@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AppMessages, MessageAt, MessageKey } from "@sdxc/i18n";
+
 import { Trans } from "@sdxc/i18n/ui";
 import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
@@ -51,7 +53,11 @@ export default createAction(routes.marketing.feature, (ctx) => {
 
 	let t = landingTranslate(ctx.intl, ctx.locale);
 	let key = FEATURE_KEYS[slug];
-	let page = (path: string) => `landing.features.pages.${key}.${path}`;
+	let page = <
+		Path extends MessageKey<MessageAt<AppMessages, `landing.features.pages.${typeof key}`>>,
+	>(
+		path: Path,
+	) => `landing.features.pages.${key}.${path}` as const;
 	let isSignedIn = isAuthenticated();
 
 	/** The features after this one in menu order, wrapping, so every page links onward. */

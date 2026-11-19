@@ -638,6 +638,7 @@ export default {
 			updated: "Filter saved.",
 			deleted: "Filter deleted. No post was removed.",
 			limit: "You have as many filters as your plan allows. Delete one to add another.",
+			notEntitled: "Filters are part of a paid plan. The filters you have stay where they are.",
 			invalidValue: "A filter needs text of up to 100 characters to look for.",
 			invalidField: "That is not one of the parts of a post a filter can read.",
 			invalidAction: "That is not one of the things a filter can do.",
@@ -1280,4 +1281,4 @@ export default {
 		description: "The page you asked for does not exist.",
 		goBackHome: "Go back home",
 	},
-};
+} as const;

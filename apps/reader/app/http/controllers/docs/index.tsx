@@ -10,6 +10,8 @@
 import { DocsHub } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
+import type { DocSlug } from "~/resources/docs/registry";
+
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import { SEO } from "~/app/initializers/seo";
 import { landingTranslate } from "~/resources/components/marketing/figures";
@@ -27,10 +29,10 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /** The first pages a new reader needs, drawn larger than the rest. */
-const START_SLUGS = ["getting-started", "import-opml"];
+const START_SLUGS: DocSlug[] = ["getting-started", "import-opml"];
 
 /** The questions people arrive with most, as chips under the title. */
-const TOPIC_SLUGS = [
+const TOPIC_SLUGS: DocSlug[] = [
 	"reading",
 	"search",
 	"folders",

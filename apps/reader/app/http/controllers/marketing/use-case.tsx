@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AppMessages, MessageAt, MessageKey } from "@sdxc/i18n";
+
 import { Trans } from "@sdxc/i18n/ui";
 import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
@@ -40,7 +42,11 @@ export default createAction(routes.marketing.useCase, (ctx) => {
 	if (!isSlug(USE_CASE_SLUGS, slug)) return defaultHandler(ctx);
 
 	let t = landingTranslate(ctx.intl, ctx.locale);
-	let page = (path: string) => `landing.useCases.pages.${slug}.${path}`;
+	let page = <
+		Path extends MessageKey<MessageAt<AppMessages, `landing.useCases.pages.${typeof slug}`>>,
+	>(
+		path: Path,
+	) => `landing.useCases.pages.${slug}.${path}` as const;
 	let content = USE_CASES[slug];
 	let isSignedIn = isAuthenticated();
 

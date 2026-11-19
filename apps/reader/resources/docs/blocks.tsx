@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import { ChevronDownIcon } from "@sdxc/icons";
@@ -19,10 +18,12 @@ import { font, text, weight } from "@sdxc/u/typography";
 import { Accordion } from "@sdxc/ui";
 import { AnchorHeading } from "@sdxc/ui/docs";
 
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
+
 export namespace DocBody {
 	export interface Props {
 		/** The request's translator with every landing figure bound, for product scenes. */
-		t: Translate;
+		t: LandingTranslate;
 		/** Every limit and interval a page may quote, formatted for the request's locale. */
 		figures: Record<string, string>;
 		/** The request's locale, for numbers a scene formats itself. */

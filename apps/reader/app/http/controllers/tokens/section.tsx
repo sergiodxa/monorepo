@@ -17,6 +17,7 @@ import type { AppContext } from "~/app/initializers/router";
 import type { UserStore } from "~/app/models/user-store";
 
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
+import { hasMessage } from "~/app/services/message-keys";
 import { AGENT_SCOPES } from "~/database/schema";
 import { SETTINGS_ANCHORS, SettingsCode, SettingsNote } from "~/resources/components/settings-area";
 import routes from "~/routes/web";
@@ -54,7 +55,7 @@ export function agentEndpoint(ctx: AppContext): string {
 
 /**
  * The copy and tone for the outcome a token action redirected with, or `null` for an
- * ordinary view of the page.
+ * ordinary view of the page or an outcome no message names.
  *
  * @param ctx - The request's dictionary and the query it arrived with.
  */
@@ -72,6 +73,7 @@ function tokenNote(
 		return { message: ctx.intl.t("agent.tokens.missing"), color: "warning" };
 	}
 
+	if (!hasMessage("agent.tokens.refused", outcome)) return null;
 	return { message: ctx.intl.t(`agent.tokens.refused.${outcome}`), color: "danger" };
 }
 

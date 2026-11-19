@@ -14,6 +14,7 @@ import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 
+import { bindFigures } from "~/resources/components/marketing/landing-translate";
 import {
 	ArticleView,
 	FeedView,
@@ -50,7 +51,7 @@ const FACES = {
 
 /** Mounts one face in a window `width` wide, as a media slot of that width holds it. */
 function mountWindow(face: keyof typeof FACES, width: string) {
-	let { t } = translate("en");
+	let t = bindFigures(translate("en").t, {});
 	let Face = FACES[face];
 	mounted = render(
 		<div style={{ inlineSize: width }}>

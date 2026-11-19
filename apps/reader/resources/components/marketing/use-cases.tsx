@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import { PlayIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 
 import type { FeatureSlug, UseCaseSlug } from "~/config/marketing";
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 import type { SamplePost } from "~/resources/components/marketing/sample-data";
 
 import { FeedView, HAIRLINE, ReaderWindow } from "~/resources/components/marketing/reader-window";
@@ -23,11 +23,11 @@ import { AgentsScene, SearchScene, scenePanel } from "~/resources/components/mar
 export interface UseCase {
 	posts: SamplePost[];
 	features: readonly [FeatureSlug, FeatureSlug, FeatureSlug];
-	spotlight: (t: Translate) => RemixNode;
+	spotlight: (t: LandingTranslate) => RemixNode;
 }
 
 /** An episode the post page plays with the browser's own player, drawn mid-listen. */
-function EpisodeScene(handle: Handle<{ t: Translate }>) {
+function EpisodeScene(handle: Handle<{ t: LandingTranslate }>) {
 	return () => {
 		let { t } = handle.props;
 		return (

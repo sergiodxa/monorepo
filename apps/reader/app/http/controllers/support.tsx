@@ -8,11 +8,11 @@
  */
 
 import type { Honeypot } from "@sdxc/honeypot";
-import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
 import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { redirect } from "@sdxc/http/response";
+import { iife } from "@sdxc/iife";
 import { isFailure, unwrap } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
@@ -25,6 +25,7 @@ import { createController } from "remix/router";
 
 import type { SupportInput } from "~/app/http/validators/support";
 import type { AppContext } from "~/app/initializers/router";
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import { getViewer, isAuthenticated } from "~/app/http/middleware/auth";
 import {
@@ -34,6 +35,7 @@ import {
 	SupportSchema,
 } from "~/app/http/validators/support";
 import { SEO } from "~/app/initializers/seo";
+import { hasMessage } from "~/app/services/message-keys";
 import { landingTranslate } from "~/resources/components/marketing/figures";
 import { findDocPage, pageTitle } from "~/resources/docs/registry";
 import DocsLayout from "~/resources/layouts/docs";
@@ -214,18 +216,30 @@ export default createController(routes.support, {
 	},
 });
 
+/** The prefix every validation message is a key under. */
+const ERROR_PREFIX = "support.errors.";
+
+/**
+ * A validation message in the reader's language. Every refinement names a key under
+ * `support.errors`; a message from anywhere else, such as the schema's own, shows as written.
+ */
+function issueText(t: LandingTranslate, message: string): string {
+	let name = message.startsWith(ERROR_PREFIX) ? message.slice(ERROR_PREFIX.length) : message;
+	return hasMessage("support.errors", name) ? t(`support.errors.${name}`) : message;
+}
+
 /** The first issue a field has, translated, or `undefined` when it has none. */
-function issueFor(t: Translate, issues: SupportIssue[], name: string): string | undefined {
+function issueFor(t: LandingTranslate, issues: SupportIssue[], name: string): string | undefined {
 	let issue = issues.find((candidate) => {
 		let head = candidate.path?.[0];
 		let key = typeof head === "object" && head !== null ? head.key : head;
 		return key === name;
 	});
-	return issue ? t(issue.message) : undefined;
+	return issue ? issueText(t, issue.message) : undefined;
 }
 
 /** The form itself, or the thanks in its place once a message was sent. */
-function SupportForm(handle: Handle<SupportPage.Model & { t: Translate }>) {
+function SupportForm(handle: Handle<SupportPage.Model & { t: LandingTranslate }>) {
 	return () => {
 		let { honeypot, issues, state, t, values } = handle.props;
 
@@ -244,16 +258,18 @@ function SupportForm(handle: Handle<SupportPage.Model & { t: Translate }>) {
 			);
 		}
 
-		let translated = issues.map((issue) => ({ ...issue, message: t(issue.message) }));
+		let translated = issues.map((issue) => ({ ...issue, message: issueText(t, issue.message) }));
 		let topicError = issueFor(t, issues, "topic");
 		let messageError = issueFor(t, issues, "message");
-		let notice = {
-			invalid: ["danger", "support.states.invalid"],
-			failed: ["danger", "support.states.failed"],
-			"rate-limited": ["warning", "support.states.rateLimited"],
-			resubmit: ["warning", "support.states.resubmit"],
-			idle: null,
-		}[state] as ["danger" | "warning", string] | null;
+		let notice = (
+			{
+				invalid: ["danger", "support.states.invalid"],
+				failed: ["danger", "support.states.failed"],
+				"rate-limited": ["warning", "support.states.rateLimited"],
+				resubmit: ["warning", "support.states.resubmit"],
+				idle: null,
+			} as const
+		)[state];
 
 		return (
 			<Form
@@ -270,11 +286,15 @@ function SupportForm(handle: Handle<SupportPage.Model & { t: Translate }>) {
 					</Alert>
 				) : null}
 
-				{values.page && findDocPage(values.page) ? (
-					<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
-						{t("support.from", { page: pageTitle(t, values.page) })}
-					</p>
-				) : null}
+				{iife(() => {
+					let page = values.page ? findDocPage(values.page) : undefined;
+					if (!page) return null;
+					return (
+						<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
+							{t("support.from", { page: pageTitle(t, page.slug) })}
+						</p>
+					);
+				})}
 				<input type="hidden" name="page" value={values.page ?? ""} />
 
 				<TextField

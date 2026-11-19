@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
 import { CheckIcon, MinusIcon } from "@sdxc/icons";
@@ -17,6 +16,7 @@ import { weight } from "@sdxc/u/typography";
 import { Table } from "@sdxc/ui/app";
 
 import type { Tier } from "~/app/services/entitlement";
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import { TIERS, TIER_LIMITS } from "~/app/services/entitlement";
 import { formatInterval } from "~/resources/components/marketing/scenes";
@@ -35,7 +35,7 @@ const ABILITY_TIERS: Record<
 
 namespace PlansTable {
 	export interface Props {
-		t: Translate;
+		t: LandingTranslate;
 		locale: string;
 	}
 }

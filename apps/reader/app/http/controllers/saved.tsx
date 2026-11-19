@@ -6,6 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { redirect } from "@sdxc/http/response";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
@@ -48,14 +50,14 @@ const TAG_OPTIONS_ID = "saved-tag-names";
  *
  * @param outcome - The redirect's `tag` parameter, as it arrived.
  */
-function tagNote(outcome: string | null): { key: string } | null {
-	if (outcome === "tag-limit") return { key: "tags.full" };
-	if (outcome === "tag-name-invalid") return { key: "tags.invalid" };
-	if (outcome === "post-tag-limit") return { key: "tags.postFull" };
-	if (outcome === "saved-full") return { key: "tags.savedFull" };
-	if (outcome === "not-entitled") return { key: "tags.notEntitled" };
-	if (outcome === "switched-off") return { key: "tags.switchedOff" };
-	if (outcome === "not-found") return { key: "tags.missing" };
+function tagNote(outcome: string | null): { text: (t: Translate) => string } | null {
+	if (outcome === "tag-limit") return { text: (t) => t("tags.full") };
+	if (outcome === "tag-name-invalid") return { text: (t) => t("tags.invalid") };
+	if (outcome === "post-tag-limit") return { text: (t) => t("tags.postFull") };
+	if (outcome === "saved-full") return { text: (t) => t("tags.savedFull") };
+	if (outcome === "not-entitled") return { text: (t) => t("tags.notEntitled") };
+	if (outcome === "switched-off") return { text: (t) => t("tags.switchedOff") };
+	if (outcome === "not-found") return { text: (t) => t("tags.missing") };
 	return null;
 }
 
@@ -207,7 +209,7 @@ export default createAction(routes.saved, {
 
 					{refused && (
 						<Alert color="warning" mix={pageNote()}>
-							<Alert.Description>{ctx.intl.t(refused.key)}</Alert.Description>
+							<Alert.Description>{refused.text(ctx.intl.t)}</Alert.Description>
 						</Alert>
 					)}
 

@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import {
@@ -22,6 +21,8 @@ import {
 } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { landingSurface } from "@sdxc/ui/styles";
+
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import { POLL_BANDS, POLL_DORMANT_MS } from "~/database/feed-schema";
 import { HAIRLINE } from "~/resources/components/marketing/reader-window";
@@ -130,7 +131,7 @@ export function formatInterval(ms: number): string {
  * side, how often the feed is fetched on the other, with a sample feed in the busiest band
  * and the weekly check a silent feed falls back to at the foot.
  */
-export function CadenceScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
+export function CadenceScene(handle: Handle<{ t: LandingTranslate; framed?: boolean }>) {
 	return () => {
 		let { framed, t } = handle.props;
 		let harbor = SAMPLE_FEEDS.find((feed) => feed.title === "Harbor Daily");
@@ -177,7 +178,7 @@ export function CadenceScene(handle: Handle<{ t: Translate; framed?: boolean }>)
  * Three filters read back as the sentences they are, each with the count of posts it has
  * decided, and the preview of what a fourth would have caught before it is saved.
  */
-export function FiltersScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
+export function FiltersScene(handle: Handle<{ t: LandingTranslate; framed?: boolean }>) {
 	return () => {
 		let { framed, t } = handle.props;
 		let rules = [
@@ -261,7 +262,7 @@ export function FiltersScene(handle: Handle<{ t: Translate; framed?: boolean }>)
  * A search narrowed with a phrase, an OR and a minus, the posts it found, and the line
  * under the list naming how far back it looked.
  */
-export function SearchScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
+export function SearchScene(handle: Handle<{ t: LandingTranslate; framed?: boolean }>) {
 	return () => {
 		let { framed, t } = handle.props;
 		let found = SAMPLE_POSTS.filter((post) => /ferry|footbridge|bus/i.test(post.title));
@@ -300,7 +301,7 @@ export function SearchScene(handle: Handle<{ t: Translate; framed?: boolean }>) 
 }
 
 /** The post page's article under the row it was opened from, with its source named above it. */
-export function ArticleScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
+export function ArticleScene(handle: Handle<{ t: LandingTranslate; framed?: boolean }>) {
 	return () => {
 		let { framed, t } = handle.props;
 		return (
@@ -343,7 +344,7 @@ export function ArticleScene(handle: Handle<{ t: Translate; framed?: boolean }>)
  * The one notification a check sends for every picked feed that had something, and the
  * quiet hours that would have held it back overnight.
  */
-export function NotifyScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
+export function NotifyScene(handle: Handle<{ t: LandingTranslate; framed?: boolean }>) {
 	return () => {
 		let { framed, t } = handle.props;
 		return (
@@ -392,7 +393,7 @@ export function NotifyScene(handle: Handle<{ t: Translate; framed?: boolean }>) 
 }
 
 /** The sidebar's organizing bands: a pinned feed, three folders, and labels on kept posts. */
-export function OrganizeScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
+export function OrganizeScene(handle: Handle<{ t: LandingTranslate; framed?: boolean }>) {
 	return () => {
 		let { framed, t } = handle.props;
 		let rows = [
@@ -462,7 +463,7 @@ export function OrganizeScene(handle: Handle<{ t: Translate; framed?: boolean }>
 }
 
 /** An OPML file arriving, read back in the import's own counts, and the ZIP that leaves. */
-export function DataScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
+export function DataScene(handle: Handle<{ t: LandingTranslate; framed?: boolean }>) {
 	return () => {
 		let { framed, t } = handle.props;
 		let files = ["subscriptions.opml", "saved.csv", "reader.json"];
@@ -524,7 +525,7 @@ export function DataScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
 }
 
 /** The tools an assistant called over one morning, as the agent endpoint names them. */
-export function AgentsScene(handle: Handle<{ t: Translate; framed?: boolean }>) {
+export function AgentsScene(handle: Handle<{ t: LandingTranslate; framed?: boolean }>) {
 	return () => {
 		let { framed, t } = handle.props;
 		let calls = [

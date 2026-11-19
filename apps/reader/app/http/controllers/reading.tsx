@@ -1000,12 +1000,12 @@ const FollowForm = f.object({
 });
 
 /** The `feeds.follow.error.*` key explaining each way the store can refuse an address. */
-const FOLLOW_ERROR_KEYS: Record<Exclude<UserStore.FollowFailure, "over-limit">, string> = {
+const FOLLOW_ERROR_KEYS = {
 	"invalid-url": "feeds.follow.error.invalidUrl",
 	"not-found": "feeds.follow.error.notFound",
 	unreachable: "feeds.follow.error.unreachable",
 	"already-following": "feeds.follow.error.alreadyFollowing",
-};
+} as const satisfies Record<Exclude<UserStore.FollowFailure, "over-limit">, string>;
 
 /**
  * The sentence a refusal is reported with. A feed cap is the one refusal whose sentence
@@ -1021,10 +1021,7 @@ function followError(
 ): string {
 	if (refused.reason !== "over-limit") return ctx.intl.t(FOLLOW_ERROR_KEYS[refused.reason]);
 
-	return ctx.intl.t("feeds.follow.error.overLimit", {
-		allowed: refused.limit.allowed,
-		count: refused.limit.allowed,
-	});
+	return ctx.intl.t("feeds.follow.error.overLimit", { count: refused.limit.allowed });
 }
 
 /**

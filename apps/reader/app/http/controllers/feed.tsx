@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import {
 	CircleCheckIcon,
 	EllipsisIcon,
@@ -137,9 +139,8 @@ function folderFieldId(feedId: string): string {
 
 /** One line of copy the page says an action's outcome in, and the tone it wears. */
 interface Note {
-	key: string;
-	/** Interpolation the copy reads, which is the count its plural form selects on. */
-	options?: { count: number };
+	/** The sentence in the reader's language, from the request's translator. */
+	text: (t: Translate) => string;
 	color: "success" | "warning" | "neutral";
 }
 
@@ -151,9 +152,9 @@ interface Note {
  * @param checked - The redirect's `checked` parameter, as it arrived.
  */
 function checkNote(checked: string | null): Note | null {
-	if (checked === "new") return { key: "feeds.check.new", color: "success" };
-	if (checked === "none") return { key: "feeds.check.none", color: "success" };
-	if (checked === "failed") return { key: "feeds.check.failed", color: "warning" };
+	if (checked === "new") return { text: (t) => t("feeds.check.new"), color: "success" };
+	if (checked === "none") return { text: (t) => t("feeds.check.none"), color: "success" };
+	if (checked === "failed") return { text: (t) => t("feeds.check.failed"), color: "warning" };
 	return null;
 }
 
@@ -168,8 +169,8 @@ function markNote(marked: string | null): Note | null {
 	if (marked === null || !/^\d+$/.test(marked)) return null;
 
 	let count = Number(marked);
-	if (count === 0) return { key: "timeline.nothingToMark", color: "neutral" };
-	return { key: "timeline.markedRead", options: { count }, color: "success" };
+	if (count === 0) return { text: (t) => t("timeline.nothingToMark"), color: "neutral" };
+	return { text: (t) => t("timeline.markedRead", { count }), color: "success" };
 }
 
 /**
@@ -187,9 +188,9 @@ function markNote(marked: string | null): Note | null {
  * @param pin - The redirect's `pin` parameter, as it arrived.
  */
 function pinNote(pin: string | null): Note | null {
-	if (pin === "pinned") return { key: "feeds.pin.pinned", color: "success" };
-	if (pin === "unpinned") return { key: "feeds.pin.unpinned", color: "success" };
-	if (pin === "full") return { key: "feeds.pin.full", color: "warning" };
+	if (pin === "pinned") return { text: (t) => t("feeds.pin.pinned"), color: "success" };
+	if (pin === "unpinned") return { text: (t) => t("feeds.pin.unpinned"), color: "success" };
+	if (pin === "full") return { text: (t) => t("feeds.pin.full"), color: "warning" };
 	return null;
 }
 
@@ -200,8 +201,8 @@ function pinNote(pin: string | null): Note | null {
  * @param notify - The redirect's `notify` parameter, as it arrived.
  */
 function notifyNote(notify: string | null): Note | null {
-	if (notify === "on") return { key: "notifications.feed.turnedOn", color: "success" };
-	if (notify === "off") return { key: "notifications.feed.turnedOff", color: "success" };
+	if (notify === "on") return { text: (t) => t("notifications.feed.turnedOn"), color: "success" };
+	if (notify === "off") return { text: (t) => t("notifications.feed.turnedOff"), color: "success" };
 	return null;
 }
 
@@ -212,14 +213,16 @@ function notifyNote(notify: string | null): Note | null {
  * @param parameters - The redirect's `parameters` parameter, as it arrived.
  */
 function parametersNote(parameters: string | null): Note | null {
-	if (parameters === "kept") return { key: "feeds.linkParameters.kept", color: "success" };
-	if (parameters === "stripped") return { key: "feeds.linkParameters.stripped", color: "success" };
+	if (parameters === "kept")
+		return { text: (t) => t("feeds.linkParameters.kept"), color: "success" };
+	if (parameters === "stripped")
+		return { text: (t) => t("feeds.linkParameters.stripped"), color: "success" };
 	return null;
 }
 
 function velocityNote(velocity: string | null): Note | null {
-	if (velocity === "saved") return { key: "feeds.velocity.saved", color: "success" };
-	if (velocity === "invalid") return { key: "feeds.velocity.invalid", color: "warning" };
+	if (velocity === "saved") return { text: (t) => t("feeds.velocity.saved"), color: "success" };
+	if (velocity === "invalid") return { text: (t) => t("feeds.velocity.invalid"), color: "warning" };
 	return null;
 }
 
@@ -231,11 +234,11 @@ function velocityNote(velocity: string | null): Note | null {
  * @param folder - The redirect's `folder` parameter, as it arrived.
  */
 function folderNote(folder: string | null): Note | null {
-	if (folder === "filed") return { key: "folders.file.filed", color: "success" };
-	if (folder === "unfiled") return { key: "folders.file.unfiled", color: "success" };
-	if (folder === "gone") return { key: "folders.file.gone", color: "warning" };
-	if (folder === "invalid") return { key: "folders.invalid", color: "warning" };
-	if (folder === "locked") return { key: "folders.notEntitled", color: "warning" };
+	if (folder === "filed") return { text: (t) => t("folders.file.filed"), color: "success" };
+	if (folder === "unfiled") return { text: (t) => t("folders.file.unfiled"), color: "success" };
+	if (folder === "gone") return { text: (t) => t("folders.file.gone"), color: "warning" };
+	if (folder === "invalid") return { text: (t) => t("folders.invalid"), color: "warning" };
+	if (folder === "locked") return { text: (t) => t("folders.notEntitled"), color: "warning" };
 	return null;
 }
 
@@ -247,7 +250,9 @@ const ACTION_ICON_SIZE = 16;
  * that recorded `ok` or `not_modified` succeeded, and a success resets the failure count,
  * so those two outcomes leave a feed with nothing to report.
  */
-const FAILURE_STATUS_KEYS: Partial<Record<FeedStatus, string>> = {
+const FAILURE_STATUS_KEYS: Partial<
+	Record<FeedStatus, `feeds.status.${"http_error" | "network_error" | "parse_error"}`>
+> = {
 	http_error: "feeds.status.http_error",
 	network_error: "feeds.status.network_error",
 	parse_error: "feeds.status.parse_error",
@@ -827,7 +832,7 @@ export default createAction(routes.feed, {
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>
-							<Alert.Description>{ctx.intl.t(note.key, note.options)}</Alert.Description>
+							<Alert.Description>{note.text(ctx.intl.t)}</Alert.Description>
 						</Alert>
 					)}
 

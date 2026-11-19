@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
 import type { TableOfContents } from "@sdxc/ui/docs";
 import type { Handle, RemixNode } from "remix/component";
 
@@ -15,6 +14,8 @@ import { LifeBuoyIcon, TableIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { DocsFooter, DocsLayout as Shell, DocsNav } from "@sdxc/ui/docs";
+
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import SiteCredit from "~/resources/components/site-credit";
 import { docHref, docsTree } from "~/resources/docs/registry";
@@ -26,7 +27,7 @@ const HEADER_HEIGHT = "calc(4rem + 1px)";
 
 namespace DocsLayout {
 	export interface Props {
-		t: Translate;
+		t: LandingTranslate;
 		isSignedIn: boolean;
 		/** The path being read, which marks one link in the tree as current. */
 		activePath: string;
@@ -91,7 +92,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 }
 
 /** The sidebar's foot: a person to write to, and the plan table, always one click away. */
-function NavFooter(handle: Handle<{ t: Translate }>) {
+function NavFooter(handle: Handle<{ t: LandingTranslate }>) {
 	return () => {
 		let { t } = handle.props;
 		let link = [

@@ -7,10 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
+import type { AppMessages, MessageAt } from "@sdxc/i18n";
 import type { DocsTree, TableOfContents } from "@sdxc/ui/docs";
 import type { Handle, RemixNode } from "remix/component";
 
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 import type { DocBody } from "~/resources/docs/blocks";
 
 import routes from "~/routes/web";
@@ -26,13 +27,16 @@ export interface DocModule {
 	default: (handle: Handle<DocBody.Props>) => () => RemixNode;
 }
 
+/** A help page's slug, named by the title and description every page has in the dictionary. */
+export type DocSlug = keyof MessageAt<AppMessages, "docs.pages">;
+
 export interface DocPage {
-	slug: string;
+	slug: DocSlug;
 	section: DocSectionKey;
 	/** The lowest plan the page's feature needs; absent when every plan has it. */
 	plan?: "paid" | "premium";
 	/** Hand-picked pages that follow from this task, drawn as "Up next". */
-	next: string[];
+	next: DocSlug[];
 }
 
 /** Every page body, keyed `./pages/<locale>/<slug>.tsx`, loaded only when a page is read. */
@@ -177,32 +181,32 @@ export function docHref(slug: string): string {
 }
 
 /** A page's title in the reader's language. */
-export function pageTitle(t: Translate, slug: string): string {
+export function pageTitle(t: LandingTranslate, slug: DocSlug): string {
 	return t(`docs.pages.${slug}.title`);
 }
 
 /** A page's one-line description in the reader's language. */
-export function pageDescription(t: Translate, slug: string): string {
+export function pageDescription(t: LandingTranslate, slug: DocSlug): string {
 	return t(`docs.pages.${slug}.description`);
 }
 
 /** A section's name in the reader's language. */
-export function sectionTitle(t: Translate, key: DocSectionKey): string {
+export function sectionTitle(t: LandingTranslate, key: DocSectionKey): string {
 	return t(`docs.sections.${key}.title`);
 }
 
 /** A section's one-line summary in the reader's language. */
-export function sectionDescription(t: Translate, key: DocSectionKey): string {
+export function sectionDescription(t: LandingTranslate, key: DocSectionKey): string {
 	return t(`docs.sections.${key}.description`);
 }
 
 /** A page as a link card: its title, address and description, in the reader's language. */
-export function pageLink(t: Translate, slug: string) {
+export function pageLink(t: LandingTranslate, slug: DocSlug) {
 	return { title: pageTitle(t, slug), href: docHref(slug), description: pageDescription(t, slug) };
 }
 
 /** The sidebar's tree: one section per group, its pages in the order above. */
-export function docsTree(t: Translate, label: string): DocsTree {
+export function docsTree(t: LandingTranslate, label: string): DocsTree {
 	return {
 		label,
 		sections: DOC_SECTIONS.map((key) => ({

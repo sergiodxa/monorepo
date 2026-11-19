@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AppMessages, MessageAt, MessageKey, Messages, Translate } from "@sdxc/i18n";
+
 import { Trans } from "@sdxc/i18n/ui";
 import { TriangleAlertIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
@@ -29,11 +31,11 @@ import {
 import { createAction } from "remix/router";
 
 import type { ComparisonSlug } from "~/config/marketing";
+import type { LandingTranslate } from "~/resources/components/marketing/landing-translate";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import { SEO, productSchema } from "~/app/initializers/seo";
-import { TIER_LIMITS } from "~/app/services/entitlement";
 import { COMPARISON_SLUGS, isSlug } from "~/config/marketing";
 import { FaqColumn } from "~/resources/components/marketing/bands";
 import { landingTranslate } from "~/resources/components/marketing/figures";
@@ -56,11 +58,29 @@ type RowKey =
 	| "ai"
 	| "hosting";
 
+/** A row competitor `Slug`'s own page has a cell for, so its column never shows a raw key. */
+type CompetitorRow<Slug extends ComparisonSlug> = Slug extends ComparisonSlug
+	? RowKey & MessageKey<MessageAt<AppMessages, `landing.compare.pages.${Slug}.rows`>>
+	: never;
+
+/**
+ * The competitor's cell for `row`. {@link COMPARISON_ROWS} lists only rows each competitor's
+ * page has copy for, which the key is checked against there.
+ */
+function competitorCell<Slug extends ComparisonSlug>(
+	t: LandingTranslate,
+	slug: Slug,
+	row: CompetitorRow<Slug>,
+): string {
+	let translate = t as Translate<Messages>;
+	return translate(`landing.compare.pages.${slug}.rows.${row}`);
+}
+
 /**
  * The rows each comparison holds. A fact the other product's pages did not confirm has no
  * row, so the table never guesses on anybody's behalf.
  */
-const COMPARISON_ROWS: Record<ComparisonSlug, readonly RowKey[]> = {
+const COMPARISON_ROWS: { [Slug in ComparisonSlug]: readonly CompetitorRow<Slug>[] } = {
 	feedly: ["freePlan", "filters", "agents", "export", "apps", "newsletters", "ai"],
 	inoreader: ["freePlan", "filters", "fullText", "search", "agents", "apps", "newsletters", "ai"],
 	feedbin: ["freePlan", "history", "agents", "apps", "newsletters", "ai", "hosting"],
@@ -73,23 +93,17 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 	if (!isSlug(COMPARISON_SLUGS, slug)) return defaultHandler(ctx);
 
 	let t = landingTranslate(ctx.intl, ctx.locale);
-	let page = (path: string) => `landing.compare.pages.${slug}.${path}`;
+	let page = <
+		Path extends MessageKey<MessageAt<AppMessages, `landing.compare.pages.${typeof slug}`>>,
+	>(
+		path: Path,
+	) => `landing.compare.pages.${slug}.${path}` as const;
 	let competitor = t(`landing.nav.compare.${slug}`);
 	let isSignedIn = isAuthenticated();
-	let count = (value: number) => value.toLocaleString(ctx.locale);
-
-	/** Figures the reader's own cells quote, read from the limits each plan enforces. */
-	let figures = {
-		feeds: count(TIER_LIMITS.free.feeds),
-		posts: count(TIER_LIMITS.free.posts),
-		rules: count(TIER_LIMITS.paid.rules),
-		days: count(TIER_LIMITS.free.searchWindowDays ?? 0),
-	};
-
-	let rows = COMPARISON_ROWS[slug].map((row) => ({
+	let rows = COMPARISON_ROWS[slug].map((row: CompetitorRow<typeof slug>) => ({
 		label: t(`landing.compare.rows.${row}`),
-		us: t(`landing.compare.reader.${row}`, figures),
-		them: t(page(`rows.${row}`)),
+		us: t(`landing.compare.reader.${row}`),
+		them: competitorCell(t, slug, row),
 	}));
 
 	let faqs = (["one", "two"] as const).map((item) => ({
@@ -226,7 +240,7 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 								key={step}
 								title={t(`landing.compare.switch.${step}.title`, { competitor })}
 							>
-								{t(`landing.compare.switch.${step}.description`, { competitor })}
+								{t(`landing.compare.switch.${step}.description`)}
 							</StepList.Item>
 						))}
 					</StepList>
