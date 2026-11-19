@@ -11,6 +11,7 @@ import type { Handle } from "remix/component";
 
 import { allocate } from "@sdxc/money";
 import { raw } from "@sdxc/u/general";
+import { when } from "@sdxc/u/state";
 import { Button, LinkButton, Select, TextArea } from "@sdxc/ui";
 import { setParamHref } from "@sdxc/ui/app";
 import { DetailSheet } from "@sdxc/ui/app/detail-sheet";
@@ -381,7 +382,8 @@ const METHODS: Record<Entry["method"], string> = {
 
 /**
  * The open transaction: its amount and merchant, its details, and three small forms that
- * each save one thing (category, split, note) with an explicit button.
+ * each save one thing (category, split, note) with an explicit button. The statement behind
+ * holds still while it is open, so a scroll gesture over the sheet never moves the list.
  */
 function TransactionSheet(handle: Handle<TransactionSheet.Props>) {
 	return () => {
@@ -401,6 +403,10 @@ function TransactionSheet(handle: Handle<TransactionSheet.Props>) {
 				position={position}
 				labels={SHEET_LABELS}
 				keys="sheet"
+				mix={[
+					when(":root:has(&)", raw({ overflow: "hidden" })),
+					when('[data-slot="app-shell-content"]:has(&)', raw({ overflow: "hidden" })),
+				]}
 			>
 				<div mix={raw({ display: "flex", flexDirection: "column", gap: "1.25rem" })}>
 					<div mix={raw({ display: "flex", alignItems: "center", gap: "0.875rem" })}>

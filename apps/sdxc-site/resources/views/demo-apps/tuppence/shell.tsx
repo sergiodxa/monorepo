@@ -23,7 +23,8 @@ import {
 } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
-import { media } from "@sdxc/u/responsive";
+import { container } from "@sdxc/u/layout";
+import { atQuery, media } from "@sdxc/u/responsive";
 import { LinkButton, Menu } from "@sdxc/ui";
 import { AppShell } from "@sdxc/ui/app/app-shell";
 import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
@@ -276,21 +277,29 @@ export default function TuppenceShell(handle: Handle<TuppenceShell.Props>) {
 					<a
 						href={href()}
 						aria-label="Tuppence home"
-						mix={raw({
-							display: "flex",
-							alignItems: "center",
-							gap: "0.625rem",
-							padding: "0.375rem 0.5rem",
-							color: "inherit",
-							textDecoration: "none",
-							fontFamily: SERIF,
-							fontSize: "1.125rem",
-							fontWeight: "700",
-							letterSpacing: "-0.01em",
-						})}
+						mix={[
+							container("tuppence-brand"),
+							raw({
+								display: "flex",
+								alignItems: "center",
+								gap: "0.625rem",
+								padding: "0.375rem 0.5rem",
+								color: "inherit",
+								textDecoration: "none",
+								fontFamily: SERIF,
+								fontSize: "1.125rem",
+								fontWeight: "700",
+								letterSpacing: "-0.01em",
+							}),
+						]}
 					>
 						<TuppenceMark size={28} />
-						<span data-slot="tuppence-wordmark">Tuppence</span>
+						<span
+							data-slot="tuppence-wordmark"
+							mix={atQuery("tuppence-brand (max-width: 6rem)", visuallyHidden())}
+						>
+							Tuppence
+						</span>
 					</a>
 				}
 				nav={<MainNav current={current} />}
