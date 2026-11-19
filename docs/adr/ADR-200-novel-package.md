@@ -63,13 +63,13 @@ developer tools and offline play.
 
 ### Entry points
 
-| Entry                 | Contains                                                                                                                                                                                |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@sdxc/novel`         | `scenes`, `scene`, `chapter`, `cast`, `character`, `assets`, `interactions`, `interaction`, `createScene`, `createNovel`, `lazy`, the frame, reply, state and event types, `NovelTypes` |
-| `@sdxc/novel/ui`      | `NovelPlayer` and its parts (stage, textbox, choice menu, backlog, save and settings screens, memories and gallery) as `remix/component` components                                     |
-| `@sdxc/novel/test`    | `createTestPlay`, `check` and `explore`                                                                                                                                                 |
-| `@sdxc/novel/dev`     | Developer tools: scene jumping, state inspection, flowchart, event log, hot reload                                                                                                      |
-| `@sdxc/novel/offline` | An opt-in service worker that caches declared assets                                                                                                                                    |
+| Entry                                               | Contains                                                                                                                                                                                |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sdxc/novel`                                       | `scenes`, `scene`, `chapter`, `cast`, `character`, `assets`, `interactions`, `interaction`, `createScene`, `createNovel`, `lazy`, the frame, reply, state and event types, `NovelTypes` |
+| `@sdxc/novel/ui`                                    | `NovelPlayer` and its parts (stage, textbox, choice menu, backlog, save and settings screens, memories and gallery) as `remix/component` components                                     |
+| `@sdxc/novel/test`                                  | `createTestPlay`, `check` and `explore`                                                                                                                                                 |
+| `@sdxc/novel/dev`                                   | Developer tools: scene jumping, state inspection, flowchart, event log, hot reload                                                                                                      |
+| `@sdxc/novel/offline`, `@sdxc/novel/offline/worker` | An opt-in service worker that caches declared assets: registration for the page, and the worker itself                                                                                  |
 
 A dating-sim layer is planned as `@sdxc/novel/sim` under its own ADR.
 
@@ -138,8 +138,8 @@ export default assets({
 });
 ```
 
-Every asset, and every voice file, is either one URL or a map of locale to URL. Locales are typed
-from the app's catalogs; a missing locale falls back to the fallback language's file.
+Every asset, and every voice file, is either one URL or a map of locale to URL. A missing locale
+falls back to its language (`pt-BR` → `pt`), then to the first file in the map.
 
 - **URLs come from the bundler.** Importing a file through Vite answers its content-hashed URL
   (`/assets/cafe-a1b2c3d4.webp`) in a build, and a glob with `query: "?url"` declares a folder of
@@ -207,25 +207,25 @@ export default createScene(scenes.spring.cafe.meeting, (ctx) => [
 - **Randomness** is `random` in callbacks, drawn from the play's seeded stream in `GameState`:
   `ctx.when((state, { random }) => random.bool(0.6), …)`.
 
-| Directive                                         | Effect                                                                          |
-| ------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `show(asset, options)`                            | Sets the background or a full-screen image, with a transition                   |
-| `hide(asset, options)`                            | Removes a full-screen image                                                     |
-| `enter(character, options)`                       | Puts a character on stage at a position, with an expression or layers           |
-| `exit(character, options)`                        | Takes a character off stage                                                     |
-| `express(character, options)`                     | Changes a character's expression or layers                                      |
-| `move(character, options)`                        | Moves a character to another position                                           |
-| `say(character, key, values?)`                    | A line spoken by a character, or by several at once; stops for the player       |
-| `narrate(key, values?)`                           | A line with no speaker; stops for the player                                    |
-| `choose(options, menu?)`                          | A menu; stops for the player's choice                                           |
-| `when(condition, directives, otherwise?)`         | Runs directives when the condition holds                                        |
-| `set(path, update)`                               | Changes state at a typed path                                                   |
-| `goto(scene)`                                     | Continues in another scene                                                      |
-| `call(scene)` / `back()`                          | Plays a scene and returns to the next directive                                 |
-| `wait(duration)`                                  | A pause with no line; stops for the UI to advance after the duration            |
-| `play(asset, options)` / `stop(channel, options)` | Music, ambience and sounds                                                      |
-| `custom(interaction, { input, into })`            | Hands the screen to an app-rendered interaction; its output is stored at `into` |
-| `ending(key)`                                     | Records an ending and finishes the play                                         |
+| Directive                                        | Effect                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `show(asset, options)`                           | Sets the background or a full-screen image, with a transition                   |
+| `hide(asset, options)`                           | Removes a full-screen image                                                     |
+| `enter(character, options)`                      | Puts a character on stage at a position, with an expression or layers           |
+| `exit(character, options)`                       | Takes a character off stage                                                     |
+| `express(character, options)`                    | Changes a character's expression or layers                                      |
+| `move(character, options)`                       | Moves a character to another position                                           |
+| `say(character, key, values?)`                   | A line spoken by a character, or by several at once; stops for the player       |
+| `narrate(key, values?)`                          | A line with no speaker; stops for the player                                    |
+| `choose(options, menu?)`                         | A menu; stops for the player's choice                                           |
+| `when(condition, directives, otherwise?)`        | Runs directives when the condition holds                                        |
+| `set(path, update)`                              | Changes state at a typed path                                                   |
+| `goto(scene)`                                    | Continues in another scene                                                      |
+| `call(scene)` / `back()`                         | Plays a scene and returns to the next directive                                 |
+| `wait(duration)`                                 | A pause with no line; stops for the UI to advance after the duration            |
+| `play(asset, options)` / `stop(target, options)` | Music, ambience and sounds                                                      |
+| `custom(interaction, { input, into })`           | Hands the screen to an app-rendered interaction; its output is stored at `into` |
+| `ending(key)`                                    | Records an ending and finishes the play                                         |
 
 Message values are evaluated once, when the line is shown, and stored with it, so the backlog,
 rollback and the seen-line record show the text as the player read it. Values must be JSON.
@@ -289,7 +289,7 @@ ctx.choose({
 ### Playing: an async generator of frames
 
 ```ts
-type Play = AsyncGenerator<Frame, Ending, Reply>;
+type Play = AsyncGenerator<Frame, Ending, Reply | undefined>;
 ```
 
 A frame is everything the UI needs to show one stop, so a renderer never replays history:
@@ -346,6 +346,7 @@ interface GameState {
 	audio: Audio;
 	state: NovelTypes["state"];
 	random: RandomState;
+	taken: string[]; // options taken in this play, which `once` reads
 	meta: { scene: string; savedAt: string; playTime: number };
 }
 ```
@@ -367,7 +368,7 @@ Data that outlives a playthrough is separate from `GameState` and is never rolle
 
 ```ts
 interface Persistent {
-	seen: Record<string, Record<string, JsonValue>>; // line key → the values it was shown with
+	seen: Record<string, Record<string, JsonValue>>; // `<scene>:<key>` → the values it was shown with
 	chosen: string[];
 	endings: string[];
 	chapters: string[];
@@ -425,12 +426,13 @@ The engine decides what happens next; the UI decides how and when it is shown.
 | Timed choices                                         | Engine puts `timeout` and `default` on the frame; UI counts down |
 | Rollback depth, option availability, `once`, `repeat` | Engine                                                           |
 
-`createNovel` takes story options only; `NovelPlayer` takes presentation settings and emits
-`settings` when the player changes them, for the app to store.
+`createNovel` takes story options only; `NovelPlayer` takes presentation settings through its
+`settings` prop and reports changes through `onSettingsChange`, for the app to store.
 
 ### `@sdxc/novel/ui`
 
-- **`NovelPlayer`** is the island that owns a play, keeps the current frame as state, and renders
+- **`NovelPlayer`** is the component that owns a play, rendered inside the app's own client
+  entry, keeps the current frame as state, and renders
   it; every other part is a presentational component over frame types, so a game can replace any
   of them.
 - **One frame renders in order**: apply the stage and await its transitions; start the voice and
