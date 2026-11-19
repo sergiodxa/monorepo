@@ -209,7 +209,9 @@ describe("MapCanvas", () => {
 		expect(pin.hasAttribute("data-highlighted")).toBe(true);
 		expect(otherPin.hasAttribute("data-highlighted")).toBe(false);
 		expect(Number(getComputedStyle(pin).zIndex)).toBe(3);
-		expect(getComputedStyle(pin).backgroundColor).not.toBe(getComputedStyle(otherPin).backgroundColor);
+		expect(getComputedStyle(pin).backgroundColor).not.toBe(
+			getComputedStyle(otherPin).backgroundColor,
+		);
 
 		await userEvent.unhover(row!);
 		expect(row!.hasAttribute("data-highlighted")).toBe(false);
