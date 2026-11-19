@@ -130,6 +130,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"cache",
 			"workers-cache",
 			"search",
+			"facets",
 			"session-storage-kv",
 			"file-storage-r2",
 			"data-table-d1",
