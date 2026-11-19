@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { LinkButton } from "@sdxc/ui";
-import { FreeBusy } from "@sdxc/ui/app/free-busy";
+import { FreeBusy } from "@sdxc/ui/schedule/free-busy";
 
 import type { Person } from "./data";
 import type { Entry } from "./model";

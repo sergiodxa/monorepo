@@ -8,7 +8,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { TimeGrid } from "@sdxc/ui/app/time-grid";
+import { TimeGrid } from "@sdxc/ui/schedule/time-grid";
 
 /** The source the page shows, matching the markup below apart from the preview's frame. */
 const CODE = `<TimeGrid

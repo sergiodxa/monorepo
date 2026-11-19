@@ -8,7 +8,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { FreeBusy } from "@sdxc/ui/app/free-busy";
+import { FreeBusy } from "@sdxc/ui/schedule/free-busy";
 
 /** The source the page shows, matching the markup below apart from the preview's frame. */
 const CODE = `<FreeBusy

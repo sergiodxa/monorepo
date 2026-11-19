@@ -19,6 +19,7 @@ import DOCS from "~/resources/content/foundations/docs";
 import FINANCE from "~/resources/content/foundations/finance";
 import LANDING from "~/resources/content/foundations/landing";
 import MAP from "~/resources/content/foundations/map";
+import SCHEDULE from "~/resources/content/foundations/schedule";
 import TRAVEL from "~/resources/content/foundations/travel";
 import VIDEO from "~/resources/content/foundations/video";
 
@@ -82,6 +83,7 @@ const FOUNDATIONS_BY_MODULE: Record<ComponentModule, Foundations> = {
 	map: MAP,
 	travel: TRAVEL,
 	finance: FINANCE,
+	schedule: SCHEDULE,
 };
 
 /** Every namespace's Foundations, in the order the sidebar lists the namespaces. */

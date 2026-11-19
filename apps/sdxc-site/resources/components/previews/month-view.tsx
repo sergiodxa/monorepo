@@ -8,7 +8,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { MonthView } from "@sdxc/ui/app/month-view";
+import { MonthView } from "@sdxc/ui/schedule/month-view";
 
 /** The source the page shows, matching the markup below apart from the preview's frame. */
 const CODE = `<MonthView

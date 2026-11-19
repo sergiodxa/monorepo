@@ -8,7 +8,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { DayStrip } from "@sdxc/ui/app/day-strip";
+import { DayStrip } from "@sdxc/ui/schedule/day-strip";
 
 /** The source the page shows, matching the markup below apart from the preview's frame. */
 const CODE = `<DayStrip

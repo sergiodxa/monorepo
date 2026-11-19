@@ -10,7 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
-import { DayStrip } from "@sdxc/ui/app/day-strip";
+import { DayStrip } from "@sdxc/ui/schedule/day-strip";
 
 import type { Recurring } from "./data";
 import type { Upcoming } from "./figures";

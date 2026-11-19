@@ -8,7 +8,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { Agenda } from "@sdxc/ui/app/agenda";
+import { Agenda } from "@sdxc/ui/schedule/agenda";
 
 /** The source the page shows, matching the markup below apart from the preview's frame. */
 const CODE = `<Agenda

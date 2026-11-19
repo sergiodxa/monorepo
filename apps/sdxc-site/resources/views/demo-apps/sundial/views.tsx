@@ -11,10 +11,10 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { media } from "@sdxc/u/responsive";
-import { Agenda } from "@sdxc/ui/app/agenda";
-import { DayStrip } from "@sdxc/ui/app/day-strip";
-import { MonthView } from "@sdxc/ui/app/month-view";
-import { TimeGrid } from "@sdxc/ui/app/time-grid";
+import { Agenda } from "@sdxc/ui/schedule/agenda";
+import { DayStrip } from "@sdxc/ui/schedule/day-strip";
+import { MonthView } from "@sdxc/ui/schedule/month-view";
+import { TimeGrid } from "@sdxc/ui/schedule/time-grid";
 
 import type { Entry } from "./model";
 import type { Instance } from "./time";

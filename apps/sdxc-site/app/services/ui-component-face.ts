@@ -126,7 +126,8 @@ type ModuleKind =
 	| "audio"
 	| "map"
 	| "travel"
-	| "finance";
+	| "finance"
+	| "schedule";
 
 /** Quiet stage wash in the site's brand hue — one step off the card, like DemoMiniature. */
 const WASH = {
@@ -163,7 +164,7 @@ const CATALOGUE = [
 	{ slug: "accent-text", module: "landing" },
 	{ slug: "accordion", module: "components" },
 	{ slug: "activity", module: "chat" },
-	{ slug: "agenda", module: "app" },
+	{ slug: "agenda", module: "schedule" },
 	{ slug: "alert", module: "components" },
 	{ slug: "alert-dialog", module: "components" },
 	{ slug: "amount", module: "components" },
@@ -228,7 +229,7 @@ const CATALOGUE = [
 	{ slug: "cta-group", module: "components" },
 	{ slug: "curriculum", module: "landing" },
 	{ slug: "danger-zone", module: "app" },
-	{ slug: "day-strip", module: "app" },
+	{ slug: "day-strip", module: "schedule" },
 	{ slug: "date-field", module: "components" },
 	{ slug: "date-picker", module: "components" },
 	{ slug: "date-range-picker", module: "components" },
@@ -273,7 +274,7 @@ const CATALOGUE = [
 	{ slug: "flight-segment", module: "travel" },
 	{ slug: "flow-diagram", module: "landing" },
 	{ slug: "form", module: "components" },
-	{ slug: "free-busy", module: "app" },
+	{ slug: "free-busy", module: "schedule" },
 	{ slug: "grid-list", module: "app" },
 	{ slug: "group", module: "components" },
 	{ slug: "header", module: "components" },
@@ -319,7 +320,7 @@ const CATALOGUE = [
 	{ slug: "message-scroller", module: "chat" },
 	{ slug: "meter", module: "components" },
 	{ slug: "modal", module: "components" },
-	{ slug: "month-view", module: "app" },
+	{ slug: "month-view", module: "schedule" },
 	{ slug: "motion-loop", module: "landing" },
 	{ slug: "nav-link", module: "components" },
 	{ slug: "navigation-menu", module: "components" },
@@ -416,7 +417,7 @@ const CATALOGUE = [
 	{ slug: "text-field", module: "components" },
 	{ slug: "textarea", module: "components" },
 	{ slug: "time-field", module: "components" },
-	{ slug: "time-grid", module: "app" },
+	{ slug: "time-grid", module: "schedule" },
 	{ slug: "timeline", module: "components" },
 	{ slug: "title-hero", module: "video" },
 	{ slug: "toast", module: "app" },

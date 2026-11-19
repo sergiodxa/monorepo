@@ -65,6 +65,7 @@ const NAMESPACES = [
 	"map",
 	"travel",
 	"finance",
+	"schedule",
 ] as const;
 
 /**
