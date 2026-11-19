@@ -31,12 +31,12 @@ import { PackageSearchForm } from "./travel-search";
 
 /** The airport nearest each place, which a package flies into. */
 const NEAREST_AIRPORT: Record<string, string> = {
-	"merrow-bay": "MRW",
-	"saltmarsh-reach": "MRW",
-	vellis: "VLS",
-	"ondine-lakes": "VLS",
-	"tallow-pines": "VLS",
-	"corrie-highlands": "VLS",
+	"ponta-delgada": "MRW",
+	"ribeira-grande": "MRW",
+	"sete-cidades": "MRW",
+	"vila-franca": "VLS",
+	furnas: "VLS",
+	nordeste: "VLS",
 };
 
 /** One priced package: a stay with the cheapest flights there and back for the dates. */
@@ -51,7 +51,7 @@ export interface PackageDeal {
 	flightCost: number;
 }
 
-/** The home airport a package search names, Sorrel City when it names none it knows. */
+/** The home airport a package search names, New York when it names none it knows. */
 export function originOf(params: URLSearchParams): string {
 	let origin = findAirport(params.get("origin") ?? "");
 	return origin === undefined || origin.place !== undefined ? "SRL" : origin.code;

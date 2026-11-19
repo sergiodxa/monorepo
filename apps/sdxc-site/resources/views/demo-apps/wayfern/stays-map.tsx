@@ -1,6 +1,6 @@
 /**
- * The map of the Lowmere coast that results, wishlists and a listing share: a real map over
- * the region's own GeoJSON, a price pin per stay with a card on hover, and "Search this area".
+ * The map results, wishlists and a listing share: São Miguel on OpenFreeMap's real streets, a
+ * price pin per stay with a card on hover, and "Search this area".
  * It renders on the server with links for zooming, then pans and zooms once its island loads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -19,7 +19,7 @@ import type { Stay } from "./data";
 import { photoSrc } from "./art";
 import { href, typeLabel } from "./data";
 import { money } from "./pricing";
-import { regionView, REGION, toLngLat } from "./region";
+import { regionView } from "./region";
 
 /** Every word the map speaks. */
 const LABELS = {
@@ -83,9 +83,8 @@ export function StaysMap(handle: Handle<StaysMap.Props>) {
 					label={label}
 					center={view.center}
 					zoom={view.zoom}
-					minZoom={6}
-					maxZoom={14}
-					basemap={{ kind: "geojson", data: REGION, ground: "water" }}
+					minZoom={8}
+					maxZoom={17}
 					controls={["zoom", "reset", "fullscreen"]}
 					navigation={navigate === undefined ? undefined : { href: navigate }}
 					labels={LABELS}
@@ -96,7 +95,7 @@ export function StaysMap(handle: Handle<StaysMap.Props>) {
 						let price = labels.get(stay.id) ?? money(stay.nightly);
 						return (
 							<GeoMap.Marker
-								at={toLngLat(stay.x, stay.y)}
+								at={stay.at}
 								label={price}
 								href={href(query === "" ? `stay/${stay.id}` : `stay/${stay.id}?${query}`)}
 								aria-label={`${stay.name}, ${price}`}

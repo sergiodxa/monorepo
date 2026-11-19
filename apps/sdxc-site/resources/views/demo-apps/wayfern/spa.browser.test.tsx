@@ -54,9 +54,9 @@ describe("Wayfern as a single-page app", () => {
 		mounted = await mountApp(wayfern, "wayfern", "");
 		let marker = region();
 
-		await press(document.querySelector('a[href="/demo/apps/wayfern/s?where=tallow-pines"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/wayfern/s?where=tallow-pines"));
-		expect(document.querySelector("h1")?.textContent).toBe("3 stays in Tallow Pines");
+		await press(document.querySelector('a[href="/demo/apps/wayfern/s?where=furnas"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/wayfern/s?where=furnas"));
+		expect(document.querySelector("h1")?.textContent).toBe("3 stays in Furnas");
 		await press(document.querySelector('[data-stay="the-canopy"] h2 a'));
 		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/wayfern/stay/the-canopy"));
 
@@ -67,13 +67,11 @@ describe("Wayfern as a single-page app", () => {
 
 	test("keeps filters in the address and lights a stay's pin while its card is hovered", async () => {
 		await page.viewport(1280, 900);
-		mounted = await mountApp(wayfern, "wayfern", "s?where=tallow-pines");
+		mounted = await mountApp(wayfern, "wayfern", "s?where=furnas");
 
-		await press(
-			document.querySelector('a[href="/demo/apps/wayfern/s?where=tallow-pines&type=cabin"]'),
-		);
+		await press(document.querySelector('a[href="/demo/apps/wayfern/s?where=furnas&type=cabin"]'));
 		await vi.waitFor(() =>
-			expect(screenUrl()).toBe("/demo/apps/wayfern/s?where=tallow-pines&type=cabin"),
+			expect(screenUrl()).toBe("/demo/apps/wayfern/s?where=furnas&type=cabin"),
 		);
 		let cards = [...document.querySelectorAll("[data-stay]")].map((card) =>
 			card.getAttribute("data-stay"),

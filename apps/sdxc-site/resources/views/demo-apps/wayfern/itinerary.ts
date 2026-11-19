@@ -19,7 +19,7 @@ import { CAR_CLASSES, findCarOffer, findRentalPlace } from "./cars";
 import { findStay, placeOf } from "./data";
 import { findAirline, findAirport, findFlight, localTime, zonedInstant } from "./flights";
 
-/** The zone every place on the Lowmere coast keeps, where stays and cars start and end. */
+/** The zone every place on São Miguel keeps, where stays and cars start and end. */
 export const COAST_ZONE = "Atlantic/Azores";
 
 /** Check-in and check-out times on the coast, in minutes after midnight. */
@@ -168,7 +168,7 @@ export function journeysOf(traveller: Traveller): Journey[] {
 	return journeys;
 }
 
-/** A journey's name: where its stay or its last flight lands, such as "Tallow Pines". */
+/** A journey's name: where its stay or its last flight lands, such as "Furnas". */
 function journeyTitle(journey: Journey): string {
 	let stay = journey.items.find((item) => item.kind === "stay");
 	if (stay !== undefined) return stay.from.split(", ").at(-1) ?? stay.from;

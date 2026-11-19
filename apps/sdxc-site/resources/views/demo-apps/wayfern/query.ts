@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createFacets } from "@sdxc/facets";
+
 import type { Amenity, Place, Stay, StayType } from "./data";
 
 import { AMENITIES, PLACES, STAYS, STAY_TYPES, findPlace } from "./data";
 import { addDays, readDay } from "./days";
 import { isBooked } from "./pricing";
-import { toLngLat } from "./region";
 
 /** How the results are ordered. */
 export type Sort = "recommended" | "price-low" | "price-high" | "rating";
@@ -182,29 +183,67 @@ export function withQuery(page: string, query: string): string {
 }
 
 /**
+ * The facets a results screen counts: stay types match any chosen one, and the nightly price
+ * reads in cents, so a dollar bound converts exactly.
+ */
+const STAY_FACETS = createFacets<Stay>()
+	.terms("type", (stay) => stay.type, { values: STAY_TYPES.map((type) => type.id) })
+	.range("price", (stay) => stay.nightly);
+
+/** What a search finds, with the count each type and amenity filter would show. */
+export interface StayResults {
+	/** The stays, in the search's order. */
+	stays: Stay[];
+	/** Stays of each type with every other filter applied, so a chip says what adding it gives. */
+	types: Map<StayType, number>;
+	/** Stays among the results with each amenity, since amenities narrow and never widen. */
+	amenities: Map<Amenity, number>;
+}
+
+/**
  * The stays a search finds, in its order: in its place, of its types, within its price,
  * with all its amenities, large enough for the party and free on every night of its dates.
  *
  * @param search The search.
  */
 export function findStays(search: Search): Stay[] {
+	return searchStays(search).stays;
+}
+
+/**
+ * Runs a search and counts its filters. Where, when, who, the map's bounds and the amenities
+ * narrow the list first; type and price then apply as facets, whose counts each leave their
+ * own facet out. The price's upper bound includes the dollar it names.
+ *
+ * @param search The search.
+ */
+export function searchStays(search: Search): StayResults {
 	let guests = search.adults + search.children;
-	let found = STAYS.filter((stay) => {
+	let candidates = STAYS.filter((stay) => {
 		if (search.place !== undefined && stay.place !== search.place) return false;
 		if (search.text !== undefined && !matchesText(stay, search.text)) return false;
-		if (search.types.length > 0 && !search.types.includes(stay.type)) return false;
-		if (search.bounds !== undefined && !inBounds(toLngLat(stay.x, stay.y), search.bounds))
-			return false;
+		if (search.bounds !== undefined && !inBounds(stay.at, search.bounds)) return false;
 		if (!search.amenities.every((amenity) => stay.amenities.includes(amenity))) return false;
 		if (stay.guests < guests) return false;
-		let nightly = stay.nightly / 100;
-		if (search.min !== undefined && nightly < search.min) return false;
-		if (search.max !== undefined && nightly > search.max) return false;
 		return search.start === undefined || search.end === undefined
 			? true
 			: isFree(stay, search.start, search.end);
 	});
-	return sortStays(found, search.sort);
+	let { items, counts } = STAY_FACETS.apply(candidates, {
+		type: search.types,
+		price: {
+			min: search.min === undefined ? null : search.min * 100,
+			max: search.max === undefined ? null : search.max * 100 + 1,
+		},
+	});
+	let types = new Map(counts.type.map((term) => [term.value as StayType, term.count]));
+	let amenities = new Map(
+		AMENITIES.map((amenity) => [
+			amenity.id,
+			items.filter((stay) => stay.amenities.includes(amenity.id)).length,
+		]),
+	);
+	return { stays: sortStays(items, search.sort), types, amenities };
 }
 
 /** Whether a point lies inside `west,south,east,north`. */

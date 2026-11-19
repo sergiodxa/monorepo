@@ -1,7 +1,7 @@
 /**
- * Wayfern's invented world: six places along the Lowmere coast and its hills, the stays in
+ * Wayfern's world: six real towns on São Miguel in the Azores, the invented stays in
  * them, their hosts, amenities and reviews, and the fake saved cards checkout picks from.
- * Every name, place and person is made up; prices are whole US cents, never floats.
+ * The towns are real; every stay, host and person is made up. Prices are whole US cents.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,60 +28,68 @@ export interface Place {
 	/** The few words a suggestion row carries under the name. */
 	blurb: string;
 	motif: Motif;
-	/** The place's centre on the region map, in the map's `0 0 400 300` units. */
+	/** The place's centre on the drawn miniature map, in its `0 0 400 300` units. */
 	x: number;
 	y: number;
+	/** Where it really is, as `[longitude, latitude]`. */
+	at: [number, number];
 }
 
 /** Every place, in the order the search suggests them. */
 export const PLACES: Place[] = [
 	{
-		id: "merrow-bay",
-		name: "Merrow Bay",
-		blurb: "Harbour cottages on the Lowmere coast",
+		id: "ponta-delgada",
+		name: "Ponta Delgada",
+		blurb: "Harbour cottages in the island's capital",
 		motif: "coast",
 		x: 300,
 		y: 205,
+		at: [-25.668, 37.741],
 	},
 	{
-		id: "tallow-pines",
-		name: "Tallow Pines",
+		id: "furnas",
+		name: "Furnas",
 		blurb: "Cabins deep in the old pinewood",
 		motif: "pines",
 		x: 105,
 		y: 135,
+		at: [-25.316, 37.773],
 	},
 	{
-		id: "ondine-lakes",
-		name: "Ondine Lakes",
+		id: "sete-cidades",
+		name: "Sete Cidades",
 		blurb: "Boathouses on three still lakes",
 		motif: "lake",
 		x: 205,
 		y: 120,
+		at: [-25.791, 37.861],
 	},
 	{
-		id: "corrie-highlands",
-		name: "Corrie Highlands",
+		id: "nordeste",
+		name: "Nordeste",
 		blurb: "Bothies under the ridge walks",
 		motif: "peaks",
 		x: 95,
 		y: 55,
+		at: [-25.149, 37.83],
 	},
 	{
-		id: "vellis",
-		name: "Vellis",
+		id: "vila-franca",
+		name: "Vila Franca",
 		blurb: "Lofts in a walled market town",
 		motif: "town",
 		x: 315,
 		y: 90,
+		at: [-25.433, 37.716],
 	},
 	{
-		id: "saltmarsh-reach",
-		name: "Saltmarsh Reach",
+		id: "ribeira-grande",
+		name: "Ribeira Grande",
 		blurb: "Dune huts where the river meets the sea",
 		motif: "dunes",
 		x: 190,
 		y: 245,
+		at: [-25.522, 37.822],
 	},
 ];
 
@@ -155,7 +163,7 @@ export const HOSTS: Host[] = [
 		trusted: true,
 		responds: "within an hour",
 		languages: ["English", "Norwegian"],
-		bio: "I grew up mending nets in Merrow and now look after three cottages on the harbour wall.",
+		bio: "I grew up mending nets in Ponta Delgada and now look after three cottages on the harbour wall.",
 	},
 	{
 		id: "tobiah",
@@ -165,7 +173,7 @@ export const HOSTS: Host[] = [
 		trusted: true,
 		responds: "within a few hours",
 		languages: ["English"],
-		bio: "Carpenter. Every cabin in Tallow Pines with a curved roof is probably mine.",
+		bio: "Carpenter. Every cabin in Furnas with a curved roof is probably mine.",
 	},
 	{
 		id: "ilse",
@@ -185,7 +193,7 @@ export const HOSTS: Host[] = [
 		trusted: false,
 		responds: "within a day",
 		languages: ["English", "Yoruba"],
-		bio: "I run the Vellis market bakery and rent the rooms above it. Breakfast is not optional.",
+		bio: "I run the Vila Franca market bakery and rent the rooms above it. Breakfast is not optional.",
 	},
 	{
 		id: "wren",
@@ -247,9 +255,11 @@ export interface Stay {
 	rating: number;
 	reviews: number;
 	amenities: Amenity[];
-	/** Where its pin sits on the region map, in the map's units. */
+	/** Where its pin sits on the drawn miniature map, in its units. */
 	x: number;
 	y: number;
+	/** Where the stay really is, as `[longitude, latitude]`. */
+	at: [number, number];
 	palette: StayPalette;
 	/** "Guest favourite" stays get a badge on their card. */
 	favourite?: boolean;
@@ -266,7 +276,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "gullwing-cottage",
 		name: "Gullwing Cottage",
-		place: "merrow-bay",
+		place: "ponta-delgada",
 		type: "cottage",
 		line: "A fisher's cottage on the harbour wall",
 		description: [
@@ -286,6 +296,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "fireplace", "water", "pets", "self-check-in"],
 		x: 312,
 		y: 214,
+		at: [-25.6645, 37.7392],
 		palette: {
 			sky: "#cfe3ec",
 			land: "#3f7f95",
@@ -304,7 +315,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "the-tide-room",
 		name: "The Tide Room",
-		place: "merrow-bay",
+		place: "ponta-delgada",
 		type: "apartment",
 		line: "A top-floor flat above the chandlery",
 		description: [
@@ -324,6 +335,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "workspace", "washer", "self-check-in"],
 		x: 292,
 		y: 198,
+		at: [-25.6712, 37.7418],
 		palette: {
 			sky: "#d9e6ee",
 			land: "#46809a",
@@ -340,7 +352,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "lantern-house",
 		name: "Lantern House",
-		place: "merrow-bay",
+		place: "ponta-delgada",
 		type: "farmhouse",
 		line: "The old keeper's house on the headland",
 		description: [
@@ -360,6 +372,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "fireplace", "washer", "crib", "ev", "water"],
 		x: 336,
 		y: 232,
+		at: [-25.6985, 37.7478],
 		palette: {
 			sky: "#c9dbe6",
 			land: "#5d8a4a",
@@ -377,7 +390,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "dune-hollow",
 		name: "Dune Hollow",
-		place: "saltmarsh-reach",
+		place: "ribeira-grande",
 		type: "cabin",
 		line: "A timber hut tucked between two dunes",
 		description: [
@@ -397,6 +410,7 @@ export const STAYS: Stay[] = [
 		amenities: ["kitchen", "parking", "hot-tub", "pets", "water"],
 		x: 176,
 		y: 254,
+		at: [-25.5352, 37.8262],
 		palette: {
 			sky: "#f1dcc0",
 			land: "#d8c08e",
@@ -414,7 +428,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "reedline-studio",
 		name: "Reedline Studio",
-		place: "saltmarsh-reach",
+		place: "ribeira-grande",
 		type: "loft",
 		line: "A painter's studio over the reedbeds",
 		description: [
@@ -434,6 +448,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "workspace", "bikes", "self-check-in"],
 		x: 206,
 		y: 236,
+		at: [-25.5151, 37.8181],
 		palette: {
 			sky: "#e9e2cf",
 			land: "#a4ab72",
@@ -450,7 +465,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "herons-rest",
 		name: "Heron's Rest",
-		place: "saltmarsh-reach",
+		place: "ribeira-grande",
 		type: "cottage",
 		line: "A flint cottage at the river mouth",
 		description: [
@@ -469,6 +484,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "fireplace", "crib", "water"],
 		x: 222,
 		y: 260,
+		at: [-25.5046, 37.8224],
 		palette: {
 			sky: "#dfe4e1",
 			land: "#7f9d8a",
@@ -482,7 +498,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "pinecone-a-frame",
 		name: "Pinecone A-frame",
-		place: "tallow-pines",
+		place: "furnas",
 		type: "cabin",
 		line: "A steep-roofed cabin under the tallest pines",
 		description: [
@@ -502,6 +518,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "fireplace", "sauna", "pets", "self-check-in"],
 		x: 98,
 		y: 128,
+		at: [-25.3205, 37.7781],
 		palette: {
 			sky: "#d7e2d2",
 			land: "#3f5f45",
@@ -523,7 +540,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "the-canopy",
 		name: "The Canopy",
-		place: "tallow-pines",
+		place: "furnas",
 		type: "treehouse",
 		line: "A treehouse eleven metres up an old pine",
 		description: [
@@ -542,6 +559,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "hot-tub"],
 		x: 122,
 		y: 146,
+		at: [-25.3098, 37.7684],
 		palette: {
 			sky: "#dbe7cf",
 			land: "#4c6a3c",
@@ -559,7 +577,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "mossback-lodge",
 		name: "Mossback Lodge",
-		place: "tallow-pines",
+		place: "furnas",
 		type: "cabin",
 		line: "A turf-roofed lodge for a big group",
 		description: [
@@ -578,6 +596,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "fireplace", "washer", "pets", "crib", "bikes"],
 		x: 80,
 		y: 150,
+		at: [-25.3262, 37.7652],
 		palette: {
 			sky: "#d3dccb",
 			land: "#56703f",
@@ -591,7 +610,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "stillwater-boathouse",
 		name: "Stillwater Boathouse",
-		place: "ondine-lakes",
+		place: "sete-cidades",
 		type: "cabin",
 		line: "A boathouse with a rowing boat and a jetty",
 		description: [
@@ -610,6 +629,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "water", "sauna", "self-check-in"],
 		x: 198,
 		y: 112,
+		at: [-25.7948, 37.8588],
 		palette: {
 			sky: "#d5e1e6",
 			land: "#4f7f86",
@@ -627,7 +647,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "ondine-glasshouse",
 		name: "Ondine Glasshouse",
-		place: "ondine-lakes",
+		place: "sete-cidades",
 		type: "loft",
 		line: "An architect's glass pavilion on the shore",
 		description: [
@@ -647,6 +667,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "fireplace", "workspace", "ev", "water", "hot-tub"],
 		x: 226,
 		y: 126,
+		at: [-25.7856, 37.8622],
 		palette: {
 			sky: "#dfe8ea",
 			land: "#5f8c84",
@@ -663,7 +684,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "kingfisher-cottage",
 		name: "Kingfisher Cottage",
-		place: "ondine-lakes",
+		place: "sete-cidades",
 		type: "cottage",
 		line: "A stone cottage between the lakes",
 		description: [
@@ -682,6 +703,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "fireplace", "bikes", "pets", "crib"],
 		x: 214,
 		y: 98,
+		at: [-25.8012, 37.8551],
 		palette: {
 			sky: "#d9e3e1",
 			land: "#5a7d5f",
@@ -695,7 +717,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "cloudberry-bothy",
 		name: "Cloudberry Bothy",
-		place: "corrie-highlands",
+		place: "nordeste",
 		type: "cabin",
 		line: "A shepherd's bothy at the foot of the corrie",
 		description: [
@@ -715,6 +737,7 @@ export const STAYS: Stay[] = [
 		amenities: ["kitchen", "parking", "fireplace", "pets"],
 		x: 86,
 		y: 60,
+		at: [-25.1602, 37.8251],
 		palette: {
 			sky: "#d8dde4",
 			land: "#6b7f5a",
@@ -731,7 +754,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "ridgeback-hut",
 		name: "Ridgeback Hut",
-		place: "corrie-highlands",
+		place: "nordeste",
 		type: "cabin",
 		line: "A mountain hut with a sauna on the ridge",
 		description: [
@@ -750,6 +773,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "sauna", "washer", "self-check-in"],
 		x: 112,
 		y: 44,
+		at: [-25.1798, 37.8102],
 		palette: {
 			sky: "#cfd8e3",
 			land: "#7a8a6a",
@@ -765,7 +789,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "clocktower-loft",
 		name: "Clocktower Loft",
-		place: "vellis",
+		place: "vila-franca",
 		type: "loft",
 		line: "A loft behind the market clock",
 		description: [
@@ -785,6 +809,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "workspace", "washer", "self-check-in"],
 		x: 318,
 		y: 86,
+		at: [-25.4321, 37.7172],
 		palette: {
 			sky: "#e6dfd3",
 			land: "#9a8c7a",
@@ -802,7 +827,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "ropemakers-rooms",
 		name: "Ropemaker's Rooms",
-		place: "vellis",
+		place: "vila-franca",
 		type: "apartment",
 		line: "Rooms above the bakery on Long Walk",
 		description: [
@@ -821,6 +846,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "washer", "bikes"],
 		x: 330,
 		y: 100,
+		at: [-25.4362, 37.7191],
 		palette: {
 			sky: "#e9e1d5",
 			land: "#a39582",
@@ -836,7 +862,7 @@ export const STAYS: Stay[] = [
 	{
 		id: "orchard-farmhouse",
 		name: "Orchard Farmhouse",
-		place: "vellis",
+		place: "vila-franca",
 		type: "farmhouse",
 		line: "A farmhouse in the cider orchards outside town",
 		description: [
@@ -855,6 +881,7 @@ export const STAYS: Stay[] = [
 		amenities: ["wifi", "kitchen", "parking", "fireplace", "washer", "pets", "crib", "bikes", "ev"],
 		x: 350,
 		y: 120,
+		at: [-25.4198, 37.7283],
 		palette: {
 			sky: "#dfe6d6",
 			land: "#7c9a4f",

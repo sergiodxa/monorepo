@@ -22,7 +22,7 @@ import { when } from "@sdxc/u/state";
 import { Checkbox, Popover, HeadingScope } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 
-import type { Search } from "./query";
+import type { Search, StayResults } from "./query";
 import type { Screen } from "./screen";
 
 import { AMENITIES, FILTER_AMENITIES, STAY_TYPES, findPlace, href } from "./data";
@@ -34,7 +34,7 @@ import {
 	PRICE_BOUNDS,
 	SORTS,
 	filterCount,
-	findStays,
+	searchStays,
 	readSearch,
 	tripQuery,
 	withQuery,
@@ -214,9 +214,9 @@ function PriceInput(
  * The filter row: stay types as toggle chips, then price, amenities and sort, each a panel
  * whose form keeps the rest of the search. It scrolls sideways on a phone.
  */
-function Filters(handle: Handle<{ search: Search }>) {
+function Filters(handle: Handle<{ search: Search; results: StayResults }>) {
 	return () => {
-		let { search } = handle.props;
+		let { results, search } = handle.props;
 		let amenityCount = search.amenities.length;
 		let priced = search.min !== undefined || search.max !== undefined;
 		let sort = SORTS.find((entry) => entry.id === search.sort) ?? SORTS[0]!;
@@ -242,17 +242,31 @@ function Filters(handle: Handle<{ search: Search }>) {
 						let types = on
 							? search.types.filter((id) => id !== type.id)
 							: [...search.types, type.id];
+						let count = results.types.get(type.id) ?? 0;
 						return (
 							<a
 								href={resultsHref({ ...search, types })}
 								data-on={on ? "" : undefined}
 								aria-label={
-									on ? `${type.label}, on. Remove this filter` : `Only ${type.label.toLowerCase()}`
+									on
+										? `${type.label}, on. Remove this filter`
+										: `Only ${type.label.toLowerCase()}, ${count} ${count === 1 ? "stay" : "stays"}`
 								}
 								mix={chipStyle()}
 							>
 								{on ? <CheckIcon aria-hidden="true" size={14} /> : null}
 								{type.label}
+								<span
+									aria-hidden="true"
+									mix={[
+										raw({
+											fontVariantNumeric: "tabular-nums",
+											color: "var(--ui-neutral-fg-muted)",
+										}),
+									]}
+								>
+									{count}
+								</span>
 							</a>
 						);
 					})}
@@ -366,7 +380,17 @@ function Filters(handle: Handle<{ search: Search }>) {
 										value={id}
 										defaultChecked={search.amenities.includes(id)}
 									>
-										{AMENITIES.find((amenity) => amenity.id === id)?.label}
+										{AMENITIES.find((amenity) => amenity.id === id)?.label}{" "}
+										<span
+											mix={[
+												raw({
+													fontVariantNumeric: "tabular-nums",
+													color: "var(--ui-neutral-fg-muted)",
+												}),
+											]}
+										>
+											({results.amenities.get(id) ?? 0})
+										</span>
 									</Checkbox>
 								))}
 							</div>
@@ -489,7 +513,7 @@ function ViewToggle(handle: Handle<{ search: Search }>) {
 function resultsHeading(search: Search, count: number): string {
 	let where = `in ${findPlace(search.place ?? "")?.name}`;
 	if (search.place === undefined)
-		where = search.text === undefined ? "across Lowmere" : `matching “${search.text}”`;
+		where = search.text === undefined ? "across São Miguel" : `matching “${search.text}”`;
 	let when =
 		search.start !== undefined && search.end !== undefined
 			? ` · ${formatRange(search.start, search.end)}`
@@ -502,7 +526,8 @@ export default function Results(handle: Handle<{ ctx: Screen }>) {
 	return () => {
 		let { back, traveller, url } = handle.props.ctx;
 		let search = readSearch(url.searchParams);
-		let stays = findStays(search);
+		let results = searchStays(search);
+		let stays = results.stays;
 		let dated = search.start !== undefined && search.end !== undefined;
 		let query = tripQuery(search);
 		let labels = new Map<string, string>();
@@ -541,7 +566,7 @@ export default function Results(handle: Handle<{ ctx: Screen }>) {
 						}),
 					]}
 				>
-					<Filters search={search} />
+					<Filters search={search} results={results} />
 					<h1
 						id="wayfern-results"
 						aria-live="polite"

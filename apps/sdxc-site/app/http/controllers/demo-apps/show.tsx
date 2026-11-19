@@ -7,11 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CSP } from "@sdxc/security-headers";
+
+import { patchCsp } from "@sdxc/security-headers/csp-patch";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import type { DemoAppSources } from "~/resources/views/demo-apps";
+
 import { cookieVariant, withStreamCache } from "~/app/http/caching";
 import defaultHandler from "~/app/http/controllers/default-handler";
+import { CONTENT_SECURITY_POLICY } from "~/config/security-policy";
 import { DEMO_APP_TOAST_PARAM, findDemoApp, readToastParam } from "~/resources/views/demo-apps";
 import DemoAppDocument from "~/resources/views/demo-apps/document";
 import routes from "~/routes/web";
@@ -31,6 +37,7 @@ export default createAction(routes.demoApps.show, async (ctx) => {
 	let { app: slug, page = "" } = s.parse(PARAMS, ctx.params);
 	let app = await findDemoApp(slug);
 	if (app === null) return defaultHandler(ctx);
+	if (app.csp !== undefined) patchCsp(ctx, { reportOnlyPolicy: withSources(app.csp) });
 
 	let param = ctx.url.searchParams.get(DEMO_APP_TOAST_PARAM);
 	let toast = param === null ? null : readToastParam(param);
@@ -73,4 +80,18 @@ function varyByTarget(response: Response): Response {
 		statusText: response.statusText,
 		headers,
 	});
+}
+
+/**
+ * The site's policy directives with a demo app's own sources added, written out whole since a
+ * patch replaces each directive it names.
+ */
+function withSources(sources: DemoAppSources): CSP.Override {
+	let override: CSP.Override = {};
+	if (sources.connectSrc !== undefined)
+		override.connectSrc = [...(CONTENT_SECURITY_POLICY.connectSrc ?? []), ...sources.connectSrc];
+	if (sources.imgSrc !== undefined)
+		override.imgSrc = [...(CONTENT_SECURITY_POLICY.imgSrc ?? []), ...sources.imgSrc];
+	if (sources.workerSrc !== undefined) override.workerSrc = ["self", ...sources.workerSrc];
+	return override;
 }

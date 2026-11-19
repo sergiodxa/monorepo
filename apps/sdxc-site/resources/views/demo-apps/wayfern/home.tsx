@@ -301,7 +301,7 @@ export default function Home(handle: Handle<Home.Props>) {
 								}),
 							]}
 						>
-							Stays along the Lowmere coast and hills
+							Stays on São Miguel, in the Azores
 						</p>
 						<h1
 							id="wayfern-hero"
@@ -342,7 +342,7 @@ export default function Home(handle: Handle<Home.Props>) {
 				<Section
 					id="wayfern-places"
 					title="Where to go"
-					lede="Six places, three hours apart at most."
+					lede="Six towns on one island, an hour apart at most."
 				>
 					<ul
 						mix={[

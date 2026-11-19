@@ -23,58 +23,58 @@ export interface Airport {
 	at: [number, number];
 }
 
-/** Every airport, home cities first, then the Lowmere coast's two. */
+/** Every airport, home cities first, then São Miguel's two. */
 export const AIRPORTS: Airport[] = [
 	{
 		code: "SRL",
-		city: "Sorrel City",
-		name: "Sorrel City Harbourside",
+		city: "New York",
+		name: "Hudson Harbourside",
 		timeZone: "America/New_York",
 		at: [-74.1, 40.6],
 	},
 	{
 		code: "KSH",
-		city: "Kestrel Harbour",
-		name: "Kestrel Harbour International",
+		city: "Halifax",
+		name: "Bedford Basin International",
 		timeZone: "America/Halifax",
 		at: [-63.5, 44.7],
 	},
 	{
 		code: "TMS",
-		city: "Tamsin",
-		name: "Tamsin Brandt Field",
+		city: "Berlin",
+		name: "Spreewald Field",
 		timeZone: "Europe/Berlin",
 		at: [13.4, 52.4],
 	},
 	{
 		code: "PAC",
-		city: "Porto Alcina",
-		name: "Porto Alcina Cliffs",
+		city: "Madrid",
+		name: "Meseta Cliffs",
 		timeZone: "Europe/Madrid",
 		at: [-3.6, 40.4],
 	},
 	{
 		code: "AMB",
-		city: "Amberley Isles",
-		name: "Amberley Isles Airfield",
+		city: "Las Palmas",
+		name: "Isleta Airfield",
 		timeZone: "Atlantic/Canary",
 		at: [-15.4, 28.1],
 	},
 	{
 		code: "MRW",
-		city: "Merrow Bay",
-		name: "Merrow Bay Coastal",
+		city: "Ponta Delgada",
+		name: "Ponta Delgada Coastal",
 		timeZone: "Atlantic/Azores",
-		place: "merrow-bay",
-		at: [-30.7475, 43.825],
+		place: "ponta-delgada",
+		at: [-25.698, 37.746],
 	},
 	{
 		code: "VLS",
-		city: "Vellis",
-		name: "Vellis Market Field",
+		city: "Vila Franca",
+		name: "Vila Franca Market Field",
 		timeZone: "Atlantic/Azores",
-		place: "vellis",
-		at: [-30.455, 44.55],
+		place: "vila-franca",
+		at: [-25.45, 37.721],
 	},
 ];
 
@@ -172,7 +172,7 @@ export function findAirport(code: string): Airport | undefined {
 	);
 }
 
-/** An airport as a field shows and posts it: `Merrow Bay (MRW)`. */
+/** An airport as a field shows and posts it: `Ponta Delgada (MRW)`. */
 export function airportLabel(airport: Airport): string {
 	return `${airport.city} (${airport.code})`;
 }

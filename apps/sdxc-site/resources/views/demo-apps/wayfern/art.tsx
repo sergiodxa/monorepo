@@ -585,7 +585,7 @@ export function WayfernMark(handle: Handle<{ size?: number }>) {
 }
 
 /**
- * The Lowmere region as one drawing in a `0 0 400 300` box: the sea along the south and east,
+ * The São Miguel region as one drawing in a `0 0 400 300` box: the sea along the south and east,
  * the lakes, the highlands' contours, the pinewood and the town walls, with every place named.
  * The results crop into it per place, so a pin sits in the same spot on every map.
  */

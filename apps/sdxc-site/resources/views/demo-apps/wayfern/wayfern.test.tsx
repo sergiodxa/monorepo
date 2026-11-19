@@ -14,7 +14,7 @@ import { fetchApp } from "~/app/test/router";
 import { findStay } from "./data";
 import { addDays, nightsBetween, readDay, today, weekday } from "./days";
 import { checkRequest, firstOpening, isBooked, nightPrice, quote } from "./pricing";
-import { findStays, readSearch, writeSearch } from "./query";
+import { findStays, readSearch, searchStays, writeSearch } from "./query";
 import { readTraveller, savedCookie, tripsCookie } from "./state";
 
 /** A Monday far enough ahead to book, so tests never depend on today's weekday. */
@@ -88,20 +88,20 @@ describe("Wayfern's search", () => {
 	test("drops a check-out before check-in and filters it doesn't offer", () => {
 		let search = readSearch(
 			new URLSearchParams(
-				"where=tallow&checkin=2026-12-10&checkout=2026-12-09&type=igloo&amenity=sauna",
+				"where=furn&checkin=2026-12-10&checkout=2026-12-09&type=igloo&amenity=sauna",
 			),
 		);
-		expect(search.place).toBe("tallow-pines");
+		expect(search.place).toBe("furnas");
 		expect(search.end).toBeUndefined();
 		expect(search.types).toEqual([]);
 		expect(search.amenities).toEqual(["sauna"]);
-		expect(writeSearch(search)).toBe("where=tallow-pines&checkin=2026-12-10&amenity=sauna");
+		expect(writeSearch(search)).toBe("where=furnas&checkin=2026-12-10&amenity=sauna");
 	});
 
 	test("finds stays by place, type, amenity, price and party", () => {
 		let ids = (query: string) =>
 			findStays(readSearch(new URLSearchParams(query))).map((stay) => stay.id);
-		expect(ids("where=ondine-lakes").every((id) => findStay(id)?.place === "ondine-lakes")).toBe(
+		expect(ids("where=sete-cidades").every((id) => findStay(id)?.place === "sete-cidades")).toBe(
 			true,
 		);
 		expect(ids("type=treehouse")).toEqual(["the-canopy"]);
@@ -109,6 +109,24 @@ describe("Wayfern's search", () => {
 		expect(ids("max=100").every((id) => findStay(id)!.nightly <= 10_000)).toBe(true);
 		expect(ids("adults=9")).toEqual(["orchard-farmhouse"]);
 		expect(ids("sort=price-low")[0]).toBe("cloudberry-bothy");
+	});
+
+	test("counts each type with the other filters applied, and amenities among the results", () => {
+		let results = searchStays(readSearch(new URLSearchParams("type=treehouse&amenity=wifi")));
+		let all = searchStays(readSearch(new URLSearchParams("amenity=wifi")));
+		expect(results.types.get("cabin")).toBe(all.types.get("cabin"));
+		expect(results.types.get("treehouse")).toBe(results.stays.length);
+		expect(results.amenities.get("wifi")).toBe(results.stays.length);
+		expect(all.amenities.get("sauna")).toBe(
+			all.stays.filter((stay) => stay.amenities.includes("sauna")).length,
+		);
+	});
+
+	test("keeps a stay priced exactly at the maximum", () => {
+		let stay = findStay("cloudberry-bothy")!;
+		let max = stay.nightly / 100;
+		let ids = findStays(readSearch(new URLSearchParams(`max=${max}`))).map((found) => found.id);
+		expect(ids).toContain(stay.id);
 	});
 });
 
@@ -141,10 +159,10 @@ describe("Wayfern's visitor state", () => {
 
 describe("Wayfern's posts", () => {
 	test("saving a stay sets its cookie and returns to the page, never off Wayfern", async () => {
-		let back = await post("saved/dune-hollow", { on: "true", back: "s?where=saltmarsh-reach" });
+		let back = await post("saved/dune-hollow", { on: "true", back: "s?where=ribeira-grande" });
 		expect(back.status).toBe(303);
 		expect(back.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/wayfern\/s\?where=saltmarsh-reach&toast=saved-dune-hollow\./,
+			/^\/demo\/apps\/wayfern\/s\?where=ribeira-grande&toast=saved-dune-hollow\./,
 		);
 		expect(cookiesOf(back)).toMatch(/^wayfern\.saved=dune-hollow%2C/);
 		let away = await post("saved/dune-hollow", { on: "true", back: "https://example.com" });
@@ -171,7 +189,7 @@ describe("Wayfern's posts", () => {
 		let trip = await (
 			await fetchApp(`/demo/apps/wayfern/trips/${code}`, { headers: { Cookie: cookie } })
 		).text();
-		expect(trip).toContain("The Canopy, Tallow Pines");
+		expect(trip).toContain("The Canopy, Furnas");
 		expect(trip).toContain("Mastercard ending in 5100");
 		let calendar = await (
 			await fetchApp("/demo/apps/wayfern/stay/the-canopy", { headers: { Cookie: cookie } })

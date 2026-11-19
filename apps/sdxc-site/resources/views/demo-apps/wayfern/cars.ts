@@ -17,7 +17,7 @@ export interface RentalCompany {
 	hue: number;
 }
 
-/** The companies with desks at the Lowmere coast's airports and towns. */
+/** The companies with desks at São Miguel's airports and towns. */
 export const RENTAL_COMPANIES: RentalCompany[] = [
 	{ id: "tallow", name: "Tallow Rent", rating: 4.6, hue: 140 },
 	{ id: "roamwell", name: "Roamwell", rating: 4.3, hue: 30 },
@@ -118,11 +118,11 @@ export type CarExtra = (typeof CAR_EXTRAS)[number]["id"];
 
 /** Where a car can be picked up or dropped off. */
 export const RENTAL_PLACES = [
-	{ id: "MRW", name: "Merrow Bay Coastal airport" },
-	{ id: "VLS", name: "Vellis Market Field airport" },
-	{ id: "merrow-bay", name: "Merrow Bay harbour office" },
-	{ id: "vellis", name: "Vellis town office" },
-	{ id: "tallow-pines", name: "Tallow Pines visitor centre" },
+	{ id: "MRW", name: "Ponta Delgada Coastal airport" },
+	{ id: "VLS", name: "Vila Franca Market Field airport" },
+	{ id: "ponta-delgada", name: "Ponta Delgada harbour office" },
+	{ id: "vila-franca", name: "Vila Franca town office" },
+	{ id: "furnas", name: "Furnas visitor centre" },
 ] as const;
 
 /** The fee for leaving a car somewhere other than where it was picked up, in US cents. */

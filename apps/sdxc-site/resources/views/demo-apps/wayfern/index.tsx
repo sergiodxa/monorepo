@@ -230,7 +230,7 @@ function route(request: DemoAppRequest, draft?: CheckoutDraft): WayfernScreen {
 	if (extra === undefined && second === undefined) {
 		if (first === "")
 			found = {
-				title: "Stays along the Lowmere coast",
+				title: "Stays on São Miguel",
 				current: "explore",
 				content: <Home ctx={ctx} />,
 			};
@@ -356,6 +356,9 @@ function screenFor(request: DemoAppRequest, screen: WayfernScreen): DemoAppScree
 	return { title: screen.title, status: screen.status, body, frames: { [MAIN_FRAME]: body } };
 }
 
+/** Where the map's style, tiles, glyphs and sprites load from, which its pages allow. */
+const MAP_HOST = "https://tiles.openfreemap.org";
+
 /** A departure a month ahead, which the sample flight, car and package screens search for. */
 const SAMPLE_DAY = plusDays(todayOf(), 30);
 
@@ -363,8 +366,8 @@ const SAMPLE_DAY = plusDays(todayOf(), 30);
 const SCREENS = [
 	"",
 	"s",
-	"s?where=merrow-bay",
-	"s?where=tallow-pines&type=cabin",
+	"s?where=ponta-delgada",
+	"s?where=furnas&type=cabin",
 	"s?amenity=hot-tub&min=150",
 	"s?sort=price-low",
 	"s?where=nowhere-at-all",
@@ -385,7 +388,7 @@ const SCREENS = [
 	"cars",
 	`cars?pickup=MRW&pickupday=${SAMPLE_DAY}&dropoffday=${plusDays(SAMPLE_DAY, 4)}`,
 	"packages",
-	`packages?where=tallow-pines&checkin=${SAMPLE_DAY}&checkout=${plusDays(SAMPLE_DAY, 3)}`,
+	`packages?where=furnas&checkin=${SAMPLE_DAY}&checkout=${plusDays(SAMPLE_DAY, 3)}`,
 	"trips/WF-8F2TL",
 	"trips/WF-3CRV9",
 ];
@@ -398,6 +401,7 @@ export default {
 	description:
 		"Wayfern, an invented travel app: stays, flights, cars and packages from one search, results on a real map, seat maps and boarding passes, and one itinerary of trips that exports to calendars.",
 	theme: { brand: BRAND, neutral: NEUTRAL, tokens: TOKENS },
+	csp: { connectSrc: [MAP_HOST], imgSrc: [MAP_HOST, "blob:"], workerSrc: ["blob:"] },
 	thumbnail: () => <WayfernThumbnail />,
 	screens: SCREENS,
 	cookies: [],

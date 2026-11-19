@@ -77,7 +77,7 @@ export function WayfernThumbnail() {
 							}),
 						]}
 					>
-						Tallow Pines · Dec 4 – 9
+						Furnas · Dec 4 – 9
 						<span
 							mix={[
 								raw({

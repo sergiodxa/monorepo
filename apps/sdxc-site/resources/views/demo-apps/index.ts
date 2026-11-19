@@ -72,6 +72,13 @@ export interface DemoAppRedirect {
 	cookies?: string[];
 }
 
+/** The extra origins a demo app's pages fetch, draw or run workers from, by CSP directive. */
+export interface DemoAppSources {
+	connectSrc?: string[];
+	imgSrc?: string[];
+	workerSrc?: string[];
+}
+
 /** One demo app: its invented product, its art direction and every screen it answers. */
 export interface DemoApp {
 	/** The product's name, which the shell, the titles and the gallery card name. */
@@ -121,6 +128,11 @@ export interface DemoApp {
 	 * to download or subscribe to, with its own content type and headers. `null` answers `404`.
 	 */
 	file?: (part: string, request: DemoAppRequest) => Response | null | Promise<Response | null>;
+	/**
+	 * Sources the app's pages load beyond the site's own, such as a map's tile host, added to
+	 * the site's policy on this app's pages only, so no other page allows them.
+	 */
+	csp?: DemoAppSources;
 	/**
 	 * Renders the content of the named `<Frame>` a screen mounts with the screen's own address
 	 * as its `src`, for a request carrying that name in `X-Remix-Target`: a link, a form or the

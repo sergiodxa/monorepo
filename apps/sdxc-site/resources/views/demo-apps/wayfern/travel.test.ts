@@ -34,8 +34,8 @@ describe("Wayfern's flights", () => {
 		let instant = zonedInstant("2026-07-01", 9 * 60, "America/New_York");
 		expect(new Date(instant).toISOString()).toBe("2026-07-01T13:00:00.000Z");
 		expect(localTime(instant, "Atlantic/Azores").time).toBe("13:00");
-		expect(findAirport("Merrow Bay (MRW)")?.code).toBe("MRW");
-		expect(findAirport("vellis")?.code).toBe("VLS");
+		expect(findAirport("Ponta Delgada (MRW)")?.code).toBe("MRW");
+		expect(findAirport("vila franca")?.code).toBe("VLS");
 	});
 
 	test("generates the same schedule for a route and day, findable by id", () => {
@@ -52,7 +52,7 @@ describe("Wayfern's flights", () => {
 	test("keeps a round trip, its picks and its filters in the address", () => {
 		let search = readFlightSearch(
 			new URLSearchParams(
-				`from=Sorrel City (SRL)&to=MRW&depart=${DAY}&return=${addDays(DAY, 5)}&adults=2&stops=0&sort=cheapest`,
+				`from=New York (SRL)&to=MRW&depart=${DAY}&return=${addDays(DAY, 5)}&adults=2&stops=0&sort=cheapest`,
 			),
 		);
 		expect(search.legs.map((leg) => `${leg.from}-${leg.to}`)).toEqual(["SRL-MRW", "MRW-SRL"]);
@@ -90,11 +90,11 @@ describe("Wayfern's cars", () => {
 	test("reads a car search and charges a one-way drop-off", () => {
 		let search = readCarSearch(
 			new URLSearchParams(
-				`pickup=MRW&dropoff=vellis&pickupday=${DAY}&dropoffday=${addDays(DAY, 3)}&at=09:30`,
+				`pickup=MRW&dropoff=vila-franca&pickupday=${DAY}&dropoffday=${addDays(DAY, 3)}&at=09:30`,
 			),
 			readDay,
 		);
-		expect(search.dropoff).toBe("vellis");
+		expect(search.dropoff).toBe("vila-franca");
 		expect(writeCarSearch(search)).toContain("at=09%3A30");
 		let offer = carOffers("MRW")[0]!;
 		let pickup = zonedInstant(DAY, 9 * 60 + 30, "Atlantic/Azores");
@@ -115,7 +115,7 @@ describe("Wayfern's itinerary", () => {
 		expect(new Set(upcoming.items.map((item) => item.kind))).toEqual(
 			new Set(["flight", "stay", "car"]),
 		);
-		expect(upcoming.title).toBe("Tallow Pines");
+		expect(upcoming.title).toBe("Furnas");
 	});
 
 	test("survives the trips cookie with every kind of booking", () => {
@@ -205,7 +205,7 @@ describe("Wayfern's travel bookings", () => {
 	test("books a car one way and a package as a flight and a stay", async () => {
 		let car = await post(`cars/${carOffers("MRW")[0]!.id}/book`, [
 			["pickup", "MRW"],
-			["dropoff", "vellis"],
+			["dropoff", "vila-franca"],
 			["pickupday", DAY],
 			["dropoffday", addDays(DAY, 3)],
 			["extra", "gps"],
@@ -213,7 +213,7 @@ describe("Wayfern's travel bookings", () => {
 		]);
 		expect(car.headers.get("Location")).toMatch(/\/trips\/WF-[A-Z0-9]{5}\?toast=booked/);
 		let trips = readTraveller(cookiesOf(car), today()).trips;
-		expect(trips[0]).toMatchObject({ kind: "car", dropoff: "vellis", extras: ["gps"] });
+		expect(trips[0]).toMatchObject({ kind: "car", dropoff: "vila-franca", extras: ["gps"] });
 		let pack = await post("packages/the-canopy/book", [
 			["checkin", addDays(DAY, 60)],
 			["checkout", addDays(DAY, 63)],
@@ -233,5 +233,19 @@ describe("Wayfern's travel bookings", () => {
 		expect(ics.match(/BEGIN:VEVENT/g)?.length).toBeGreaterThanOrEqual(4);
 		expect(ics).toContain("UID:WF-7M3QK-stay@wayfern.demo");
 		expect((await fetchApp("/demo/apps/wayfern/files/journey/WF-ZZZZZ.ics")).status).toBe(404);
+	});
+});
+
+describe("Wayfern's content security policy", () => {
+	test("allows the map's tile host on Wayfern's pages and on no other demo", async () => {
+		let wayfern =
+			(await fetchApp("/demo/apps/wayfern/s")).headers.get("Content-Security-Policy-Report-Only") ??
+			"";
+		expect(wayfern).toMatch(/connect-src[^;]*https:\/\/tiles\.openfreemap\.org/);
+		expect(wayfern).toMatch(/img-src[^;]*https:\/\/tiles\.openfreemap\.org[^;]*blob:/);
+		expect(wayfern).toMatch(/worker-src[^;]*blob:/);
+		let pulse =
+			(await fetchApp("/demo/apps/pulse")).headers.get("Content-Security-Policy-Report-Only") ?? "";
+		expect(pulse).not.toContain("openfreemap");
 	});
 });
