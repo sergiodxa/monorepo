@@ -46,6 +46,7 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/app/table": () => import("@sdxc/ui/app/table"),
 	"@sdxc/ui/app/toasts": () => import("@sdxc/ui/app/toasts"),
 	"@sdxc/ui/carousel": () => import("@sdxc/ui/carousel"),
+	"@sdxc/ui/autocomplete": () => import("@sdxc/ui/autocomplete"),
 	"@sdxc/ui/character-count": () => import("@sdxc/ui/character-count"),
 	"@sdxc/ui/chat/composer-submit": () => import("@sdxc/ui/chat/composer-submit"),
 	"@sdxc/ui/commerce/option-group": () => import("@sdxc/ui/commerce/option-group"),
@@ -57,6 +58,8 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/docs/docs-nav-tools": () => import("@sdxc/ui/docs/docs-nav-tools"),
 	"@sdxc/ui/docs/page-actions": () => import("@sdxc/ui/docs/page-actions"),
 	"@sdxc/ui/docs/table-of-contents": () => import("@sdxc/ui/docs/table-of-contents"),
+	"@sdxc/ui/lightbox": () => import("@sdxc/ui/lightbox"),
+	"@sdxc/ui/map-canvas": () => import("@sdxc/ui/map-canvas"),
 	"@sdxc/ui/relative-time": () => import("@sdxc/ui/relative-time"),
 	"@sdxc/ui/video/reel-feed": () => import("@sdxc/ui/video/reel-feed"),
 	"@sdxc/ui/video/story-viewer": () => import("@sdxc/ui/video/story-viewer"),
@@ -66,6 +69,10 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 		import("~/resources/views/demo-apps/main-frame-sync"),
 	"file:resources/views/demo-apps/murmur/player.tsx": () =>
 		import("~/resources/views/demo-apps/murmur/player"),
+	"file:resources/views/demo-apps/wayfern/dates-field.tsx": () =>
+		import("~/resources/views/demo-apps/wayfern/dates-field"),
+	"file:resources/views/demo-apps/wayfern/guests-field.tsx": () =>
+		import("~/resources/views/demo-apps/wayfern/guests-field"),
 	"file:resources/views/demo-apps/vesper/search-live.tsx": () =>
 		import("~/resources/views/demo-apps/vesper/search-live"),
 	"file:resources/views/demo-apps/pinhole/double-tap-like.tsx": () =>
