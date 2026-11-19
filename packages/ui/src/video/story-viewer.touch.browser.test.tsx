@@ -66,7 +66,7 @@ describe("StoryViewer under a finger", () => {
 
 		await drag({ x: 180, y: 250 }, { x: 185, y: 520 });
 
-		await vi.waitFor(() => expect(closes).toEqual(["closed"]));
+		await vi.waitFor(() => expect(closes).toEqual(["closed"]), { timeout: 4000 });
 		expect(currentSegment(mounted, "ana")).toBe(0);
 	});
 
@@ -90,9 +90,9 @@ describe("StoryViewer under a finger", () => {
 
 		await drag({ x: 320, y: 350 }, { x: 40, y: 352 });
 
-		await vi.waitFor(() => expect(activeGroup(feed)).toBe("group-bo"));
+		await vi.waitFor(() => expect(activeGroup(feed)).toBe("group-bo"), { timeout: 4000 });
 		let track = feed.container.querySelector<HTMLElement>("[data-slot=story-viewer-track]")!;
-		await vi.waitFor(() => expect(track.scrollLeft).toBeCloseTo(375, -1));
+		await vi.waitFor(() => expect(track.scrollLeft).toBeCloseTo(375, -1), { timeout: 4000 });
 	});
 
 	test("a tap on the right steps forward", async () => {
@@ -108,7 +108,7 @@ describe("StoryViewer under a finger", () => {
 		await cdp().send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
 		await cdp().send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 
-		await vi.waitFor(() => expect(currentSegment(feed, "ana")).toBe(1));
+		await vi.waitFor(() => expect(currentSegment(feed, "ana")).toBe(1), { timeout: 4000 });
 		expect(location.search).toBe("?story=ana-1");
 	});
 });

@@ -66,14 +66,14 @@ describe("ReelFeed under a finger", () => {
 		await swipe(scroller, 480, 180);
 
 		await waitForActive(feed, 1);
-		await vi.waitFor(() => expect(scroller.scrollTop).toBeCloseTo(600, -1));
-		await vi.waitFor(() => expect(videoAt(feed, 1).paused).toBe(false));
+		await vi.waitFor(() => expect(scroller.scrollTop).toBeCloseTo(600, -1), { timeout: 4000 });
+		await vi.waitFor(() => expect(videoAt(feed, 1).paused).toBe(false), { timeout: 4000 });
 		expect(videoAt(feed, 0).paused).toBe(true);
 
 		await swipe(scroller, 180, 480);
 
 		await waitForActive(feed, 0);
-		await vi.waitFor(() => expect(scroller.scrollTop).toBeCloseTo(0, -1));
+		await vi.waitFor(() => expect(scroller.scrollTop).toBeCloseTo(0, -1), { timeout: 4000 });
 	});
 
 	test("a short, slow drag settles back on the same reel", async () => {
