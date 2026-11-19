@@ -36,6 +36,11 @@ const BASE: EmojiEntry[] = [
 	},
 ];
 
+/** An emoticon whose characters also occur in URLs and paths. */
+const SLASH: EmojiEntry[] = [
+	{ emoji: "😕", shortcodes: ["confused"], category: "smileys-emotion", emoticons: [":/"] },
+];
+
 const CUSTOM: EmojiEntry[] = [
 	{
 		shortcodes: ["blobcat"],
@@ -69,6 +74,13 @@ describe("replaceShortcodes", () => {
 	test("replaces ASCII emoticons", () => {
 		expect(replaceShortcodes("ok :)", indexEntries(BASE))).toBe("ok 😄");
 	});
+
+	test("replaces an emoticon only with whitespace or the text's edge on both sides", () => {
+		let index = indexEntries(SLASH);
+		expect(replaceShortcodes(":/ hmm :/", index)).toBe("😕 hmm 😕");
+		expect(replaceShortcodes("see https://example.com", index)).toBe("see https://example.com");
+		expect(replaceShortcodes("open C:/path or a:/b", index)).toBe("open C:/path or a:/b");
+	});
 });
 
 describe("tokenize", () => {
@@ -78,6 +90,19 @@ describe("tokenize", () => {
 			{ type: "text", value: "x " },
 			{ type: "custom", name: "blobcat", src: "https://example.com/blobcat.png", label: "blobcat" },
 			{ type: "text", value: " y" },
+		]);
+	});
+});
+
+describe("tokenize emoticons", () => {
+	test("leaves an emoticon inside a word or URL as text", () => {
+		let index = indexEntries(SLASH);
+		expect(tokenize("https://example.com", index)).toEqual([
+			{ type: "text", value: "https://example.com" },
+		]);
+		expect(tokenize("ok :/", index)).toEqual([
+			{ type: "text", value: "ok " },
+			{ type: "unicode", emoji: "😕", name: "confused" },
 		]);
 	});
 });

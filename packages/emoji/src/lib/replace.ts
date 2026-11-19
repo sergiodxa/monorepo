@@ -1,6 +1,6 @@
 /**
- * Replaces complete `:name:` shortcodes and known ASCII emoticons with Unicode
- * characters. Custom shortcodes stay as typed so render/tokenize can draw images.
+ * Replaces complete `:name:` shortcodes and ASCII emoticons that stand as their own
+ * word with Unicode characters. Custom shortcodes stay as typed so render/tokenize can draw images.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,6 +8,7 @@
 
 import type { ShortcodeIndex } from "./types.js";
 
+import { emoticonKeys, findEmoticon } from "./emoticons.js";
 import { isUnicodeEmoji } from "./types.js";
 
 /** A complete `:shortcode:` token; names are letters, digits, `+`, `-`, `_`. */
@@ -31,21 +32,20 @@ export function replaceShortcodes(text: string, index: ShortcodeIndex): string {
 	return replaceEmoticons(withShortcodes, index);
 }
 
-/** Longest-first emoticon replacement so `:-)` wins over `:)` when both exist. */
+/** Swaps every emoticon that stands as its own word, so URLs and paths keep their colons. */
 function replaceEmoticons(text: string, index: ShortcodeIndex): string {
-	let emoticons: string[] = [];
-	for (let key of index.keys()) {
-		if (key.startsWith(":") && key.endsWith(":") && key.length > 2) continue;
-		if (/^[a-z0-9_+-]+$/i.test(key)) continue;
-		emoticons.push(key);
-	}
-	emoticons.sort((a, b) => b.length - a.length);
+	let emoticons = emoticonKeys(index);
+	if (emoticons.length === 0) return text;
 
-	let out = text;
-	for (let emoticon of emoticons) {
-		let entry = index.get(emoticon);
-		if (!entry || !isUnicodeEmoji(entry)) continue;
-		out = out.split(emoticon).join(entry.emoji);
+	let out = "";
+	let cursor = 0;
+	let hit = findEmoticon(text, cursor, emoticons);
+	while (hit) {
+		let entry = index.get(hit.emoticon);
+		out += text.slice(cursor, hit.at);
+		out += entry && isUnicodeEmoji(entry) ? entry.emoji : hit.emoticon;
+		cursor = hit.at + hit.emoticon.length;
+		hit = findEmoticon(text, cursor, emoticons);
 	}
-	return out;
+	return out + text.slice(cursor);
 }

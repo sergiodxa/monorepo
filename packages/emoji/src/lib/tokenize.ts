@@ -8,15 +8,16 @@
 
 import type { EmojiSegment, ShortcodeIndex } from "./types.js";
 
+import { emoticonKeys, findEmoticon } from "./emoticons.js";
 import { isCustomEmoji, isUnicodeEmoji } from "./types.js";
 
 /** A complete `:shortcode:` token. */
 const SHORTCODE = /:([a-z0-9_+-]+):/gi;
 
 /**
- * Tokenizes `text` against the index. Unicode shortcodes and emoticons become
- * `unicode` segments; custom shortcodes become `custom` segments; everything
- * else stays `text`.
+ * Tokenizes `text` against the index. Unicode shortcodes and emoticons standing
+ * as their own word become `unicode` segments; custom shortcodes become `custom`
+ * segments; everything else stays `text`.
  *
  * @param text - Source string
  * @param index - Shortcode map from {@link indexEntries}
@@ -58,61 +59,49 @@ export function tokenize(text: string, index: ShortcodeIndex): EmojiSegment[] {
 	);
 }
 
-/** Walks text segments and splits known emoticons into unicode segments. */
+/**
+ * Splits emoticons out of the text segments. A segment's ends count as word edges
+ * only at the start and end of the whole string, so an emoticon glued to a
+ * shortcode stays text.
+ */
 function tokenizeEmoticons(segments: EmojiSegment[], index: ShortcodeIndex): EmojiSegment[] {
-	let emoticons: string[] = [];
-	for (let key of index.keys()) {
-		if (/^[a-z0-9_+-]+$/i.test(key)) continue;
-		if (key.startsWith(":") && key.endsWith(":")) continue;
-		emoticons.push(key);
-	}
-	emoticons.sort((a, b) => b.length - a.length);
+	let emoticons = emoticonKeys(index);
 	if (emoticons.length === 0) return segments;
 
 	let out: EmojiSegment[] = [];
-	for (let segment of segments) {
+	segments.forEach((segment, position) => {
 		if (segment.type !== "text") {
 			out.push(segment);
-			continue;
+			return;
 		}
-		splitEmoticons(segment.value, emoticons, index, out);
-	}
+		let edges = { start: position === 0, end: position === segments.length - 1 };
+		splitEmoticons(segment.value, emoticons, index, edges, out);
+	});
 	return out;
 }
 
+/** Pushes `value` as text and unicode segments, one per emoticon standing as its own word. */
 function splitEmoticons(
 	value: string,
-	emoticons: string[],
+	emoticons: readonly string[],
 	index: ShortcodeIndex,
+	edges: { start: boolean; end: boolean },
 	out: EmojiSegment[],
 ) {
-	let rest = value;
-	while (rest.length > 0) {
-		let hit: { at: number; emoticon: string } | undefined;
-		for (let emoticon of emoticons) {
-			let at = rest.indexOf(emoticon);
-			if (at < 0) continue;
-			if (!hit || at < hit.at || (at === hit.at && emoticon.length > hit.emoticon.length)) {
-				hit = { at, emoticon };
-			}
-		}
-		if (!hit) {
-			pushText(out, rest);
-			return;
-		}
-		if (hit.at > 0) pushText(out, rest.slice(0, hit.at));
+	let cursor = 0;
+	let hit = findEmoticon(value, cursor, emoticons, edges);
+	while (hit) {
+		if (hit.at > cursor) pushText(out, value.slice(cursor, hit.at));
 		let entry = index.get(hit.emoticon);
 		if (entry && isUnicodeEmoji(entry)) {
-			out.push({
-				type: "unicode",
-				emoji: entry.emoji,
-				name: entry.shortcodes[0] ?? hit.emoticon,
-			});
+			out.push({ type: "unicode", emoji: entry.emoji, name: entry.shortcodes[0] ?? hit.emoticon });
 		} else {
 			pushText(out, hit.emoticon);
 		}
-		rest = rest.slice(hit.at + hit.emoticon.length);
+		cursor = hit.at + hit.emoticon.length;
+		hit = findEmoticon(value, cursor, emoticons, edges);
 	}
+	pushText(out, value.slice(cursor));
 }
 
 function pushText(segments: EmojiSegment[], value: string) {
