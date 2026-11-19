@@ -40,8 +40,8 @@ const MAP: Foundations = {
 			body: "Rows and pins sharing a `data-map-key` light each other through `mapLink` or one `MapCanvasSync`.",
 		},
 		{
-			title: "Your own basemap",
-			body: "`GeoMap` draws a GeoJSON region you ship, so no tile host or glyph server is involved; a style URL works too.",
+			title: "Real streets, or your own",
+			body: "`GeoMap` draws OpenFreeMap's light and dark streets by default; pass a GeoJSON region you ship, or another style URL, as `basemap`.",
 		},
 		{
 			title: "Progress as a variable",
