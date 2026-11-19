@@ -2027,6 +2027,7 @@
       "name": "@sdxc/novel",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/diagram": "workspace:*",
         "@sdxc/i18n": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/random": "workspace:*",

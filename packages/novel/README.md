@@ -129,6 +129,7 @@ createNovel({
 - `@sdxc/novel`: declarations, `createScene`, `createNovel`, `lazy`, and the frame, reply, state and event types.
 - `@sdxc/novel/ui`: `NovelPlayer` and the parts it is built from (`Stage`, `Textbox`, `ChoiceMenu`, `Backlog`, `SaveScreen`, `SettingsScreen`, `QuickMenu`, `AudioMixer`), as `remix/component` components.
 - `@sdxc/novel/test`: `createTestPlay`, which drives a play by naming each reply; `check`, the static checks over every scene; and `explore`, which plays every combination of choices.
+- `@sdxc/novel/dev`: `createDevTools` and the `NovelDevTools` panel, for development builds only.
 
 ```typescript
 import { check, createTestPlay, explore } from "@sdxc/novel/test";
@@ -184,4 +185,16 @@ let links = await novel.links(scenes.prologue.opening, { locale: "en" });
 		<link rel={link.rel} href={link.href} as={link.as} crossorigin={link.crossorigin} />
 	))}
 </head>;
+```
+
+## Developer tools
+
+`createDevTools(novel, { restart })` follows the play through the novel's events, and `NovelDevTools` renders it: the play's position and state, a jump to any scene with state edited as JSON and checked against the schema, persistent data with resets, the scene graph as a flowchart, the event log, and `check()`'s problems with missing messages. Every edited play reaches the app through `restart`, which passes the options to the player as `start`. `devtools.reload(modules)` swaps hot-reloaded scenes and resumes the play on the same line:
+
+```tsx
+let devtools = createDevTools(novel, { restart: (start) => remountPlayer(start) });
+import.meta.hot?.accept(["./scenes/opening.ts", "./scenes/cafe.ts"], (modules) =>
+	devtools.reload(modules),
+);
+<NovelDevTools devtools={devtools} />;
 ```

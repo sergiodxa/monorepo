@@ -6,6 +6,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./dev": "./src/dev.tsx",
 		"./test": "./src/test.ts",
 		"./ui": "./src/ui.tsx"
 	},
@@ -13,6 +14,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/diagram": "workspace:*",
 		"@sdxc/i18n": "workspace:*",
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/random": "workspace:*",
