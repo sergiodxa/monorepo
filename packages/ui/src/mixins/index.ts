@@ -9,6 +9,7 @@
 
 export * from "./active-descendant-keys.js";
 export * from "./aria-checked.js";
+export * from "./autocomplete.js";
 export * from "./calendar-keys.js";
 export * from "./carousel-controls.js";
 export * from "./character-count.js";

@@ -12,6 +12,7 @@ export * from "./accordion.js";
 export * from "./alert-dialog.js";
 export * from "./alert.js";
 export * from "./aspect-ratio.js";
+export * from "./autocomplete.js";
 export * from "./avatar.js";
 export * from "./badge.js";
 export * from "./breadcrumbs.js";

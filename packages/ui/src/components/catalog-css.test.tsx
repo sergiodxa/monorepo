@@ -90,6 +90,7 @@ const PROBE_PROPS = {
  * different shape, keyed by the component's export name and spread over {@link PROBE_PROPS}.
  */
 const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
+	Autocomplete: { id: "a", label: "a", options: [{ value: "a", label: "a", description: "a" }] },
 	Lightbox: { id: "a", label: "a", photos: [{ alt: "a" }], lightbox: "a" },
 	RangeMonths: {
 		month: "2026-03",
