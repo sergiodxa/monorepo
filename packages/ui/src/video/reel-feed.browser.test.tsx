@@ -159,6 +159,103 @@ describe("ReelFeed", () => {
 		expect(location.href).toBe(before);
 	});
 
+	test("moves on to the next reel by itself when the one on screen ends", async () => {
+		mounted = mountReels(0, 600, { autoAdvance: true, loopAt: 0.6 });
+		await waitForActive(mounted, 0);
+
+		await waitForActive(mounted, 1);
+		await vi.waitFor(() => expect(scrollerOf(mounted!).scrollTop).toBeCloseTo(600, -1), {
+			timeout: 4000,
+		});
+	});
+
+	test("loops the reel on screen when the feed does not advance by itself", async () => {
+		mounted = mountReels(0, 600, { loopAt: 0.6 });
+		await waitForActive(mounted, 0);
+		let video = videoAt(mounted, 0);
+		await vi.waitFor(() => expect(video.currentTime).toBeGreaterThan(0.3));
+
+		await new Promise((resolve) => setTimeout(resolve, 1200));
+
+		expect(mounted.container.querySelector("[data-reel-active]")?.id).toBe("reel-0");
+		expect(video.currentTime).toBeLessThan(0.95);
+	});
+
+	test("loops the last reel even when the feed advances by itself", async () => {
+		mounted = mountReels(5, 600, { autoAdvance: true, loopAt: 0.6 });
+		await waitForActive(mounted, 5);
+
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+
+		expect(mounted.container.querySelector("[data-reel-active]")?.id).toBe("reel-5");
+	});
+
+	test("keeps step controls live in both directions as the feed moves", async () => {
+		mounted = render(
+			<div style="block-size: 600px; --ui-reel-feed-height: 600px">
+				<ReelFeed
+					label="Reels"
+					controls={
+						<>
+							<a href="?reel=0" data-reel-step="-1" id="up" aria-disabled="true">
+								Up
+							</a>
+							<a href="?reel=1" data-reel-step="1" id="down">
+								Down
+							</a>
+						</>
+					}
+				>
+					{[0, 1, 2].map((index) => (
+						<ReelFeed.Item
+							id={`reel-${index}`}
+							href={`?reel=${index}`}
+							label={`Reel ${index + 1}`}
+							offset={index}
+							sources={[]}
+							labels={{ pause: "Pause" }}
+						/>
+					))}
+				</ReelFeed>
+			</div>,
+		);
+		await waitForActive(mounted, 0);
+		let up = mounted.container.querySelector<HTMLAnchorElement>("#up")!;
+		let down = mounted.container.querySelector<HTMLAnchorElement>("#down")!;
+
+		down.click();
+		await waitForActive(mounted, 1);
+		expect(up.hasAttribute("aria-disabled")).toBe(false);
+		expect(up.getAttribute("href")).toContain("?reel=0");
+		expect(down.getAttribute("href")).toContain("?reel=2");
+
+		up.click();
+		await waitForActive(mounted, 0);
+		expect(up.getAttribute("aria-disabled")).toBe("true");
+	});
+
+	test("a looping feed runs on from the last reel to the first", async () => {
+		mounted = mountReels(5, 600, { loop: true });
+		await waitForActive(mounted, 5);
+		let feed = mounted;
+
+		scrollerOf(feed).dispatchEvent(
+			new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+		);
+
+		await waitForActive(feed, 0);
+		await vi.waitFor(() => expect(scrollerOf(feed).scrollTop).toBe(0), { timeout: 4000 });
+		expect(feed.container.querySelectorAll("[data-reel-clone]")).toHaveLength(1);
+		expect(feed.container.querySelector("[data-reel-clone] [id]")).toBeNull();
+	});
+
+	test("a looping feed that advances by itself plays on from the last reel to the first", async () => {
+		mounted = mountReels(5, 600, { loop: true, autoAdvance: true, loopAt: 0.6 });
+		await waitForActive(mounted, 5);
+
+		await waitForActive(mounted, 0);
+	});
+
 	test("never steps past either end", async () => {
 		mounted = mountReels(0);
 		await waitForActive(mounted, 0);

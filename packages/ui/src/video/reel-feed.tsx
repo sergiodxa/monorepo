@@ -32,6 +32,16 @@ export namespace ReelFeed {
 		 */
 		followAddress?: boolean;
 		/**
+		 * Moves on to the next reel when the one on screen reaches its end, the way a reels tab
+		 * plays through; the last reel loops. Without it every reel loops until the visitor swipes.
+		 */
+		autoAdvance?: boolean;
+		/**
+		 * Runs on from the last reel to the first, by swipe, key, wheel, step control or
+		 * `autoAdvance`, so the feed never ends; the island adds a copy of the first reel to do it.
+		 */
+		loop?: boolean;
+		/**
 		 * The frame the next reel's page is prefetched into, such as `main`, so moving to it with
 		 * a link renders without waiting; the document hint is prefetched either way.
 		 */
@@ -40,7 +50,8 @@ export namespace ReelFeed {
 		children: RemixNode;
 		/**
 		 * Controls beside the scroller, such as up and down arrows: an element marked
-		 * `data-reel-step="1"` or `"-1"` steps the feed, so a link to the next reel moves it in place.
+		 * `data-reel-step="1"` or `"-1"` steps the feed, so a link to the next reel moves it in place;
+		 * the island keeps its link on the neighbouring reel and marks it `aria-disabled` at an end.
 		 */
 		controls?: RemixNode;
 	}
@@ -97,13 +108,25 @@ const HEIGHT = "var(--ui-reel-feed-height, 100dvh)";
  */
 export function ReelFeed(handle: Handle<ReelFeed.Props>) {
 	return () => {
-		let { children, controls, followAddress, label, mix, prefetchTarget, ...rest } = handle.props;
+		let {
+			autoAdvance,
+			children,
+			controls,
+			followAddress,
+			label,
+			loop,
+			mix,
+			prefetchTarget,
+			...rest
+		} = handle.props;
 		return (
 			<section
 				{...rest}
 				aria-label={label}
 				data-slot="reel-feed"
 				data-follow-address={followAddress ? "" : undefined}
+				data-auto-advance={autoAdvance ? "" : undefined}
+				data-loop={loop ? "" : undefined}
 				data-prefetch-target={prefetchTarget}
 				mix={mergeMix([raw({ position: "relative", blockSize: HEIGHT, minInlineSize: "0" })], mix)}
 			>

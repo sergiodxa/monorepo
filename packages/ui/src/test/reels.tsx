@@ -26,18 +26,23 @@ export const REEL_COUNT = 6;
  *
  * @param current The reel the page opens on.
  * @param height The feed's height in pixels.
+ * @param options Whether the feed plays through and loops, and each reel's length in seconds.
  */
-export function mountReels(current = 0, height = 600): RenderResult {
+export function mountReels(
+	current = 0,
+	height = 600,
+	options: { autoAdvance?: boolean; loop?: boolean; loopAt?: number } = {},
+): RenderResult {
 	return render(
 		<div style={`block-size: ${height}px; inline-size: 360px; --ui-reel-feed-height: ${height}px`}>
-			<ReelFeed label="Reels">
+			<ReelFeed label="Reels" autoAdvance={options.autoAdvance} loop={options.loop}>
 				{Array.from({ length: REEL_COUNT }, (_, index) => (
 					<ReelFeed.Item
 						id={`reel-${index}`}
 						href={`?reel=${index}`}
 						label={`Reel ${index + 1}`}
 						offset={index - current}
-						loopAt={4}
+						loopAt={options.loopAt ?? 4}
 						sources={[{ src: `${CLIP}?reel=${index}`, type: "video/webm" }]}
 						labels={{ pause: "Pause" }}
 					>
