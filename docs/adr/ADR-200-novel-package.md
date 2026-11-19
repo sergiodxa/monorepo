@@ -1,0 +1,752 @@
+# ADR-200: Novel Package
+
+## Status
+
+**Accepted** - 2026-11-19
+
+## Background
+
+A visual novel is a story told as a sequence of lines over a stage: a background, characters
+drawn in front of it, music, and a textbox. The player reads, advances, and at certain points
+chooses, and those choices change state that later decides which scenes play and which ending
+is reached. Engines such as Ren'Py, Ink, Naninovel and Yarn Spinner exist for this, each with
+its own language, runtime and toolchain.
+
+This repository builds web applications with Remix v3: route contracts mapped to handlers,
+middleware that publishes onto a context, `remix/component` for UI, and declaration maps whose
+handlers load lazily (`@sdxc/jobs`, `@sdxc/mail`, `@sdxc/mcp`). A novel written with the same
+shapes reads like the rest of an app, renders with the same components, tests with the same
+tools, and ships inside an ordinary web app rather than a separate engine.
+
+## Context
+
+### What a novel needs
+
+| Concern             | Need                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| Story               | Lines, narration, choices, conditions, state changes, jumps between scenes, endings        |
+| Stage               | Backgrounds, full-screen images (CGs), characters with expressions, positions, transitions |
+| Sound               | Music, ambience, one-shot sounds, a voice per line                                         |
+| Player              | Advance, auto mode, skip read text, backlog, rollback, saves, settings                     |
+| Across playthroughs | Lines read, choices taken, endings reached, gallery and music unlocks                      |
+| Language            | Every line, name and choice translated; voices and images with text per language           |
+| Authoring           | Typed references, static checks, a way to test every path, fast iteration                  |
+
+### How other engines save a position
+
+| Engine    | Position saved as                                                                          | When the script changes                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Ren'Py    | The current statement and its return stack, plus changed variables, shown images and music | Statement identity comes from compiled `.rpyc` files; a missing spot fails to load, and code added later never runs for an old save |
+| Naninovel | Script name and the index of the command within it                                         | Edits shift the index; its forum recommends checkpoint-based saving                                                                 |
+| Ink       | Content path and visit counts as JSON                                                      | Adding or removing a choice or gather desyncs old saves                                                                             |
+
+A numeric position breaks when the script is edited, a named one survives, and every engine
+treats compatibility across releases as best effort.
+
+### Repository pieces this builds on
+
+| Package                             | Used for                                                                                                                                             |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sdxc/messageformat`, `@sdxc/i18n` | Every line is a MessageFormat 2 message; keys and their values are typed from the app's catalog, and `Trans` renders markup through a components map |
+| `@sdxc/random`                      | Seeded, serializable draws, so rollback, saves and exploration replay the same rolls                                                                 |
+| `@sdxc/expression`                  | Conditions written as data (the future dating-sim event tables)                                                                                      |
+| `@sdxc/result`                      | Every operation that can fail answers a `Result`                                                                                                     |
+| `remix/data-schema`                 | The novel's state schema, which types state and validates loaded saves                                                                               |
+| `remix/component`, `@sdxc/ui`       | The player UI                                                                                                                                        |
+
+## Decision
+
+Add `@sdxc/novel`: declaration maps for scenes, characters and assets; scene modules that
+return a list of directives; a novel object that maps scenes to their modules and runs a
+playthrough as an async generator of frames; and separate entry points for the UI, testing,
+developer tools and offline play.
+
+### Entry points
+
+| Entry                 | Contains                                                                                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sdxc/novel`         | `scenes`, `scene`, `chapter`, `cast`, `character`, `assets`, `interactions`, `interaction`, `createScene`, `createNovel`, `lazy`, the frame, reply, state and event types, `NovelTypes` |
+| `@sdxc/novel/ui`      | `NovelPlayer` and its parts (stage, textbox, choice menu, backlog, save and settings screens, memories and gallery) as `remix/component` components                                     |
+| `@sdxc/novel/test`    | `createTestPlay` and `explore`                                                                                                                                                          |
+| `@sdxc/novel/dev`     | Developer tools: scene jumping, state inspection, flowchart, event log, hot reload                                                                                                      |
+| `@sdxc/novel/offline` | An opt-in service worker that caches declared assets                                                                                                                                    |
+
+A dating-sim layer is planned as `@sdxc/novel/sim` under its own ADR.
+
+### Declarations
+
+Declarations hold no handlers, so importing them costs only data and types.
+
+**Scenes** are a nested map, grouped by chapter when the novel has a chapter select:
+
+```ts
+export default scenes({
+	prologue: chapter({
+		title: "chapters.prologue",
+		scenes: { opening: scene({ title: "scenes.opening" }), arrival: scene() },
+	}),
+	spring: chapter({
+		title: "chapters.spring",
+		scenes: {
+			cafe: { meeting: scene({ title: "scenes.cafeMeeting" }), sit: scene(), leave: scene() },
+		},
+	}),
+});
+```
+
+A scene's name is its dotted path (`spring.cafe.meeting`). Saves and the seen-line record are
+keyed by it, so renaming a scene is a breaking change for old saves, the same as renaming a job.
+
+**The cast** declares characters only. A character has a flat set of sprites, layers, or no
+image at all, and the options `enter` accepts are typed from that shape:
+
+```ts
+export default cast({
+	mika: character({
+		name: "cast.mika.name",
+		color: "#e86a92",
+		sprites: { neutral: "/mika/neutral.webp", smile: "/mika/smile.webp" },
+	}),
+	ren: character({
+		name: "cast.ren.name",
+		layers: {
+			body: { school: "/ren/body-school.webp", casual: "/ren/body-casual.webp" },
+			face: { neutral: "/ren/face-neutral.webp", grin: "/ren/face-grin.webp" },
+		},
+	}),
+	player: character({ name: "cast.player.name" }),
+});
+```
+
+**Assets** declare the media scenes draw on:
+
+```ts
+import cafe from "./bg/cafe.webp";
+import street from "./bg/street.webp";
+import letterEn from "./cg/letter-en.webp";
+import letterJa from "./cg/letter-ja.webp";
+import chill from "./music/chill.ogg";
+import rain from "./ambience/rain.ogg";
+import door from "./sfx/door.ogg";
+
+export default assets({
+	backgrounds: { cafe, street },
+	images: { letter: { en: letterEn, ja: letterJa } },
+	music: { chill },
+	ambience: { rain },
+	sounds: { door: { src: door, caption: "captions.door" } },
+});
+```
+
+Every asset, and every voice file, is either one URL or a map of locale to URL. Locales are typed
+from the app's catalogs; a missing locale falls back to the fallback language's file.
+
+- **URLs come from the bundler.** Importing a file through Vite answers its content-hashed URL
+  (`/assets/cafe-a1b2c3d4.webp`) in a build, and a glob with `query: "?url"` declares a folder of
+  sprites without one import per file and without putting file contents in the bundle. A URL
+  from `public/` also works, unhashed.
+- **The server and the browser must agree.** `novel.links()` renders prefetch tags on the
+  server, so the Worker build has to resolve an imported asset to the same URL as the client
+  build. Phase 1 verifies this first.
+- **Small files may be inlined.** Vite inlines files under `build.assetsInlineLimit` (4 KB by
+  default) as `data:` URLs; the package accepts them, and they get no prefetch link.
+
+**Interactions** declare custom scenes the app renders itself, such as a minigame, with schemas
+for what goes in and what comes back:
+
+```ts
+export default interactions({
+	fishing: interaction({
+		input: s.object({ difficulty: s.number() }),
+		output: s.object({ caught: s.number() }),
+	}),
+});
+```
+
+**Types.** An app declares its state, catalog and interactions once, the way `@sdxc/mail` apps
+augment `MailTypes`, and every scene is typed from that:
+
+```ts
+declare module "@sdxc/novel" {
+	interface NovelTypes {
+		state: StandardSchemaV1.InferOutput<typeof STATE>;
+		messages: typeof en;
+	}
+}
+```
+
+### Scenes are lists of directives
+
+```ts
+export default createScene(scenes.spring.cafe.meeting, (ctx) => [
+	ctx.show(assets.backgrounds.cafe, { transition: "fade" }),
+	ctx.play(assets.music.chill),
+	ctx.enter(cast.mika, { at: "1/3", expression: "smile" }),
+	ctx.say(cast.mika, "cafe.meeting.greeting"),
+	ctx.when((state) => state.affection.mika >= 40, [ctx.say(cast.mika, "cafe.meeting.hoping")]),
+	ctx.say(cast.mika, "cafe.meeting.gold", (state) => ({ gold: state.gold })),
+	ctx.choose({
+		"cafe.meeting.sit": [
+			ctx.set("affection.mika", (value) => value + 5),
+			ctx.goto(scenes.spring.cafe.sit),
+		],
+		"cafe.meeting.leave": [ctx.goto(scenes.spring.cafe.leave)],
+	}),
+]);
+```
+
+- **The builder runs once**, when the module loads, and returns data. `ctx` carries no live
+  state; state is read only inside callbacks (`when`, `set`, message values), which the engine
+  calls at play time with `(state, { random, persistent })`.
+- **A scene is inspectable without running it**: every line, asset, jump and choice is in the
+  array, which is what the static checks, `explore`, the flowchart and prefetching read.
+- **Waits are implicit.** The engine stops at every `say`, `narrate`, `choose`, `wait` and
+  `custom`; staging directives run through to the next stop.
+- **Message keys identify lines.** A key appears at most once per scene (a static check), and it
+  is what saves, the seen-line record, the backlog and voice files are keyed by.
+- **Randomness** is `random` in callbacks, drawn from the play's seeded stream in `GameState`:
+  `ctx.when((state, { random }) => random.bool(0.6), …)`.
+
+| Directive                                         | Effect                                                                          |
+| ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `show(asset, options)`                            | Sets the background or a full-screen image, with a transition                   |
+| `hide(asset, options)`                            | Removes a full-screen image                                                     |
+| `enter(character, options)`                       | Puts a character on stage at a position, with an expression or layers           |
+| `exit(character, options)`                        | Takes a character off stage                                                     |
+| `express(character, options)`                     | Changes a character's expression or layers                                      |
+| `move(character, options)`                        | Moves a character to another position                                           |
+| `say(character, key, values?)`                    | A line spoken by a character, or by several at once; stops for the player       |
+| `narrate(key, values?)`                           | A line with no speaker; stops for the player                                    |
+| `choose(options, menu?)`                          | A menu; stops for the player's choice                                           |
+| `when(condition, directives, otherwise?)`         | Runs directives when the condition holds                                        |
+| `set(path, update)`                               | Changes state at a typed path                                                   |
+| `goto(scene)`                                     | Continues in another scene                                                      |
+| `call(scene)` / `back()`                          | Plays a scene and returns to the next directive                                 |
+| `wait(duration)`                                  | A pause with no line; stops for the UI to advance after the duration            |
+| `play(asset, options)` / `stop(channel, options)` | Music, ambience and sounds                                                      |
+| `custom(interaction, { input, into })`            | Hands the screen to an app-rendered interaction; its output is stored at `into` |
+| `ending(key)`                                     | Records an ending and finishes the play                                         |
+
+Message values are evaluated once, when the line is shown, and stored with it, so the backlog,
+rollback and the seen-line record show the text as the player read it. Values must be JSON.
+
+### Choices
+
+An option is a list of directives, or an object when it needs more:
+
+```ts
+ctx.choose({
+	"cafe.meeting.sit": [ctx.goto(scenes.spring.cafe.sit)],
+	"cafe.meeting.flirt": {
+		when: (state) => state.charm >= 50,
+		visibility: "disabled",
+		reason: "choices.needCharm",
+		then: [ctx.set("affection.mika", (value) => value + 10), ctx.goto(scenes.spring.cafe.date)],
+	},
+	"cafe.meeting.leave": [ctx.goto(scenes.spring.cafe.leave)],
+});
+```
+
+- **`visibility`** decides what a failed `when` looks like: `"hidden"` (the default) removes the
+  option, and `"disabled"` shows it locked with the `reason` message.
+- **`once: true`** removes an option after it has been taken in this play. With the menu option
+  `repeat: true`, the menu comes back after a branch that stays in the scene, which is how a
+  question hub is written.
+- **An option's ID is its label key**, stored internally with the scene name so a shared label
+  such as `common.yes` never collides. Tests, analytics and the chosen-option record use it.
+- **`option.chosen`** is true when the option was taken in any playthrough, from `Persistent`;
+  the UI decides how that looks.
+- **`timeout` and `default`** on the menu make a timed choice. The engine puts them on the frame
+  and the UI runs the countdown.
+- A menu with no available option is reported by the static checks and `explore`; at run time the
+  engine continues past it and emits `error`.
+
+### Stage
+
+- **Positions** are `` `${n}/${d}` ``: column `n` of `d`. `1/3`, `2/3` and `3/3` are left, center
+  and right; `1/2` and `2/2` split the stage; `1/1` centers. A character's width is capped to its
+  column. `left`, `center` and `right` are aliases a novel can redefine, and two characters in one
+  slot is a static warning.
+- **Speaker focus.** On a line, every character on stage carries `speaking`: true for the
+  speaker, false for the rest. With two or more characters on stage, the UI enlarges the speaker
+  slightly, brings it to the front and darkens the others, so the player sees who talks. When
+  nobody on stage speaks (narration, the player, an off-stage voice), nobody is darkened.
+  `say([cast.mika, cast.ren], key)` marks both as speaking for a line said together. Whether and
+  how to show it is the UI's: `NovelPlayer` turns it off with `focus={false}`, and the look is
+  CSS the app can restyle.
+- **Transitions** are named in the directive and implemented in CSS by the UI. Built in for
+  backgrounds and images: `fade`, `dissolve`, `slide` in four directions, `wipe`, `zoom`, `flash`,
+  `shake`; for characters: `fade` and `slide`. A custom name is a CSS class the app styles.
+- **Audio** goes through four channels, each with its own volume setting in the UI:
+
+| Channel    | Behavior                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| `music`    | One loop at a time, crossfaded when it changes                                             |
+| `ambience` | Loops that layer                                                                           |
+| `sound`    | One-shots that overlap, each with an occurrence ID so a re-rendered frame never replays it |
+| `voice`    | One per line, found by character and message key; stops on advance and lowers the music    |
+
+### Playing: an async generator of frames
+
+```ts
+type Play = AsyncGenerator<Frame, Ending, Reply>;
+```
+
+A frame is everything the UI needs to show one stop, so a renderer never replays history:
+
+| Frame    | Carries                                                                           | Answered by                 |
+| -------- | --------------------------------------------------------------------------------- | --------------------------- |
+| `line`   | Speaker (or none), message key and values, voice, whether it was seen             | `frame.advance()`           |
+| `choice` | Prompt, options (ID, label, `disabled`, `reason`, `chosen`), `timeout`, `default` | `frame.choose(id)`          |
+| `pause`  | A duration                                                                        | `frame.advance()`           |
+| `custom` | The interaction and its parsed input                                              | `frame.complete(output)`    |
+| `error`  | The error and the frame to retry                                                  | The carried frame's methods |
+
+Every frame also carries `stage` (background, image, characters with positions, sprites and `speaking`) and
+`audio` (what each channel should be playing), both complete, plus the scene and a frame ID.
+
+- **Replies are built from frames.** `next()` accepts only a `Reply`, which only frame methods
+  create, so after narrowing on `frame.type` TypeScript prevents choosing on a line or advancing
+  through a menu. A reply from a frame that is no longer current, or an option that is not
+  available, yields an `error` frame.
+- **The engine has no clock.** It never waits, animates or times out; durations and timeouts are
+  facts on frames that the UI acts on. A test advances through a `wait` instantly.
+- **Outside the generator**: `play.state` is the current `GameState`, `play.rollback()` restores
+  the previous stop (bounded by `createNovel({ rollback })`, default 100), and `play.save(slot)`
+  emits `save`.
+
+```ts
+let play = novel.start({ from: saved });
+let step = await play.next();
+
+while (!step.done) {
+	let frame = step.value;
+	let reply = await iife(async () => {
+		if (frame.type === "choice") return frame.choose(await pick(frame.options));
+		if (frame.type === "custom") return frame.complete(await runInteraction(frame));
+		if (frame.type === "error") return showError(frame); // answers through the carried frame
+		await waitForPlayer(frame);
+		return frame.advance();
+	});
+	step = await play.next(reply);
+}
+```
+
+`novel.start({ from })` answers a `Result`: a loaded save is untrusted, so it is migrated and
+validated against the state schema before a play starts.
+
+### Game state and saves
+
+```ts
+interface GameState {
+	version: number;
+	position: { scene: string; line: string };
+	stack: { scene: string; line: string }[];
+	stage: Stage;
+	audio: Audio;
+	state: NovelTypes["state"];
+	random: RandomState;
+	meta: { scene: string; savedAt: string; playTime: number };
+}
+```
+
+- **The position is anchored on a message key.** The player can only be stopped at a line or a
+  menu, and both have a key, so inserting or removing beats anywhere in a scene leaves a save
+  valid. When the key no longer exists, the play resumes at the start of its scene.
+- **The stage and audio are saved**, so loading draws what was on screen without replaying the
+  scene.
+- **New state fields take their schema default.** For larger changes,
+  `createNovel({ version, migrate })` upgrades an older `GameState` step by step.
+- **The package stores nothing.** It emits `GameState` as JSON on `save`, and the app keeps it in
+  `localStorage`, IndexedDB, a server or anywhere else.
+
+### Persistent data
+
+Data that outlives a playthrough is separate from `GameState` and is never rolled back:
+
+```ts
+interface Persistent {
+	seen: Record<string, Record<string, JsonValue>>; // line key → the values it was shown with
+	chosen: string[];
+	endings: string[];
+	chapters: string[];
+	unlocked: { images: string[]; music: string[] };
+}
+```
+
+It feeds skip-read-text, the chosen-option mark, a Memories screen that lists each scene's seen
+lines in order by reading the scene arrays, the CG gallery, the music room, the endings list,
+scene replay and the chapter select. It is emitted on `persist`, and the app stores it.
+
+### Events and plugins
+
+The novel is a typed event emitter. Handlers receive the payload and the play they fired for, so
+concurrent plays in tests stay apart:
+
+```ts
+novel.on("save", ({ slot, state }) => localStorage.setItem(`save:${slot}`, JSON.stringify(state)));
+novel.on("persist", (persistent) => localStorage.setItem("persistent", JSON.stringify(persistent)));
+novel.use(achievements({ "endings.good": "ACH_GOOD_END" }));
+```
+
+| Event                         | When                                                                  |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `scene`                       | A scene starts                                                        |
+| `line`, `choice`              | A line is shown; an option is taken                                   |
+| `ending`, `unlock`, `chapter` | An ending is reached; an image or track unlocks; a chapter is reached |
+| `save`, `persist`             | A save is requested; persistent data changed                          |
+| `error`                       | A missing asset, message or mapping, or a dead-end menu               |
+
+A plugin is a function that registers listeners. Handlers run side effects only and cannot change
+the story, which keeps a play deterministic; a handler that fails is reported on `error`.
+
+### Language
+
+- Every line, name, choice label, chapter and caption is a message key in the app's catalog,
+  typed by `@sdxc/i18n`: keys are checked, and each message's values are checked against the
+  variables its text declares.
+- Inline effects use MessageFormat 2 markup (`{#shake}No way!{/shake}`, `{#b}…{/b}`); the UI
+  decides which names it supports by passing elements to `Trans`'s `components`.
+- The frame carries keys and values, so changing language re-renders the same frame.
+
+### What belongs to the UI
+
+The engine decides what happens next; the UI decides how and when it is shown.
+
+| Concern                                               | Owner                                                            |
+| ----------------------------------------------------- | ---------------------------------------------------------------- |
+| Text speed, auto mode and its delay                   | UI                                                               |
+| Skip                                                  | UI, from the frame's `seen`                                      |
+| Volumes, voice lowering the music                     | UI                                                               |
+| Language                                              | UI                                                               |
+| Transition durations                                  | UI                                                               |
+| The look of disabled and chosen options               | UI                                                               |
+| Timed choices                                         | Engine puts `timeout` and `default` on the frame; UI counts down |
+| Rollback depth, option availability, `once`, `repeat` | Engine                                                           |
+
+`createNovel` takes story options only; `NovelPlayer` takes presentation settings and emits
+`settings` when the player changes them, for the app to store.
+
+### `@sdxc/novel/ui`
+
+- **`NovelPlayer`** is the island that owns a play, keeps the current frame as state, and renders
+  it; every other part is a presentational component over frame types, so a game can replace any
+  of them.
+- **One frame renders in order**: apply the stage and await its transitions; start the voice and
+  the typewriter; wait for a click, auto mode or skip; reply. A click during a transition
+  finishes it.
+- **Transitions** use the View Transitions API for stage changes and CSS for characters; the
+  player awaits `transition.finished` and `getAnimations({ subtree: true })`, so built-in and
+  custom transitions end the same way. `prefers-reduced-motion` and skip finish them at once.
+- **Audio** uses the Web Audio API: one `AudioContext`, a gain node per channel and a master gain.
+  Voice and sounds are decoded buffers whose `ended` event drives auto mode; music and ambience
+  stream through `MediaElementAudioSourceNode`. The context resumes on the first interaction.
+- **Images** are `<img>` elements, decoded with `img.decode()` before a transition starts.
+- **Speaker focus** is a `data-speaking` attribute on each character: the default stylesheet
+  scales the speaker to about 105%, raises it above the others, and dims the rest with
+  `filter: brightness(0.6)`, all through a short CSS transition so focus glides between speakers.
+- **The stage** is a fixed 16:9 logical surface scaled with container query units and
+  letterboxed, with full-screen mode through the Fullscreen API.
+- **Input**: click, Space and Enter advance; Ctrl skips; the wheel and arrow keys reach the
+  backlog and rollback; tap and swipe on touch; gamepad focus navigation.
+- **Accessibility**: the textbox is a live region, sounds show their captions, and font size, a
+  dyslexia-friendly font and self-voicing are settings.
+- **Screens**: backlog, save and load slots (thumbnails drawn from the saved `stage`), settings,
+  Memories, gallery, music room, endings and chapter select.
+
+### Loading and prefetch
+
+- `novel.map(scenes.x, lazy(() => import("./scenes/x.js")))` loads a scene's module on first use.
+- `novel.links(scene, { depth })` answers `<link>` descriptors, `preload` for what the scene
+  shows and `prefetch` for the scenes its jumps reach, which a page renders into its head.
+- While a play runs, the player prefetches the modules and assets of the scenes reachable from
+  the current one.
+
+### Testing: `@sdxc/novel/test`
+
+```ts
+let play = createTestPlay(novel, {
+	seed: "mika",
+	state: { affection: { mika: 40 } },
+	scene: scenes.spring.cafe.meeting,
+});
+
+let frame = await play.advanceUntil("choice");
+expect(frame.options.map((option) => option.id)).toEqual([
+	"cafe.meeting.sit",
+	"cafe.meeting.leave",
+]);
+
+await play.choose("cafe.meeting.sit");
+expect(play.state.affection.mika).toBe(45);
+expect(play.scene).toBe(scenes.spring.cafe.sit);
+```
+
+`explore(novel, options)` walks every combination of choices from the initial scene, copying the
+state at each menu and skipping a position already visited with an identical state, so loops and
+hubs terminate. It reports the endings reached with the shortest choice path to each,
+unreachable scenes, dead-end menus, missing messages per locale and missing assets.
+`maxPaths` and `maxDepth` cap a very branchy novel, the report says when a cap was hit, and draws
+come from seeded streams so every reported path replays exactly in `createTestPlay`.
+
+### Developer tools: `@sdxc/novel/dev`
+
+A panel built with `remix/component` that connects through the novel's events: jump to any scene
+with an edited state, inspect state and persistent data, see the scene graph as a flowchart, read
+the event log, see missing assets and messages, and reset seen lines and unlocks. With the dev
+server, an edited scene module reloads and the play stays on the same line, since positions are
+anchored on message keys. It is a separate entry so it never ships in a production bundle.
+
+### Offline: `@sdxc/novel/offline`
+
+An opt-in service worker that caches only the novel's declared assets, under fingerprinted URLs,
+and its scene modules. An unhashed URL (a file from `public/`) is cached only with revalidation,
+so a changed file is never served stale. It never caches HTML or app routes, caches assets as they are first
+fetched, clears caches from older versions on activation, and takes an optional size budget.
+
+### Out of scope
+
+| Feature                     | Why                                                                                 |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| NVL (full-screen text) mode | Adding a mode to frames later breaks nothing                                        |
+| DLC                         | Chapters cover the structure when it is needed                                      |
+| Dating-sim layer            | `@sdxc/novel/sim`, with its own ADR, after the core works                           |
+| Canvas or WebGL effects     | An optional effects layer later; frames assume nothing about how the stage is drawn |
+| Desktop builds and Steam    | Depend on a desktop shell decision                                                  |
+
+## Usage Examples
+
+### A whole novel
+
+```ts
+// novel/state.ts
+export const STATE = s.object({
+	affection: s.object({ mika: s.defaulted(s.number(), 0) }),
+	gold: s.defaulted(s.number(), 10),
+	charm: s.defaulted(s.number(), 0),
+});
+
+// novel/types.ts
+declare module "@sdxc/novel" {
+	interface NovelTypes {
+		state: StandardSchemaV1.InferOutput<typeof STATE>;
+		messages: typeof en;
+	}
+}
+
+// app/initializers/novel.ts
+export const novel = createNovel({
+	scenes,
+	cast,
+	assets,
+	interactions,
+	state: STATE,
+	initial: scenes.prologue.opening,
+	version: 1,
+});
+
+novel.map(
+	scenes.prologue.opening,
+	lazy(() => import("~/novel/scenes/prologue/opening")),
+);
+novel.map(
+	scenes.spring.cafe.meeting,
+	lazy(() => import("~/novel/scenes/spring/cafe/meeting")),
+);
+```
+
+### A custom interaction
+
+```ts
+ctx.custom(interactions.fishing, { input: { difficulty: 2 }, into: "lastCatch" }),
+ctx.when((state) => state.lastCatch.caught >= 3, [ctx.say(cast.mika, "lake.impressed")]),
+```
+
+The app renders the `custom` frame with its own component and replies with
+`frame.complete({ caught: 4 })`, which the engine validates against the declared output schema.
+
+### Rendering a page with the player
+
+The app's own client entry imports the novel and renders `NovelPlayer`, since a novel holds
+functions and cannot travel from the server as props. The page renders that entry and the
+prefetch links for the opening scene:
+
+```tsx
+router.get(routes.play, (ctx) =>
+	ctx.render(
+		<Document assets={ctx.assets} links={novel.links(scenes.prologue.opening, { depth: 1 })}>
+			<Game />
+		</Document>,
+	),
+);
+```
+
+### Storing saves and settings
+
+```ts
+novel.on("save", ({ slot, state }) => db.put("saves", state, slot));
+novel.on("persist", (persistent) => db.put("persistent", persistent, "main"));
+```
+
+## Consequences
+
+### Positive
+
+- **One set of patterns.** Scenes are declared, handled and mapped the way routes, jobs, emails
+  and MCP tools are, and the UI is `remix/component`.
+- **Typed throughout.** Scene jumps, characters' expressions and layers, state paths, message
+  keys and their values, interaction inputs and outputs, and replies are all checked by the
+  compiler.
+- **Saves survive edits.** Anchoring on message keys keeps old saves valid when beats are added
+  or removed.
+- **Testable without a browser.** The engine is a pure generator; `createTestPlay` covers a scene
+  and `explore` covers the whole story.
+- **Translation from the start.** Every visible string is a typed message, and voices and images
+  localize per asset.
+- **Storage stays the app's.** Saves, persistent data and settings are JSON on events.
+
+### Negative
+
+- **Writers author keys.** Lines live in a catalog, not inline in the scene, which is less direct
+  than a script language; tooling that generates keys from a draft can close the gap later.
+- **No script language.** A novel is TypeScript, which suits developers more than writers who
+  know Ren'Py or Ink.
+- **Static analysis stops at callbacks.** `when` and `set` callbacks are opaque to `explore` and
+  the flowchart, which see the branch but not its condition.
+- **Large surface.** Five entry points and a full player UI are a significant build and a large
+  public API to keep stable.
+
+### Neutral
+
+- **Renaming a scene breaks old saves**, the same contract as renaming a job.
+- **Compatibility is best effort**, as in every engine studied: a removed line resumes at its
+  scene's start.
+
+## Implementation Plan
+
+### Phase 1: Declarations and the engine
+
+**Priority:** High
+
+1. Verify that an asset imported from a declaration resolves to the same URL in the Worker build
+   and the client build.
+2. Write the playthrough specs first: a small fixture novel with lines, a menu, a hub, a jump, a
+   call, an ending and a custom interaction, asserted through the generator.
+3. Declarations (`scenes`, `chapter`, `scene`, `cast`, `character`, `assets`, `interactions`),
+   `NovelTypes`, `createScene` and its directives.
+4. `createNovel`, `map`, `lazy`, `start`, frames and replies, `GameState`, rollback.
+5. `createTestPlay`.
+
+### Phase 2: Saves, persistence and events
+
+**Priority:** High
+
+1. Message-key anchoring, stage and audio snapshots, `version` and `migrate`, `start({ from })`
+   validation.
+2. `Persistent` with seen-line values, chosen options, endings, chapters and unlocks.
+3. The event emitter, `use`, and `error` reporting with placeholders.
+
+### Phase 3: Static checks and exploration
+
+**Priority:** High
+
+1. Static checks over the scene arrays: duplicate keys, unmapped jumps, unknown assets, shared
+   slots, dead-end menus.
+2. `explore` with its report.
+
+### Phase 4: The player UI
+
+**Priority:** High
+
+1. `NovelPlayer`, stage, textbox, choice menu, frame sequencing, transitions and the Web Audio
+   mixer, with browser tests.
+2. Auto mode, skip, backlog, rollback, save and load slots, settings and full screen.
+3. Memories, gallery, music room, endings and chapter select.
+
+### Phase 5: Loading and developer tools
+
+**Priority:** Medium
+
+1. `links` and runtime prefetch.
+2. `@sdxc/novel/dev` with hot reload.
+
+### Phase 6: Offline
+
+**Priority:** Low
+
+1. `@sdxc/novel/offline`.
+
+## Alternatives Considered
+
+### 1. Imperative handlers on a context
+
+`createScene(scene, async (ctx) => { await ctx.say(…); ctx.goto(…) })`.
+
+**Rejected because**: the waits are implicit and easy to get wrong without `await`, a suspended
+async function cannot be saved mid-scene, and nothing about a scene can be read without running
+it, which removes static checks, exploration, the flowchart and prefetching.
+
+### 2. A script language
+
+A text format compiled to the same directives, like Ren'Py's or Ink's.
+
+**Rejected for now because**: it needs its own parser, editor support and error reporting before
+the first scene runs, and TypeScript already gives typed references and checking. A text format
+can later compile to the same directive arrays.
+
+### 3. JSX as the scene language
+
+**Rejected because**: `remix/component` renders to the DOM or to HTML and has no custom-renderer
+API, and JSX in the same project already means UI.
+
+### 4. Canvas rendering
+
+**Rejected because**: `<img>` layers, CSS, the View Transitions API and `remix/component` cover the
+stage, and the DOM gives text layout, accessibility and focus without reimplementing them.
+
+### 5. Raw input objects for `next()`
+
+`play.next({ type: "choose", option })`.
+
+**Rejected because**: a generator's `next()` has one parameter type for every step, so the
+compiler could not stop a choice being sent to a line. Replies built by frame methods restore
+that check.
+
+### 6. Saving a numeric beat position
+
+**Rejected because**: any edit before the saved beat shifts the index, which is the failure
+Naninovel and Ink saves show.
+
+### 7. Timing inside the engine
+
+**Rejected because**: tests and `explore` would wait on timers, and text speed, auto mode and
+transitions are presentation the player configures.
+
+## References
+
+- [Ren'Py: Saving, Loading, and Rollback](https://www.renpy.org/doc/html/save_load_rollback.html)
+- [Naninovel: State Management](https://naninovel.com/guide/state-management)
+- [inky issue #253: editing the story breaks saved state](https://github.com/inkle/inky/issues/253)
+- [MessageFormat 2](https://messageformat.unicode.org/)
+- [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API)
+- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+- [ADR-104: Random Package](./ADR-104-random-package.md)
+- [ADR-105: Expression Package](./ADR-105-expression-package.md)
+
+## Current Progress
+
+- [ ] Phase 1: Declarations and the engine
+- [ ] Phase 2: Saves, persistence and events
+- [ ] Phase 3: Static checks and exploration
+- [ ] Phase 4: The player UI
+- [ ] Phase 5: Loading and developer tools
+- [ ] Phase 6: Offline
+
+## Notes
+
+- The package is created only after this ADR is accepted. When it is, it follows the new-package
+  checklist: a `description`, a `LICENSE.md`, the root README row, the `release:bootstrap`
+  publish, its group in the docs site, and a guide.
+- `NovelPlayer` is a client entry; its exported value needs a written type for the publish build.
+- A small demo novel in an app would exercise every phase; it needs its own decision before an
+  app is created.
