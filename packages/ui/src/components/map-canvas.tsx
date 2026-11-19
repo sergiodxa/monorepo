@@ -441,6 +441,10 @@ MapCanvas.Pin = function MapCanvasPin(handle: Handle<MapCanvas.PinProps>) {
 							zIndex: "3",
 							boxShadow: "var(--ui-shadow-ring-hover), 0 4px 12px -4px rgb(0 0 0 / 0.3)",
 						},
+						"&[data-highlighted]:not([aria-current])": {
+							background: "var(--ui-neutral-bg-solid)",
+							color: "var(--ui-neutral-fg-on-solid)",
+						},
 						"@media (forced-colors: active)": { border: "1px solid CanvasText" },
 					}),
 					when("&:focus-visible", raw({ outline: "2px solid var(--ui-brand-ring)" })),
