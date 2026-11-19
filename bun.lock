@@ -2023,6 +2023,23 @@
         "remix": "3.2.0",
       },
     },
+    "packages/novel": {
+      "name": "@sdxc/novel",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/i18n": "workspace:*",
+        "@sdxc/random": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.2.0",
+      },
+      "peerDependencies": {
+        "remix": "3.2.0",
+      },
+    },
     "packages/openapi": {
       "name": "@sdxc/openapi",
       "version": "0.0.1",
@@ -3603,6 +3620,8 @@
     "@sdxc/newsletter": ["@sdxc/newsletter@workspace:packages/newsletter"],
 
     "@sdxc/no-www-middleware": ["@sdxc/no-www-middleware@workspace:packages/no-www-middleware"],
+
+    "@sdxc/novel": ["@sdxc/novel@workspace:packages/novel"],
 
     "@sdxc/openapi": ["@sdxc/openapi@workspace:packages/openapi"],
 

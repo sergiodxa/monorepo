@@ -735,7 +735,7 @@ transitions are presentation the player configures.
 
 ## Current Progress
 
-- [ ] Phase 1: Declarations and the engine
+- [x] Phase 1: Declarations and the engine
 - [ ] Phase 2: Saves, persistence and events
 - [ ] Phase 3: Static checks and exploration
 - [ ] Phase 4: The player UI
@@ -750,3 +750,51 @@ transitions are presentation the player configures.
 - `NovelPlayer` is a client entry; its exported value needs a written type for the publish build.
 - A small demo novel in an app would exercise every phase; it needs its own decision before an
   app is created.
+
+### Phase 1 decisions
+
+Made while building Phase 1, without a review, where this ADR left the detail open:
+
+- **Asset URLs agree.** In a throwaway app on this repository's Vite + `@cloudflare/vite-plugin` +
+  `@pitlane/vite-plugin-remix` setup, an imported asset and a `?url` glob resolved to the same
+  hashed URL in the Worker build and the client build. `@pitlane/assets` forces
+  `build.assetsInlineLimit` to `0`, even over an app's own value, so nothing is inlined as a
+  `data:` URL in these apps; the engine still accepts any URL string.
+- **`done: true` on an option leaves a repeating menu.** A hub needs a way out that continues in
+  the same scene; without it every branch of a `repeat` menu would come back to the menu.
+- **`GameState` carries `taken`** (options taken in this play, as `<scene>:<option>`), since `once`
+  must survive a save. `version` is left to Phase 2, which reads a save without it as version 1.
+- **Pauses, interactions and calls are anchored as `<previous key>+<n>`**, counting those three
+  since the last line or menu in document order; a menu is anchored on its prompt key, or its first
+  option's key without one. A call's return address uses the same anchor.
+- **A stop's snapshot is taken before its callbacks run.** `play.state`, rollback and a resumed
+  save re-evaluate the stop from the same state and random position, so message values and option
+  conditions come out exactly as first shown.
+- **The stage and audio keep each asset's id beside its URL.** A loaded save re-reads URLs from the
+  current declarations by id and drops what no longer exists, so a rebuild with new hashes keeps
+  old saves drawing.
+- **Voices come from `createNovel({ voice })`**, a function of speaker id and message key that
+  answers a URL or a locale map, which fits a `import.meta.glob` of voice files.
+- **`seen` and `chosen` are per play until `Persistent` exists in Phase 2**, which widens them to
+  every playthrough.
+- **Transitions and sounds belong to one stop.** They appear on the frame where they happened and
+  are cleared after it, so a re-rendered frame never animates or plays twice.
+- **`NovelTypes` also takes `interactions`**, and a custom frame carries the interaction's name as
+  `frame.interaction`, a top-level discriminant that narrows `input` and `complete()`.
+- **Interaction input and output are typed from the schema's output** when its input type is
+  `unknown`, as every `remix/data-schema` schema's is.
+- **An error frame's `frame` is `null`** when the play cannot reach its first stop; calling
+  `next()` again retries. A menu with no available option is passed silently until Phase 2's
+  `error` event reports it.
+- **`Ending` is `{ key, scene }`**, with `key: null` when the story runs out without an `ending`.
+- **`stop()` takes `"music"`, `"ambience"` or one ambience asset**; `play()` takes `volume` and
+  `fade`. The default aliases are `left` `1/3`, `center` `2/3`, `right` `3/3`, redefined through
+  `createNovel({ positions })`.
+- **`unicorn/no-thenable` is off for the package**, because an option's directives are named
+  `then` as this ADR writes them; an app writing option objects sees the same warning.
+- **`novel.map()` throws on a scene mapped twice**, as `@sdxc/mail` does for a setup mistake, and
+  a play reports an endless loop after 10,000 directives without a stop.
+- **The fixture novel lives inside its test file**, so its `NovelTypes` augmentation never reaches
+  the published build.
+- **`meta.scene` is the scene's title key**, or its name without one, and `meta.playTime` counts the
+  time between a play's start and the read of `play.state`, carried over from a save.

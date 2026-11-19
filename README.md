@@ -319,13 +319,14 @@ references live at [sdxc.dev](https://sdxc.dev).
 
 ### UI and Internationalization
 
-| Package                                 | Description                                                                              |
-| --------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [@sdxc/i18n](packages/i18n)             | Language detection and MessageFormat 2 translators for Remix routers and remix/component |
-| [@sdxc/icons](packages/icons)           | Lucide icons for Remix UI                                                                |
-| [@sdxc/lazy-frame](packages/lazy-frame) | A remix/component frame that loads once the reader scrolls near it or opens its dialog   |
-| [@sdxc/u](packages/u)                   | Tailwind-like Remix UI styling utilities                                                 |
-| [@sdxc/ui](packages/ui)                 | Remix v3 UI component library                                                            |
+| Package                                 | Description                                                                                                 |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| [@sdxc/i18n](packages/i18n)             | Language detection and MessageFormat 2 translators for Remix routers and remix/component                    |
+| [@sdxc/icons](packages/icons)           | Lucide icons for Remix UI                                                                                   |
+| [@sdxc/lazy-frame](packages/lazy-frame) | A remix/component frame that loads once the reader scrolls near it or opens its dialog                      |
+| [@sdxc/novel](packages/novel)           | Visual novels declared like routes: typed scenes, a cast and assets, played as an async generator of frames |
+| [@sdxc/u](packages/u)                   | Tailwind-like Remix UI styling utilities                                                                    |
+| [@sdxc/ui](packages/ui)                 | Remix v3 UI component library                                                                               |
 
 ### Foundations
 

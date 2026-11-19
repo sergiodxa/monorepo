@@ -1,0 +1,662 @@
+/**
+ * The engine behind a play: it runs a scene's directives to the next stop, turns that stop into
+ * a frame, applies the replies frames build, and keeps the stops it passed for rollback. Every
+ * transition works on a copy, so a refused reply or a failed jump leaves the play where it was.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { Result } from "@sdxc/result";
+
+import { restoreRandom } from "@sdxc/random";
+import { failure, isFailure, success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
+
+import type { Path, SceneIndex } from "./anchors.js";
+import type {
+	AssetDeclaration,
+	AssetSource,
+	CharacterDeclaration,
+	InteractionDeclaration,
+	SceneDeclaration,
+} from "./declarations.js";
+import type { ChooseDirective, Directive, StoredCallback } from "./directives.js";
+import type {
+	Ending,
+	Frame,
+	FrameOption,
+	GameState,
+	Reply,
+	StopFrame,
+	StoryPosition,
+} from "./frames.js";
+import type { Audio, Fraction, Position, Stage, StageCharacter, StageScenery } from "./stage.js";
+import type { NovelState, PlayTools, StateRecord } from "./types.js";
+
+import { directiveAt, enterOption, nextPath, optionOf } from "./anchors.js";
+import { NovelError } from "./errors.js";
+import { REPLY } from "./frames.js";
+import { getPath, setPath, validate } from "./state.js";
+
+/** Directives a play may run between two stops before it is reported as an endless loop. */
+const MAX_STEPS = 10_000;
+
+/** What the engine reads from its novel: declarations by name and loaded scenes. */
+export interface NovelRuntime {
+	/** Loads a mapped scene once, indexing its anchors. */
+	load(scene: string): Promise<Result<SceneIndex, NovelError>>;
+	/** A scene already loaded, for reading anchors without waiting. */
+	loaded(scene: string): SceneIndex | undefined;
+	scene(name: string): SceneDeclaration | undefined;
+	position(position: Position): Fraction;
+	voice(speaker: string, key: string): AssetSource | null;
+	/** How many earlier stops `rollback()` can return to. */
+	readonly rollback: number;
+}
+
+/** Where a play continues: a scene, and a path in it or an anchor to resolve once it loads. */
+export interface Cursor {
+	scene: string;
+	path: Path | null;
+	/** The anchor to resolve when `path` is `null`; `null` starts the scene from its top. */
+	anchor: string | null;
+	/** Continues with the directive after the anchored one, as a return from a call does. */
+	after: boolean;
+}
+
+/** Everything a play changes, as plain data a stop's snapshot copies. */
+export interface Live {
+	cursor: Cursor;
+	stack: Cursor[];
+	stage: Stage;
+	audio: Audio;
+	state: StateRecord;
+	random: GameState["random"];
+	taken: string[];
+}
+
+/** A stop the play reached: the play as it stood before the stop was evaluated, and its frame. */
+interface Stop {
+	snapshot: Live;
+	frame: StopFrame;
+}
+
+/** What one transition answered: a frame to yield, or the end of the play. */
+export type Outcome = { kind: "frame"; frame: Frame } | { kind: "end"; ending: Ending };
+
+/** What running directives reached: a stop, or the end of the play. */
+type Reached =
+	| { kind: "stop"; stop: Stop; work: Live }
+	| { kind: "end"; ending: Ending; work: Live };
+
+/**
+ * One playthrough's engine. It owns the current stop and the history `rollback()` walks; the
+ * play's generator and its `state` getter read it.
+ */
+export class PlayEngine {
+	#runtime: NovelRuntime;
+	#live: Live;
+	#history: Stop[] = [];
+	#current: Stop | null = null;
+	#ended = false;
+	#id = generateUUID();
+	#frames = 0;
+	#sounds = 0;
+	/** Lines read in this play, as `<scene>:<key>`. */
+	#seen = new Set<string>();
+	/** Options taken in this play, as `<scene>:<option>`. */
+	#chosen = new Set<string>();
+	#playTime: number;
+	#startedAt = Date.now();
+
+	/**
+	 * @param runtime - The novel's declarations and scenes.
+	 * @param live - Where the play starts.
+	 * @param playTime - Milliseconds already played, carried over from a save.
+	 */
+	constructor(runtime: NovelRuntime, live: Live, playTime: number) {
+		this.#runtime = runtime;
+		this.#live = live;
+		this.#playTime = playTime;
+	}
+
+	/** The play as JSON, at the current stop as it stood before the stop was shown. */
+	get state(): GameState {
+		let live = this.#current?.snapshot ?? this.#live;
+		let scene = this.#runtime.scene(live.cursor.scene);
+		return structuredClone({
+			position: this.#anchor(live.cursor),
+			stack: live.stack.map((entry) => this.#anchor(entry)),
+			stage: live.stage,
+			audio: live.audio,
+			state: live.state as NovelState,
+			random: live.random,
+			taken: live.taken,
+			meta: {
+				scene: scene?.title ?? live.cursor.scene,
+				savedAt: new Date().toISOString(),
+				playTime: this.#playTime + (Date.now() - this.#startedAt),
+			},
+		});
+	}
+
+	/**
+	 * Runs to the first stop, or answers a reply to the current one.
+	 *
+	 * @param reply - What the UI answered; ignored before the first stop.
+	 * @returns The next frame, an error frame for a refused reply, or the ending.
+	 */
+	async step(reply: Reply | undefined): Promise<Outcome> {
+		if (this.#current === null) return this.#reach(structuredClone(this.#live));
+		let work = this.#answer(this.#current, reply);
+		if (isFailure(work)) return this.#refuse(work.error);
+		let outcome = await this.#reach(work.data);
+		let taken = work.data.taken.at(-1);
+		if (outcome.kind !== "frame" || outcome.frame.type !== "error") {
+			if (reply?.[REPLY].kind === "choose" && taken !== undefined) this.#chosen.add(taken);
+		}
+		return outcome;
+	}
+
+	/**
+	 * Returns to the stop before the current one, with its state, stage and draws.
+	 *
+	 * @returns That stop's frame, or `null` when there is no earlier stop to return to.
+	 */
+	async rollback(): Promise<StopFrame | null> {
+		if (this.#ended || this.#history.length < 2) return null;
+		this.#history.pop();
+		let previous = this.#history.pop() as Stop;
+		let outcome = await this.#reach(structuredClone(previous.snapshot));
+		return outcome.kind === "frame" && outcome.frame.type !== "error" ? outcome.frame : null;
+	}
+
+	/** Runs `work` to its next stop and makes that stop current, or reports why it could not. */
+	async #reach(work: Live): Promise<Outcome> {
+		let reached = await this.#run(work);
+		if (isFailure(reached)) return this.#refuse(reached.error);
+		if (reached.data.kind === "end") {
+			this.#ended = true;
+			this.#live = reached.data.work;
+			this.#current = null;
+			return { kind: "end", ending: reached.data.ending };
+		}
+		let { stop, work: after } = reached.data;
+		this.#live = after;
+		this.#current = stop;
+		this.#history.push(stop);
+		if (this.#history.length > this.#runtime.rollback + 1) this.#history.shift();
+		return { kind: "frame", frame: stop.frame };
+	}
+
+	/** An error frame carrying the current stop to retry. */
+	#refuse(error: NovelError): Outcome {
+		return { kind: "frame", frame: { type: "error", error, frame: this.#current?.frame ?? null } };
+	}
+
+	/** Applies a reply to a copy of the play, after checking it answers the current stop. */
+	#answer(current: Stop, reply: Reply | undefined): Result<Live, NovelError> {
+		let body = typeof reply === "object" && reply !== null ? reply[REPLY] : undefined;
+		if (body === undefined) {
+			return failure(new NovelError("invalid-reply", "Answer a frame with one of its methods."));
+		}
+		if (body.frame !== current.frame.id) {
+			return failure(new NovelError("stale-reply", `Frame ${body.frame} is no longer current.`));
+		}
+		let work = structuredClone(this.#live);
+		let path = work.cursor.path as Path;
+		let frame = current.frame;
+		if (body.kind === "advance") {
+			work.cursor.path = nextPath(path);
+			return success(work);
+		}
+		if (body.kind === "choose" && frame.type === "choice") {
+			let option = frame.options.find((entry) => entry.id === body.option);
+			if (option === undefined || option.disabled) {
+				return failure(
+					new NovelError("unavailable-option", `Option "${body.option}" is not available.`),
+				);
+			}
+			let id = `${work.cursor.scene}:${option.id}`;
+			work.taken = [...work.taken.filter((entry) => entry !== id), id];
+			work.cursor.path = enterOption(path, option.id);
+			return success(work);
+		}
+		if (body.kind === "complete" && frame.type === "custom") {
+			return this.#complete(work, body.output);
+		}
+		return failure(
+			new NovelError("invalid-reply", `A ${frame.type} frame takes no ${body.kind} reply.`),
+		);
+	}
+
+	/** Validates an interaction's output and stores it where the scene asked. */
+	#complete(work: Live, output: unknown): Result<Live, NovelError> {
+		let path = work.cursor.path as Path;
+		let index = this.#runtime.loaded(work.cursor.scene) as SceneIndex;
+		let directive = directiveAt(index.module.directives, path);
+		if (directive?.type !== "custom") {
+			return failure(new NovelError("invalid-reply", "The current stop is not an interaction."));
+		}
+		let parsed = validate(directive.interaction.output, output);
+		if (isFailure(parsed)) {
+			return failure(
+				new NovelError(
+					"invalid-output",
+					`The "${directive.interaction.name}" interaction answered output its schema refused: ${parsed.error.message}`,
+				),
+			);
+		}
+		if (directive.into !== undefined) setPath(work.state, directive.into, parsed.data);
+		work.cursor.path = nextPath(path);
+		return success(work);
+	}
+
+	/** Runs directives from the cursor until one stops for the player or the play ends. */
+	async #run(work: Live): Promise<Result<Reached, NovelError>> {
+		let random = restoreRandom(work.random);
+		let tools: PlayTools = { random };
+		for (let steps = 0; steps < MAX_STEPS; steps++) {
+			let index = await this.#resolve(work.cursor);
+			if (isFailure(index)) return index;
+			let path = work.cursor.path as Path;
+			let directive = directiveAt(index.data.module.directives, path);
+			if (directive === undefined) {
+				let ended = this.#leave(work, index.data, path);
+				if (ended === null) continue;
+				work.random = random.state();
+				return success({ kind: "end", ending: ended, work });
+			}
+			if (isStop(directive)) {
+				work.random = random.state();
+				let snapshot = structuredClone(work);
+				let frame = this.#frame(directive, work, tools);
+				if (frame === null) {
+					work.cursor.path = nextPath(path);
+					continue;
+				}
+				work.random = random.state();
+				clearOneShots(work);
+				return success({ kind: "stop", stop: { snapshot, frame }, work });
+			}
+			let ended = this.#apply(directive, work, tools);
+			if (ended !== null) {
+				work.random = random.state();
+				return success({ kind: "end", ending: ended, work });
+			}
+		}
+		return failure(
+			new NovelError(
+				"endless-loop",
+				`Scene "${work.cursor.scene}" ran ${MAX_STEPS} directives without a stop.`,
+			),
+		);
+	}
+
+	/** Loads the cursor's scene and resolves its anchor to a path. */
+	async #resolve(cursor: Cursor): Promise<Result<SceneIndex, NovelError>> {
+		let index = await this.#runtime.load(cursor.scene);
+		if (isFailure(index) || cursor.path !== null) return index;
+		let anchored = cursor.anchor === null ? undefined : index.data.paths.get(cursor.anchor);
+		if (anchored === undefined) cursor.path = [0];
+		else cursor.path = cursor.after ? nextPath(anchored) : anchored;
+		return index;
+	}
+
+	/** Moves the cursor out of a list that ran out, answering the ending when the story did. */
+	#leave(work: Live, index: SceneIndex, path: Path): Ending | null {
+		if (path.length === 1) return this.#return(work);
+		let parent = path.slice(0, -2);
+		let owner = directiveAt(index.module.directives, parent);
+		if (owner?.type === "choose" && owner.repeat) {
+			let option = optionOf(owner, path.at(-2) as string);
+			if (option !== undefined && !option.done) {
+				work.cursor.path = parent;
+				return null;
+			}
+		}
+		work.cursor.path = nextPath(parent);
+		return null;
+	}
+
+	/** Returns from a called scene, or ends the play when nothing called this one. */
+	#return(work: Live): Ending | null {
+		let caller = work.stack.pop();
+		if (caller === undefined) return { key: null, scene: work.cursor.scene };
+		work.cursor =
+			caller.path === null
+				? { ...caller, after: true }
+				: { ...caller, path: nextPath(caller.path), anchor: null, after: false };
+		return null;
+	}
+
+	/** Runs one directive that does not stop, answering the ending when it finishes the play. */
+	#apply(directive: Directive, work: Live, tools: PlayTools): Ending | null {
+		let path = work.cursor.path as Path;
+		work.cursor.path = nextPath(path);
+		switch (directive.type) {
+			case "when": {
+				let holds = call(directive.condition, work.state, tools);
+				work.cursor.path = [...path, holds ? "then" : "otherwise", 0];
+				return null;
+			}
+			case "set": {
+				let update =
+					typeof directive.update === "function"
+						? (
+								directive.update as (
+									value: unknown,
+									state: StateRecord,
+									tools: PlayTools,
+								) => unknown
+							)(getPath(work.state, directive.path), work.state, tools)
+						: directive.update;
+				setPath(work.state, directive.path, structuredClone(update));
+				return null;
+			}
+			case "goto":
+				work.cursor = { scene: directive.scene.name, path: null, anchor: null, after: false };
+				return null;
+			case "call":
+				work.stack.push({ scene: work.cursor.scene, path, anchor: null, after: false });
+				work.cursor = { scene: directive.scene.name, path: null, anchor: null, after: false };
+				return null;
+			case "back":
+				return this.#return(work);
+			case "ending":
+				return { key: directive.key, scene: work.cursor.scene };
+			case "play":
+				this.#play(directive.asset, { volume: directive.volume, fade: directive.fade }, work.audio);
+				return null;
+			case "stop":
+				if (directive.channel === "music") work.audio.music = null;
+				else if (directive.asset === undefined) work.audio.ambience = [];
+				else
+					work.audio.ambience = work.audio.ambience.filter(
+						(track) => track.id !== directive.asset?.id,
+					);
+				return null;
+			default:
+				this.#stage(directive, work.stage);
+				return null;
+		}
+	}
+
+	/** Starts a track or a sound on its channel. */
+	#play(asset: AssetDeclaration, options: { volume?: number; fade?: number }, audio: Audio): void {
+		let track = withDefined({ id: asset.id, src: asset.src }, options);
+		if (asset.kind === "music") audio.music = track;
+		else if (asset.kind === "ambience") {
+			audio.ambience = [...audio.ambience.filter((entry) => entry.id !== asset.id), track];
+		} else {
+			this.#sounds += 1;
+			let sound = withDefined(
+				{ id: asset.id, src: asset.src, occurrence: `${this.#id}:${this.#sounds}` },
+				{ caption: asset.caption, volume: options.volume },
+			);
+			audio.sounds = [...audio.sounds, sound];
+		}
+	}
+
+	/** Applies a staging directive to the stage. */
+	#stage(directive: Directive, stage: Stage): void {
+		switch (directive.type) {
+			case "show": {
+				let scenery = withDefined<StageScenery>(
+					{ id: directive.asset.id, src: directive.asset.src },
+					{ transition: directive.transition },
+				);
+				if (directive.asset.kind === "background") stage.background = scenery;
+				else stage.image = scenery;
+				return;
+			}
+			case "hide":
+				stage.image = null;
+				return;
+			case "enter": {
+				let entering = withDefined<StageCharacter>(
+					{ id: directive.character.id, at: this.#runtime.position(directive.at), images: [] },
+					{
+						expression: directive.expression,
+						layers: directive.layers,
+						transition: directive.transition,
+					},
+				);
+				let placed = drawCharacter(directive.character, entering);
+				stage.characters = [...stage.characters.filter((entry) => entry.id !== placed.id), placed];
+				return;
+			}
+			case "exit":
+				stage.characters = stage.characters.filter((entry) => entry.id !== directive.character.id);
+				return;
+			case "express":
+				stage.characters = stage.characters.map((entry) => {
+					if (entry.id !== directive.character.id) return entry;
+					let changed = withDefined<StageCharacter>(
+						{ ...entry },
+						{
+							expression: directive.expression,
+							layers:
+								directive.layers === undefined
+									? undefined
+									: { ...entry.layers, ...directive.layers },
+							transition: directive.transition,
+						},
+					);
+					return drawCharacter(directive.character, changed);
+				});
+				return;
+			case "move":
+				stage.characters = stage.characters.map((entry) =>
+					entry.id === directive.character.id
+						? withDefined<StageCharacter>(
+								{ ...entry, at: this.#runtime.position(directive.at) },
+								{ transition: directive.transition },
+							)
+						: entry,
+				);
+				break;
+			default:
+				break;
+		}
+	}
+
+	/** Builds the frame for a stop, or `null` for a menu with no option to take. */
+	#frame(directive: Directive, work: Live, tools: PlayTools): StopFrame | null {
+		this.#frames += 1;
+		let id = `${this.#id}:${this.#frames}`;
+		let scene = work.cursor.scene;
+		let base = { id, scene, audio: structuredClone({ ...work.audio, voice: null }) };
+		switch (directive.type) {
+			case "say":
+			case "narrate": {
+				let speakers = directive.type === "say" ? directive.speakers : [];
+				let values =
+					typeof directive.values === "function"
+						? call(directive.values as StoredCallback<object>, work.state, tools)
+						: directive.values;
+				let voice =
+					speakers[0] === undefined ? null : this.#runtime.voice(speakers[0].id, directive.key);
+				let seen = this.#seen.has(`${scene}:${directive.key}`);
+				this.#seen.add(`${scene}:${directive.key}`);
+				let ids = new Set(speakers.map((speaker) => speaker.id));
+				return {
+					...base,
+					type: "line",
+					stage: frameStage(work.stage, ids),
+					audio: structuredClone({ ...work.audio, voice }),
+					speakers: speakers.map((speaker) =>
+						withDefined({ id: speaker.id, name: speaker.name }, { color: speaker.color }),
+					),
+					key: directive.key,
+					values:
+						values === undefined ? undefined : (structuredClone(values) as Record<string, unknown>),
+					voice,
+					seen,
+					advance: () => reply({ frame: id, kind: "advance" }),
+				};
+			}
+			case "choose": {
+				let options = this.#options(directive, work, tools);
+				if (!options.some((option) => !option.disabled)) return null;
+				return withDefined(
+					{
+						...base,
+						type: "choice" as const,
+						stage: frameStage(work.stage, new Set()),
+						options,
+						choose: (option: string) => reply({ frame: id, kind: "choose", option }),
+					},
+					{ prompt: directive.prompt, timeout: directive.timeout, default: directive.default },
+				);
+			}
+			case "wait":
+				return {
+					...base,
+					type: "pause",
+					stage: frameStage(work.stage, new Set()),
+					duration: directive.duration,
+					advance: () => reply({ frame: id, kind: "advance" }),
+				};
+			case "custom":
+				return {
+					...base,
+					type: "custom",
+					stage: frameStage(work.stage, new Set()),
+					interaction: directive.interaction.name,
+					input: parsedInput(directive.interaction, directive.input),
+					complete: (output: unknown) => reply({ frame: id, kind: "complete", output }),
+				} as StopFrame;
+			default:
+				return null;
+		}
+	}
+
+	/** The options a menu offers now: hidden ones removed, locked ones marked, taken `once` ones gone. */
+	#options(menu: ChooseDirective, work: Live, tools: PlayTools): FrameOption[] {
+		let scene = work.cursor.scene;
+		let offered: FrameOption[] = [];
+		for (let option of menu.options) {
+			let id = `${scene}:${option.key}`;
+			if (option.once && work.taken.includes(id)) continue;
+			let holds = option.when === undefined || call(option.when, work.state, tools);
+			if (!holds && option.visibility === "hidden") continue;
+			offered.push(
+				withDefined(
+					{ id: option.key, label: option.key, disabled: !holds, chosen: this.#chosen.has(id) },
+					{ reason: holds ? undefined : option.reason },
+				),
+			);
+		}
+		return offered;
+	}
+
+	/** A cursor as a save stores it: its scene and the anchor of the directive it stands on. */
+	#anchor(cursor: Cursor): StoryPosition {
+		if (cursor.path === null) return { scene: cursor.scene, line: cursor.anchor ?? "" };
+		let index = this.#runtime.loaded(cursor.scene);
+		let line = index?.anchors.get(JSON.stringify(cursor.path)) ?? "";
+		return { scene: cursor.scene, line };
+	}
+}
+
+/** Reports whether a directive stops the play for the player. */
+function isStop(directive: Directive): boolean {
+	return (
+		directive.type === "say" ||
+		directive.type === "narrate" ||
+		directive.type === "choose" ||
+		directive.type === "wait" ||
+		directive.type === "custom"
+	);
+}
+
+/** Calls a stored callback with the play's state. */
+function call<Value>(callback: StoredCallback<Value>, state: StateRecord, tools: PlayTools): Value {
+	return callback(state, tools);
+}
+
+/** Wraps a reply body so only the engine reads it. */
+function reply(body: Reply[typeof REPLY]): Reply {
+	return { [REPLY]: body };
+}
+
+/**
+ * The interaction input as its schema parses it. A scene's input is checked by the compiler,
+ * so a refusal here falls back to the input as written.
+ */
+function parsedInput(target: InteractionDeclaration, input: unknown): unknown {
+	let parsed = validate(target.input, input);
+	return isFailure(parsed) ? input : parsed.data;
+}
+
+/** Drops the facts that belong to one stop: transitions and the sounds it started. */
+function clearOneShots(work: Live): void {
+	let { background, image } = work.stage;
+	if (background !== null) delete background.transition;
+	if (image !== null) delete image.transition;
+	for (let character of work.stage.characters) delete character.transition;
+	work.audio.sounds = [];
+}
+
+/** The stage as a frame shows it, marking the speakers. */
+function frameStage(stage: Stage, speakers: Set<string>) {
+	return {
+		background: stage.background === null ? null : { ...stage.background },
+		image: stage.image === null ? null : { ...stage.image },
+		characters: stage.characters.map((character) => ({
+			...character,
+			speaking: speakers.has(character.id),
+		})),
+	};
+}
+
+/**
+ * Draws a character from its declaration: the named sprite (the first one by default), or the
+ * named variant of every layer (each layer's first by default), bottom to top.
+ *
+ * @param character - The declared character.
+ * @param entry - Where it stands and what it shows.
+ * @returns The entry with its images filled in.
+ */
+export function drawCharacter(
+	character: CharacterDeclaration,
+	entry: StageCharacter,
+): StageCharacter {
+	let image = character.image;
+	if (image.kind === "sprites") {
+		let names = Object.keys(image.sprites);
+		let expression =
+			entry.expression !== undefined && entry.expression in image.sprites
+				? entry.expression
+				: names[0];
+		if (expression === undefined) return { ...entry, images: [] };
+		return { ...entry, expression, images: [image.sprites[expression] as AssetSource] };
+	}
+	if (image.kind === "layers") {
+		let layers: Record<string, string> = {};
+		let images: AssetSource[] = [];
+		for (let [layer, variants] of Object.entries(image.layers)) {
+			let wanted = entry.layers?.[layer];
+			let variant = wanted !== undefined && wanted in variants ? wanted : Object.keys(variants)[0];
+			if (variant === undefined) continue;
+			layers[layer] = variant;
+			images.push(variants[variant] as AssetSource);
+		}
+		return { ...entry, layers, images };
+	}
+	return { ...entry, images: [] };
+}
+
+/**
+ * Copies the fields of `optional` that are defined onto `value`, so frames and saves carry no
+ * `undefined` keys.
+ */
+function withDefined<Value extends object>(value: Value, optional: Record<string, unknown>): Value {
+	let result = { ...value } as Record<string, unknown>;
+	for (let [key, field] of Object.entries(optional)) {
+		if (field !== undefined) result[key] = field;
+	}
+	return result as Value;
+}
