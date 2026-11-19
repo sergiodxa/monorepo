@@ -498,6 +498,7 @@
         "@sdxc/security-headers": "workspace:*",
         "@sdxc/seo": "workspace:*",
         "@sdxc/sitemap": "workspace:*",
+        "@sdxc/synth": "workspace:*",
         "@sdxc/trace-context": "workspace:*",
         "@sdxc/trailing-slash-middleware": "workspace:*",
         "@sdxc/u": "workspace:*",

@@ -9,10 +9,11 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
+import { seededRandom } from "@sdxc/synth";
+
 import type { Album, Artist, CoverPalette, Genre, Motif, Playlist } from "./data";
 
 import { ALBUMS, ARTISTS, GENRES, PLAYLISTS } from "./data";
-import { seededRandom } from "./synth";
 
 /** The drawing's side in user units; every motif draws inside it. */
 const SIZE = 300;

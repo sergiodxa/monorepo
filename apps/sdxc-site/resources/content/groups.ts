@@ -80,6 +80,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"markdown",
 			"math",
 			"diagram",
+			"synth",
 			"diff",
 			"emoji",
 			"yaml",

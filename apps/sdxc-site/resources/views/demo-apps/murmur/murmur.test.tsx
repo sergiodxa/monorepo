@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { renderSong } from "@sdxc/synth";
 import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
@@ -14,6 +15,7 @@ import { fetchApp } from "~/app/test/router";
 import {
 	ALBUMS,
 	PLAYLISTS,
+	SONG_SAMPLE_RATE,
 	TRACKS,
 	contextTracks,
 	findTrack,
@@ -21,7 +23,6 @@ import {
 	songSpec,
 } from "./data";
 import { listCookie, nowCookie, parseNowPlaying, readListener } from "./state";
-import { SAMPLE_RATE, encodeWav, renderSong } from "./synth";
 
 /** Posts a form to a Murmur action path with the given cookie. */
 async function post(page: string, fields: Record<string, string>, cookie = "") {
@@ -78,32 +79,18 @@ describe("Murmur's catalogue", () => {
 
 describe("Murmur's sound", () => {
 	test("writes the same samples for the same track every time, and different ones per track", () => {
-		let first = TRACKS[0]!;
-		let spec = { ...songSpec(first), duration: 12 };
-		let a = renderSong(spec);
-		let b = renderSong(spec);
-		let other = renderSong({ ...songSpec(TRACKS[1]!), duration: 12 });
-		expect(a.length).toBe(12 * SAMPLE_RATE);
-		expect(a).toEqual(b);
-		expect(a).not.toEqual(other);
+		let options = { sampleRate: SONG_SAMPLE_RATE };
+		let spec = { ...songSpec(TRACKS[0]!), duration: 12 };
+		let a = renderSong(spec, options);
+		expect(a.length).toBe(12 * SONG_SAMPLE_RATE);
+		expect(renderSong(spec, options)).toEqual(a);
+		expect(renderSong({ ...songSpec(TRACKS[1]!), duration: 12 }, options)).not.toEqual(a);
 	});
 
-	test("stays inside full scale and is not silent", () => {
-		let samples = renderSong({ ...songSpec(findTrack("harbor-lights-1")!), duration: 40 });
-		let peak = samples.reduce((max, value) => Math.max(max, Math.abs(value)), 0);
-		expect(peak).toBeLessThanOrEqual(1);
-		expect(peak).toBeGreaterThan(0.1);
-	});
-
-	test("wraps samples as a 16-bit mono WAV file", () => {
-		let bytes = encodeWav(new Float32Array([0, 1, -1]));
-		let view = new DataView(bytes.buffer);
-		expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("RIFF");
-		expect(view.getUint16(22, true)).toBe(1);
-		expect(view.getUint32(24, true)).toBe(SAMPLE_RATE);
-		expect(view.getInt16(46, true)).toBe(0x7fff);
-		expect(view.getInt16(48, true)).toBe(-0x8000);
-		expect(bytes.length).toBe(44 + 6);
+	test("plays each album in its own style and key", () => {
+		let spec = songSpec(findTrack("harbor-lights-1")!);
+		expect(spec.style).toBe("house");
+		expect(spec.duration).toBe(4 * 60 + 31);
 	});
 });
 

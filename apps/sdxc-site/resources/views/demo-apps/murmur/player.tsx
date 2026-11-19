@@ -27,6 +27,7 @@ import {
 	VolumeXIcon,
 	XIcon,
 } from "@sdxc/icons";
+import { encodeWav, renderSong } from "@sdxc/synth";
 import { raw } from "@sdxc/u/general";
 import {
 	PlayerBar,
@@ -54,10 +55,10 @@ import {
 	findAlbum,
 	findTrack,
 	href,
+	SONG_SAMPLE_RATE,
 	songSpec,
 } from "./data";
 import { NOW_COOKIE, nowPlayingValue, readListener } from "./state";
-import { encodeWav, renderSong } from "./synth";
 
 /** The id of the queue panel, a popover. */
 export const QUEUE_PANEL = "murmur-queue";
@@ -141,7 +142,10 @@ export const MurmurPlayer = clientEntry(
 		function sourceFor(track: Track): string {
 			let cached = sources.get(track.id);
 			if (cached !== undefined) return cached;
-			let bytes = encodeWav(renderSong(songSpec(track)));
+			let bytes = encodeWav(
+				renderSong(songSpec(track), { sampleRate: SONG_SAMPLE_RATE }),
+				SONG_SAMPLE_RATE,
+			);
 			let url = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
 			sources.set(track.id, url);
 			for (let [id, old] of sources) {

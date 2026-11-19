@@ -7,9 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Mode, SongSpec, Style } from "@sdxc/synth";
+
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 
-import type { Mode, SongSpec, Style } from "./synth";
+/**
+ * The sample rate every track renders at: a quarter of CD quality keeps a rendered track a few
+ * megabytes in memory, and these timbres lose nothing at it.
+ */
+export const SONG_SAMPLE_RATE = 22_050;
 
 /** The folder name the app is served under. */
 export const SLUG = "murmur";
