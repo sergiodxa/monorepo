@@ -114,7 +114,15 @@ interface TextShape {
 type Shape = RectShape | CircleShape | LineShape | PathShape | StrokeShape | TextShape;
 
 /** Module a catalogue entry ships from; drives the default stage composition. */
-type ModuleKind = "components" | "app" | "docs" | "landing" | "chat" | "color" | "video" | "commerce";
+type ModuleKind =
+	| "components"
+	| "app"
+	| "docs"
+	| "landing"
+	| "chat"
+	| "color"
+	| "video"
+	| "commerce";
 
 /** Quiet stage wash in the site's brand hue — one step off the card, like DemoMiniature. */
 const WASH = {
