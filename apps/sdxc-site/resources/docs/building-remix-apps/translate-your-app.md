@@ -177,6 +177,25 @@ export default createAction(routes.welcome, (ctx) =>
 );
 ```
 
+Markup can carry options. `{#docs href=$url}` hands the element an `href` from the message's
+values, and a literal such as `{#pause ms=400/}` arrives as the string `"400"`. An option fills
+in only what the element leaves unset, so `<a href="/safe" />` keeps its own `href`. When the
+markup needs logic, pass a component instead of an element; it receives the markup's `name`,
+its `options` and the enclosed `children`:
+
+```tsx {% title="resources/components/pause.tsx" %}
+import type { Handle } from "remix/component";
+
+import { Trans } from "@sdxc/i18n/ui";
+
+export function Pause(handle: Handle<Trans.MarkupProps>) {
+	return () => <span data-pause={Number(handle.props.options.ms ?? 400)} />;
+}
+```
+
+Then `<Trans i18nKey="story.wait" components={{ pause: Pause }} />` renders each `{#pause/}`
+through it, and the values type-check against the variables every option reads.
+
 ## Reach the translator from any component
 
 `IntlProvider` publishes the translator through context, and `intl(handle)` reads it back
