@@ -9,11 +9,13 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { ClockIcon, MinusIcon, PlusIcon, ShoppingBagIcon, StarIcon, TrashIcon } from "@sdxc/icons";
+import { ClockIcon, ShoppingBagIcon, StarIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 import { Badge, LinkButton } from "@sdxc/ui";
+import { CartLine } from "@sdxc/ui/commerce/cart-line";
+import { QuantityStepper } from "@sdxc/ui/commerce/quantity-stepper";
 
 import type { Cuisine, Line, Restaurant } from "./data";
 import type { Cart } from "./state";
@@ -459,173 +461,50 @@ export function CuisineChips(handle: Handle<CuisineChips.Props>) {
 	};
 }
 
-/** The look of a stepper's round button. */
-function stepButton() {
-	return [
-		raw({
-			display: "inline-grid",
-			placeItems: "center",
-			inlineSize: "2rem",
-			blockSize: "2rem",
-			padding: "0",
-			border: "0",
-			borderRadius: "999px",
-			color: "var(--ui-neutral-fg-emphasis)",
-			backgroundColor: "var(--ui-neutral-bg-subtle)",
-			cursor: "pointer",
-		}),
-		when(
-			"&:hover",
-			raw({ backgroundColor: "var(--ui-neutral-bg-tint-hover, var(--ui-neutral-bg-muted))" }),
-		),
-		when(
-			"&:focus-visible",
-			raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "1px" }),
-		),
-		when("&:disabled", raw({ opacity: "0.4", cursor: "not-allowed" })),
-	];
-}
-
-namespace LineStepper {
+namespace BocadoCartLine {
 	export interface Props {
-		/** The line's place in the cart. */
-		index: number;
+		cart: Cart;
 		line: Line;
-		name: string;
-		/** The page the post returns to. */
+		/** The line's place in the cart, which its stepper's posts name. */
+		index: number;
+		/** The page the stepper's posts return to. */
 		back: string;
 	}
 }
 
 /**
- * A cart line's − count + control. Each button is a post naming the new count, so it works
- * without script; at one, − becomes a bin that removes the line.
+ * One cart line: the dish's picture on its restaurant's tint, its name, picks and price, and
+ * a stepper whose posts set the line's count.
  */
-export function LineStepper(handle: Handle<LineStepper.Props>) {
-	return () => {
-		let { back, index, line, name } = handle.props;
-		return (
-			<form
-				method="post"
-				action={actionHref("cart/line")}
-				mix={[
-					raw({
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "0.25rem",
-						padding: "0.125rem",
-						borderRadius: "999px",
-						boxShadow: "inset 0 0 0 1px var(--ui-neutral-border)",
-					}),
-				]}
-			>
-				<input type="hidden" name="line" value={String(index)} />
-				<input type="hidden" name="back" value={back} />
-				<button
-					type="submit"
-					name="qty"
-					value={String(line.qty - 1)}
-					aria-label={line.qty === 1 ? `Remove ${name}` : `One fewer ${name}`}
-					mix={stepButton()}
-				>
-					{line.qty === 1 ? (
-						<TrashIcon aria-hidden="true" size={15} />
-					) : (
-						<MinusIcon aria-hidden="true" size={15} />
-					)}
-				</button>
-				<output
-					aria-label={`${line.qty} of ${name}`}
-					mix={[
-						raw({
-							minInlineSize: "1.5rem",
-							textAlign: "center",
-							fontWeight: "700",
-							fontVariantNumeric: "tabular-nums",
-						}),
-					]}
-				>
-					{line.qty}
-				</output>
-				<button
-					type="submit"
-					name="qty"
-					value={String(line.qty + 1)}
-					aria-label={`One more ${name}`}
-					disabled={line.qty >= MAX_QTY}
-					mix={stepButton()}
-				>
-					<PlusIcon aria-hidden="true" size={15} />
-				</button>
-			</form>
-		);
-	};
-}
-
-/** One cart line: the dish's art, name, picks and price, and its stepper. */
-export function CartLine(handle: Handle<{ cart: Cart; line: Line; index: number; back: string }>) {
+export function BocadoCartLine(handle: Handle<BocadoCartLine.Props>) {
 	return () => {
 		let { back, cart, index, line } = handle.props;
 		let entry = findItem(cart.restaurant, line.item);
 		if (entry === undefined) return null;
 		let picks = choiceSummary(cart.restaurant, line);
 		return (
-			<li
+			<CartLine
 				data-cart-line={line.item}
-				mix={[
-					raw({
-						display: "grid",
-						gridTemplateColumns: "3rem minmax(0, 1fr) auto",
-						alignItems: "center",
-						gap: "0.75rem",
-						paddingBlock: "0.75rem",
-						borderBlockEnd: "1px solid var(--ui-neutral-border-subtle, var(--ui-neutral-border))",
-					}),
-				]}
-			>
-				<span
-					mix={[
-						raw({
-							display: "grid",
-							placeItems: "center",
-							inlineSize: "3rem",
-							blockSize: "3rem",
-							borderRadius: "0.75rem",
-							backgroundColor: cart.restaurant.tones[0],
-							padding: "0.25rem",
-							boxSizing: "border-box",
-						}),
-					]}
-				>
-					<DishArt dish={entry.dish} />
-				</span>
-				<span mix={[raw({ display: "grid", gap: "0.125rem", minInlineSize: "0" })]}>
-					<span mix={[raw({ fontWeight: "650", color: "var(--ui-neutral-fg-emphasis)" })]}>
-						{entry.name}
-					</span>
-					{picks === "" ? null : (
-						<span
-							mix={[
-								raw({
-									fontSize: "0.8125rem",
-									color: "var(--ui-neutral-fg-muted)",
-									lineHeight: "1.35",
-								}),
-							]}
-						>
-							{picks}
-						</span>
-					)}
-					<span
-						mix={[
-							raw({ fontSize: "0.875rem", fontWeight: "600", fontVariantNumeric: "tabular-nums" }),
-						]}
-					>
-						{money(lineTotal(cart.restaurant, line))}
-					</span>
-				</span>
-				<LineStepper index={index} line={line} name={entry.name} back={back} />
-			</li>
+				name={entry.name}
+				details={picks === "" ? undefined : picks}
+				price={money(lineTotal(cart.restaurant, line))}
+				media={<DishArt dish={entry.dish} />}
+				mediaBackground={cart.restaurant.tones[0]}
+				action={
+					<QuantityStepper
+						action={actionHref("cart/line")}
+						value={line.qty}
+						max={MAX_QTY}
+						fields={{ line: String(index), back }}
+						labels={{
+							fewer: `One fewer ${entry.name}`,
+							more: `One more ${entry.name}`,
+							remove: `Remove ${entry.name}`,
+							count: `${line.qty} of ${entry.name}`,
+						}}
+					/>
+				}
+			/>
 		);
 	};
 }
@@ -713,7 +592,7 @@ export function CartPanel(handle: Handle<CartPanel.Props>) {
 				) : null}
 				<ul mix={[raw({ margin: "0", padding: "0", listStyle: "none" })]}>
 					{cart.lines.map((line, index) => (
-						<CartLine cart={cart} line={line} index={index} back={back} />
+						<BocadoCartLine cart={cart} line={line} index={index} back={back} />
 					))}
 				</ul>
 				<div

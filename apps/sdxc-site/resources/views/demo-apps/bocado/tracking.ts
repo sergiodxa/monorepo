@@ -84,17 +84,6 @@ export function orderProgress(order: Order, now: number): Progress {
 	return progressAt((now - order.placedAt) / 1000);
 }
 
-/**
- * Where a step stands against the step reached: behind it, at it, or still ahead.
- *
- * @param index The step's place in {@link STEPS}.
- * @param reached The place of the step reached.
- */
-export function stepState(index: number, reached: number): "done" | "current" | "todo" {
-	if (index < reached) return "done";
-	return index === reached ? "current" : "todo";
-}
-
 /** How often the stream reports the courier, in milliseconds. */
 const TICK_MS = 1000;
 

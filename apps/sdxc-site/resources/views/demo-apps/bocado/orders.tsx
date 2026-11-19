@@ -11,7 +11,6 @@ import type { Handle } from "remix/component";
 
 import {
 	BikeIcon,
-	CheckIcon,
 	MessageCircleIcon,
 	PhoneIcon,
 	RotateCcwIcon,
@@ -20,9 +19,9 @@ import {
 	HouseIcon,
 } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
-import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 import { LinkButton } from "@sdxc/ui";
+import { OrderLive, OrderSteps } from "@sdxc/ui/commerce/order-tracker";
 import { MapCanvas } from "@sdxc/ui/map-canvas";
 
 import type { Address, Order, Restaurant } from "./data";
@@ -42,8 +41,7 @@ import {
 } from "./data";
 import { CARD_RADIUS, Gutter } from "./parts";
 import { choiceSummary, lineCount, priceLines } from "./state";
-import { TrackLive } from "./track-live";
-import { COURIER, STEPS, orderProgress, stepState } from "./tracking";
+import { COURIER, STEPS, orderProgress } from "./tracking";
 
 /** The id of the element the live island updates. */
 const TRACK_ROOT = "bocado-track";
@@ -208,61 +206,6 @@ export function orderNumber(order: Order): string {
 	return `#${order.id.replaceAll("-", "").slice(-6).toUpperCase()}`;
 }
 
-/** The look of one timeline row by its state. */
-function stepRow() {
-	return [
-		raw({
-			position: "relative",
-			display: "grid",
-			gridTemplateColumns: "1.5rem minmax(0, 1fr)",
-			gap: "0.875rem",
-			paddingBlockEnd: "1.125rem",
-			color: "var(--ui-neutral-fg-muted)",
-			"&:last-child": { paddingBlockEnd: "0" },
-			"&::before": {
-				content: '""',
-				position: "absolute",
-				insetInlineStart: "calc(0.75rem - 1px)",
-				insetBlockStart: "1.5rem",
-				insetBlockEnd: "0",
-				inlineSize: "2px",
-				backgroundColor: "var(--ui-neutral-border)",
-			},
-			"&:last-child::before": { display: "none" },
-			"& [data-dot]": {
-				display: "grid",
-				placeItems: "center",
-				inlineSize: "1.5rem",
-				blockSize: "1.5rem",
-				borderRadius: "999px",
-				boxShadow: "inset 0 0 0 2px var(--ui-neutral-border)",
-				backgroundColor: "var(--ui-bg-raised, var(--ui-bg))",
-				color: "transparent",
-				transition: "background-color 300ms ease, box-shadow 300ms ease",
-			},
-			"&[data-state='done']": { color: "var(--ui-neutral-fg)" },
-			"&[data-state='done']::before": { backgroundColor: "var(--ui-color-brand-600)" },
-			"&[data-state='done'] [data-dot]": {
-				color: "white",
-				backgroundColor: "var(--ui-color-brand-600)",
-				boxShadow: "none",
-			},
-			"&[data-state='current']": { color: "var(--ui-neutral-fg-emphasis)", fontWeight: "700" },
-			"&[data-state='current'] [data-dot]": {
-				boxShadow: "inset 0 0 0 6px var(--ui-color-brand-600)",
-				animation: "bocado-pulse 1.6s ease-out infinite",
-			},
-			"@keyframes bocado-pulse": {
-				"0%": {
-					outline: "0 solid color-mix(in oklch, var(--ui-color-brand-500) 50%, transparent)",
-				},
-				"100%": { outline: "10px solid transparent" },
-			},
-		}),
-		motionReduce(raw({ "& [data-dot]": { transition: "none", animation: "none !important" } })),
-	];
-}
-
 namespace TrackingPage {
 	export interface Props {
 		order: Order;
@@ -281,13 +224,12 @@ export function TrackingPage(handle: Handle<TrackingPage.Props>) {
 		let address = findAddress(order.address)!;
 		let payment = findPayment(order.payment);
 		let progress = orderProgress(order, now);
-		let reached = STEPS.indexOf(progress.step);
 		let totals = priceLines(restaurant, order.lines, { tip: order.tip, priority: order.priority });
 		return (
 			<Gutter>
 				<div
 					id={TRACK_ROOT}
-					data-track-state={progress.step.id}
+					data-order-state={progress.step.id}
 					mix={[
 						raw({
 							display: "grid",
@@ -327,7 +269,7 @@ export function TrackingPage(handle: Handle<TrackingPage.Props>) {
 									{restaurant.name} · {orderNumber(order)}
 								</p>
 								<h1
-									data-track-headline=""
+									data-order-headline=""
 									aria-live="polite"
 									mix={[
 										raw({
@@ -363,12 +305,12 @@ export function TrackingPage(handle: Handle<TrackingPage.Props>) {
 											letterSpacing: "0.06em",
 										}),
 									]}
-									data-track-eta-label=""
+									data-order-eta-label=""
 								>
 									{progress.done ? "Delivered" : "Arriving in"}
 								</span>
 								<span
-									data-track-eta=""
+									data-order-eta=""
 									mix={[
 										raw({
 											fontSize: "1.375rem",
@@ -495,24 +437,7 @@ export function TrackingPage(handle: Handle<TrackingPage.Props>) {
 							>
 								Order status
 							</h2>
-							<ol mix={[raw({ margin: "0", padding: "0", listStyle: "none" })]}>
-								{STEPS.map((step, index) => {
-									let state = stepState(index, reached);
-									return (
-										<li
-											data-track-step={step.id}
-											data-state={state}
-											aria-current={state === "current" ? "step" : undefined}
-											mix={stepRow()}
-										>
-											<span data-dot="">
-												<CheckIcon aria-hidden="true" size={13} />
-											</span>
-											<span mix={[raw({ alignSelf: "center" })]}>{step.label}</span>
-										</li>
-									);
-								})}
-							</ol>
+							<OrderSteps steps={[...STEPS]} current={progress.step.id} />
 						</section>
 						<section
 							aria-labelledby="bocado-receipt"
@@ -596,11 +521,17 @@ export function TrackingPage(handle: Handle<TrackingPage.Props>) {
 					</div>
 				</div>
 				{progress.done ? null : (
-					<TrackLive
+					<OrderLive
 						src={streamHref(`orders/${order.id}`)}
 						root={TRACK_ROOT}
 						steps={STEPS.map((step) => step.id)}
 						headlines={Object.fromEntries(STEPS.map((step) => [step.id, step.headline]))}
+						labels={{
+							arriving: "Arriving in",
+							arrived: "Delivered",
+							done: "Arrived",
+							minutes: "{n} min",
+						}}
 					/>
 				)}
 			</Gutter>
