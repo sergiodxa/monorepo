@@ -31,12 +31,15 @@ export interface SpanItem {
 	last: number;
 }
 
+/** The shortest length an event takes up on the grid, the height of one line of its title. */
+const MIN_BLOCK_MINUTES = 30;
+
 /**
- * The end a placement compares against: a zero-length event still blocks the minute it marks,
- * so two events at the same instant never draw on top of each other.
+ * The end a placement compares against: a short event still blocks the half hour its block is
+ * drawn over, so a 15-minute standup sits beside the event right after it instead of under it.
  */
 function blockingEnd(item: TimedItem): number {
-	return Math.max(item.end, item.start + 1);
+	return Math.max(item.end, item.start + MIN_BLOCK_MINUTES);
 }
 
 /** Whether two events share any minute. */

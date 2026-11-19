@@ -309,3 +309,66 @@ describe("TimeGrid editing", () => {
 		});
 	});
 });
+
+describe("short events", () => {
+	/** A 45-minute run with a place, and a 15-minute standup right before a long block. */
+	const SHORT: TimeGridTypes.Event[] = [
+		{
+			id: "run",
+			date: "2026-11-18",
+			start: 420,
+			end: 465,
+			title: "Easy run",
+			time: "7:00 – 7:45 AM",
+			detail: "Hudson River path",
+		},
+		{
+			id: "standup",
+			date: "2026-11-18",
+			start: 570,
+			end: 585,
+			title: "Standup",
+			time: "9:30 – 9:45 AM",
+		},
+		{
+			id: "focus",
+			date: "2026-11-18",
+			start: 585,
+			end: 705,
+			title: "Focus: write the brief",
+			time: "9:45 – 11:45 AM",
+		},
+	];
+
+	/** The lines of a block the browser draws, each with its box. */
+	function visibleLines(element: HTMLElement): DOMRect[] {
+		return [...element.querySelectorAll<HTMLElement>(":scope > :first-child > span")]
+			.filter((line) => getComputedStyle(line).display !== "none")
+			.map((line) => line.getBoundingClientRect());
+	}
+
+	test("shows only the lines that fit, each whole, inside its block", async () => {
+		let grid = mount({ events: SHORT, scrollTo: 420 });
+		await expect
+			.poll(() => getComputedStyle(block(grid, "run")).containerName)
+			.toBe("ui-time-grid-event");
+		for (let id of ["run", "standup", "focus"]) {
+			let box = block(grid, id).getBoundingClientRect();
+			let lines = visibleLines(block(grid, id));
+			expect(lines.length).toBeGreaterThan(0);
+			for (let line of lines) {
+				expect(line.top).toBeGreaterThanOrEqual(box.top);
+				expect(line.bottom).toBeLessThanOrEqual(box.bottom + 0.5);
+				expect(line.height).toBeGreaterThanOrEqual(15);
+			}
+		}
+		expect(visibleLines(block(grid, "standup"))).toHaveLength(1);
+	});
+
+	test("sets a 15-minute event beside the one right after it", () => {
+		let grid = mount({ events: SHORT });
+		let standup = block(grid, "standup").getBoundingClientRect();
+		let focus = block(grid, "focus").getBoundingClientRect();
+		expect(standup.right <= focus.left || standup.bottom <= focus.top).toBe(true);
+	});
+});

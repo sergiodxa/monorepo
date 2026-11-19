@@ -51,6 +51,15 @@ describe("layoutTimedItems", () => {
 		expect(layout.get("b")?.columns).toBe(1);
 	});
 
+	test("sets a short event beside the one right after it, since its block is drawn taller", () => {
+		let layout = layoutTimedItems([
+			{ id: "standup", start: 570, end: 585 },
+			{ id: "focus", start: 585, end: 705 },
+		]);
+		expect(layout.get("standup")).toEqual({ column: 0, columns: 2, span: 1 });
+		expect(layout.get("focus")).toEqual({ column: 1, columns: 2, span: 1 });
+	});
+
 	test("sets two events at the same instant side by side, zero-length ones included", () => {
 		let layout = layoutTimedItems([
 			{ id: "a", start: 540, end: 540 },

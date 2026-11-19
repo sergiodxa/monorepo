@@ -26,6 +26,15 @@ const HOUR = "var(--ui-time-grid-hour, 3rem)";
 /** The width of one time zone's column of hour labels. */
 const GUTTER = "var(--ui-time-grid-gutter, 3.5rem)";
 
+/**
+ * An event block too short for its title and time on two lines: the time joins the title on one
+ * line, which every block keeps fully readable however short.
+ */
+const ONE_LINE = "@container ui-time-grid-event (height < 2.5rem)";
+
+/** An event block too short for a third line, which drops its detail (a place or a note). */
+const TWO_LINES = "@container ui-time-grid-event (height < 3.5rem)";
+
 /** Minutes in a day, the column's full height. */
 const DAY_MINUTES = 1440;
 
@@ -738,7 +747,6 @@ function EventBlock(
 ) {
 	return () => {
 		let { id, event, place, movable } = handle.props;
-		let short = event.end - event.start < 45;
 		let popoverId = event.popover === undefined ? undefined : `${id}-event-${event.id}-popover`;
 		let left = (place.column / place.columns) * 100;
 		let width = (place.span / place.columns) * 100;
@@ -752,13 +760,13 @@ function EventBlock(
 				data-editable={event.editable && movable ? "" : undefined}
 				data-tentative={event.tentative ? "" : undefined}
 				data-past={event.past ? "" : undefined}
-				data-short={short ? "" : undefined}
 				style={`${tint(event.color)}; top: ${minutes(event.start)}; height: max(1.25rem, ${minutes(Math.min(DAY_MINUTES, event.end) - event.start)}); left: calc(${left}% + 1px); width: calc(${width}% - 3px)`}
 				mix={[
 					BLOCK,
 					raw({
 						position: "absolute",
 						zIndex: "1",
+						container: "ui-time-grid-event / size",
 						transition: "box-shadow 120ms, opacity 120ms",
 						"&:hover": {
 							backgroundColor:
@@ -790,36 +798,55 @@ function EventBlock(
 						data-slot="time-grid-title"
 						mix={[
 							raw({
+								flexShrink: "0",
 								fontWeight: "600",
 								overflow: "hidden",
 								textOverflow: "ellipsis",
-								"[data-short] &": { whiteSpace: "nowrap" },
+								[ONE_LINE]: { whiteSpace: "nowrap" },
 							}),
 						]}
 					>
 						{event.title}
-						{short && event.time !== undefined ? (
-							<span mix={[raw({ fontWeight: "400", opacity: "0.8" })]}>{`, ${event.time}`}</span>
-						) : null}
+						{event.time === undefined ? null : (
+							<span
+								mix={[
+									raw({
+										display: "none",
+										fontWeight: "400",
+										opacity: "0.8",
+										[ONE_LINE]: { display: "inline" },
+									}),
+								]}
+							>{`, ${event.time}`}</span>
+						)}
 					</span>
-					{short || event.time === undefined ? null : (
+					{event.time === undefined ? null : (
 						<span
 							aria-hidden="true"
 							data-slot="time-grid-time"
-							mix={[raw({ opacity: "0.8", whiteSpace: "nowrap" })]}
+							mix={[
+								raw({
+									flexShrink: "0",
+									opacity: "0.8",
+									whiteSpace: "nowrap",
+									[ONE_LINE]: { display: "none" },
+								}),
+							]}
 						>
 							{event.time}
 						</span>
 					)}
-					{short || event.detail === undefined ? null : (
+					{event.detail === undefined ? null : (
 						<span
 							aria-hidden="true"
 							mix={[
 								raw({
+									flexShrink: "0",
 									opacity: "0.8",
 									whiteSpace: "nowrap",
 									overflow: "hidden",
 									textOverflow: "ellipsis",
+									[TWO_LINES]: { display: "none" },
 								}),
 							]}
 						>
