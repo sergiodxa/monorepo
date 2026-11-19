@@ -739,7 +739,8 @@ transitions are presentation the player configures.
 - [x] Phase 1: Declarations and the engine
 - [x] Phase 2: Saves, persistence and events
 - [x] Phase 3: Static checks and exploration
-- [ ] Phase 4: The player UI
+- [ ] Phase 4: The player UI (steps 1 and 2 done: the player, stage, textbox, menus, audio, auto, skip,
+      backlog, rollback, saves, settings and full screen; step 3's screens remain)
 - [ ] Phase 5: Loading and developer tools
 - [ ] Phase 6: Offline
 
@@ -855,3 +856,52 @@ Made while building Phases 2 and 3, without a review, where this ADR left the de
   them, and missing messages are checked on every shown frame and every entered scene's titles.
 - **`createTestPlay` logs the play's events** through a sink of its own while the novel's
   listeners still receive them, takes `persistent` like `start()`, and gains `save` and `follow`.
+
+### Phase 4 decisions
+
+Made while building steps 1 and 2 of Phase 4, without a review, where this ADR left the detail open:
+
+- **`NovelPlayer` is a plain component, not a client entry.** A novel holds functions and cannot be
+  serialized, so the app's own `clientEntry` renders it, as the page example above already does.
+- **The typewriter paints instead of mutating the DOM.** The whole line renders through `Trans` at
+  once and the unrevealed rest is a range in the `novel-unrevealed` CSS highlight, painted
+  transparent: the line keeps its final layout, the live region holds the whole text, and markup
+  effects keep running.
+- **Markup shipped:** `b`, `i`, `shake` (a looping CSS animation), `speed` (half speed inside it) and
+  standalone `pause` (400ms, or `data-novel-pause` on an app's own element). `Trans` drops markup
+  options, so `{#speed rate=…}` cannot carry a rate; an app passes its own elements through `markup`.
+- **Built-in scenery transitions are View Transitions typed `novel-<name>`** over layers named per
+  player with the `novel-scenery` class; the root snapshot does not animate during them. A custom
+  name is the class on the new image. Characters animate through CSS transitions with
+  `@starting-style` (fade, slide in from the nearer edge, a `left` transition for a move), and a
+  removed character or replaced sprite fades out through `persistNode`, since a frame does not say
+  how a character exited.
+- **A frame waits only for the stage's finite animations**; the interface over it (textbox, menu
+  countdown, interaction) and looping effects are left out. Rollback, error frames, skip and
+  reduced motion present a frame at once.
+- **Auto mode waits for the typewriter, the voice and self-voicing**, then `autoDelay` (default
+  1000ms) plus 25ms per character for an unvoiced line.
+- **Skip stops itself** at an unread line in read-only mode, at a menu and at an interaction; held
+  Control resumes it while held. Sounds a skipped frame started are recorded as played, unheard.
+- **Keys:** Space/Enter advance, `a` auto, `k` skip (Tab stays focus navigation), ↑/PageUp and the
+  wheel up roll back, the wheel down advances, ←/`l` backlog, `q`/`w` quick save and load, `s`/`o`
+  save and load screens, `h` hide, `f` full screen, Escape settings. Keys stand down while a dialog
+  or a field has focus. Touch: a tap advances, a downward swipe opens the backlog, an upward swipe
+  rolls back. Gamepad (standard mapping): A presses the focused control or advances, B closes a
+  dialog or hides the interface, LB rolls back, RB skips, Start opens settings, the D-pad moves
+  focus.
+- **Saves go through `play.save(slot)`**, so they reach the novel's `save` event, and also through
+  an `onSave` prop; the app passes stored saves back through `saves`. Slots are `quick` plus `slots`
+  numbered ones (default 6), and loading carries the current play's persistent data over.
+- **Settings are one JSON object** (`textSpeed` in characters per second with `0` for instant,
+  `autoDelay`, `skip`, five volumes, `fontSize`, `dyslexiaFont`, `selfVoicing`), completed with
+  defaults from whatever the app stored.
+- **The interface's own words are a `labels` prop with English defaults**, since the story's catalog
+  belongs to the app; the screens are built from `@sdxc/ui`'s `Dialog`, `Slider`, `Switch` and
+  `Select`, so a game loads `@sdxc/ui/theme.css`.
+- **The dyslexia-friendly font is a stack** (`OpenDyslexic`, `Atkinson Hyperlegible`, `Lexend`,
+  Verdana) with wider tracking and spacing; the package ships no font file.
+- **A localized asset falls back** from the exact locale to its language, then to the map's first
+  file.
+- **Browser tests declare their own small novel** with the keys of the package fixture's
+  `NovelTypes` augmentation, which every file of the package shares when it is type checked.
