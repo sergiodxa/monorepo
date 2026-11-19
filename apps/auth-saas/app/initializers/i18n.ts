@@ -15,6 +15,13 @@ import en from "~/resources/locales/en";
 /** The language a reader asking for none the app speaks receives; the only bundle shipped today. */
 export const FALLBACK_LANGUAGE = "en";
 
+declare module "@sdxc/i18n" {
+	/** Types every translator's keys and values by the English bundle, the only one shipped. */
+	interface I18nTypes {
+		messages: typeof en;
+	}
+}
+
 /**
  * Binds a reader's language to its translator: `translate(locale).t("mail.footer", …)`. One
  * instance is kept per language, so a sweep mailing every tenant's owners builds it once; a

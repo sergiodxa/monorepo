@@ -20,7 +20,7 @@ export default createEmail(emails.owners.credentialsExportStarted, {
 		return (
 			<AuthMailLayout
 				title={t("mail.credentialsExportStarted.subject", { tenantName })}
-				preview={t("mail.credentialsExportStarted.preview", { tenantName })}
+				preview={t("mail.credentialsExportStarted.preview")}
 				tenantName={tenantName}
 				t={t}
 			>
