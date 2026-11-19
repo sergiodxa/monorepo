@@ -45,6 +45,8 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/app/toasts": () => import("@sdxc/ui/app/toasts"),
 	"@sdxc/ui/character-count": () => import("@sdxc/ui/character-count"),
 	"@sdxc/ui/chat/composer-submit": () => import("@sdxc/ui/chat/composer-submit"),
+	"@sdxc/ui/commerce/option-group": () => import("@sdxc/ui/commerce/option-group"),
+	"@sdxc/ui/commerce/order-tracker": () => import("@sdxc/ui/commerce/order-tracker"),
 	"@sdxc/ui/confirm": () => import("@sdxc/ui/confirm"),
 	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),
 	"@sdxc/ui/docs/code-tabs-sync": () => import("@sdxc/ui/docs/code-tabs-sync"),
