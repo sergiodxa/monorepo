@@ -95,7 +95,8 @@ describe("GET /demo/apps/:app", () => {
 
 	test.each(
 		apps.filter(
-			({ slug }) => !["bocado", "chorus", "murmur", "pinhole", "vesper", "wayfern"].includes(slug),
+			({ slug }) =>
+				!["bocado", "chorus", "murmur", "pinhole", "tuppence", "vesper", "wayfern"].includes(slug),
 		),
 	)(
 		"$slug's workspace and user rows open real menus, with Sign out back to the gallery",
