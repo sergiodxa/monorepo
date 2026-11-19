@@ -7,6 +7,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./dev": "./src/dev.tsx",
+		"./offline": "./src/offline.ts",
+		"./offline/worker": "./src/offline/worker.ts",
 		"./test": "./src/test.ts",
 		"./ui": "./src/ui.tsx"
 	},

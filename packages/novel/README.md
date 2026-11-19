@@ -130,6 +130,7 @@ createNovel({
 - `@sdxc/novel/ui`: `NovelPlayer` and the parts it is built from (`Stage`, `Textbox`, `ChoiceMenu`, `Backlog`, `SaveScreen`, `SettingsScreen`, `QuickMenu`, `AudioMixer`), as `remix/component` components.
 - `@sdxc/novel/test`: `createTestPlay`, which drives a play by naming each reply; `check`, the static checks over every scene; and `explore`, which plays every combination of choices.
 - `@sdxc/novel/dev`: `createDevTools` and the `NovelDevTools` panel, for development builds only.
+- `@sdxc/novel/offline` and `@sdxc/novel/offline/worker`: `registerOffline` for the page and `serveOffline` for an opt-in service worker.
 
 ```typescript
 import { check, createTestPlay, explore } from "@sdxc/novel/test";
@@ -197,4 +198,22 @@ import.meta.hot?.accept(["./scenes/opening.ts", "./scenes/cafe.ts"], (modules) =
 	devtools.reload(modules),
 );
 <NovelDevTools devtools={devtools} />;
+```
+
+## Offline
+
+The app's worker script calls `serveOffline()`, and the page registers it with `registerOffline()`, which sends the novel's declared files (add voice files through `extra`). The worker caches only those files and the scene module chunks `modules` names, as they are first fetched: content-hashed files (`/assets/<name>-<hash>.<ext>`) cache-first, any other file from the network first with the cache as its offline fallback. It never answers a navigation, deletes older versions' caches on activation, and keeps an optional `budget` in bytes by evicting the least recently used files.
+
+```typescript
+// sw.ts, built as its own entry and served from the game's scope
+import { serveOffline } from "@sdxc/novel/offline/worker";
+serveOffline({
+	version: BUILD_ID,
+	budget: 200_000_000,
+	modules: (url) => url.pathname.startsWith("/assets/scenes/"),
+});
+
+// the page
+import { registerOffline } from "@sdxc/novel/offline";
+await registerOffline(novel, { url: "/sw.js", type: "module", extra: Object.values(VOICES) });
 ```
