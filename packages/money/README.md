@@ -10,36 +10,61 @@ npm add @sdxc/money
 
 ## Usage
 
-Hold every amount as an integer of the currency's minor unit (cents, pence, whole yen) with
-its ISO 4217 code, and let the package do the arithmetic and the text.
+### Format an amount
 
-```typescript
-import { allocate, formatAmount, parseAmount } from "@sdxc/money";
-
-let total = parseAmount("84.20", "EUR"); // 8420
-let shares = allocate(8420, 3); // [2807, 2807, 2806]
-formatAmount(shares[0]!, "EUR", { locale: "en-IE" }); // "€28.07"
-```
-
-A tip and a converted total:
-
-```typescript
-import { convert, formatAmount, percentOf } from "@sdxc/money";
-
-let subtotal = 4280;
-let tip = percentOf(subtotal, 15); // 642
-let inPounds = convert(subtotal + tip, "EUR", "GBP", 0.8538); // 4202
-formatAmount(inPounds, "GBP"); // "£42.02"
-```
-
-A statement row, with money in marked and money out plain:
+Hold every amount as an integer of its currency's minor unit (cents for euros, whole yen for
+yen) beside its ISO 4217 code, and turn it into text only when you show it.
 
 ```typescript
 import { formatAmount } from "@sdxc/money";
 
-formatAmount(210000, "EUR", { sign: "ledger" }); // "+€2,100.00"
-formatAmount(-2340, "EUR", { sign: "ledger" }); // "€23.40"
-formatAmount(-2340, "EUR"); // "−€23.40", with U+2212
+formatAmount(4250, "EUR"); // "€42.50"
+formatAmount(4250, "JPY"); // "¥4,250"
+formatAmount(-2340, "EUR", { locale: "de-DE" }); // "−23,40 €", with a true minus
+```
+
+### Read an amount someone typed
+
+```typescript
+import { parseAmount } from "@sdxc/money";
+
+parseAmount("42.50", "EUR"); // 4250
+parseAmount("1.204,50 €", "EUR", { locale: "de-DE" }); // 120450
+parseAmount("42.505", "EUR"); // null: euros have two decimals
+parseAmount("-5", "EUR"); // null
+```
+
+### Split a total so the shares add back
+
+```typescript
+import { allocate } from "@sdxc/money";
+
+allocate(1000, 3); // [334, 333, 333]
+allocate(1000, [2, 1, 1]); // [500, 250, 250]
+```
+
+`Math.round(1000 / 3)` three times gives 999; the leftover cent here goes to the first share.
+
+### Take a percentage and convert
+
+```typescript
+import { convert, percentOf } from "@sdxc/money";
+
+percentOf(4280, 15); // 642, a 15% tip on €42.80
+convert(4922, "EUR", "GBP", 0.8538); // 4202, €49.22 as £42.02
+convert(84500, "JPY", "EUR", 0.006104); // 51579, ¥84,500 rounded to whole cents
+```
+
+### Total amounts per currency
+
+```typescript
+import { sumByCurrency } from "@sdxc/money";
+
+sumByCurrency([
+	{ amount: 1250, currency: "EUR" },
+	{ amount: 900, currency: "GBP" },
+	{ amount: -300, currency: "EUR" },
+]); // Map { "EUR" => 950, "GBP" => 900 }
 ```
 
 ## API
@@ -115,44 +140,107 @@ Rounds half away from zero, so `2.5` and `-2.5` round to the same magnitude.
 
 The options described above.
 
-## Pattern: Split a bill from a form
+## Pattern: Read a price in a form handler
 
-Read what was typed, refuse it with a message when it is not an amount, and split it so the
-shares add back to the bill.
+Parse the price once where the form arrives, answer with the field's error when the text is
+not an amount, and pass minor units on from there, so nothing downstream sees a float.
 
 ```typescript
-import { allocate, formatAmount, parseAmount } from "@sdxc/money";
+import { formatAmount, parseAmount } from "@sdxc/money";
 
-function splitBill(form: FormData, people: number) {
-	let total = parseAmount(String(form.get("amount") ?? ""), "EUR", { locale: "en-IE" });
-	if (total === null) return { error: "Enter an amount like 42 or 42.50." };
-	let shares = allocate(total, people);
-	return {
-		shares,
-		summary: shares.map((share) => formatAmount(share, "EUR", { locale: "en-IE" })).join(" + "),
-	};
+async function updatePrice(request: Request, save: (cents: number) => Promise<void>) {
+	let input = (await request.formData()).get("price");
+	let price = typeof input === "string" ? parseAmount(input, "USD") : null;
+	if (price === null) {
+		return Response.json(
+			{ field: "price", error: "Enter a price like 19 or 19.99." },
+			{ status: 422 },
+		);
+	}
+	await save(price);
+	return Response.json({ price, label: formatAmount(price, "USD") });
 }
 ```
 
-## Pattern: A balance across currencies
+## Pattern: Split a bill with the tip
 
-Convert each account to one currency at your rates, then format the total.
+Add the tip in minor units, then split the whole bill, so what everyone pays adds up to
+exactly what the restaurant charges.
 
 ```typescript
-import { convert, formatAmount } from "@sdxc/money";
+import { allocate, formatAmount, percentOf } from "@sdxc/money";
 
-let rates: Record<string, number> = { EUR: 1, GBP: 1.1712, JPY: 0.006104 };
-let accounts = [
-	{ amount: 348216, currency: "EUR" },
-	{ amount: 124050, currency: "GBP" },
-	{ amount: 84500, currency: "JPY" },
-];
-let total = accounts.reduce(
-	(sum, account) =>
-		sum + convert(account.amount, account.currency, "EUR", rates[account.currency]!),
-	0,
-);
-formatAmount(total, "EUR", { locale: "en-IE" }); // "€5,450.82"
+function splitBill(subtotal: number, tipPercent: number, people: number) {
+	let tip = percentOf(subtotal, tipPercent);
+	return allocate(subtotal + tip, people).map((share) => formatAmount(share, "EUR"));
+}
+
+splitBill(8420, 10, 3); // ["€30.88", "€30.87", "€30.87"]
+```
+
+To share the tip by what each person ordered, pass their subtotals as weights:
+`allocate(842, [3200, 2900, 2320])` gives `[320, 290, 232]`.
+
+## Pattern: A net worth across currencies
+
+Total each currency first and convert each total once, so a currency is rounded once rather
+than once per account, and a missing rate stops the sum instead of counting it as zero.
+
+```typescript
+import type { Money } from "@sdxc/money";
+import { convert, formatAmount, sumByCurrency } from "@sdxc/money";
+
+function netWorth(accounts: Money[], rates: Map<string, number>, base: string) {
+	let total = 0;
+	for (let [currency, amount] of sumByCurrency(accounts)) {
+		let rate = currency === base ? 1 : rates.get(currency);
+		if (rate === undefined) return null;
+		total += convert(amount, currency, base, rate);
+	}
+	return formatAmount(total, base);
+}
+
+netWorth(
+	[
+		{ amount: 348216, currency: "EUR" },
+		{ amount: 124050, currency: "GBP" },
+		{ amount: 84500, currency: "JPY" },
+		{ amount: -12000, currency: "EUR" },
+	],
+	new Map([
+		["GBP", 1.1712],
+		["JPY", 0.006104],
+	]),
+	"EUR",
+); // "€5,330.82"
+```
+
+## Pattern: Show the cents smaller
+
+Split the formatted text into its whole part and its cents, so a balance can set the cents
+in a smaller size in any locale and currency, including ones with no cents at all.
+
+```typescript
+import { amountParts } from "@sdxc/money";
+
+function splitCents(amount: number, currency: string) {
+	let parts = amountParts(amount, currency);
+	let isCents = (part: Intl.NumberFormatPart) =>
+		part.type === "decimal" || part.type === "fraction";
+	return {
+		whole: parts
+			.filter((part) => !isCents(part))
+			.map((part) => part.value)
+			.join(""),
+		cents: parts
+			.filter(isCents)
+			.map((part) => part.value)
+			.join(""),
+	};
+}
+
+splitCents(348216, "EUR"); // { whole: "€3,482", cents: ".16" }
+splitCents(84500, "JPY"); // { whole: "¥84,500", cents: "" }
 ```
 
 ## Versioning
