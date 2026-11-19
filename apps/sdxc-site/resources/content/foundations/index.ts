@@ -17,6 +17,8 @@ import COMMERCE from "~/resources/content/foundations/commerce";
 import COMPONENTS from "~/resources/content/foundations/components";
 import DOCS from "~/resources/content/foundations/docs";
 import LANDING from "~/resources/content/foundations/landing";
+import MAP from "~/resources/content/foundations/map";
+import TRAVEL from "~/resources/content/foundations/travel";
 import VIDEO from "~/resources/content/foundations/video";
 
 /** One CSS custom property as the variables table lists it. */
@@ -76,6 +78,8 @@ const FOUNDATIONS_BY_MODULE: Record<ComponentModule, Foundations> = {
 	video: VIDEO,
 	commerce: COMMERCE,
 	audio: AUDIO,
+	map: MAP,
+	travel: TRAVEL,
 };
 
 /** Every namespace's Foundations, in the order the sidebar lists the namespaces. */
