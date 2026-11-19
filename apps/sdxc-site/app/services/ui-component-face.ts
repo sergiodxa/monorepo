@@ -275,6 +275,7 @@ const CATALOGUE = [
 	{ slug: "logo", module: "components" },
 	{ slug: "logo-cloud", module: "landing" },
 	{ slug: "logo-sentence", module: "landing" },
+	{ slug: "map-canvas", module: "components" },
 	{ slug: "marker", module: "chat" },
 	{ slug: "marquee", module: "landing" },
 	{ slug: "menu", module: "components" },
@@ -397,6 +398,21 @@ function graphTone(level: number): Tone {
  * inside the shared window / device / docs chrome.
  */
 const OVERRIDES: Record<string, Shape[]> = {
+	"map-canvas": windowScene([
+		{ kind: "rect", x: 20, y: 27, w: 120, h: 59, r: 4, tone: "chrome" },
+		{ kind: "path", d: "M98 27 L140 27 L140 86 L112 86 L104 70 L108 54 L98 40 Z", tone: "label" },
+		{ kind: "line", x1: 20, y1: 52, x2: 102, y2: 50, tone: "surface", weight: 2.5 },
+		{ kind: "line", x1: 58, y1: 27, x2: 58, y2: 86, tone: "surface", weight: 2.5 },
+		{ kind: "line", x1: 20, y1: 72, x2: 104, y2: 66, tone: "surface", weight: 2.5 },
+		{ kind: "stroke", d: "M30 80 L58 72 L58 52 L84 46", tone: "accent", weight: 1.6 },
+		{ kind: "circle", cx: 58, cy: 62, r: 3, tone: "accent" },
+		{ kind: "rect", x: 28, y: 32, w: 20, h: 9, r: 4.5, tone: "surface", ring: true },
+		txt("$182", 38, 38.5, 5.5, "ink", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 64, y: 56, w: 20, h: 9, r: 4.5, tone: "ink" },
+		txt("$95", 74, 62.5, 5.5, "surface", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 82, y: 33, w: 20, h: 9, r: 4.5, tone: "surface", ring: true },
+		txt("$240", 92, 39.5, 5.5, "ink", { align: "center", font: "semibold" }),
+	]),
 	"check-runs": windowScene([
 		{ kind: "circle", cx: 34, cy: 36, r: 4, tone: "accent" },
 		txt("1 failing, 3 successful", 42, 39, 7, "ink", { font: "semibold" }),
