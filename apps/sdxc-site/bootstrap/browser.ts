@@ -58,6 +58,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/app/table": () => import("@sdxc/ui/app/table"),
 	"@sdxc/ui/app/toasts": () => import("@sdxc/ui/app/toasts"),
 	"@sdxc/ui/app/tree": () => import("@sdxc/ui/app/tree"),
+	"@sdxc/ui/carousel": () => import("@sdxc/ui/carousel"),
 	"@sdxc/ui/character-count": () => import("@sdxc/ui/character-count"),
 	"@sdxc/ui/chat/composer-submit": () => import("@sdxc/ui/chat/composer-submit"),
 	"@sdxc/ui/commerce/option-group": () => import("@sdxc/ui/commerce/option-group"),

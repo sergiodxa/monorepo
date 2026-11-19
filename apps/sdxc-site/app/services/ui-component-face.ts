@@ -290,6 +290,7 @@ const CATALOGUE = [
 	{ slug: "map-canvas", module: "components" },
 	{ slug: "marker", module: "chat" },
 	{ slug: "marquee", module: "landing" },
+	{ slug: "media-grid", module: "components" },
 	{ slug: "menu", module: "components" },
 	{ slug: "menu-item-card", module: "commerce" },
 	{ slug: "menubar", module: "app" },
@@ -494,6 +495,18 @@ const OVERRIDES: Record<string, Shape[]> = {
 					: []),
 			];
 		}),
+	]),
+	"media-grid": windowScene([
+		{ kind: "rect", x: 44, y: 26, w: 24, h: 24, tone: "accent" },
+		{ kind: "rect", x: 94, y: 26, w: 24, h: 24, tone: "label" },
+		{ kind: "rect", x: 44, y: 51, w: 24, h: 24, tone: "label" },
+		{ kind: "rect", x: 69, y: 51, w: 24, h: 24, tone: "label" },
+		{ kind: "rect", x: 94, y: 51, w: 24, h: 24, tone: "label" },
+		{ kind: "rect", x: 69, y: 26, w: 24, h: 49, tone: "ink" },
+		{ kind: "rect", x: 44, y: 76, w: 24, h: 14, tone: "label" },
+		{ kind: "rect", x: 94, y: 76, w: 24, h: 14, tone: "label" },
+		{ kind: "rect", x: 59, y: 30, w: 6, h: 5, r: 1, tone: "surface" },
+		{ kind: "circle", cx: 81, cy: 50, r: 4, tone: "surface" },
 	]),
 	"map-canvas": windowScene([
 		{ kind: "rect", x: 20, y: 27, w: 120, h: 59, r: 4, tone: "chrome" },
