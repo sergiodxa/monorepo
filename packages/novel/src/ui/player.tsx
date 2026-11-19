@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Trans } from "@sdxc/i18n/ui";
 import type { Handle, Props as TagProps, RemixElement, RemixNode } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
@@ -85,7 +86,7 @@ export namespace NovelPlayer {
 		/** Replaces any of the interface's English labels. */
 		labels?: Partial<NovelLabels>;
 		/** Markup elements for lines, beside `b`, `i`, `shake`, `speed` and `pause`. */
-		markup?: Record<string, RemixElement>;
+		markup?: Record<string, RemixElement | Trans.MarkupComponent>;
 	}
 }
 

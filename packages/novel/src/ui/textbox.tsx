@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Trans } from "@sdxc/i18n/ui";
 import type { Handle, Props as TagProps, RemixElement } from "remix/component";
 
 import { css, ref } from "remix/component";
@@ -30,7 +31,7 @@ export namespace Textbox {
 		/** Called once the whole line is visible. */
 		onRevealed?: () => void;
 		/** Markup elements beside the built-in line effects. */
-		markup?: Record<string, RemixElement>;
+		markup?: Record<string, RemixElement | Trans.MarkupComponent>;
 	}
 
 	/** Props {@link Captions} accepts. */

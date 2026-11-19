@@ -867,9 +867,8 @@ Made while building steps 1 and 2 of Phase 4, without a review, where this ADR l
   once and the unrevealed rest is a range in the `novel-unrevealed` CSS highlight, painted
   transparent: the line keeps its final layout, the live region holds the whole text, and markup
   effects keep running.
-- **Markup shipped:** `b`, `i`, `shake` (a looping CSS animation), `speed` (half speed inside it) and
-  standalone `pause` (400ms, or `data-novel-pause` on an app's own element). `Trans` drops markup
-  options, so `{#speed rate=…}` cannot carry a rate; an app passes its own elements through `markup`.
+- **Markup shipped:** `b`, `i`, `shake` (a looping CSS animation), `speed` and standalone `pause`; an
+  app passes its own elements or markup components through `markup`.
 - **Built-in scenery transitions are View Transitions typed `novel-<name>`** over layers named per
   player with the `novel-scenery` class; the root snapshot does not animate during them. A custom
   name is the class on the new image. Characters animate through CSS transitions with
@@ -905,3 +904,13 @@ Made while building steps 1 and 2 of Phase 4, without a review, where this ADR l
   file.
 - **Browser tests declare their own small novel** with the keys of the package fixture's
   `NovelTypes` augmentation, which every file of the package shares when it is type checked.
+
+### Phase 4 step 3 decisions
+
+Made while building step 3 of Phase 4, without a review, where this ADR left the detail open:
+
+- **Markup options.** `speed` and `pause` are `Trans` markup components: `{#speed rate=…}` types its
+  span at `rate` times the reader's text speed (half without it), so a slowed line stays relative to
+  the speed the reader chose, and `{#pause ms=…/}` holds for `ms` (400ms without it). A literal option
+  arrives as a string and a variable one as its value; anything that is not a positive number falls
+  back to the default.

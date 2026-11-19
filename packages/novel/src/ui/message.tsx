@@ -1,7 +1,7 @@
 /**
  * Renders one of the story's messages through `Trans`, with the inline effects a line's
- * MessageFormat markup names: `{#b}`, `{#i}`, `{#shake}`, `{#speed}` and `{#pause/}`. Frames carry
- * keys as plain strings, so this is where an untyped key meets the app's typed catalog.
+ * MessageFormat markup names: `{#b}`, `{#i}`, `{#shake}`, `{#speed rate=…}` and `{#pause ms=…/}`.
+ * Frames carry keys as plain strings, so this is where an untyped key meets the typed catalog.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,8 +18,8 @@ export namespace Message {
 		/** The message key a frame carries. */
 		i18nKey: string;
 		values?: Record<string, unknown> | undefined;
-		/** Elements for more markup names, or replacements for the built-in ones. */
-		markup?: Record<string, RemixElement>;
+		/** Elements or markup components for more names, or replacements for the built-in ones. */
+		markup?: Record<string, RemixElement | Trans.MarkupComponent>;
 	}
 }
 
@@ -28,18 +28,54 @@ type UntypedTrans = (
 	handle: Handle<{
 		i18nKey: string;
 		values?: Record<string, unknown>;
-		components?: Record<string, RemixElement>;
+		components?: Record<string, RemixElement | Trans.MarkupComponent>;
 	}>,
 ) => () => RemixElement;
 
+/** The typing rate `{#speed}` sets without a `rate` option: half the reader's text speed. */
+const DEFAULT_SPEED_RATE = 0.5;
+
 /**
- * The effects a line's markup can name. `shake` loops, `speed` halves the typewriter inside it,
- * and the standalone `pause` holds the typewriter for 400ms; an app overrides any of them, or a
- * pause's length through `data-novel-pause`, with {@link Message.Props.markup}.
+ * Reads a positive number from a markup option, which arrives as a string when the message
+ * writes it literally and as the passed value when it names a variable.
+ */
+function positive(value: unknown): number | undefined {
+	let number = typeof value === "number" ? value : Number(value);
+	return typeof value !== "boolean" && value !== "" && Number.isFinite(number) && number > 0
+		? number
+		: undefined;
+}
+
+/**
+ * `{#speed rate=…}…{/speed}`: types its content at `rate` times the reader's text speed (`2`
+ * twice as fast, `0.25` at a quarter), half speed without the option, so a slow line stays
+ * relative to the speed the reader chose.
+ */
+function Speed(handle: Handle<Trans.MarkupProps>) {
+	return () => (
+		<span data-novel-speed={String(positive(handle.props.options.rate) ?? DEFAULT_SPEED_RATE)}>
+			{handle.props.children}
+		</span>
+	);
+}
+
+/** `{#pause ms=…/}`: holds the typewriter for `ms` milliseconds, 400 without the option. */
+function Pause(handle: Handle<Trans.MarkupProps>) {
+	return () => {
+		let ms = positive(handle.props.options.ms);
+		return <span data-novel-pause={ms === undefined ? "" : String(ms)} />;
+	};
+}
+
+/**
+ * The effects a line's markup can name. `shake` loops, `speed` types its content at `rate` times
+ * the reader's speed (half without it), and the standalone `pause` holds the typewriter for `ms`
+ * (400 without it); an app overrides any of them with {@link Message.Props.markup}.
  *
  * @returns A fresh components map for `Trans`.
+ * @example lineMarkup().speed; // renders "{#speed rate=0.25}…{/speed}" at a quarter speed
  */
-export function lineMarkup(): Record<string, RemixElement> {
+export function lineMarkup(): Record<string, RemixElement | Trans.MarkupComponent> {
 	return {
 		b: <b />,
 		i: <i />,
@@ -59,8 +95,8 @@ export function lineMarkup(): Record<string, RemixElement> {
 				})}
 			/>
 		),
-		speed: <span data-novel-speed="0.5" />,
-		pause: <span data-novel-pause="" />,
+		speed: Speed,
+		pause: Pause,
 	};
 }
 

@@ -169,4 +169,6 @@ export const Game = clientEntry(import.meta.url, function Game() {
 });
 ```
 
+Lines may use MessageFormat markup: `{#b}`, `{#i}` and `{#shake}` style their text, `{#speed rate=2}…{/speed}` types its text at that multiple of the reader's text speed (half without `rate`), and `{#pause ms=600/}` holds the typewriter (400ms without `ms`). Pass `markup` to add your own names, as elements or as components receiving `Trans.MarkupProps`.
+
 Saves reach the novel's `save` event (and `onSave`), so `novel.on("save", …)` stores them; pass them back through `saves` for the load screen. Space, Enter and a click advance, `a` toggles auto, `k` or a held Control skips, ↑ and the wheel roll back, `l` opens the backlog, `q`/`w` quick save and load, `h` hides the interface, `f` goes full screen and Escape opens the settings.

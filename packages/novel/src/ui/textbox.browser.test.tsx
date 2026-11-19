@@ -38,6 +38,8 @@ const MESSAGES = {
 		shake: "{#shake}No way!{/shake}",
 		pause: "Wait{#pause/} for it.",
 		slow: "{#speed}slow{/speed}",
+		fast: "{#speed rate=4}fast{/speed} then {#speed rate=$rate}set{/speed}",
+		held: "Wait{#pause ms=250/} for it.",
 		named: "Hi, {$name}!",
 	},
 	menu: {
@@ -115,6 +117,31 @@ describe("Textbox", () => {
 		expect(effect.textContent).toBe("No way!");
 		expect(getComputedStyle(effect).animationName).toBe("novel-text-shake");
 		expect(getComputedStyle(effect).animationIterationCount).toBe("infinite");
+	});
+
+	test("reads a speed's rate and a pause's length from their markup options", () => {
+		let defaults = mount(<Textbox frame={line("line.slow")} typing={false} textSpeed={40} />);
+		expect(defaults.$("[data-novel-speed]")!.dataset["novelSpeed"]).toBe("0.5");
+		expect(defaults.$("[data-novel-speed]")!.textContent).toBe("slow");
+		mounted?.cleanup();
+		let paused = mount(<Textbox frame={line("line.pause")} typing={false} textSpeed={40} />);
+		expect(paused.$("[data-novel-pause]")!.dataset["novelPause"]).toBe("");
+		mounted?.cleanup();
+		let fast = mount(
+			<Textbox
+				frame={line("line.fast", { values: { rate: 0.25 } })}
+				typing={false}
+				textSpeed={40}
+			/>,
+		);
+		expect([...fast.$$("[data-novel-speed]")].map((span) => span.dataset["novelSpeed"])).toEqual([
+			"4",
+			"0.25",
+		]);
+		mounted?.cleanup();
+		let held = mount(<Textbox frame={line("line.held")} typing={false} textSpeed={40} />);
+		expect(held.$("[data-novel-pause]")!.dataset["novelPause"]).toBe("250");
+		expect(held.$("[data-novel-line]")!.textContent).toBe("Wait for it.");
 	});
 
 	test("hides the whole line until typing starts, keeping it in the live region", async () => {
