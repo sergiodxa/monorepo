@@ -12,7 +12,7 @@ import { describe, expect, test } from "vitest";
 
 import { ISLAND, ISLAND_CENTER, LABELS, NAVIGATION } from "../test/map.js";
 
-import { GeoMap } from "./map.js";
+import { GeoMap, OPEN_FREE_MAP } from "./map.js";
 
 /** Three stays a few hundred metres apart and one across the island. */
 const STAYS = [
@@ -94,6 +94,15 @@ describe("GeoMap on the server", () => {
 		expect(html).toMatch(
 			/<a[^>]*href="\/stays\?center=-32,44&amp;zoom=10"[^>]*aria-label="Zoom out"/,
 		);
+	});
+
+	test("draws on OpenFreeMap's light and dark styles when no basemap is given", async () => {
+		let html = await renderToString(
+			<GeoMap id="plain" label="Plain" center={ISLAND_CENTER} zoom={11} labels={LABELS} />,
+		);
+		expect(html).toContain(OPEN_FREE_MAP.light);
+		expect(html).toContain(OPEN_FREE_MAP.dark);
+		expect(html).not.toMatch(/<[a-z]+[^>]*data-slot="map-basemap"/);
 	});
 
 	test("hides the zoom buttons when the map has no navigation", async () => {

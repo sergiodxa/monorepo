@@ -53,6 +53,17 @@ export type { FeatureKind, MapFeature, MapFeatureCollection } from "./utils/base
 /** Controls a map shows when the caller names none. */
 const DEFAULT_CONTROLS: GeoMap.Control[] = ["zoom"];
 
+/**
+ * OpenFreeMap's free vector styles, a quiet light one and its dark twin, which need no key.
+ * Their style, tiles, glyphs and sprites all load from `tiles.openfreemap.org`, the one host a
+ * page's CSP must allow in `connect-src` and `img-src` (with `blob:`) to draw them.
+ */
+export const OPEN_FREE_MAP: GeoMap.StyleBasemap = {
+	kind: "style",
+	light: "https://tiles.openfreemap.org/styles/positron",
+	dark: "https://tiles.openfreemap.org/styles/dark",
+};
+
 /** Lowest zoom a map reaches when the caller names none. */
 const DEFAULT_MIN_ZOOM = 0;
 
@@ -142,7 +153,10 @@ export namespace GeoMap {
 		minZoom?: number;
 		/** @default 20 */
 		maxZoom?: number;
-		/** A tinted stage with markers only when omitted. */
+		/**
+		 * What the map is drawn on: a MapLibre style pair, or your own GeoJSON.
+		 * @default OPEN_FREE_MAP
+		 */
 		basemap?: Basemap;
 		/** @default ["zoom"] */
 		controls?: Control[];
@@ -346,7 +360,7 @@ function controlStyle() {
 export function GeoMap(handle: Handle<GeoMap.Props, GeoMap.Context>) {
 	return () => {
 		let {
-			basemap,
+			basemap = OPEN_FREE_MAP,
 			center,
 			children,
 			clusterRadius,
