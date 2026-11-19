@@ -14,11 +14,13 @@ import { raw } from "@sdxc/u/general";
 import { LinkButton } from "@sdxc/ui";
 import { FreeBusy } from "@sdxc/ui/app/free-busy";
 
-import type { CalendarEvent, Person } from "./data";
+import type { Person } from "./data";
+import type { Entry } from "./model";
 import type { ViewContext } from "./views";
 
 import { LOCALE, ME, PEOPLE, findPerson, href, shiftDate } from "./data";
 import { PersonDot } from "./event";
+import { guestsOf, organizerOf, rsvpOf } from "./model";
 import { clockAt, formatDay, formatMinute, instantAt, instancesIn, zoneName } from "./time";
 import { viewHref } from "./views";
 
@@ -93,14 +95,26 @@ function outsideOf(working: Span[]): Span[] {
 }
 
 /** A teammate's busy blocks: shared events they are invited to, and two of their own. */
-function busyOf(person: Person, day: string, zone: string, events: CalendarEvent[]): Span[] {
+function busyOf(person: Person, day: string, zone: string, events: Entry[]): Span[] {
 	let shared = instancesIn(events, day, 1, zone)
-		.filter((instance) => instance.days === undefined && instance.event.guests.includes(person.id))
+		.filter(
+			(instance) =>
+				instance.days === undefined &&
+				(guestsOf(instance.event).includes(person.id) ||
+					organizerOf(instance.event) === person.id ||
+					(person.id === ME && guestsOf(instance.event).length === 0)),
+		)
 		.flatMap((instance): Span[] => {
 			let span = onDay(instance.start.getTime(), instance.end.getTime(), day, zone);
 			return span === null
 				? []
-				: [{ ...span, title: instance.event.title, tentative: instance.event.rsvp === "maybe" }];
+				: [
+						{
+							...span,
+							title: instance.event.title ?? "",
+							tentative: person.id === ME && rsvpOf(instance.event) === "maybe",
+						},
+					];
 		});
 	if (person.id === ME) return shared;
 	let theirs = clockAt(instantAt(day, 720, zone), person.zone).date;
@@ -162,7 +176,7 @@ namespace FindScreen {
 		with: string[];
 		length: number;
 		/** Every event on the shared calendar, hidden calendars included. */
-		everything: CalendarEvent[];
+		everything: Entry[];
 	}
 }
 

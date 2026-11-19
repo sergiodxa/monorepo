@@ -31,14 +31,18 @@ import {
 } from "~/resources/views/demo-apps/main-frame";
 import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 
-import type { CalendarEvent } from "./data";
+import type { Seeds } from "./edits";
 import type { Draft, DraftIssues } from "./event";
+import type { Entry } from "./model";
 import type { Changes, Visitor } from "./state";
+import type { Instance } from "./time";
 import type { ViewContext, ViewId } from "./views";
 
-import { CALENDARS, ZONES, actionHref, findPerson, href, seedEvents, shiftDate } from "./data";
+import { CALENDARS, ZONES, actionHref, findPerson, href, shiftDate } from "./data";
+import { answer, create, edit, remove, reschedule, skip, store } from "./edits";
 import { EventDialog, blankDraft, draftOf, eventFields, readDraft } from "./event";
 import { DEFAULT_WITH, FindScreen, LENGTHS } from "./find";
+import { DOMAIN, durationOf, isAllDay, isEditable, localDateTime } from "./model";
 import { SundialShell, rangeTitle } from "./shell";
 import {
 	SHELL_COOKIE,
@@ -48,6 +52,7 @@ import {
 	isPersonal,
 	readVisitor,
 	resetCookies,
+	seedEntries,
 	undoCookies,
 	zonesCookie,
 } from "./state";
@@ -148,7 +153,7 @@ interface Scene {
 	visitor: Visitor;
 	context: ViewContext;
 	/** Every event, hidden calendars included, for the people comparison. */
-	everything: CalendarEvent[];
+	everything: Entry[];
 }
 
 /** Reads the visitor, the clock and the screen's day from a request. */
@@ -192,14 +197,24 @@ function readLength(url: URL): number {
 	return (LENGTHS as readonly number[]).includes(value) ? value : 30;
 }
 
-/** An occurrence by its key, `id~day`, or `undefined` when it is not on the calendar. */
-function findInstance(events: CalendarEvent[], key: string, zone: string) {
-	let [id = "", day = ""] = key.split("~");
-	let event = events.find((entry) => entry.id === id);
-	if (!event || !isDate(day)) return undefined;
-	return instancesIn([event], shiftDate(day, -2), 5, zone).find(
-		(instance) => instance.key === `${id}~${day}`,
-	);
+/**
+ * An occurrence by its key, `uid~recurrenceId` (or `uid~once`), or `undefined` when it is not on
+ * the calendar; the expansion is read around the day the key names, so it stays cheap.
+ */
+function findInstance(entries: Entry[], key: string, zone: string): Instance | undefined {
+	let cut = key.lastIndexOf("~");
+	let uid = key.slice(0, cut);
+	let occurrence = key.slice(cut + 1);
+	let entry = entries.find((item) => item.event.uid === uid);
+	if (!entry) return undefined;
+	let day = occurrence === "once" ? entry.event.start.slice(0, 10) : occurrence.slice(0, 10);
+	if (!isDate(day)) return undefined;
+	return instancesIn([entry], shiftDate(day, -2), 5, zone).find((instance) => instance.key === key);
+}
+
+/** Whether an occurrence belongs to a repeating event. */
+function repeats(instance: Instance | undefined): boolean {
+	return instance !== undefined && instance.recurrenceId !== undefined;
 }
 
 /** The dialog the address asks for: an event's edit form, or a new event's. */
@@ -220,7 +235,7 @@ function dialogOf(
 				target={refused.target}
 				draft={refused.draft}
 				issues={refused.issues}
-				recurring={instance !== undefined && instance.event.repeat !== "none"}
+				recurring={repeats(instance)}
 				back={context.back}
 				closeHref={closeHref}
 			/>
@@ -230,16 +245,12 @@ function dialogOf(
 	let edit = params.get("edit");
 	if (edit !== null) {
 		let instance = findInstance(scene.everything, edit, context.zone);
-		if (
-			!instance ||
-			CALENDARS.find((calendar) => calendar.id === instance.event.calendar)?.subscribed
-		)
-			return null;
+		if (!instance || !isEditable(instance.calendar)) return null;
 		return (
 			<EventDialog
 				target={instance.key}
-				draft={draftOf(instance)}
-				recurring={instance.event.repeat !== "none"}
+				draft={draftOf(instance, context.zone)}
+				recurring={repeats(instance)}
 				back={context.back}
 				closeHref={closeHref}
 			/>
@@ -362,47 +373,17 @@ function backOf(form: FormData): string {
 	return BACK.test(back) ? back : "";
 }
 
-/** A copy of changes with one event stored: patched when it is a seed, else in the visitor's list. */
-function putEvent(changes: Changes, seedIds: Set<string>, event: CalendarEvent): Changes {
-	if (seedIds.has(event.id)) {
-		let { id: _id, ...fields } = event;
-		return { ...changes, patched: { ...changes.patched, [event.id]: fields } };
-	}
-	let added = changes.added.filter((entry) => entry.id !== event.id);
-	return { ...changes, added: [...added, event] };
-}
-
-/** A fresh id for a visitor's event, unique among their events. */
+/** A fresh uid for a visitor's event, unique among their events. */
 function newId(changes: Changes): string {
-	let used = new Set(changes.added.map((event) => event.id));
+	let used = new Set(changes.added.map((entry) => entry.event.uid));
 	let index = changes.added.length + 1;
-	while (used.has(`mine-${index}`)) index += 1;
-	return `mine-${index}`;
+	while (used.has(`mine-${index}@${DOMAIN}`)) index += 1;
+	return `mine-${index}@${DOMAIN}`;
 }
 
-/**
- * Stores an event's new time. A repeating event moved by one occurrence skips that day and
- * gains a one-off copy at the new time, so the rest of the series stays where it was.
- */
-function reschedule(
-	changes: Changes,
-	seedIds: Set<string>,
-	event: CalendarEvent,
-	day: string,
-	fields: Partial<CalendarEvent>,
-	scope: "this" | "all",
-): Changes {
-	if (event.repeat === "none" || scope === "all")
-		return putEvent(changes, seedIds, { ...event, ...fields });
-	let series = { ...event, exceptions: [...new Set([...(event.exceptions ?? []), day])] };
-	let copy: CalendarEvent = {
-		...event,
-		...fields,
-		id: `${event.id}-${day.replaceAll("-", "")}`,
-		repeat: "none",
-		exceptions: undefined,
-	};
-	return putEvent(putEvent(changes, seedIds, series), seedIds, copy);
+/** The seed's events by uid, which the visitor's patches are computed against. */
+function seedsOf(scene: Scene): Seeds {
+	return new Map(seedEntries(scene.context.today).map((entry) => [entry.event.uid, entry]));
 }
 
 /** Answers a refused edit with the screen and its dialog showing what was typed. */
@@ -443,21 +424,16 @@ function submitEvent(
 	let checked = eventFields(draft);
 	if ("issues" in checked) return refusedScreen(request, back, target, draft, checked.issues);
 	let { visitor } = scene;
-	let seedIds = new Set(seedEvents(scene.context.today).map((event) => event.id));
+	let seeds = seedsOf(scene);
 	if (target === "new") {
-		let event: CalendarEvent = { ...checked.fields, id: newId(visitor.changes) };
-		let next = putEvent(visitor.changes, seedIds, event);
+		let event = create(newId(visitor.changes), checked.fields);
+		let next = store(visitor.changes, seeds, { calendar: checked.fields.calendar, event });
 		return { page: back, toast: "created", cookies: changesCookies(visitor, next, back) };
 	}
 	let instance = findInstance(scene.everything, target, scene.context.zone);
-	if (!instance) return null;
-	let { event } = instance;
-	let fields: Partial<CalendarEvent> = { ...checked.fields };
-	if (event.repeat !== "none" && draft.scope === "all")
-		fields = { ...fields, date: event.date, exceptions: event.exceptions };
-	if (event.organizer !== undefined) fields.organizer = event.organizer;
-	if (event.rsvp !== undefined) fields.rsvp = event.rsvp;
-	let next = reschedule(visitor.changes, seedIds, event, instance.day, fields, draft.scope);
+	if (!instance || !isEditable(instance.calendar)) return null;
+	let event = edit(instance, checked.fields, draft.scope);
+	let next = store(visitor.changes, seeds, { calendar: checked.fields.calendar, event });
 	return { page: back, toast: "saved", cookies: changesCookies(visitor, next, back) };
 }
 
@@ -478,51 +454,37 @@ function submitMove(form: FormData, scene: Scene): DemoAppRedirect | null {
 	)
 		return null;
 	let instance = findInstance(scene.everything, key, scene.context.zone);
-	if (!instance || instance.event.start === null) return null;
-	if (CALENDARS.find((calendar) => calendar.id === instance.event.calendar)?.subscribed)
-		return null;
-	let at = clockAt(instantAt(date, start, scene.context.zone), instance.event.zone);
-	let seedIds = new Set(seedEvents(scene.context.today).map((event) => event.id));
-	let next = reschedule(
-		scene.visitor.changes,
-		seedIds,
-		instance.event,
-		instance.day,
-		{ date: at.date, start: at.minute, length: end - start },
-		"this",
-	);
+	if (!instance || isAllDay(instance.event) || !isEditable(instance.calendar)) return null;
+	let zone = instance.series.timeZone ?? scene.context.zone;
+	let at = clockAt(instantAt(date, start, scene.context.zone), zone);
+	let event = reschedule(instance, localDateTime(at.date, at.minute), durationOf(end - start));
+	let next = store(scene.visitor.changes, seedsOf(scene), { calendar: instance.calendar, event });
 	return { page: back, toast: "moved", cookies: changesCookies(scene.visitor, next, back) };
 }
 
-/** Deletes an occurrence: a one-off goes, a repeat skips that day. */
+/** Deletes an occurrence: a one-off goes, a repeat skips that occurrence. */
 function submitDelete(key: string, form: FormData, scene: Scene): DemoAppRedirect | null {
 	let back = backOf(form);
 	let instance = findInstance(scene.everything, key, scene.context.zone);
-	if (!instance) return null;
-	let { event } = instance;
-	let seedIds = new Set(seedEvents(scene.context.today).map((entry) => entry.id));
-	let changes = scene.visitor.changes;
-	let next = iife(() => {
-		if (event.repeat !== "none")
-			return putEvent(changes, seedIds, {
-				...event,
-				exceptions: [...(event.exceptions ?? []), instance.day],
-			});
-		if (seedIds.has(event.id)) return { ...changes, deleted: [...changes.deleted, event.id] };
-		return { ...changes, added: changes.added.filter((entry) => entry.id !== event.id) };
-	});
+	if (!instance || !isEditable(instance.calendar)) return null;
+	let seeds = seedsOf(scene);
+	let skipped = skip(instance);
+	let next =
+		skipped === null
+			? remove(scene.visitor.changes, seeds, instance.uid)
+			: store(scene.visitor.changes, seeds, { calendar: instance.calendar, event: skipped });
 	return { page: back, toast: "deleted", cookies: changesCookies(scene.visitor, next, back) };
 }
 
-/** Records the visitor's answer to an invitation. */
+/** Records the visitor's answer to an invitation, on every occurrence of it. */
 function submitRsvp(key: string, form: FormData, scene: Scene): DemoAppRedirect | null {
-	let answer = field(form, "rsvp");
-	if (answer !== "yes" && answer !== "maybe" && answer !== "no") return null;
+	let rsvp = field(form, "rsvp");
+	if (rsvp !== "yes" && rsvp !== "maybe" && rsvp !== "no") return null;
 	let instance = findInstance(scene.everything, key, scene.context.zone);
 	if (!instance) return null;
 	let back = backOf(form);
-	let seedIds = new Set(seedEvents(scene.context.today).map((event) => event.id));
-	let next = putEvent(scene.visitor.changes, seedIds, { ...instance.event, rsvp: answer });
+	let event = answer(instance.series, rsvp);
+	let next = store(scene.visitor.changes, seedsOf(scene), { calendar: instance.calendar, event });
 	return { page: back, toast: "rsvp", cookies: changesCookies(scene.visitor, next, back) };
 }
 

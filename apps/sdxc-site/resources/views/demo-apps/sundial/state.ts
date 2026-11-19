@@ -7,23 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { JSCalendar } from "@sdxc/jscalendar";
+
 import { iife } from "@sdxc/iife";
+import { applyPatch, parse } from "@sdxc/jscalendar";
+import { isSuccess } from "@sdxc/result";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 
-import type { CalendarEvent } from "./data";
+import type { Entry } from "./model";
 
-import {
-	CALENDARS,
-	COLORS,
-	DEFAULT_SECOND_ZONE,
-	DEFAULT_ZONE,
-	REPEATS,
-	SLUG,
-	ZONES,
-	findPerson,
-	seedEvents,
-} from "./data";
+import { CALENDARS, DEFAULT_SECOND_ZONE, DEFAULT_ZONE, SLUG, ZONES, seedDefinitions } from "./data";
+import { isEditable, toEntry } from "./model";
 
 /** Every Sundial cookie starts with this. */
 const COOKIE_PREFIX = "sundial.";
@@ -34,16 +29,16 @@ export const SHELL_COOKIE = "sundial-sidebar";
 /** A week: long enough to come back to, short enough that the demo resets itself. */
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
-/** The most events a visitor's own list keeps, oldest dropped first, so the cookie stays small. */
-const ADDED_LIMIT = 14;
+/** The longest a stored value may be once encoded, so each cookie stays under a browser's 4 KB. */
+const VALUE_LIMIT = 3600;
 
 /** What the visitor changed about the seed calendar. */
 export interface Changes {
-	/** Events the visitor made, and single repeats they moved out of a series. */
-	added: CalendarEvent[];
-	/** Fields the visitor changed on seed events, by id. */
-	patched: Record<string, Partial<CalendarEvent>>;
-	/** Seed events the visitor deleted. */
+	/** Events the visitor made or imported, each filed under a calendar. */
+	added: Entry[];
+	/** JSCalendar PatchObjects the visitor applied to seed events, by uid. */
+	patched: Record<string, JSCalendar.PatchObject>;
+	/** Seed events the visitor deleted, by uid. */
 	deleted: string[];
 }
 
@@ -85,40 +80,33 @@ function readJson(value: string | undefined): unknown {
 	}
 }
 
-/** Whether a value read from a cookie is an event this demo can draw. */
-function isEvent(value: unknown): value is CalendarEvent {
-	if (typeof value !== "object" || value === null) return false;
-	let event = value as Partial<CalendarEvent>;
-	return (
-		typeof event.id === "string" &&
-		typeof event.title === "string" &&
-		typeof event.date === "string" &&
-		/^\d{4}-\d{2}-\d{2}$/.test(event.date) &&
-		(event.start === null || typeof event.start === "number") &&
-		typeof event.length === "number" &&
-		event.length > 0 &&
-		CALENDARS.some((calendar) => calendar.id === event.calendar) &&
-		ZONES.some((zone) => zone.id === event.zone) &&
-		REPEATS.some((repeat) => repeat.id === event.repeat) &&
-		Array.isArray(event.guests) &&
-		event.guests.every((guest) => findPerson(guest) !== undefined) &&
-		(event.color === undefined || COLORS.some((color) => color.id === event.color))
-	);
+/** A JSCalendar Event read from a cookie, or `null` when it is not one RFC 8984 accepts. */
+function readEvent(value: unknown): JSCalendar.Event | null {
+	let parsed = parse(value);
+	return isSuccess(parsed) && parsed.data["@type"] === "Event" ? parsed.data : null;
 }
 
-/** Reads a set of changes, dropping anything that is not an event this demo can draw. */
+/** Reads a set of changes, dropping anything that is not a valid event on a known calendar. */
 function readChanges(value: unknown): Changes {
 	if (typeof value !== "object" || value === null) return noChanges();
 	let raw = value as Partial<Changes>;
-	let added = Array.isArray(raw.added) ? raw.added.filter(isEvent) : [];
+	let added: Entry[] = [];
+	for (let entry of Array.isArray(raw.added) ? raw.added : []) {
+		if (typeof entry !== "object" || entry === null) continue;
+		let event = readEvent((entry as { event?: unknown }).event);
+		let calendar = (entry as { calendar?: unknown }).calendar;
+		if (event && typeof calendar === "string" && isEditable(calendar))
+			added.push({ calendar, event });
+	}
 	let patched: Changes["patched"] = {};
 	if (typeof raw.patched === "object" && raw.patched !== null) {
-		for (let [id, patch] of Object.entries(raw.patched)) {
-			if (typeof patch === "object" && patch !== null) patched[id] = patch;
+		for (let [uid, patch] of Object.entries(raw.patched)) {
+			if (typeof patch === "object" && patch !== null)
+				patched[uid] = patch as JSCalendar.PatchObject;
 		}
 	}
 	let deleted = Array.isArray(raw.deleted)
-		? raw.deleted.filter((id): id is string => typeof id === "string")
+		? raw.deleted.filter((uid): uid is string => typeof uid === "string")
 		: [];
 	return { added, patched, deleted };
 }
@@ -168,24 +156,31 @@ export function readVisitor(header: string | null): Visitor {
 	};
 }
 
+/** The seed calendar for the week holding `today`, as JSCalendar entries. */
+export function seedEntries(today: string): Entry[] {
+	return seedDefinitions(today).map(toEntry);
+}
+
 /**
- * The visitor's calendar: the seed for their week with their edits applied, deletions removed,
- * and their own events added.
+ * The visitor's calendar: the seed for their week with their patches applied, deletions removed,
+ * and their own events added. A patch that no longer applies, or that leaves an event RFC 8984
+ * rejects, is skipped and the seed shows as it was.
  *
  * @param visitor What the visitor changed.
  * @param today Their today, which the seed is set around.
  */
-export function eventsOf(visitor: Visitor, today: string): CalendarEvent[] {
+export function eventsOf(visitor: Visitor, today: string): Entry[] {
 	let { added, patched, deleted } = visitor.changes;
-	let seed = seedEvents(today)
-		.filter((event) => !deleted.includes(event.id))
-		.map((event) => {
-			let patch = patched[event.id];
-			if (patch === undefined) return event;
-			let merged = { ...event, ...patch, id: event.id };
-			return isEvent(merged) ? merged : event;
+	let seed = seedEntries(today)
+		.filter((entry) => !deleted.includes(entry.event.uid))
+		.map((entry) => {
+			let patch = patched[entry.event.uid];
+			if (patch === undefined) return entry;
+			let applied = applyPatch(entry.event, patch);
+			let event = isSuccess(applied) ? readEvent(applied.data) : null;
+			return event ? { ...entry, event } : entry;
 		});
-	return [...seed, ...added.filter((event) => !deleted.includes(event.id))];
+	return [...seed, ...added.filter((entry) => !deleted.includes(entry.event.uid))];
 }
 
 /** One `Set-Cookie` value under the app's own path. */
@@ -201,18 +196,33 @@ function cookieHeader(name: string, value: string, maxAge = COOKIE_MAX_AGE): str
  * @param back The page an Undo returns to.
  */
 export function changesCookies(visitor: Visitor, next: Changes, back: string): string[] {
-	let trimmed = { ...next, added: next.added.slice(-ADDED_LIMIT) };
+	let undo = encodeURIComponent(JSON.stringify({ changes: visitor.changes, back }));
 	return [
-		cookieHeader("changes", encodeURIComponent(JSON.stringify(trimmed))),
-		cookieHeader("undo", encodeURIComponent(JSON.stringify({ changes: visitor.changes, back }))),
+		cookieHeader("changes", encodeChanges(next)),
+		cookieHeader(
+			"undo",
+			undo.length <= VALUE_LIMIT ? undo : "",
+			undo.length <= VALUE_LIMIT ? undefined : 0,
+		),
 	];
+}
+
+/** Changes encoded for a cookie, dropping the visitor's oldest events until the value fits. */
+function encodeChanges(changes: Changes): string {
+	let added = changes.added;
+	let value = encodeURIComponent(JSON.stringify(changes));
+	while (value.length > VALUE_LIMIT && added.length > 0) {
+		added = added.slice(1);
+		value = encodeURIComponent(JSON.stringify({ ...changes, added }));
+	}
+	return value;
 }
 
 /** The cookies an Undo answers with: the old changes back, and nothing left to undo. */
 export function undoCookies(visitor: Visitor): string[] {
 	if (visitor.undo === null) return [];
 	return [
-		cookieHeader("changes", encodeURIComponent(JSON.stringify(visitor.undo.changes))),
+		cookieHeader("changes", encodeChanges(visitor.undo.changes)),
 		cookieHeader("undo", "", 0),
 	];
 }

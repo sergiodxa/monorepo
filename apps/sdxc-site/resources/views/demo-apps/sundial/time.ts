@@ -7,27 +7,32 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Recurrence, Weekday } from "@sdxc/dates";
+import type { JSCalendar } from "@sdxc/jscalendar";
 
-import { expandRecurrence } from "@sdxc/dates";
 import { instantFromParts, zonedParts } from "@sdxc/dates/zone";
-import { iife } from "@sdxc/iife";
+import { occurrences } from "@sdxc/jscalendar/recurrence";
+import { isFailure } from "@sdxc/result";
 
-import type { CalendarEvent, RepeatId } from "./data";
+import type { Entry } from "./model";
 
 import { LOCALE, shiftDate } from "./data";
+import { isAllDay } from "./model";
 
-/** Milliseconds in a minute and a day. */
-const MINUTE_MS = 60_000;
+/** Milliseconds in a day. */
 const DAY_MS = 86_400_000;
 
-/** One occurrence of an event, at its instants. */
+/** One occurrence of an event, at its instants, with its override applied. */
 export interface Instance {
-	/** The event id and the day it happens on in the event's zone: `standup~2026-11-18`. */
+	/** The event's uid and the occurrence it is: `standup~2026-11-18T09:30:00`, or `uid~once`. */
 	key: string;
-	event: CalendarEvent;
-	/** The day this occurrence falls on in the event's own zone, which an exception names. */
-	day: string;
+	uid: string;
+	calendar: string;
+	/** The stored event, with its rules and overrides. */
+	series: JSCalendar.Event;
+	/** This occurrence alone: the series shifted to it, its override patched in. */
+	event: JSCalendar.Event;
+	/** The LocalDateTime the rule generated, which an override is keyed by. */
+	recurrenceId?: JSCalendar.LocalDateTime;
 	start: Date;
 	end: Date;
 	/** For an all-day instance, its first and last day, inclusive. */
@@ -71,76 +76,54 @@ export function instantAt(date: string, minute: number, zone: string): number {
 	);
 }
 
-/** The repeat rule a dialog choice stands for, read against the event's first day. */
-function ruleOf(repeat: RepeatId, exceptions: string[] | undefined): Recurrence | null {
-	let base = { exceptions };
-	if (repeat === "daily") return { ...base, frequency: "daily" };
-	if (repeat === "weekdays")
-		return { ...base, frequency: "weekly", weekdays: [1, 2, 3, 4, 5] as Weekday[] };
-	if (repeat === "weekly") return { ...base, frequency: "weekly" };
-	if (repeat === "biweekly") return { ...base, frequency: "weekly", interval: 2 };
-	if (repeat === "monthly") return { ...base, frequency: "monthly" };
-	if (repeat === "yearly") return { ...base, frequency: "yearly" };
-	return null;
-}
-
 /**
- * Every occurrence of the events that touches a range of the viewer's days. Timed events repeat
- * at their own zone's wall clock; all-day events float, the same dates in every zone.
+ * Every occurrence of the entries that touches a range of the viewer's days. Timed events repeat
+ * at their own zone's wall clock across DST; all-day events float, the same dates in every zone.
+ * An entry whose rules cannot be expanded is left out rather than failing the screen.
  *
- * @param events Stored events.
+ * @param entries Stored events and their calendars.
  * @param first The range's first day, `YYYY-MM-DD` on the viewer's clock.
  * @param days How many days the range covers.
  * @param zone The viewer's zone.
  */
 export function instancesIn(
-	events: CalendarEvent[],
+	entries: Entry[],
 	first: string,
 	days: number,
 	zone: string,
 ): Instance[] {
-	let window = {
-		start: new Date(instantAt(first, 0, zone)),
-		end: new Date(instantAt(shiftDate(first, days), 0, zone)),
-	};
-	let floating = {
-		start: new Date(Date.parse(`${first}T00:00:00Z`)),
-		end: new Date(Date.parse(`${shiftDate(first, days)}T00:00:00Z`)),
-	};
 	let found: Instance[] = [];
-	for (let event of events) {
-		let allDay = event.start === null;
-		let start = allDay
-			? Date.parse(`${event.date}T00:00:00Z`)
-			: instantAt(event.date, event.start ?? 0, event.zone);
-		let end = allDay ? start + event.length * DAY_MS : start + event.length * MINUTE_MS;
-		let rule = ruleOf(event.repeat, event.exceptions);
-		let seriesZone = allDay ? "UTC" : event.zone;
-		let range = allDay ? floating : window;
-		let occurrences = iife(() => {
-			if (rule !== null)
-				return expandRecurrence(
-					{ start: new Date(start), end: new Date(end) },
-					rule,
-					range,
-					seriesZone,
-				);
-			if (start < range.end.getTime() && end > range.start.getTime())
-				return [{ start: new Date(start), end: new Date(end) }];
-			return [];
-		});
-		for (let occurrence of occurrences) {
-			let day = clockAt(occurrence.start.getTime(), seriesZone).date;
+	for (let { calendar, event } of entries) {
+		let allDay = isAllDay(event);
+		let window = allDay
+			? {
+					from: Date.parse(`${first}T00:00:00Z`),
+					to: Date.parse(`${shiftDate(first, days)}T00:00:00Z`),
+					timeZone: "UTC",
+				}
+			: {
+					from: instantAt(first, 0, zone),
+					to: instantAt(shiftDate(first, days), 0, zone),
+					timeZone: zone,
+				};
+		let expanded = occurrences(event, window);
+		if (isFailure(expanded)) continue;
+		for (let occurrence of expanded.data) {
+			let start = new Date(occurrence.start);
+			let end = new Date(Math.max(occurrence.end, occurrence.start + (allDay ? DAY_MS : 0)));
 			found.push({
-				key: `${event.id}~${day}`,
-				event,
-				day,
-				start: occurrence.start,
-				end: occurrence.end,
+				key: `${event.uid}~${occurrence.recurrenceId ?? "once"}`,
+				uid: event.uid,
+				calendar,
+				series: event,
+				event: occurrence.object,
+				recurrenceId: occurrence.recurrenceId,
+				start,
+				end,
 				days: allDay
 					? {
-							first: occurrence.start.toISOString().slice(0, 10),
-							last: new Date(occurrence.end.getTime() - DAY_MS).toISOString().slice(0, 10),
+							first: start.toISOString().slice(0, 10),
+							last: new Date(end.getTime() - DAY_MS).toISOString().slice(0, 10),
 						}
 					: undefined,
 			});

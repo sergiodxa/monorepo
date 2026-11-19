@@ -34,7 +34,7 @@ import {
 import { RouteDialog } from "@sdxc/ui/app/route-dialog";
 import { Dialog } from "@sdxc/ui/dialog";
 
-import type { CalendarEvent, RepeatId, Rsvp } from "./data";
+import type { RepeatId, Rsvp } from "./data";
 import type { Instance } from "./time";
 
 import {
@@ -46,10 +46,21 @@ import {
 	ZONES,
 	actionHref,
 	colorValue,
-	eventColor,
 	findCalendar,
 	findPerson,
 } from "./data";
+import {
+	durationOf,
+	eventColor,
+	guestsOf,
+	isAllDay,
+	localDateTime,
+	locationOf,
+	organizerOf,
+	repeatOf,
+	rsvpOf,
+	rulesOf,
+} from "./model";
 import { clockAt, formatDay, formatMinute, formatTimes, zoneName } from "./time";
 
 /** What the edit form holds, every field as typed, so a refused post shows it back unchanged. */
@@ -60,7 +71,8 @@ export interface Draft {
 	endDate: string;
 	end: string;
 	allDay: boolean;
-	repeat: RepeatId;
+	/** `custom` keeps rules the dialog cannot express, such as an imported RRULE. */
+	repeat: RepeatId | "custom";
 	zone: string;
 	calendar: string;
 	color: string;
@@ -91,27 +103,37 @@ export function minuteOf(value: string): number | null {
 	return minute < 1440 ? minute : null;
 }
 
-/** The draft an occurrence opens with: its times on its own zone's clock. */
-export function draftOf(instance: Instance): Draft {
+/** The colour id a stored `#rrggbb` value is, or `""` for the calendar's own. */
+function colorIdOf(value: string | undefined): string {
+	return COLORS.find((color) => color.value === value)?.id ?? "";
+}
+
+/**
+ * The draft an occurrence opens with: its times on its own zone's clock, or on the viewer's for
+ * an event with floating times.
+ */
+export function draftOf(instance: Instance, viewer: string): Draft {
 	let { event } = instance;
-	let allDay = event.start === null;
-	let start = allDay ? null : clockAt(instance.start.getTime(), event.zone);
-	let end = allDay ? null : clockAt(instance.end.getTime(), event.zone);
+	let allDay = isAllDay(event);
+	let zone = event.timeZone ?? viewer;
+	let start = clockAt(instance.start.getTime(), allDay ? "UTC" : zone);
+	let end = clockAt(instance.end.getTime() - (allDay ? 86_400_000 : 0), allDay ? "UTC" : zone);
+	let repeat = repeatOf(instance.series);
 	return {
-		title: event.title,
-		date: allDay ? (instance.days?.first ?? event.date) : (start?.date ?? event.date),
-		start: start ? clockValue(start.minute) : "09:00",
-		endDate: allDay ? (instance.days?.last ?? event.date) : (end?.date ?? event.date),
-		end: end ? clockValue(end.minute) : "10:00",
+		title: event.title ?? "",
+		date: start.date,
+		start: clockValue(allDay ? 540 : start.minute),
+		endDate: end.date,
+		end: clockValue(allDay ? 600 : end.minute),
 		allDay,
-		repeat: event.repeat,
-		zone: event.zone,
-		calendar: event.calendar,
-		color: event.color ?? "",
-		guests: event.guests,
-		location: event.location ?? "",
-		notes: event.notes ?? "",
-		scope: event.repeat === "none" ? "all" : "this",
+		repeat,
+		zone: ZONES.some((entry) => entry.id === zone) ? zone : viewer,
+		calendar: instance.calendar,
+		color: colorIdOf(event.color),
+		guests: guestsOf(event),
+		location: locationOf(event) ?? "",
+		notes: event.description ?? "",
+		scope: repeat === "none" ? "all" : "this",
 	};
 }
 
@@ -150,7 +172,10 @@ export function readDraft(form: FormData): Draft {
 		let value = form.get(name);
 		return typeof value === "string" ? value : "";
 	};
-	let repeat = REPEATS.find((entry) => entry.id === text("repeat"))?.id ?? "none";
+	let repeat: Draft["repeat"] =
+		text("repeat") === "custom"
+			? "custom"
+			: (REPEATS.find((entry) => entry.id === text("repeat"))?.id ?? "none");
 	let zone = ZONES.find((entry) => entry.id === text("zone"))?.id ?? ZONES[0].id;
 	let calendar =
 		CALENDARS.find((entry) => entry.id === text("calendar") && !entry.subscribed)?.id ?? "work";
@@ -175,34 +200,53 @@ export function readDraft(form: FormData): Draft {
 	};
 }
 
+/** The JSCalendar properties a checked draft sets on an event. */
+export interface EventFields {
+	calendar: string;
+	title: string;
+	start: string;
+	duration: string;
+	timeZone: string | null;
+	showWithoutTime: boolean;
+	/** `undefined` keeps the event's own rules, for a `custom` repeat. */
+	recurrenceRules: ReturnType<typeof rulesOf> | "keep";
+	guests: string[];
+	location?: string;
+	description?: string;
+	color?: string;
+}
+
 /**
- * Checks a draft and turns it into an event's fields, or says what to fix. An event with no
- * title is saved as "(No title)", the way a quick add expects.
+ * Checks a draft and turns it into the JSCalendar properties it sets, or says what to fix. An
+ * event with no title is saved as "(No title)", the way a quick add expects.
  *
  * @returns The fields, or the issues to show beside the form.
  */
-export function eventFields(
-	draft: Draft,
-): { fields: Omit<CalendarEvent, "id"> } | { issues: DraftIssues } {
+export function eventFields(draft: Draft): { fields: EventFields } | { issues: DraftIssues } {
 	if (draft.date === "") return { issues: { end: "Pick a start date." } };
 	let base = {
 		calendar: draft.calendar,
 		title: draft.title === "" ? "(No title)" : draft.title,
-		date: draft.date,
-		zone: draft.zone,
-		repeat: draft.repeat,
-		guests: draft.guests.length === 0 ? [ME] : draft.guests,
-		organizer: ME,
+		recurrenceRules: draft.repeat === "custom" ? ("keep" as const) : rulesOf(draft.repeat),
+		guests: draft.guests,
 		location: draft.location === "" ? undefined : draft.location,
-		notes: draft.notes === "" ? undefined : draft.notes,
-		color: draft.color === "" ? undefined : (draft.color as CalendarEvent["color"]),
+		description: draft.notes === "" ? undefined : draft.notes,
+		color: draft.color === "" ? undefined : colorValue(draft.color),
 	};
 	let days = Math.round(
 		(Date.parse(`${draft.endDate}T00:00:00Z`) - Date.parse(`${draft.date}T00:00:00Z`)) / 86_400_000,
 	);
 	if (draft.allDay) {
 		if (days < 0) return { issues: { end: "The end date is before the start date." } };
-		return { fields: { ...base, start: null, length: days + 1 } };
+		return {
+			fields: {
+				...base,
+				start: localDateTime(draft.date, 0),
+				duration: durationOf((days + 1) * 1440, true),
+				timeZone: null,
+				showWithoutTime: true,
+			},
+		};
 	}
 	let start = minuteOf(draft.start);
 	let end = minuteOf(draft.end);
@@ -210,7 +254,15 @@ export function eventFields(
 	let length = days * 1440 + end - start;
 	if (length <= 0) return { issues: { end: "The event has to end after it starts." } };
 	if (length > 14 * 1440) return { issues: { end: "Keep an event under two weeks." } };
-	return { fields: { ...base, start, length } };
+	return {
+		fields: {
+			...base,
+			start: localDateTime(draft.date, start),
+			duration: durationOf(length),
+			timeZone: draft.zone,
+			showWithoutTime: false,
+		},
+	};
 }
 
 /** A small round avatar with initials, tinted by the person's hue. */
@@ -306,9 +358,15 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 	return () => {
 		let { instance, zone, editHref, back } = handle.props;
 		let { event } = instance;
-		let calendar = findCalendar(event.calendar);
+		let calendar = findCalendar(instance.calendar);
 		let readOnly = calendar?.subscribed === true;
-		let invited = event.organizer !== undefined && event.organizer !== ME;
+		let organizer = organizerOf(event);
+		let invited = organizer !== undefined && organizer !== ME;
+		let guests = guestsOf(event);
+		let location = locationOf(event);
+		let repeat = repeatOf(instance.series);
+		let rsvp = rsvpOf(event);
+		let eventZone = event.timeZone ?? zone;
 		let when = iife(() => {
 			let days = instance.days;
 			if (days === undefined)
@@ -317,8 +375,8 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 			return `${formatDay(days.first, "short")} – ${formatDay(days.last, "short")} · All day`;
 		});
 		let otherZone =
-			instance.days === undefined && event.zone !== zone
-				? `${formatTimes(instance, event.zone)} ${zoneName(event.zone, instance.day)} in ${ZONES.find((entry) => entry.id === event.zone)?.label ?? event.zone}`
+			instance.days === undefined && eventZone !== zone
+				? `${formatTimes(instance, eventZone)} ${zoneName(eventZone, clockAt(instance.start.getTime(), eventZone).date)} in ${ZONES.find((entry) => entry.id === eventZone)?.label ?? eventZone}`
 				: null;
 		return (
 			<div
@@ -336,7 +394,7 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 				<div mix={[raw({ display: "flex", gap: "0.625rem", alignItems: "start" })]}>
 					<span
 						aria-hidden="true"
-						style={`background-color: ${eventColor(event)}`}
+						style={`background-color: ${eventColor(instance)}`}
 						mix={[
 							raw({
 								flex: "none",
@@ -366,16 +424,16 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 					</div>
 				</div>
 				{otherZone === null ? null : <Line icon={<ClockIcon />}>{otherZone}</Line>}
-				{event.repeat === "none" ? null : (
+				{repeat === "none" ? null : (
 					<Line icon={<RepeatIcon />}>
-						{REPEATS.find((entry) => entry.id === event.repeat)?.name ?? ""}
+						{REPEATS.find((entry) => entry.id === repeat)?.name ?? "Repeats on a custom rule"}
 					</Line>
 				)}
-				{event.location === undefined ? null : <Line icon={<MapPinIcon />}>{event.location}</Line>}
-				{event.guests.length > 1 ? (
+				{location === undefined ? null : <Line icon={<MapPinIcon />}>{location}</Line>}
+				{guests.length > 1 ? (
 					<Line icon={<UsersIcon />}>
 						<div mix={[raw({ display: "grid", gap: "0.375rem" })]}>
-							<span>{`${event.guests.length} guests`}</span>
+							<span>{`${guests.length} guests`}</span>
 							<ul
 								mix={[
 									raw({
@@ -387,14 +445,14 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 									}),
 								]}
 							>
-								{event.guests.map((guest) => {
+								{guests.map((guest) => {
 									let person = findPerson(guest);
 									return (
 										<li mix={[raw({ display: "flex", gap: "0.5rem", alignItems: "center" })]}>
 											<PersonDot id={guest} size={20} />
 											<span>
 												{person?.name ?? guest}
-												{guest === event.organizer ? (
+												{guest === organizer ? (
 													<span mix={[raw({ color: "var(--ui-neutral-fg-muted)" })]}>
 														{" "}
 														· Organizer
@@ -408,7 +466,7 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 						</div>
 					</Line>
 				) : null}
-				{event.notes === undefined ? null : (
+				{event.description === undefined ? null : (
 					<p
 						mix={[
 							raw({
@@ -419,7 +477,7 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 							}),
 						]}
 					>
-						{event.notes}
+						{event.description}
 					</p>
 				)}
 				<Line icon={<CalendarIcon />}>{calendar?.name ?? ""}</Line>
@@ -449,9 +507,9 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 								name="rsvp"
 								value={answer.id}
 								size="sm"
-								variant={event.rsvp === answer.id ? "solid" : "outline"}
-								color={event.rsvp === answer.id ? "brand" : "neutral"}
-								aria-pressed={event.rsvp === answer.id ? "true" : "false"}
+								variant={rsvp === answer.id ? "solid" : "outline"}
+								color={rsvp === answer.id ? "brand" : "neutral"}
+								aria-pressed={rsvp === answer.id ? "true" : "false"}
 							>
 								{answer.label}
 							</Button>
@@ -467,7 +525,7 @@ export function EventCard(handle: Handle<EventCard.Props>) {
 							<input type="hidden" name="back" value={back} />
 							<Button type="submit" size="sm" variant="ghost" color="neutral">
 								<TrashIcon size={14} aria-hidden="true" />
-								{event.repeat === "none" ? "Delete" : "Delete this one"}
+								{repeat === "none" ? "Delete" : "Delete this one"}
 							</Button>
 						</form>
 						<LinkButton href={editHref} size="sm" variant="outline" color="neutral">
@@ -663,7 +721,12 @@ export function EventDialog(handle: Handle<EventDialog.Props>) {
 									name="repeat"
 									label="Repeat"
 									value={draft.repeat}
-									options={REPEATS.map((repeat) => ({ value: repeat.id, label: repeat.name }))}
+									options={[
+										...REPEATS.map((repeat) => ({ value: repeat.id, label: repeat.name })),
+										...(draft.repeat === "custom"
+											? [{ value: "custom", label: "Custom rule (kept)" }]
+											: []),
+									]}
 								/>
 							</div>
 							{recurring ? (

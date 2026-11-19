@@ -11,15 +11,16 @@ import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
 
-import type { CalendarEvent } from "./data";
+import type { Seed } from "./data";
 
-import { PEOPLE, findPerson, seedEvents } from "./data";
+import { PEOPLE, findPerson } from "./data";
 import { freeSlots, workingSpans } from "./find";
-import { eventsOf, readVisitor } from "./state";
+import { toEntry } from "./model";
+import { eventsOf, readVisitor, seedEntries } from "./state";
 import { clockAt, hourLabels, instancesIn, segmentsOf } from "./time";
 
 /** A weekly 3 PM London meeting that began in the summer. */
-const LONDON_SYNC: CalendarEvent = {
+const LONDON_SYNC: Seed = {
 	id: "sync",
 	calendar: "work",
 	title: "Sync",
@@ -32,9 +33,9 @@ const LONDON_SYNC: CalendarEvent = {
 };
 
 /** The New York minute each of a series' occurrences starts at, by its day. */
-function newYorkStarts(event: CalendarEvent, first: string, days: number): Record<string, number> {
+function newYorkStarts(seed: Seed, first: string, days: number): Record<string, number> {
 	return Object.fromEntries(
-		instancesIn([event], first, days, "America/New_York").map((instance) => {
+		instancesIn([toEntry(seed)], first, days, "America/New_York").map((instance) => {
 			let at = clockAt(instance.start.getTime(), "America/New_York");
 			return [at.date, at.minute];
 		}),
@@ -76,7 +77,7 @@ describe("Sundial's clock", () => {
 	});
 
 	test("splits an overnight flight at midnight on the viewer's clock", () => {
-		let flight: CalendarEvent = {
+		let flight: Seed = {
 			...LONDON_SYNC,
 			id: "f",
 			zone: "America/New_York",
@@ -85,7 +86,7 @@ describe("Sundial's clock", () => {
 			start: 21 * 60 + 40,
 			length: 420,
 		};
-		let [instance] = instancesIn([flight], "2026-11-24", 2, "America/New_York");
+		let [instance] = instancesIn([toEntry(flight)], "2026-11-24", 2, "America/New_York");
 		let pieces = segmentsOf(instance!, "America/New_York");
 		expect(pieces.map((piece) => [piece.date, piece.start, piece.end])).toEqual([
 			["2026-11-24", 1300, 1440],
@@ -119,14 +120,15 @@ describe("Sundial's clock", () => {
 });
 
 describe("Sundial's posts", () => {
-	test("moving one standup leaves the series in place and adds a one-off at the new time", async () => {
+	test("moving one standup writes that occurrence's override and leaves the series in place", async () => {
 		let today = clockAt(Date.now(), "America/New_York").date;
-		let standup = instancesIn(seedEvents(today), today, 7, "America/New_York").find(
-			(instance) => instance.event.id === "standup",
+		let standup = instancesIn(seedEntries(today), today, 7, "America/New_York").find(
+			(instance) => instance.uid === "standup",
 		)!;
+		let day = standup.recurrenceId!.slice(0, 10);
 		let response = await post("move", {
 			id: standup.key,
-			date: standup.day,
+			date: day,
 			start: "840",
 			end: "855",
 			back: "day?d=2026-11-18",
@@ -136,17 +138,40 @@ describe("Sundial's posts", () => {
 			/^\/demo\/apps\/sundial\/day\?d=2026-11-18&toast=moved\./,
 		);
 		let visitor = readVisitor(cookiesOf(response));
-		let events = eventsOf(visitor, today);
-		let series = events.find((event) => event.id === "standup")!;
-		expect(series.exceptions).toEqual([standup.day]);
-		expect(series.start).toBe(570);
-		let copy = events.find((event) => event.id === `standup-${standup.day.replaceAll("-", "")}`)!;
-		expect([copy.date, copy.start, copy.length, copy.repeat]).toEqual([
-			standup.day,
-			840,
-			15,
-			"none",
-		]);
+		expect(visitor.changes.patched.standup).toEqual({
+			recurrenceOverrides: {
+				[standup.recurrenceId!]: { start: `${day}T14:00:00`, duration: "PT15M" },
+			},
+		});
+		let week = instancesIn(eventsOf(visitor, today), today, 7, "America/New_York").filter(
+			(instance) => instance.uid === "standup",
+		);
+		let moved = week.find((instance) => instance.recurrenceId === standup.recurrenceId)!;
+		expect(clockAt(moved.start.getTime(), "America/New_York")).toEqual({ date: day, minute: 840 });
+		expect(
+			week
+				.filter((instance) => instance !== moved)
+				.every((instance) => clockAt(instance.start.getTime(), "America/New_York").minute === 570),
+		).toBe(true);
+	});
+
+	test("deleting one occurrence excludes it and keeps the rest of the series", async () => {
+		let today = clockAt(Date.now(), "America/New_York").date;
+		let standups = instancesIn(seedEntries(today), today, 7, "America/New_York").filter(
+			(instance) => instance.uid === "standup",
+		);
+		let response = await post(`events/${encodeURIComponent(standups[0]!.key)}/delete`, {
+			back: "",
+		});
+		let after = instancesIn(
+			eventsOf(readVisitor(cookiesOf(response)), today),
+			today,
+			7,
+			"America/New_York",
+		);
+		expect(after.filter((instance) => instance.uid === "standup")).toHaveLength(
+			standups.length - 1,
+		);
 	});
 
 	test("Undo puts the calendar back as it was before the last change", async () => {
@@ -163,7 +188,9 @@ describe("Sundial's posts", () => {
 			back: "",
 		});
 		let cookie = cookiesOf(created);
-		expect(readVisitor(cookie).changes.added.map((event) => event.title)).toEqual(["Pairing"]);
+		expect(readVisitor(cookie).changes.added.map((entry) => entry.event.title)).toEqual([
+			"Pairing",
+		]);
 		let undone = await post("undo", {}, cookie);
 		expect(undone.headers.get("Location")).toMatch(/^\/demo\/apps\/sundial\?toast=undone\./);
 		expect(readVisitor(cookiesOf(undone)).changes.added).toEqual([]);

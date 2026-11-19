@@ -40,16 +40,16 @@ export const DEFAULT_ZONE = "America/New_York";
 /** The second zone column it opens with. */
 export const DEFAULT_SECOND_ZONE = "Europe/London";
 
-/** The colours an event or calendar can take, each an oklch hue that reads on light and dark. */
+/** The colours an event or calendar can take, as the `#rrggbb` values JSCalendar stores. */
 export const COLORS = [
-	{ id: "dial", name: "Dial blue", value: "oklch(0.56 0.13 245)" },
-	{ id: "fern", name: "Fern", value: "oklch(0.58 0.12 150)" },
-	{ id: "marigold", name: "Marigold", value: "oklch(0.72 0.15 75)" },
-	{ id: "clay", name: "Clay", value: "oklch(0.6 0.14 40)" },
-	{ id: "plum", name: "Plum", value: "oklch(0.52 0.13 320)" },
-	{ id: "slate", name: "Slate", value: "oklch(0.55 0.03 250)" },
-	{ id: "rose", name: "Rose", value: "oklch(0.62 0.16 10)" },
-	{ id: "lagoon", name: "Lagoon", value: "oklch(0.62 0.1 200)" },
+	{ id: "dial", name: "Dial blue", value: "#2f6fb3" },
+	{ id: "fern", name: "Fern", value: "#3f8f55" },
+	{ id: "marigold", name: "Marigold", value: "#d99a1e" },
+	{ id: "clay", name: "Clay", value: "#c2603a" },
+	{ id: "plum", name: "Plum", value: "#8a4a91" },
+	{ id: "slate", name: "Slate", value: "#66707f" },
+	{ id: "rose", name: "Rose", value: "#cf4a62" },
+	{ id: "lagoon", name: "Lagoon", value: "#2b9aa6" },
 ] as const;
 
 /** A colour's id. */
@@ -167,8 +167,8 @@ export const REPEATS: Array<{ id: RepeatId; name: string }> = [
 /** A visitor's answer to an invitation. */
 export type Rsvp = "yes" | "maybe" | "no" | "pending";
 
-/** One event, stored in the zone it was planned in, as a seed or as the visitor changed it. */
-export interface CalendarEvent {
+/** A seed event as written here: the compact shape `model.ts` turns into a JSCalendar Event. */
+export interface Seed {
 	id: string;
 	calendar: string;
 	title: string;
@@ -217,7 +217,7 @@ function at(clock: string): number {
  *
  * @param today The visitor's today, as `YYYY-MM-DD` in their zone.
  */
-export function seedEvents(today: string): CalendarEvent[] {
+export function seedDefinitions(today: string): Seed[] {
 	let monday = mondayOf(today);
 	let day = (offset: number) => shiftDate(monday, offset);
 	let year = Number(today.slice(0, 4));
@@ -229,8 +229,8 @@ export function seedEvents(today: string): CalendarEvent[] {
 		offset: number,
 		start: string,
 		length: number,
-		extra: Partial<CalendarEvent> = {},
-	): CalendarEvent => ({
+		extra: Partial<Seed> = {},
+	): Seed => ({
 		id,
 		calendar,
 		title,
@@ -249,8 +249,8 @@ export function seedEvents(today: string): CalendarEvent[] {
 		title: string,
 		date: string,
 		days: number,
-		extra: Partial<CalendarEvent> = {},
-	): CalendarEvent => ({
+		extra: Partial<Seed> = {},
+	): Seed => ({
 		id,
 		calendar,
 		title,
@@ -429,9 +429,4 @@ export function findPerson(id: string): Person | undefined {
 /** A colour's CSS value, falling back to the first. */
 export function colorValue(id: string | undefined): string {
 	return (COLORS.find((color) => color.id === id) ?? COLORS[0]).value;
-}
-
-/** The colour an event draws in: its own, else its calendar's. */
-export function eventColor(event: CalendarEvent): string {
-	return colorValue(event.color ?? findCalendar(event.calendar)?.color);
 }

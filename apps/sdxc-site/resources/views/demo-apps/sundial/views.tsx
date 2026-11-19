@@ -16,11 +16,12 @@ import { DayStrip } from "@sdxc/ui/app/day-strip";
 import { MonthView } from "@sdxc/ui/app/month-view";
 import { TimeGrid } from "@sdxc/ui/app/time-grid";
 
-import type { CalendarEvent } from "./data";
+import type { Entry } from "./model";
 import type { Instance } from "./time";
 
-import { LOCALE, actionHref, eventColor, findCalendar, href, mondayOf, shiftDate } from "./data";
+import { LOCALE, actionHref, href, mondayOf, shiftDate } from "./data";
 import { EventCard } from "./event";
+import { eventColor, isEditable, locationOf, rsvpOf } from "./model";
 import {
 	clockAt,
 	formatDay,
@@ -55,7 +56,7 @@ export interface ViewContext {
 	zone: string;
 	second: string | null;
 	/** The visitor's events on the calendars they show. */
-	events: CalendarEvent[];
+	events: Entry[];
 	/** The screen's own address, with its query, for forms to come back to. */
 	back: string;
 }
@@ -92,11 +93,6 @@ const GRID_LABELS: TimeGrid.Labels = {
 	moved: "{title} moved to {time}",
 	resized: "{title} now ends at {time}",
 };
-
-/** Whether the visitor may change an event: theirs, not a subscribed calendar's. */
-function editable(event: CalendarEvent): boolean {
-	return findCalendar(event.calendar)?.subscribed !== true;
-}
 
 /** The address of the dialog editing an occurrence, from the screen it opens over. */
 function editHref(context: ViewContext, instance: Instance): string {
@@ -152,8 +148,8 @@ function Grid(handle: Handle<Grid.Props>) {
 				id: instance.key,
 				start: range.first,
 				end: range.last,
-				title: instance.event.title,
-				color: eventColor(instance.event),
+				title: instance.event.title ?? "",
+				color: eventColor(instance),
 				popover: card(context, instance),
 			};
 		});
@@ -168,13 +164,13 @@ function Grid(handle: Handle<Grid.Props>) {
 				date: segment.date,
 				start: segment.start,
 				end: segment.end,
-				title: instance.event.title,
+				title: instance.event.title ?? "",
 				time: formatTimes(instance, context.zone),
-				detail: instance.event.location,
-				color: eventColor(instance.event),
+				detail: locationOf(instance.event),
+				color: eventColor(instance),
 				popover: card(context, instance),
-				editable: editable(instance.event) && !segment.cut,
-				tentative: instance.event.rsvp === "pending" || instance.event.rsvp === "maybe",
+				editable: isEditable(instance.calendar) && !segment.cut,
+				tentative: rsvpOf(instance.event) === "pending" || rsvpOf(instance.event) === "maybe",
 				past: instance.end.getTime() < context.now.at,
 			}));
 		return (
@@ -364,9 +360,9 @@ export function MonthScreen(handle: Handle<{ context: ViewContext }>) {
 				start: range?.first ?? clockAt(instance.start.getTime(), context.zone).date,
 				end: range?.last,
 				allDay: lane,
-				title: instance.event.title,
+				title: instance.event.title ?? "",
 				time: lane ? undefined : shortTime(instance, context.zone),
-				color: eventColor(instance.event),
+				color: eventColor(instance),
 				popover: card(context, instance),
 				past: instance.end.getTime() < context.now.at,
 			};
@@ -405,12 +401,12 @@ export function AgendaScreen(handle: Handle<{ context: ViewContext }>) {
 			href: viewHref("day", date),
 			events: (byDay.get(date) ?? []).map((instance) => ({
 				id: instance.key,
-				title: instance.event.title,
+				title: instance.event.title ?? "",
 				time: formatTimes(instance, context.zone),
-				color: eventColor(instance.event),
-				detail: instance.event.location,
+				color: eventColor(instance),
+				detail: locationOf(instance.event),
 				popover: card(context, instance),
-				tentative: instance.event.rsvp === "pending" || instance.event.rsvp === "maybe",
+				tentative: rsvpOf(instance.event) === "pending" || rsvpOf(instance.event) === "maybe",
 				past: instance.end.getTime() < context.now.at,
 			})),
 		}));
