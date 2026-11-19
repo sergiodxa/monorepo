@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/component";
+import type { EntryComponent, Handle, Props as TagProps } from "remix/component";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
 import { outline } from "@sdxc/u/color";
@@ -19,7 +19,9 @@ import { flex, flexCol, gap, grow, items, justify, shrink } from "@sdxc/u/layout
 import { media } from "@sdxc/u/responsive";
 import { bs, is, minIs, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { attrs } from "remix/component";
+import { attrs, clientEntry } from "remix/component";
+
+import { carouselSync } from "../mixins/carousel-controls.js";
 
 import { Button } from "./button.js";
 
@@ -108,6 +110,28 @@ export namespace Carousel {
 	 * Every {@link Button.Props} field, with `commandfor` required and `command`
 	 * narrowed to the verb the paired mixin listens for.
 	 */
+	/** Every native `<div>` attribute, plus the dots' viewport, count and names. */
+	export interface DotsProps extends Omit<TagProps<"div">, "children"> {
+		/** `id` of the {@link Carousel.Viewport} the dots move. */
+		commandfor: string;
+		/** How many slides the viewport holds, one dot each. */
+		count: number;
+		/** Each dot's accessible name, from its zero-based index, such as "Photo 2 of 3". */
+		label: (index: number) => string;
+		/** The slide the page renders in view, marked before script runs. @default 0 */
+		current?: number;
+	}
+
+	/** Every native `<span>` attribute, plus the viewport it reads and its size. */
+	export interface CountProps extends Omit<TagProps<"span">, "children"> {
+		/** `id` of the {@link Carousel.Viewport} whose position it shows. */
+		viewport: string;
+		/** How many slides the viewport holds. */
+		total: number;
+		/** The slide the page renders in view. @default 0 */
+		current?: number;
+	}
+
 	export interface NextProps extends Omit<Button.Props, "commandfor" | "command"> {
 		/** `id` of the {@link Carousel.Viewport} this control scrolls forward through. */
 		commandfor: string;
@@ -266,6 +290,7 @@ Carousel.Slide = function CarouselSlide(handle: Handle<Carousel.SlideProps>) {
 			<div
 				{...rest}
 				data-slot="slide"
+				data-carousel-slide=""
 				mix={mergeMix(
 					[
 						attrs({ role: DEFAULT_SLIDE_ROLE }),
@@ -383,3 +408,106 @@ Carousel.Next = function CarouselNext(handle: Handle<Carousel.NextProps>) {
 		);
 	};
 };
+
+/**
+ * A row of dots, one `--ui-goto` invoker per slide, the one in view marked with
+ * `aria-current`. Each dot draws 6px inside a 24px target, so a row reads as a position
+ * indicator and still takes a thumb; it needs `carouselControls()` or {@link CarouselSync}.
+ *
+ * @example <Carousel.Dots commandfor="photos" count={3} label={(i) => `Photo ${i + 1} of 3`} />
+ */
+Carousel.Dots = function CarouselDots(handle: Handle<Carousel.DotsProps>) {
+	return () => {
+		let { commandfor, count, current = 0, label, mix, ...rest } = handle.props;
+		return (
+			<div
+				{...rest}
+				data-slot="dots"
+				mix={mergeMix([flex(), justify("center"), items("center")], mix)}
+			>
+				{Array.from({ length: count }, (_, index) => (
+					<button
+						type="button"
+						commandfor={commandfor}
+						command="--ui-goto"
+						data-slide={String(index)}
+						aria-label={label(index)}
+						aria-current={index === current ? "true" : undefined}
+						mix={[
+							raw({
+								display: "grid",
+								placeItems: "center",
+								inlineSize: "var(--ui-carousel-dot-target, 1.5rem)",
+								blockSize: "var(--ui-carousel-dot-target, 1.5rem)",
+								marginInline: "calc((var(--ui-carousel-dot-target, 1.5rem) - 0.75rem) / -2)",
+								padding: "0",
+								border: "0",
+								background: "transparent",
+								cursor: "pointer",
+								"&::before": {
+									content: '""',
+									inlineSize: "0.375rem",
+									blockSize: "0.375rem",
+									borderRadius: "999px",
+									backgroundColor:
+										"var(--ui-carousel-dot, color-mix(in oklch, currentColor 45%, transparent))",
+									transition: "background-color 150ms ease, scale 150ms ease",
+								},
+							}),
+							when(
+								'&[aria-current="true"]::before',
+								raw({
+									backgroundColor: "var(--ui-carousel-dot-current, currentColor)",
+									scale: "1.25",
+								}),
+							),
+							when("&:focus-visible", outline({ color: "brand.ring", offset: 0 })),
+							media(
+								"(prefers-reduced-motion: reduce)",
+								raw({ "&::before": { transition: "none" } }),
+							),
+						]}
+					/>
+				))}
+			</div>
+		);
+	};
+};
+
+/**
+ * The position as `n / N` in tabular figures, rewritten as the viewport scrolls by
+ * `carouselControls()` or {@link CarouselSync}. It is hidden from assistive tech, since
+ * the dots' current marker already says the same.
+ *
+ * @example <Carousel.Count viewport="photos" total={3} />
+ */
+Carousel.Count = function CarouselCount(handle: Handle<Carousel.CountProps>) {
+	return () => {
+		let { current = 0, mix, total, viewport, ...rest } = handle.props;
+		return (
+			<span
+				{...rest}
+				aria-hidden="true"
+				data-slot="count"
+				data-carousel-count-for={viewport}
+				mix={mergeMix([raw({ fontVariantNumeric: "tabular-nums" })], mix)}
+			>
+				{current + 1} / {total}
+			</span>
+		);
+	};
+};
+
+/**
+ * The island that runs a Carousel without a page-written island around its viewport: a
+ * hidden marker placed anywhere inside the {@link Carousel} root. It loads from
+ * `@sdxc/ui/carousel`, which the app's browser entry maps to an import.
+ *
+ * @example <Carousel>…<CarouselSync /></Carousel>
+ */
+export const CarouselSync: EntryComponent<Record<never, never>> = clientEntry(
+	"@sdxc/ui/carousel#CarouselSync",
+	function CarouselSync() {
+		return () => <span hidden mix={[carouselSync()]} />;
+	},
+);

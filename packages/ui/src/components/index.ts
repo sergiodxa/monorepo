@@ -55,6 +55,7 @@ export * from "./link.js";
 export * from "./listbox.js";
 export * from "./logo.js";
 export * from "./map-canvas.js";
+export * from "./media-grid.js";
 export * from "./menu.js";
 export * from "./meter.js";
 export * from "./modal.js";

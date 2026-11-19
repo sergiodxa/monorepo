@@ -223,6 +223,10 @@ Every export carries JSDoc, so the editor shows each full signature.
   presets.
 - `AspectRatio`, `ScrollArea`, `Carousel` — a ratio lock, a scroll region, and a scroll-snap slide
   set.
+  `Carousel.Dots` and `Carousel.Count` show the position, and `CarouselSync`, placed inside the
+  root, runs the arrows, dots and count without a page-written island.
+- `MediaGrid` — square photo and video tiles as links, three to a row; `.Item` can stand
+  `tall`, carry a `badge` and show an `overlay` on hover or focus.
 - `YouTubeEmbed` — a lazy-loaded 16:9 YouTube player (`videoId`, `start?`, `title`) served from
   `www.youtube-nocookie.com`, which the page's `frame-src` has to allow.
 - `Text`, `Header`, `Keyboard`, `Typeset` — muted copy, a section label, a `<kbd>`, and typography

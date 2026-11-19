@@ -1,8 +1,8 @@
 /**
  * Handles the `--ui-prev`, `--ui-next`, and `--ui-goto` commands a Carousel's
- * invoker buttons dispatch at its viewport, turning each into an
- * `Element.scrollBy()` call, and keeps every matching invoker's `disabled`
- * state in sync with whichever scroll edge the viewport currently sits at.
+ * invoker buttons dispatch at its viewport, turning each into a scroll, and keeps
+ * every matching invoker's `disabled` state, the current dot and any `n / N` count
+ * in step with the slide in view.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -169,6 +169,48 @@ function syncGotoCurrent(node: HTMLElement): void {
 }
 
 /**
+ * Writes `n / N` into every count naming the viewport (`data-carousel-count-for`), so the
+ * position reads the same as the dots.
+ *
+ * @param node Carousel viewport whose scroll position is read.
+ */
+function syncCount(node: HTMLElement): void {
+	if (node.id === "") return;
+	let current = readCurrentSlideIndex(node);
+	if (current === null) return;
+	let total = node.querySelectorAll(`[${CAROUSEL_SLIDE_ATTRIBUTE}]`).length;
+	for (let count of document.querySelectorAll<HTMLElement>(
+		`[data-carousel-count-for="${CSS.escape(node.id)}"]`,
+	)) {
+		count.textContent = `${current + 1} / ${total}`;
+	}
+}
+
+/** Re-syncs everything that reports a viewport's position: arrows, dots and counts. */
+function syncAll(node: HTMLElement): void {
+	syncInvokerDisabled(node);
+	syncGotoCurrent(node);
+	syncCount(node);
+}
+
+/** Runs one `--ui-prev`, `--ui-next` or `--ui-goto` command against a viewport. */
+function runCommand(viewport: HTMLElement, event: Event): void {
+	let commandEvent = asCommandEvent(event);
+	switch (commandEvent.command) {
+		case PREV_COMMAND:
+			scrollByPage(viewport, -1);
+			return;
+		case NEXT_COMMAND:
+			scrollByPage(viewport, 1);
+			return;
+		case GOTO_COMMAND: {
+			let index = readGotoSlideIndex(commandEvent.source);
+			if (index !== null) scrollToSlide(viewport, index);
+		}
+	}
+}
+
+/**
  * Parses a `--ui-goto` command's target slide index from its invoking
  * button's `data-slide` attribute.
  *
@@ -256,13 +298,9 @@ export const carouselControls = createMixin<HTMLElement>((handle) => {
 	handle.addEventListener("insert", (event) => {
 		let viewport = event.node;
 
-		syncInvokerDisabled(viewport);
-		syncGotoCurrent(viewport);
+		syncAll(viewport);
 
-		let observer = new ResizeObserver(() => {
-			syncInvokerDisabled(viewport);
-			syncGotoCurrent(viewport);
-		});
+		let observer = new ResizeObserver(() => syncAll(viewport));
 		observer.observe(viewport);
 		handle.signal.addEventListener("abort", () => observer.disconnect());
 	});
@@ -270,27 +308,53 @@ export const carouselControls = createMixin<HTMLElement>((handle) => {
 	return () =>
 		createElement(handle.element, {
 			mix: [
-				on<HTMLElement, "command">("command", (event) => {
-					let commandEvent = asCommandEvent(event);
-					let viewport = event.currentTarget;
-
-					switch (commandEvent.command) {
-						case PREV_COMMAND:
-							scrollByPage(viewport, -1);
-							return;
-						case NEXT_COMMAND:
-							scrollByPage(viewport, 1);
-							return;
-						case GOTO_COMMAND: {
-							let index = readGotoSlideIndex(commandEvent.source);
-							if (index !== null) scrollToSlide(viewport, index);
-						}
-					}
-				}),
-				on<HTMLElement, "scroll">("scroll", (event) => {
-					syncInvokerDisabled(event.currentTarget);
-					syncGotoCurrent(event.currentTarget);
-				}),
+				on<HTMLElement, "command">("command", (event) => runCommand(event.currentTarget, event)),
+				on<HTMLElement, "scroll">("scroll", (event) => syncAll(event.currentTarget)),
 			],
 		});
+});
+
+/** Set on a Carousel root once {@link carouselSync} runs it, for controls that need script. */
+export const CAROUSEL_READY_ATTRIBUTE = "data-carousel-ready";
+
+/**
+ * Runs the Carousel it sits in from a hidden host anywhere inside the carousel root, so a
+ * server-rendered carousel gets the same command handling, arrow and dot state and `n / N`
+ * counts as {@link carouselControls} without the page writing an island around its viewport.
+ * It marks the root with {@link CAROUSEL_READY_ATTRIBUTE} while it runs.
+ *
+ * @example <span hidden mix={[carouselSync()]} />
+ */
+export const carouselSync = createMixin<HTMLElement>((handle) => {
+	let controller: AbortController | undefined;
+
+	handle.addEventListener("insert", (event) => {
+		controller?.abort();
+		let root = event.node.closest<HTMLElement>("[data-slot=carousel]");
+		let viewport = root?.querySelector<HTMLElement>("[data-slot=viewport]");
+		if (!root || !viewport) return;
+		let wired = new AbortController();
+		controller = wired;
+		let target = viewport;
+		target.addEventListener("command", (command) => runCommand(target, command), {
+			signal: wired.signal,
+		});
+		target.addEventListener("scroll", () => syncAll(target), {
+			passive: true,
+			signal: wired.signal,
+		});
+		let observer = new ResizeObserver(() => syncAll(target));
+		observer.observe(target);
+		root.setAttribute(CAROUSEL_READY_ATTRIBUTE, "");
+		syncAll(target);
+		wired.signal.addEventListener("abort", () => {
+			observer.disconnect();
+			root.removeAttribute(CAROUSEL_READY_ATTRIBUTE);
+		});
+	});
+
+	handle.addEventListener("remove", () => {
+		controller?.abort();
+		controller = undefined;
+	});
 });
