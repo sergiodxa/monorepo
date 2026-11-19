@@ -72,6 +72,32 @@ describe("OrderSteps", () => {
 		);
 	});
 
+	test("sets a step's detail under its label, and keeps a step without one to its label", () => {
+		mounted = render(
+			<OrderSteps
+				current="on-the-way"
+				steps={[
+					{ id: "placed", label: "Order placed", detail: "Mon 16 Nov" },
+					{ id: "on-the-way", label: "On the way", detail: "Scanned in Leeds" },
+					{ id: "delivered", label: "Delivered" },
+				]}
+			/>,
+		);
+		let rows = [...mounted.container.querySelectorAll<HTMLElement>("[data-order-step]")];
+		expect(rows.map((row) => row.textContent)).toEqual([
+			"Order placedMon 16 Nov",
+			"On the wayScanned in Leeds",
+			"Delivered",
+		]);
+		let detail = rows[1]!.querySelector<HTMLElement>('[data-slot="order-step-detail"]')!;
+		let label = detail.previousElementSibling!;
+		expect(detail.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+			label.getBoundingClientRect().bottom,
+		);
+		expect(getComputedStyle(detail).fontWeight).toBe("400");
+		expect(rows[2]!.querySelector('[data-slot="order-step-detail"]')).toBeNull();
+	});
+
 	test("reads a stream line, and refuses one for a step it lacks", () => {
 		let ids = STEPS.map((step) => step.id);
 		expect(parseOrderLine("on-the-way 0.420 9", ids)).toEqual({

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { EntryComponent, Handle, Props as TagProps } from "remix/component";
+import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { CheckIcon } from "@sdxc/icons";
 import { mergeMix, raw } from "@sdxc/u/general";
@@ -21,6 +21,8 @@ export namespace OrderSteps {
 		/** The id the stream names the step by. */
 		id: string;
 		label: string;
+		/** Under the label in small muted type, such as a date or where the parcel was scanned. */
+		detail?: RemixNode;
 	}
 
 	/** Props accepted by {@link OrderSteps}; the host is an `<ol>`. */
@@ -151,7 +153,25 @@ export function OrderSteps(handle: Handle<OrderSteps.Props>) {
 							<span data-dot="">
 								<CheckIcon aria-hidden="true" size={13} />
 							</span>
-							<span mix={[raw({ alignSelf: "center" })]}>{step.label}</span>
+							{step.detail === undefined ? (
+								<span mix={[raw({ alignSelf: "center" })]}>{step.label}</span>
+							) : (
+								<span mix={[raw({ display: "grid", gap: "0.125rem", alignSelf: "center" })]}>
+									<span>{step.label}</span>
+									<span
+										data-slot="order-step-detail"
+										mix={[
+											raw({
+												fontSize: "0.8125rem",
+												fontWeight: "400",
+												color: "var(--ui-neutral-fg-muted)",
+											}),
+										]}
+									>
+										{step.detail}
+									</span>
+								</span>
+							)}
 						</li>
 					);
 				})}
