@@ -99,7 +99,6 @@ export const FACE_KIND = {
 	"drop-indicator": "drop-indicator",
 	"drop-zone": "drop-zone",
 	"editor-layout": "split-view",
-	"emoji-picker": "popover",
 	empty: "empty",
 	equalizer: "meter",
 	"episode-player": "video",

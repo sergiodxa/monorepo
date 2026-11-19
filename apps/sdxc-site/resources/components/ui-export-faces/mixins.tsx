@@ -2060,6 +2060,7 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 				body = <ToggleFace kind="check" />;
 				break;
 			case "optimisticToggleSync":
+			case "reactionSync":
 			case "pressToggle":
 			case "mirrorSelectedOption":
 			case "splitViewToggle":

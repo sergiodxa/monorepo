@@ -250,7 +250,6 @@ const CATALOGUE = [
 	{ slug: "drop-indicator", module: "app" },
 	{ slug: "drop-zone", module: "app" },
 	{ slug: "editor-layout", module: "app" },
-	{ slug: "emoji-picker", module: "chat" },
 	{ slug: "empty", module: "app" },
 	{ slug: "episode-list", module: "video" },
 	{ slug: "equalizer", module: "audio" },
@@ -1061,21 +1060,6 @@ const OVERRIDES: Record<string, Shape[]> = {
 			weight: 1.4,
 			tone: "surface",
 		},
-	]),
-	"emoji-picker": windowScene([
-		{ kind: "rect", x: 34, y: 27, w: 76, h: 46, r: 6, tone: "surface", ring: true },
-		{ kind: "rect", x: 40, y: 32, w: 64, h: 8, r: 4, tone: "label" },
-		...[0, 1, 2].flatMap((row) =>
-			[0, 1, 2, 3, 4, 5].map((column): Shape => ({
-				kind: "circle",
-				cx: 45 + column * 11,
-				cy: 49 + row * 9,
-				r: 3,
-				tone: row === 0 && column === 1 ? "accent" : "label",
-			})),
-		),
-		{ kind: "circle", cx: 40, cy: 82, r: 5, tone: "surface", ring: true },
-		{ kind: "stroke", d: "M37.5 83 L40 84.5 L42.5 83", weight: 1.2, tone: "ink" },
 	]),
 	"mention-menu": windowScene([
 		{ kind: "rect", x: 28, y: 28, w: 72, h: 34, r: 6, tone: "surface", ring: true },
