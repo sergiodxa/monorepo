@@ -9,7 +9,13 @@
 
 import type { Handle } from "remix/component";
 
-import { AudioLinesIcon, ChevronDownIcon, ChevronUpIcon, MessageCircleIcon } from "@sdxc/icons";
+import {
+	AudioLinesIcon,
+	ChevronDownIcon,
+	ChevronUpIcon,
+	MessageCircleIcon,
+	XIcon,
+} from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { ReelFeed } from "@sdxc/ui/video/reel-feed";
@@ -119,6 +125,27 @@ function CommentsSheet(handle: Handle<{ reel: Reel; index: number }>) {
 							inlineSize: "min(26rem, calc(100vw - 1rem))",
 							maxBlockSize: "70dvh",
 							margin: "auto auto 0",
+							"@supports (anchor-name: --reel)": {
+								positionAnchor: `--reel-${reel.id}`,
+								inset: "auto",
+								insetInlineStart: "anchor(left)",
+								insetInlineEnd: "anchor(right)",
+								insetBlockEnd: "anchor(bottom)",
+								inlineSize: "auto",
+								maxBlockSize: "min(65dvh, 32rem)",
+								margin: "0",
+								"@media (min-width: 64rem)": {
+									insetInlineStart: "calc(anchor(right) + 1rem)",
+									insetInlineEnd: "1rem",
+									insetBlockStart: "anchor(top)",
+									insetBlockEnd: "anchor(bottom)",
+									inlineSize: "auto",
+									blockSize: "auto",
+									maxInlineSize: "24rem",
+									maxBlockSize: "none",
+									borderRadius: "1rem",
+								},
+							},
 							padding: "0",
 							border: "0",
 							borderStartStartRadius: "1rem",
@@ -127,24 +154,38 @@ function CommentsSheet(handle: Handle<{ reel: Reel; index: number }>) {
 							color: "var(--ui-neutral-fg-emphasis)",
 							boxShadow: "0 -20px 60px -20px rgb(0 0 0 / 0.5)",
 							overflowY: "auto",
-							"&::backdrop": { backgroundColor: "rgb(0 0 0 / 0.4)" },
-							[`@media ${TABLET}`]: { margin: "auto", borderRadius: "1rem" },
+							"&::backdrop": { backgroundColor: "rgb(0 0 0 / 0.3)" },
+							"@media (min-width: 64rem)": { "&::backdrop": { backgroundColor: "transparent" } },
 						}),
 					]}
 				>
-					<p
+					<div
 						mix={[
 							raw({
-								margin: "0",
-								padding: "0.875rem 1rem",
-								textAlign: "center",
-								fontWeight: "650",
+								position: "sticky",
+								insetBlockStart: "0",
+								display: "grid",
+								gridTemplateColumns: "2.5rem 1fr 2.5rem",
+								alignItems: "center",
+								paddingBlock: "0.375rem",
+								paddingInline: "0.5rem",
+								backgroundColor: "var(--ui-bg)",
 								borderBlockEnd: "1px solid var(--ui-neutral-border)",
 							}),
 						]}
 					>
-						Comments
-					</p>
+						<span />
+						<p mix={[raw({ margin: "0", textAlign: "center", fontWeight: "650" })]}>Comments</p>
+						<button
+							type="button"
+							popovertarget={id}
+							popovertargetaction="hide"
+							aria-label="Close comments"
+							mix={[actionButton()]}
+						>
+							<XIcon size={20} aria-hidden="true" />
+						</button>
+					</div>
 					<ul
 						mix={[
 							raw({
@@ -303,9 +344,9 @@ function ReelOverlay(handle: Handle<ReelOverlay.Props>) {
 }
 
 /** An up or down arrow beside the feed on a pointer screen, a link to that reel that steps in place. */
-function StepLink(handle: Handle<{ target: Reel | undefined; direction: -1 | 1 }>) {
+function StepLink(handle: Handle<{ target: Reel | undefined; current: Reel; direction: -1 | 1 }>) {
 	return () => {
-		let { direction, target } = handle.props;
+		let { current, direction, target } = handle.props;
 		let up = direction === -1;
 		let label = up ? "Previous reel" : "Next reel";
 		let mix = [
@@ -331,17 +372,11 @@ function StepLink(handle: Handle<{ target: Reel | undefined; direction: -1 | 1 }
 		) : (
 			<ChevronDownIcon size={22} aria-hidden="true" />
 		);
-		if (target === undefined) {
-			return (
-				<span aria-hidden="true" aria-disabled="true" mix={mix}>
-					{icon}
-				</span>
-			);
-		}
 		return (
 			<a
-				href={href(`reels/${target.id}`)}
+				href={href(`reels/${(target ?? current).id}`)}
 				data-reel-step={String(direction)}
+				aria-disabled={target === undefined ? "true" : undefined}
 				aria-label={label}
 				title={label}
 				mix={mix}
@@ -404,6 +439,8 @@ export default function ReelsPage(handle: Handle<ReelsPage.Props>) {
 				<ReelFeed
 					label="Reels"
 					followAddress
+					autoAdvance
+					loop
 					prefetchTarget="main"
 					controls={
 						<>
@@ -420,8 +457,8 @@ export default function ReelsPage(handle: Handle<ReelsPage.Props>) {
 									}),
 								]}
 							>
-								<StepLink target={REELS[index - 1]} direction={-1} />
-								<StepLink target={REELS[index + 1]} direction={1} />
+								<StepLink target={REELS[index - 1]} current={current} direction={-1} />
+								<StepLink target={REELS[index + 1] ?? REELS[0]} current={current} direction={1} />
 							</div>
 							<ReelTitle />
 						</>
@@ -440,6 +477,10 @@ export default function ReelsPage(handle: Handle<ReelsPage.Props>) {
 							labels={{ pause: "Pause" }}
 							mix={[raw({ [`@media ${TABLET}`]: { paddingBlock: "1rem" } })]}
 						>
+							<span
+								aria-hidden="true"
+								style={`position: absolute; inset: 0; pointer-events: none; anchor-name: --reel-${reel.id}`}
+							/>
 							<ReelOverlay reel={reel} index={position} state={state} />
 						</ReelFeed.Item>
 					))}

@@ -95,6 +95,14 @@ describe("Pinhole's reels", () => {
 		expect(body).toContain(`<title>Reel by Inès Oduya`);
 	});
 
+	test("draws both arrows as step links, and runs on past the last reel", async () => {
+		let first = await page(`reels/${REELS[0]!.id}`);
+		expect(first).toMatch(/<a href="[^"]+" data-reel-step="-1" aria-disabled="true"/);
+		expect(first).toMatch(new RegExp(`data-auto-advance="" data-loop=""`));
+		let last = await page(`reels/${REELS.at(-1)!.id}`);
+		expect(last).toMatch(new RegExp(`<a href="${ROOT}/reels/${REELS[0]!.id}" data-reel-step="1"`));
+	});
+
 	test("plays each reel's own clip, looping it at the reel's length", async () => {
 		let body = await page(`reels/${REELS[0]!.id}`);
 		let clips = [...body.matchAll(/<source src="([^"]+\.webm)"/g)].map(([, src]) => src);

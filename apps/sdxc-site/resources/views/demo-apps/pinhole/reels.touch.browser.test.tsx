@@ -36,7 +36,7 @@ afterEach(() => {
 	mounted = undefined;
 });
 
-/** Drags one finger up or down the middle of the screen, as a quick swipe. */
+/** Drags one finger up or down the middle of the screen, one move a frame, as a quick swipe. */
 async function swipe(fromY: number, toY: number): Promise<void> {
 	let session = cdp();
 	await session.send("Input.dispatchTouchEvent", {
@@ -49,6 +49,7 @@ async function swipe(fromY: number, toY: number): Promise<void> {
 			type: "touchMove",
 			touchPoints: [{ x: 195, y }],
 		});
+		await new Promise((resolve) => setTimeout(resolve, 16));
 	}
 	await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 }

@@ -359,6 +359,12 @@ export function actionButton() {
 	];
 }
 
+/** A toggle's icon in the feed, sized inline so the button's own glyph rules leave it alone. */
+const FEED_ICON = "inline-size: 1.625rem; block-size: 1.625rem; max-inline-size: none";
+
+/** A toggle's icon over a reel, the size of the comment and share icons beside it. */
+const MEDIA_ICON = "inline-size: 1.75rem; block-size: 1.75rem; max-inline-size: none";
+
 namespace LikeToggle {
 	export interface Props {
 		/** The post or reel id. */
@@ -418,7 +424,7 @@ export function LikeToggle(handle: Handle<LikeToggle.Props>) {
 					pressedContent={
 						<HeartIcon
 							size={26}
-							style="inline-size: 1.625rem; block-size: 1.625rem; max-inline-size: none"
+							style={onMedia ? MEDIA_ICON : FEED_ICON}
 							fill="currentColor"
 							strokeWidth={1.75}
 							aria-hidden="true"
@@ -427,7 +433,7 @@ export function LikeToggle(handle: Handle<LikeToggle.Props>) {
 					unpressedContent={
 						<HeartIcon
 							size={26}
-							style="inline-size: 1.625rem; block-size: 1.625rem; max-inline-size: none"
+							style={onMedia ? MEDIA_ICON : FEED_ICON}
 							strokeWidth={1.75}
 							aria-hidden="true"
 						/>
@@ -632,7 +638,7 @@ export function ShareButton(handle: Handle<ShareButton.Props>) {
 					title="Share"
 					mix={[actionButton(), onMedia ? raw({ color: "oklch(0.99 0 0)" }) : raw({})]}
 				>
-					<SendIcon size={24} strokeWidth={1.75} aria-hidden="true" />
+					<SendIcon size={onMedia ? 28 : 24} strokeWidth={1.75} aria-hidden="true" />
 				</button>
 				<div
 					id={id}

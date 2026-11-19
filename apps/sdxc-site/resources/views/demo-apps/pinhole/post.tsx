@@ -246,7 +246,12 @@ export default function PostPage(handle: Handle<{ post: Post; state: VisitorStat
 									gridArea: "media",
 									minBlockSize: "0",
 									backgroundColor: "oklch(0.14 0.008 60)",
-									[`@media ${DESKTOP}`]: { display: "grid", alignItems: "center" },
+									[`@media ${DESKTOP}`]: {
+										"& > [data-pinhole-media]": {
+											aspectRatio: "auto !important",
+											blockSize: "100% !important",
+										},
+									},
 								}),
 							]}
 						>
