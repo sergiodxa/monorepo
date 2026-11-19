@@ -9,7 +9,9 @@
 
 import type { RenderResult } from "remix/component/test";
 
+import { render } from "remix/component/test";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { page } from "vitest/browser";
 
 import {
 	activeGroup,
@@ -19,6 +21,8 @@ import {
 	waitForViewer,
 	watchClose,
 } from "../test/stories.js";
+
+import { StoryViewer } from "./story-viewer.js";
 
 import "../reset.css";
 import "../theme.css";
@@ -127,6 +131,35 @@ describe("StoryViewer", () => {
 		expect(button.getAttribute("aria-pressed")).toBe("false");
 	});
 
+	test("holds still while a field inside it has focus", async () => {
+		mounted = render(
+			<StoryViewer label="Stories" closeHref="?closed" labels={{ close: "Close", pause: "Pause" }}>
+				<StoryViewer.Group
+					id="group-solo"
+					label="Solo"
+					durations={[30]}
+					current={0}
+					active
+					previousHref="?closed"
+					nextHref="?closed"
+					labels={{ previous: "Previous", next: "Next" }}
+					footer={<input id="reply" aria-label="Reply" />}
+				>
+					<StoryViewer.Segment href="?story=solo-0" current>
+						<div />
+					</StoryViewer.Segment>
+				</StoryViewer.Group>
+			</StoryViewer>,
+		);
+		await waitForViewer(mounted);
+		let field = mounted.container.querySelector<HTMLInputElement>("#reply")!;
+
+		field.focus();
+		expect(fillState(mounted, "solo")).toBe("paused");
+		field.blur();
+		expect(fillState(mounted, "solo")).toBe("running");
+	});
+
 	test("steps with the arrow keys and closes on Escape", async () => {
 		mounted = mountStories("ana");
 		await waitForViewer(mounted);
@@ -139,6 +172,17 @@ describe("StoryViewer", () => {
 		expect(closes).toEqual(["closed"]);
 	});
 
+	test("shown inside a box, leaves the page's keys and focus alone", async () => {
+		let before = document.activeElement;
+		mounted = mountStories("ana", 30, true);
+		await waitForViewer(mounted);
+
+		document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+
+		expect(currentSegment(mounted, "ana")).toBe(0);
+		expect(document.activeElement).toBe(before);
+	});
+
 	test("closes after the last person's last segment", async () => {
 		mounted = mountStories("cy");
 		await waitForViewer(mounted);
@@ -149,6 +193,29 @@ describe("StoryViewer", () => {
 		next.click();
 
 		expect(closes).toEqual(["closed"]);
+	});
+
+	test("fills a phone's screen edge to edge", async () => {
+		await page.viewport(390, 844);
+		mounted = mountStories("ana");
+		let card = mounted.container.querySelector<HTMLElement>(
+			"#group-ana [data-slot=story-viewer-card]",
+		)!;
+		let box = card.getBoundingClientRect();
+		await page.viewport(414, 896);
+		expect([box.width, box.height]).toEqual([390, 844]);
+	});
+
+	test("stands 9:16 with a margin on a wide screen", async () => {
+		await page.viewport(1280, 800);
+		mounted = mountStories("ana");
+		let card = mounted.container.querySelector<HTMLElement>(
+			"#group-ana [data-slot=story-viewer-card]",
+		)!;
+		let box = card.getBoundingClientRect();
+		await page.viewport(414, 896);
+		expect(box.height).toBe(752);
+		expect(box.width / box.height).toBeCloseTo(0.5625, 2);
 	});
 
 	test("keeps the card inside the screen and never wider than 9:16", () => {

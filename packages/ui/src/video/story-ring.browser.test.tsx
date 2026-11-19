@@ -38,6 +38,33 @@ describe("StoryRing", () => {
 		expect(getComputedStyle(face).borderRadius).not.toBe("0px");
 	});
 
+	test("takes a CSS length, so a page can size it by breakpoint", () => {
+		mounted = render(
+			<div style="--ring: 80px">
+				<StoryRing size="var(--ring)">
+					<span />
+				</StoryRing>
+			</div>,
+		);
+		let ring = mounted.container.querySelector<HTMLElement>("[data-slot=story-ring]")!;
+		expect(ring.getBoundingClientRect().width).toBe(80);
+	});
+
+	test("paints a seen ring quietly whatever its size, after rings of other sizes", () => {
+		mounted = render(
+			<div style="--ui-story-ring: rgb(220 60 40); --ui-neutral-border-strong: rgb(160 160 160)">
+				<StoryRing size={3}>
+					<span />
+				</StoryRing>
+				<StoryRing id="big-seen" seen size={7}>
+					<span />
+				</StoryRing>
+			</div>,
+		);
+		let seen = getComputedStyle(mounted.container.querySelector("#big-seen")!).backgroundColor;
+		expect(seen).toBe("rgb(160, 160, 160)");
+	});
+
 	test("paints a seen ring in a different colour than an unseen one", () => {
 		mounted = render(
 			<div style="--ui-story-ring: rgb(220 60 40); --ui-neutral-border-strong: rgb(160 160 160)">

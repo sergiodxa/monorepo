@@ -77,7 +77,8 @@ const FILL = "ui-story-fill";
 
 /**
  * Renders the viewer: a full-screen dark stage with the close and pause buttons, and the track
- * of groups; the group marked `active` is the one the track starts at.
+ * of groups; the group marked `active` is the one the track starts at. A page shows it inside
+ * a box by setting `--ui-story-viewer-position: absolute` and `--ui-story-viewer-height`.
  *
  * @example
  * <StoryViewer label="Stories" closeHref="/" labels={{ close: "Close", pause: "Pause" }}>
@@ -101,7 +102,7 @@ export function StoryViewer(handle: Handle<StoryViewer.Props>) {
 					[
 						keyframes(FILL, { from: { inlineSize: "0%" }, to: { inlineSize: "100%" } }),
 						raw({
-							position: "fixed",
+							position: "var(--ui-story-viewer-position, fixed)",
 							inset: "0",
 							zIndex: "var(--ui-story-viewer-z, 60)",
 							display: "grid",
@@ -197,7 +198,8 @@ function roundControl() {
 }
 
 /**
- * One person's stories: a screen-wide snap point centring a card at most 9:16, with the bars,
+ * One person's stories: a screen-wide snap point holding a card that fills a phone and stands
+ * 9:16 with a margin on a wider screen, with the bars,
  * the header, the segments, the two tap zones and an optional footer.
  */
 StoryViewer.Group = function StoryViewerGroup(handle: Handle<StoryViewer.GroupProps>) {
@@ -228,7 +230,7 @@ StoryViewer.Group = function StoryViewerGroup(handle: Handle<StoryViewer.GroupPr
 							container: "ui-story-group / size",
 							display: "grid",
 							placeItems: "center",
-							blockSize: "100dvh",
+							blockSize: "var(--ui-story-viewer-height, 100dvh)",
 							scrollSnapAlign: "center",
 							scrollSnapStop: "always",
 							overflow: "hidden",
@@ -243,8 +245,8 @@ StoryViewer.Group = function StoryViewerGroup(handle: Handle<StoryViewer.GroupPr
 					mix={[
 						raw({
 							position: "relative",
-							inlineSize: "min(100cqi, 56.25cqb)",
-							blockSize: "min(100cqb, 177.78cqi)",
+							inlineSize: "100cqi",
+							blockSize: "100cqb",
 							overflow: "hidden",
 							backgroundColor: "oklch(0.2 0.01 280)",
 							touchAction: "pan-x",
@@ -352,6 +354,7 @@ StoryViewer.Group = function StoryViewerGroup(handle: Handle<StoryViewer.GroupPr
 					{footer === undefined ? null : (
 						<div
 							data-slot="story-viewer-footer"
+							data-story-control=""
 							mix={[
 								raw({
 									position: "absolute",

@@ -31,35 +31,44 @@ function storyHref(person: string, segment: number): string {
  *
  * @param person The person whose group is active.
  * @param seconds Each segment's length.
+ * @param boxed Shows the viewer inside a box on the page rather than over the whole window.
  */
-export function mountStories(person = "ana", seconds = 30): RenderResult {
+export function mountStories(person = "ana", seconds = 30, boxed = false): RenderResult {
 	return render(
-		<StoryViewer label="Stories" closeHref="?closed" labels={{ close: "Close", pause: "Pause" }}>
-			{PEOPLE.map((entry, position) => {
-				let before = PEOPLE[position - 1];
-				let previousHref = before ? storyHref(before.id, before.segments - 1) : "?closed";
-				let nextHref = entry.segments > 1 ? storyHref(entry.id, 1) : "?closed";
-				return (
-					<StoryViewer.Group
-						id={`group-${entry.id}`}
-						label={`${entry.id}'s story`}
-						durations={Array.from({ length: entry.segments }, () => seconds)}
-						current={0}
-						active={entry.id === person}
-						previousHref={previousHref}
-						nextHref={nextHref}
-						labels={{ previous: "Previous", next: "Next" }}
-						header={<p>{entry.id}</p>}
-					>
-						{Array.from({ length: entry.segments }, (_, index) => (
-							<StoryViewer.Segment href={storyHref(entry.id, index)} current={index === 0}>
-								<div style={`background: hsl(${index * 90 + position * 30} 60% 40%)`} />
-							</StoryViewer.Segment>
-						))}
-					</StoryViewer.Group>
-				);
-			})}
-		</StoryViewer>,
+		<div
+			style={
+				boxed
+					? "position: relative; block-size: 400px; --ui-story-viewer-position: absolute; --ui-story-viewer-height: 400px"
+					: undefined
+			}
+		>
+			<StoryViewer label="Stories" closeHref="?closed" labels={{ close: "Close", pause: "Pause" }}>
+				{PEOPLE.map((entry, position) => {
+					let before = PEOPLE[position - 1];
+					let previousHref = before ? storyHref(before.id, before.segments - 1) : "?closed";
+					let nextHref = entry.segments > 1 ? storyHref(entry.id, 1) : "?closed";
+					return (
+						<StoryViewer.Group
+							id={`group-${entry.id}`}
+							label={`${entry.id}'s story`}
+							durations={Array.from({ length: entry.segments }, () => seconds)}
+							current={0}
+							active={entry.id === person}
+							previousHref={previousHref}
+							nextHref={nextHref}
+							labels={{ previous: "Previous", next: "Next" }}
+							header={<p>{entry.id}</p>}
+						>
+							{Array.from({ length: entry.segments }, (_, index) => (
+								<StoryViewer.Segment href={storyHref(entry.id, index)} current={index === 0}>
+									<div style={`background: hsl(${index * 90 + position * 30} 60% 40%)`} />
+								</StoryViewer.Segment>
+							))}
+						</StoryViewer.Group>
+					);
+				})}
+			</StoryViewer>
+		</div>,
 	);
 }
 

@@ -43,7 +43,8 @@ export interface StoryChangeDetail {
 /**
  * Runs the viewer it sits in: plays the open group's current segment and moves on when its bar
  * fills, steps on taps and arrow keys, pauses for a hold, the space bar or the pause button,
- * moves between groups by horizontal snap, and closes on a downward swipe or Escape.
+ * moves between groups by horizontal snap, and closes on a downward swipe or Escape. Typing in
+ * a field inside it, such as a reply, holds the story still until the field loses focus.
  */
 export const storyViewerSync: MixinFactory<HTMLElement> = createMixin<HTMLElement>((handle) => {
 	let controller: AbortController | undefined;
@@ -106,6 +107,7 @@ function wireViewer(viewer: HTMLElement, track: HTMLElement, signal: AbortSignal
 	let holdTimer: ReturnType<typeof setTimeout> | undefined;
 	let swallowClick = false;
 	let closing = false;
+	let fullScreen = getComputedStyle(viewer).position === "fixed";
 
 	/** Pauses or resumes the bar and any video, keeping the pause button's state in step. */
 	function setPaused(paused: boolean) {
@@ -312,13 +314,17 @@ function wireViewer(viewer: HTMLElement, track: HTMLElement, signal: AbortSignal
 		}
 	}
 
-	/** Steps, pauses and closes from the keyboard, unless the visitor is typing a reply. */
+	/**
+	 * Steps, pauses and closes from the keyboard, unless the visitor is typing a reply; a viewer
+	 * shown inside a box on a longer page answers only keys pressed inside it.
+	 */
 	function onKey(event: KeyboardEvent) {
 		if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
 		let typing =
 			event.target instanceof Element &&
 			event.target.closest("input, textarea, select, [contenteditable]");
-		if (typing) return;
+		if (typing || !(fullScreen || (event.target instanceof Node && viewer.contains(event.target))))
+			return;
 		let rtl = getComputedStyle(viewer).direction === "rtl";
 		if (event.key === "Escape") leave();
 		else if (event.key === (rtl ? "ArrowLeft" : "ArrowRight")) next();
@@ -364,7 +370,7 @@ function wireViewer(viewer: HTMLElement, track: HTMLElement, signal: AbortSignal
 	syncVideos();
 	for (let group of groups) observer.observe(group);
 	viewer.setAttribute(STORY_READY, "");
-	if (!viewer.contains(document.activeElement)) viewer.focus({ preventScroll: true });
+	if (fullScreen && !viewer.contains(document.activeElement)) viewer.focus({ preventScroll: true });
 
 	viewer.addEventListener("click", onClick, { signal });
 	viewer.addEventListener("pointerdown", onPointerDown, { signal });
@@ -375,6 +381,22 @@ function wireViewer(viewer: HTMLElement, track: HTMLElement, signal: AbortSignal
 	viewer.addEventListener("contextmenu", (event) => press?.held && event.preventDefault(), {
 		signal,
 	});
+	viewer.addEventListener(
+		"focusin",
+		(event) => {
+			if (event.target instanceof Element && event.target.matches("input, textarea"))
+				setPaused(true);
+		},
+		{ signal },
+	);
+	viewer.addEventListener(
+		"focusout",
+		(event) => {
+			if (event.target instanceof Element && event.target.matches("input, textarea"))
+				setPaused(manualPause);
+		},
+		{ signal },
+	);
 	pauseButton?.addEventListener(
 		"click",
 		() => {

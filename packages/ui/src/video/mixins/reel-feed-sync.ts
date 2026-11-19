@@ -53,7 +53,8 @@ export function reelPreload(offset: number): "auto" | "metadata" | "none" {
 /**
  * Runs the feed it sits in: watches which reel fills the scroller, slides the preload window,
  * plays that reel and pauses the rest, follows its address, prefetches the next reel's page,
- * and steps one reel at a time for the arrow keys, Page keys, `j`/`k` and the wheel.
+ * and steps one reel at a time for the arrow keys, Page keys, `j`/`k`, the wheel and any
+ * `data-reel-step` control inside the feed.
  */
 export const reelFeedSync: MixinFactory<HTMLElement> = createMixin<HTMLElement>((handle) => {
 	let controller: AbortController | undefined;
@@ -159,13 +160,22 @@ function wireFeed(feed: HTMLElement, scroller: HTMLElement, signal: AbortSignal)
 		activate(index, true);
 	}
 
+	/**
+	 * Whether a key press is the feed's: one from inside it, or any while the feed fills most of
+	 * the window and is the page's main content; a small feed on a longer page leaves the page's keys alone.
+	 */
+	function ownsKeys(event: KeyboardEvent): boolean {
+		if (event.target instanceof Node && feed.contains(event.target)) return true;
+		return feed.getBoundingClientRect().height >= window.innerHeight * 0.8;
+	}
+
 	/** Steps for the keys a visitor reads a vertical feed with, unless they are typing. */
 	function onKey(event: KeyboardEvent) {
 		if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
 		let typing =
 			event.target instanceof Element &&
 			event.target.closest("input, textarea, select, [contenteditable]");
-		if (typing) return;
+		if (typing || !ownsKeys(event)) return;
 		let step = { ArrowDown: 1, PageDown: 1, j: 1, ArrowUp: -1, PageUp: -1, k: -1 }[event.key];
 		if (step === undefined) return;
 		event.preventDefault();
@@ -181,6 +191,22 @@ function wireFeed(feed: HTMLElement, scroller: HTMLElement, signal: AbortSignal)
 		if (wheelLocked || Math.abs(event.deltaY) < WHEEL_THRESHOLD) return;
 		wheelLocked = true;
 		go(event.deltaY > 0 ? 1 : -1);
+	}
+
+	/**
+	 * Steps for a control marked `data-reel-step` (`1` or `-1`) inside the feed, such as a link
+	 * to the next reel's page, which then moves the feed in place.
+	 */
+	function onStep(event: MouseEvent) {
+		let control =
+			event.target instanceof Element
+				? event.target.closest<HTMLElement>("[data-reel-step]")
+				: null;
+		if (control === null || !feed.contains(control)) return;
+		if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+			return;
+		event.preventDefault();
+		go(Number(control.dataset.reelStep) < 0 ? -1 : 1);
 	}
 
 	/** Pauses or resumes the reel whose stage was pressed. */
@@ -247,6 +273,7 @@ function wireFeed(feed: HTMLElement, scroller: HTMLElement, signal: AbortSignal)
 	document.addEventListener("keydown", onKey, { signal });
 	scroller.addEventListener("wheel", onWheel, { passive: false, signal });
 	scroller.addEventListener("click", onToggle, { signal });
+	feed.addEventListener("click", onStep, { signal });
 	scroller.addEventListener("touchstart", () => (touchedAt = current), { passive: true, signal });
 	scroller.addEventListener("scrollend", onScrollEnd, { signal });
 	scroller.addEventListener("timeupdate", onTime, { capture: true, signal });

@@ -20,8 +20,11 @@ export namespace StoryRing {
 		children: RemixNode;
 		/** Whether every story behind it has been seen, which quiets the ring. Default: `false`. */
 		seen?: boolean;
-		/** The ring's outer size in rem. Default: `4`. */
-		size?: number;
+		/**
+		 * The ring's outer size in rem, or a CSS length, such as a custom property a page
+		 * changes with its width. Default: `4`.
+		 */
+		size?: number | string;
 	}
 }
 
@@ -29,23 +32,25 @@ export namespace StoryRing {
 const DEFAULT_SIZE = 4;
 
 /**
- * Renders the ring around its picture. The unseen ring paints `--ui-story-ring`, the brand's
+ * Renders the ring around its picture, its size set on the element itself so every ring shares
+ * one set of rules and the seen state always wins. The unseen ring paints `--ui-story-ring`, the brand's
  * solid colour unless a page names a gradient; the seen ring paints the quiet border colour.
  *
  * @example <StoryRing seen={person.seen}><Avatar src={person.photo} alt="" /></StoryRing>
  */
 export function StoryRing(handle: Handle<StoryRing.Props>) {
 	return () => {
-		let { children, mix, seen = false, size = DEFAULT_SIZE, ...rest } = handle.props;
+		let { children, mix, seen = false, size = DEFAULT_SIZE, style, ...rest } = handle.props;
+		let side = typeof size === "number" ? `${size}rem` : size;
 		return (
 			<span
 				{...rest}
+				style={`--ui-story-ring-size: ${side};${typeof style === "string" ? ` ${style}` : ""}`}
 				data-slot="story-ring"
 				data-seen={seen ? "" : undefined}
 				mix={mergeMix(
 					[
 						raw({
-							"--ui-story-ring-size": `${size}rem`,
 							position: "relative",
 							display: "inline-grid",
 							placeItems: "center",

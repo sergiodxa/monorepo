@@ -38,6 +38,11 @@ export namespace ReelFeed {
 		prefetchTarget?: string;
 		/** {@link ReelFeed.Item} elements in feed order. */
 		children: RemixNode;
+		/**
+		 * Controls beside the scroller, such as up and down arrows: an element marked
+		 * `data-reel-step="1"` or `"-1"` steps the feed, so a link to the next reel moves it in place.
+		 */
+		controls?: RemixNode;
 	}
 
 	/** One video source, in the order the browser should try them. */
@@ -92,7 +97,7 @@ const HEIGHT = "var(--ui-reel-feed-height, 100dvh)";
  */
 export function ReelFeed(handle: Handle<ReelFeed.Props>) {
 	return () => {
-		let { children, followAddress, label, mix, prefetchTarget, ...rest } = handle.props;
+		let { children, controls, followAddress, label, mix, prefetchTarget, ...rest } = handle.props;
 		return (
 			<section
 				{...rest}
@@ -122,6 +127,7 @@ export function ReelFeed(handle: Handle<ReelFeed.Props>) {
 				>
 					{children}
 				</div>
+				{controls}
 				<ReelFeedSync />
 			</section>
 		);

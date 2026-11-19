@@ -9,11 +9,12 @@
 
 import type { RenderResult } from "remix/component/test";
 
+import { render } from "remix/component/test";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { mountReels, scrollerOf, videoAt, waitForActive } from "../test/reels.js";
 
-import { reelPreload } from "./reel-feed.js";
+import { ReelFeed, reelPreload } from "./reel-feed.js";
 
 import "../reset.css";
 import "../theme.css";
@@ -75,7 +76,9 @@ describe("ReelFeed", () => {
 		let feed = mounted;
 		await vi.waitFor(() => expect(videoAt(feed, 0).paused).toBe(false));
 
-		document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+		scrollerOf(feed).dispatchEvent(
+			new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+		);
 
 		await waitForActive(feed, 1);
 		await vi.waitFor(() => expect(scrollerOf(feed).scrollTop).toBeCloseTo(600, -1));
@@ -85,6 +88,25 @@ describe("ReelFeed", () => {
 		expect(feed.container.querySelector("link[rel=prefetch]")?.getAttribute("href")).toBe(
 			"?reel=2",
 		);
+	});
+
+	test("leaves the page's arrow keys alone when it is a small part of a longer page", async () => {
+		mounted = mountReels(0, 300);
+		await waitForActive(mounted, 0);
+
+		document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+		await new Promise((resolve) => setTimeout(resolve, 100));
+
+		expect(mounted.container.querySelector("[data-reel-active]")?.id).toBe("reel-0");
+	});
+
+	test("takes the page's arrow keys when it fills the window", async () => {
+		mounted = mountReels(0, window.innerHeight);
+		await waitForActive(mounted, 0);
+
+		document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+
+		await waitForActive(mounted, 1);
 	});
 
 	test("moves one reel for a whole wheel flick, however many events its momentum sends", async () => {
@@ -104,11 +126,46 @@ describe("ReelFeed", () => {
 		expect(mounted.container.querySelector("[data-reel-active]")?.id).toBe("reel-1");
 	});
 
+	test("steps in place for a step control, without following its link", async () => {
+		mounted = render(
+			<div style="block-size: 600px; --ui-reel-feed-height: 600px">
+				<ReelFeed
+					label="Reels"
+					controls={
+						<a href="?reel=1" data-reel-step="1" id="down">
+							Next
+						</a>
+					}
+				>
+					{[0, 1, 2].map((index) => (
+						<ReelFeed.Item
+							id={`reel-${index}`}
+							href={`?reel=${index}`}
+							label={`Reel ${index + 1}`}
+							offset={index}
+							sources={[]}
+							labels={{ pause: "Pause" }}
+						/>
+					))}
+				</ReelFeed>
+			</div>,
+		);
+		await waitForActive(mounted, 0);
+		let before = location.href;
+
+		mounted.container.querySelector<HTMLElement>("#down")!.click();
+
+		await waitForActive(mounted, 1);
+		expect(location.href).toBe(before);
+	});
+
 	test("never steps past either end", async () => {
 		mounted = mountReels(0);
 		await waitForActive(mounted, 0);
 
-		document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+		scrollerOf(mounted).dispatchEvent(
+			new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
+		);
 		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		expect(scrollerOf(mounted).scrollTop).toBe(0);
