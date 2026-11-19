@@ -381,7 +381,8 @@ export function MonthView(handle: Handle<MonthView.Props>) {
 										position: "relative",
 										display: "grid",
 										gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-										gridTemplateRows: shownRows === 0 ? "auto 1fr" : `auto repeat(${shownRows}, auto) 1fr`,
+										gridTemplateRows:
+											shownRows === 0 ? "auto 1fr" : `auto repeat(${shownRows}, auto) 1fr`,
 										alignContent: "start",
 										rowGap: "0.125rem",
 										paddingBlockEnd: "0.25rem",
