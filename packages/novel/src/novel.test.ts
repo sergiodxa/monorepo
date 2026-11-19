@@ -788,6 +788,57 @@ describe("exits", () => {
 	});
 });
 
+describe("replay", () => {
+	test("ends a scene replay at a jump out of the scene, playing calls through", async () => {
+		let play = createTestPlay(fixture(), {
+			seed: "mika",
+			scene: SCENES.prologue.opening,
+			replay: "scene",
+		});
+		await play.advanceUntil("choice");
+		expect(play.transcript.map((entry) => entry.type === "line" && entry.key)).toContain(
+			"flashback.memory",
+		);
+		await play.choose("opening.done");
+		expect(play.ending).toEqual({ key: null, scene: "prologue.opening" });
+	});
+
+	test("records only the lines it shows, and keeps other progress and its events silent", async () => {
+		let novel = fixture();
+		let log = record(novel);
+		let play = unwrap(
+			novel.start({ seed: "mika", replay: "scene", persistent: { endings: ["endings.bad"] } }),
+		);
+		let frame = frameOf(await play.next());
+		frame = await until(play, frame, "choice");
+		let step = await play.next(choice(frame).choose("opening.done"));
+		expect(step.done).toBe(true);
+
+		expect(play.persistent.seen["prologue.opening:opening.welcome"]).toEqual({});
+		expect(play.persistent.seen["prologue.flashback:flashback.memory"]).toEqual({});
+		expect(play.persistent).toMatchObject({
+			chosen: [],
+			endings: ["endings.bad"],
+			chapters: [],
+			unlocked: { images: [], music: [] },
+		});
+		let names = new Set(log.map((entry) => entry.name));
+		expect(names).toEqual(new Set(["scene", "line", "persist"]));
+	});
+
+	test("plays a chapter replay through every scene of the chapter", async () => {
+		let play = createTestPlay(fixture(), { seed: "mika", replay: "chapter" });
+		await play.advanceUntil("choice");
+		await play.choose("opening.done");
+		expect(play.scene).toBe(SCENES.prologue.cafe);
+		await play.complete({ caught: 4 });
+		await play.advanceUntil("choice");
+		await play.choose("cafe.stay");
+		expect(play.ending).toEqual({ key: "endings.good", scene: "prologue.cafe" });
+		expect(play.persistent.endings).toEqual([]);
+	});
+});
+
 describe("versions and migrations", () => {
 	test("stamps a save with the novel's version", async () => {
 		let play = start();

@@ -152,6 +152,12 @@ export interface Ending {
 	scene: string;
 }
 
+/**
+ * How far a replay plays before it finishes: the scene it starts in, or that scene's chapter. A
+ * `goto` past that bound ends the play with a `null` ending key; calls still play and return.
+ */
+export type ReplayScope = "scene" | "chapter";
+
 /** A place in the story, anchored on the message key of the stop it names. */
 export interface StoryPosition {
 	/** The scene's name. */

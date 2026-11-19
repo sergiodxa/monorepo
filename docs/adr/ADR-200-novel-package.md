@@ -739,8 +739,7 @@ transitions are presentation the player configures.
 - [x] Phase 1: Declarations and the engine
 - [x] Phase 2: Saves, persistence and events
 - [x] Phase 3: Static checks and exploration
-- [ ] Phase 4: The player UI (steps 1 and 2 done: the player, stage, textbox, menus, audio, auto, skip,
-      backlog, rollback, saves, settings and full screen; step 3's screens remain)
+- [x] Phase 4: The player UI
 - [x] Phase 5: Loading and developer tools (the player's runtime prefetch, which reads
       `novel.reachable()`, is wired with the player)
 - [x] Phase 6: Offline
@@ -874,8 +873,8 @@ Made while building steps 1 and 2 of Phase 4, without a review, where this ADR l
   player with the `novel-scenery` class; the root snapshot does not animate during them. A custom
   name is the class on the new image. Characters animate through CSS transitions with
   `@starting-style` (fade, slide in from the nearer edge, a `left` transition for a move), and a
-  removed character or replaced sprite fades out through `persistNode`, since a frame does not say
-  how a character exited.
+  replaced sprite fades out through `persistNode`; a character's exit is drawn as the frame
+  authors it (see the step 3 decisions).
 - **A frame waits only for the stage's finite animations**; the interface over it (textbox, menu
   countdown, interaction) and looping effects are left out. Rollback, error frames, skip and
   reduced motion present a frame at once.
@@ -915,6 +914,55 @@ Made while building step 3 of Phase 4, without a review, where this ADR left the
   the speed the reader chose, and `{#pause ms=…/}` holds for `ms` (400ms without it). A literal option
   arrives as a string and a variable one as its value; anything that is not a positive number falls
   back to the default.
+- **Exits are a one-shot fact on the stage.** `stage.exits` lists each character an `exit` took off
+  since the previous stop, as it last stood, with `transition` holding the exit's own transition
+  (never its entrance's). It is set only on that stop, cleared like other transitions, left out of
+  `play.state` and saves, and dropped when the character enters again before the stop. A character
+  that was not on stage leaves no record.
+- **The UI draws an exit as authored.** `Stage` keeps the character's element and marks it
+  `data-exiting`: `fade` fades out, `slide` slides 30% toward the nearer edge while fading, and a
+  custom name is the element's class, which an app animates under `[data-exiting]` and should end
+  hidden. An exit without a transition, a removal no frame explains (a load, a rollback) and skip or
+  reduced motion take the character off at once, so the old fade on every removal is gone.
+- **Replay is an engine option**, `start({ replay: "scene" | "chapter" })`, since only the engine
+  knows what a play records. A replay finishes, with a `null` ending key, at a `goto` out of the scene
+  it started in, or out of that scene's chapter (scenes outside every chapter count as one); calls
+  play through and return. It records only seen lines: `chosen`, `endings`, `chapters` and
+  `unlocked` stay as they were, and `choice`, `ending`, `chapter` and `unlock` stay silent, while
+  `scene`, `line`, `persist` and `error` still fire. Saving is the player's to refuse: `play.save()`
+  still answers.
+- **Chapter select and scene replay both start replays.** Chapter select starts a `"chapter"` replay
+  at the chapter's first mapped scene, scene replay a `"scene"` replay. In `NovelPlayer` a replay
+  hides save and quick save (their keys do nothing) and adds an "End replay" button; when it ends, on
+  its own or from the button, the player resumes the play it interrupted at the same stop, with its
+  backlog and the persistent data the replay recorded. A replay started with no play to resume (a
+  title screen passing `start={{ scene, replay }}`) ends like a play and calls `onEnding`. Loading a
+  save during a replay leaves it. Rollback history before the replay is not kept.
+- **Reached is read from `Persistent`.** A scene is reached once a line in it was read or an option in
+  it taken; a chapter once it is in `chapters` or one of its scenes is reached. Chapter select lists
+  titled chapters and scene replay titled scenes, since an untitled scene is a beat no menu lists;
+  Memories also shows an untitled scene's read lines, without a heading.
+- **The library reads every mapped scene.** `readLibrary(novel, persistent, locale)` loads each
+  mapped module (lazy ones included) so the endings list knows every `ending` key, collected
+  statically with `endingKeys()`; reached keys no scene holds any more are appended. A module that
+  fails to load lists the scene with `loaded: false` and no lines. `sceneLines()` walks conditions
+  and menu options in document order; a line's values come from `Persistent.seen` and its voice
+  from the novel's `voice` option for the reader's locale, with the asset fallback rule.
+- **Screens are panels, the player puts them in dialogs.** `Memories`, `Gallery`, `MusicRoom`,
+  `EndingsList`, `ChapterSelect` and `SceneReplay` each take `novel` and a persistent value and load
+  their library themselves (showing `labels.loading` meanwhile), so a title screen lays them out as
+  it likes. `NovelPlayer` lists them in an "Extras" menu (the `@sdxc/ui` `Menu` popover, turned off
+  with `extras={false}`) and renders each inside a modal dialog only while it is open, reading the
+  play's persistent data as it opens.
+- **The gallery's lightbox is its own native `<dialog>`**, one per gallery showing the picked CG;
+  a locked CG is a placeholder labeled `labels.locked`.
+- **The music room plays through an `AudioMixer`**: the player's own, whose music and ambience the
+  player restores from the frame when the room closes, or one the room makes and disposes. Tracks
+  have no declared title, so a track shows its key unless `musicTitles` (or `titles`) maps its id to
+  a message key.
+- **New labels** (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`,
+  `sceneReplay`, `loading`, `locked`, `unknownEnding`, `noMemories`, `play`, `stop`,
+  `endReplay`) default to English like the rest.
 
 ### Phase 5 and 6 decisions
 

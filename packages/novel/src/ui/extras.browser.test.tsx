@@ -1,0 +1,401 @@
+/**
+ * The library screens in a real browser: Memories, the CG gallery and its lightbox, the music
+ * room, the endings list, chapter select and scene replay, each alone over a stored `Persistent`
+ * value and from `NovelPlayer`'s extras menu, plus replays and authored exits in the player.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type {} from "@vitest/browser-playwright";
+import type { RemixNode } from "remix/component";
+import type { RenderResult } from "remix/component/test";
+
+import { createI18n } from "@sdxc/i18n";
+import { IntlProvider } from "@sdxc/i18n/ui";
+import { render } from "remix/component/test";
+import * as s from "remix/data-schema";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { userEvent } from "vitest/browser";
+
+import type { Persistent } from "../persistent.js";
+
+import {
+	assets,
+	cast,
+	chapter,
+	character,
+	createNovel,
+	createScene,
+	lazy,
+	scene,
+	scenes,
+} from "../index.js";
+
+import { AudioMixer } from "./audio.js";
+import { ChapterSelect, SceneReplay } from "./chapters.js";
+import { EndingsList } from "./endings.js";
+import { Gallery } from "./gallery.js";
+import { Memories } from "./memories.js";
+import { MusicRoom } from "./music-room.js";
+import { NovelPlayer } from "./player.js";
+import { DEFAULT_SETTINGS } from "./settings.js";
+
+/** An SVG image as a data URL, so images decode without a server. */
+function svg(color: string, width = 320, height = 640): string {
+	return `data:image/svg+xml,${encodeURIComponent(
+		`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="${color}"/></svg>`,
+	)}`;
+}
+
+const STATE = s.object({
+	gold: s.defaulted(s.number(), 10),
+	charm: s.defaulted(s.number(), 0),
+	affection: s.defaulted(s.object({ mika: s.defaulted(s.number(), 0) }), { mika: 0 }),
+	lastCatch: s.optional(s.object({ caught: s.number() })),
+});
+
+/** The catalog the screens translate through. */
+const MESSAGES = {
+	cast: { mika: "Mika", ren: "Ren" },
+	chapters: { prologue: "Prologue" },
+	titles: { opening: "Opening", cafe: "The café" },
+	opening: {
+		welcome: "Welcome.",
+		hello: "Hello, {$name}!",
+		thinking: "I should say something.",
+		ask: "Where now?",
+		lucky: "At the café.",
+	},
+	cafe: { stay: "Stay", leave: "Leave" },
+	endings: { good: "Good ending", bad: "Bad ending" },
+};
+
+const SCENES = scenes({
+	prologue: chapter({
+		title: "chapters.prologue",
+		scenes: { opening: scene({ title: "titles.opening" }), cafe: scene({ title: "titles.cafe" }) },
+	}),
+});
+
+const CAST = cast({
+	mika: character({ name: "cast.mika", color: "#e86a92", sprites: { smile: svg("pink") } }),
+});
+
+const ASSETS = assets({
+	backgrounds: { room: svg("green", 1600, 900) },
+	images: {
+		letter: { en: svg("white", 1600, 900), ja: svg("black", 1600, 900) },
+		kiss: svg("red", 1600, 900),
+	},
+	music: { chill: "/music/chill.ogg", theme: "/music/theme.ogg" },
+});
+
+const OPENING = createScene(SCENES.prologue.opening, (ctx) => [
+	ctx.show(ASSETS.backgrounds.room),
+	ctx.enter(CAST.mika, { at: "left", expression: "smile" }),
+	ctx.narrate("opening.welcome"),
+	ctx.say(CAST.mika, "opening.hello", { name: "Ada" }),
+	ctx.exit(CAST.mika, { transition: "slide" }),
+	ctx.narrate("opening.thinking"),
+	ctx.choose(
+		{
+			"cafe.stay": [ctx.goto(SCENES.prologue.cafe)],
+			"cafe.leave": [ctx.ending("endings.bad")],
+		},
+		{ prompt: "opening.ask" },
+	),
+]);
+
+const CAFE = createScene(SCENES.prologue.cafe, (ctx) => [
+	ctx.narrate("opening.lucky"),
+	ctx.ending("endings.good"),
+]);
+
+/** A novel over the fixture, its café loaded lazily the way an app maps scenes. */
+function fixture() {
+	let novel = createNovel({
+		scenes: SCENES,
+		cast: CAST,
+		assets: ASSETS,
+		state: STATE,
+		initial: SCENES.prologue.opening,
+		voice: ({ speaker, key }) => (speaker === "mika" ? `/voice/${key}.ogg` : undefined),
+	});
+	novel.map(SCENES.prologue.opening, OPENING);
+	novel.map(
+		SCENES.prologue.cafe,
+		lazy(async () => ({ default: CAFE })),
+	);
+	return novel;
+}
+
+/** A reader who read the opening's first two lines and reached the bad ending. */
+const STORED: Persistent = {
+	seen: {
+		"prologue.opening:opening.welcome": {},
+		"prologue.opening:opening.hello": { name: "Ada" },
+	},
+	chosen: ["prologue.opening:cafe.leave"],
+	endings: ["endings.bad"],
+	chapters: ["prologue"],
+	unlocked: { images: ["images.letter"], music: ["music.chill"] },
+};
+
+let mounted: RenderResult | undefined;
+
+afterEach(() => {
+	mounted?.cleanup();
+	mounted = undefined;
+	vi.restoreAllMocks();
+});
+
+/** Renders `node` under a translator for `locale`. */
+function mount(node: RemixNode, locale = "en"): RenderResult {
+	let container = document.createElement("div");
+	container.style.width = "960px";
+	container.style.height = "540px";
+	document.body.append(container);
+	let intl = createI18n({ locale, fallbackLanguage: "en", resources: { en: MESSAGES } });
+	mounted = render(<IntlProvider intl={intl}>{node}</IntlProvider>, { container });
+	return mounted;
+}
+
+/** Waits until a screen has read its library. */
+async function loaded(result: RenderResult, selector: string): Promise<HTMLElement> {
+	await vi.waitFor(() => expect(result.$(selector)!.getAttribute("aria-busy")).toBeNull());
+	return result.$(selector)!;
+}
+
+describe("Memories", () => {
+	test("lists the read lines of reached scenes with their values, speakers and voices", async () => {
+		let replayed = vi.fn();
+		let result = mount(<Memories novel={fixture()} persistent={STORED} onReplayVoice={replayed} />);
+		expect(result.$("[data-novel-memories]")!.textContent).toBe("Loading…");
+		let screen = await loaded(result, "[data-novel-memories]");
+		expect(screen.querySelector("h3")!.textContent).toBe("Prologue");
+		expect(screen.querySelector("h4")!.textContent).toBe("Opening");
+		let lines = [...screen.querySelectorAll("li")];
+		expect(lines.map((line) => line.textContent)).toEqual(["Welcome.", "MikaHello, Ada!"]);
+		expect(lines[0]!.querySelector("button")).toBeNull();
+		lines[1]!.querySelector("button")!.click();
+		expect(replayed).toHaveBeenCalledWith(
+			expect.objectContaining({ key: "opening.hello", voice: "/voice/opening.hello.ogg" }),
+		);
+	});
+
+	test("says there is nothing to remember on a first playthrough", async () => {
+		let result = mount(<Memories novel={fixture()} persistent={undefined} />);
+		let screen = await loaded(result, "[data-novel-memories]");
+		expect(screen.textContent).toBe("Nothing to remember yet.");
+	});
+});
+
+describe("Gallery", () => {
+	test("opens an unlocked CG in its locale in a lightbox and shows locked ones as placeholders", async () => {
+		let result = mount(<Gallery novel={fixture()} persistent={STORED} />, "ja");
+		let screen = await loaded(result, "[data-novel-gallery]");
+		let letter = screen.querySelector<HTMLButtonElement>('[data-image="images.letter"] button')!;
+		expect(letter.querySelector("img")!.getAttribute("src")).toBe(svg("black", 1600, 900));
+		let locked = screen.querySelector('[data-image="images.kiss"]')!;
+		expect(locked.querySelector("img, button")).toBeNull();
+		expect(locked.textContent).toBe("Locked");
+
+		letter.click();
+		let lightbox = result.$("[data-novel-lightbox]") as HTMLDialogElement;
+		await vi.waitFor(() => expect(lightbox.open).toBe(true));
+		await vi.waitFor(() =>
+			expect(lightbox.querySelector("img")?.getAttribute("src")).toBe(svg("black", 1600, 900)),
+		);
+		await userEvent.keyboard("{Escape}");
+		await vi.waitFor(() => expect(lightbox.open).toBe(false));
+	});
+});
+
+describe("MusicRoom", () => {
+	test("plays an unlocked track on the mixer's music channel and stops it", async () => {
+		let mixer = new AudioMixer(DEFAULT_SETTINGS.volume);
+		let result = mount(<MusicRoom novel={fixture()} persistent={STORED} mixer={mixer} />);
+		let screen = await loaded(result, "[data-novel-music-room]");
+		expect(screen.querySelector('[data-track="music.theme"] button')).toBeNull();
+		expect(screen.querySelector('[data-track="music.theme"]')!.textContent).toBe("Locked");
+		let play = screen.querySelector<HTMLButtonElement>('[data-track="music.chill"] button')!;
+		expect(screen.querySelector('[data-track="music.chill"] span')!.textContent).toBe("chill");
+		play.click();
+		expect(mixer.snapshot.music).toBe("music.chill");
+		await vi.waitFor(() => expect(play.textContent).toBe("Stop"));
+		play.click();
+		expect(mixer.snapshot.music).toBeNull();
+		mixer.dispose();
+	});
+});
+
+describe("EndingsList", () => {
+	test("counts the endings reached of every ending the scenes hold", async () => {
+		let result = mount(<EndingsList novel={fixture()} persistent={STORED} />);
+		let screen = await loaded(result, "[data-novel-endings]");
+		expect(screen.querySelector("[data-novel-endings-count]")!.textContent).toBe("1 / 2");
+		expect([...screen.querySelectorAll("li")].map((item) => item.textContent)).toEqual([
+			"Bad ending",
+			"???",
+		]);
+	});
+});
+
+describe("ChapterSelect and SceneReplay", () => {
+	test("offers reached chapters and scenes, and locks the rest", async () => {
+		let chosen = vi.fn();
+		let result = mount(
+			<div>
+				<ChapterSelect novel={fixture()} persistent={STORED} onSelect={chosen} />
+				<SceneReplay novel={fixture()} persistent={STORED} onSelect={chosen} />
+			</div>,
+		);
+		let chapters = await loaded(result, "[data-novel-chapters]");
+		let scenesList = await loaded(result, "[data-novel-scenes]");
+		chapters.querySelector<HTMLButtonElement>('[data-name="prologue"] button')!.click();
+		expect(chosen).toHaveBeenLastCalledWith(SCENES.prologue.opening);
+		let cafe = scenesList.querySelector<HTMLButtonElement>('[data-name="prologue.cafe"] button')!;
+		expect(cafe.disabled).toBe(true);
+		expect(cafe.textContent).toBe("Locked");
+		scenesList.querySelector<HTMLButtonElement>('[data-name="prologue.opening"] button')!.click();
+		expect(chosen).toHaveBeenLastCalledWith(SCENES.prologue.opening);
+	});
+});
+
+/** Mounts a player over the fixture with instant text. */
+function player(props: Partial<NovelPlayer.Props> = {}) {
+	let result = mount(
+		<NovelPlayer
+			novel={fixture()}
+			start={{ seed: "extras" }}
+			settings={{ textSpeed: 0 }}
+			{...props}
+		/>,
+	);
+	return {
+		result,
+		line: () => result.$("[data-novel-line]")?.textContent ?? null,
+		root: () => result.$("[data-novel-player]")!,
+		phase: () => result.$("[data-novel-player]")!.dataset["phase"],
+		next: () => result.$("[data-novel-surface]")!.click(),
+	};
+}
+
+/** Waits until the player shows `text` and waits for the reader. */
+async function shows(view: ReturnType<typeof player>, text: string): Promise<void> {
+	await vi.waitFor(
+		() => {
+			expect(view.line()).toBe(text);
+			expect(view.phase()).toBe("waiting");
+		},
+		{ timeout: 5000 },
+	);
+}
+
+/** Opens a library screen from the extras menu and answers its dialog. */
+async function openScreen(
+	view: ReturnType<typeof player>,
+	screen: string,
+): Promise<HTMLDialogElement> {
+	(view.result.$('[data-action="extras"]') as HTMLButtonElement).click();
+	let menu = view.result.$("[data-novel-extras]")!;
+	await vi.waitFor(() => expect(menu.matches(":popover-open")).toBe(true));
+	menu.querySelector<HTMLButtonElement>(`[data-screen="${screen}"]`)!.click();
+	let dialog = view.result.$(
+		`#${menu.querySelector(`[data-screen="${screen}"]`)!.getAttribute("commandfor")}`,
+	) as HTMLDialogElement;
+	await vi.waitFor(() => expect(dialog.open).toBe(true));
+	return dialog;
+}
+
+describe("NovelPlayer extras", () => {
+	test("slides a character out toward the nearer edge as the scene exits it", async () => {
+		let view = player();
+		await shows(view, "Welcome.");
+		view.next();
+		await shows(view, "Hello, Ada!");
+		view.next();
+		await vi.waitFor(() =>
+			expect(view.result.$('[data-id="mika"]')?.dataset["exiting"]).toBe("true"),
+		);
+		let mika = view.result.$('[data-id="mika"]')!;
+		expect(view.phase()).toBe("staging");
+		await shows(view, "I should say something.");
+		expect(getComputedStyle(mika).opacity).toBe("0");
+		expect(getComputedStyle(mika).translate).not.toBe("none");
+	});
+
+	test("opens Memories from the extras menu with the lines read in this play", async () => {
+		let view = player();
+		await shows(view, "Welcome.");
+		view.next();
+		await shows(view, "Hello, Ada!");
+		let dialog = await openScreen(view, "memories");
+		await vi.waitFor(() =>
+			expect([...dialog.querySelectorAll("li")].map((item) => item.textContent)).toEqual([
+				"Welcome.",
+				"MikaHello, Ada!",
+			]),
+		);
+		dialog.close();
+		await vi.waitFor(() => expect(dialog.querySelector("[data-novel-memories]")).toBeNull());
+	});
+
+	test("replays a scene without saving, then resumes the play it interrupted", async () => {
+		let onSave = vi.fn();
+		let view = player({ onSave });
+		await shows(view, "Welcome.");
+		view.next();
+		await shows(view, "Hello, Ada!");
+		let dialog = await openScreen(view, "scenes");
+		let opening = await vi.waitFor(() => {
+			let button = dialog.querySelector<HTMLButtonElement>('[data-name="prologue.opening"] button');
+			expect(button?.disabled).toBe(false);
+			return button!;
+		});
+		opening.click();
+		await shows(view, "Welcome.");
+		expect(dialog.open).toBe(false);
+		expect(view.root().dataset["replay"]).toBe("true");
+		expect(view.result.$('[data-action="save"]')).toBeNull();
+		expect(view.result.$('[data-action="quickSave"]')).toBeNull();
+		await userEvent.keyboard("q");
+		expect(onSave).not.toHaveBeenCalled();
+
+		(view.result.$('[data-action="endReplay"]') as HTMLButtonElement).click();
+		await shows(view, "Hello, Ada!");
+		expect(view.root().dataset["replay"]).toBe("false");
+		await userEvent.keyboard("q");
+		expect(onSave).toHaveBeenCalledTimes(1);
+	});
+
+	test("ends a chapter replay at its ending and resumes the interrupted play", async () => {
+		let ended = vi.fn();
+		let view = player({ onEnding: ended });
+		await shows(view, "Welcome.");
+		let dialog = await openScreen(view, "chapters");
+		let prologue = await vi.waitFor(() => {
+			let button = dialog.querySelector<HTMLButtonElement>('[data-name="prologue"] button');
+			expect(button?.disabled).toBe(false);
+			return button!;
+		});
+		prologue.click();
+		await vi.waitFor(() => expect(view.root().dataset["replay"]).toBe("true"));
+		await shows(view, "Welcome.");
+		view.next();
+		await shows(view, "Hello, Ada!");
+		view.next();
+		await shows(view, "I should say something.");
+		view.next();
+		await vi.waitFor(() => expect(view.result.$('[data-option="cafe.stay"]')).not.toBeNull(), {
+			timeout: 5000,
+		});
+		(view.result.$('[data-option="cafe.stay"]') as HTMLButtonElement).click();
+		await shows(view, "At the café.");
+		view.next();
+		await shows(view, "Welcome.");
+		expect(view.root().dataset["replay"]).toBe("false");
+		expect(ended).not.toHaveBeenCalled();
+	});
+});

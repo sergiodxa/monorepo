@@ -90,6 +90,7 @@ export type {
 	InteractionFrame,
 	LineFrame,
 	PauseFrame,
+	ReplayScope,
 	Reply,
 	Speaker,
 	StopFrame,

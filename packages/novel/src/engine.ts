@@ -29,6 +29,7 @@ import type {
 	Frame,
 	FrameOption,
 	GameState,
+	ReplayScope,
 	Reply,
 	StopFrame,
 	StoryPosition,
@@ -152,18 +153,32 @@ export class PlayEngine {
 	#reported = new Set<string>();
 	#playTime: number;
 	#startedAt = Date.now();
+	/** The bound of a replay, with the scene and chapter it started in; `null` for a normal play. */
+	#replay: { scope: ReplayScope; scene: string; chapter: string | undefined } | null;
 
 	/**
 	 * @param runtime - The novel's declarations and scenes.
 	 * @param live - Where the play starts.
 	 * @param playTime - Milliseconds already played, carried over from a save.
 	 * @param persistent - What earlier playthroughs left; the engine updates it in place.
+	 * @param replay - Plays as a replay bounded by this scope, recording only the lines it shows.
 	 */
-	constructor(runtime: NovelRuntime, live: Live, playTime: number, persistent: Persistent) {
+	constructor(
+		runtime: NovelRuntime,
+		live: Live,
+		playTime: number,
+		persistent: Persistent,
+		replay?: ReplayScope,
+	) {
 		this.#runtime = runtime;
 		this.#live = live;
 		this.#playTime = playTime;
 		this.#persistent = persistent;
+		let scene = live.cursor.scene;
+		this.#replay =
+			replay === undefined
+				? null
+				: { scope: replay, scene, chapter: runtime.scene(scene)?.chapter?.name };
 	}
 
 	/** Persistent data as this play has updated it. */
@@ -289,6 +304,7 @@ export class PlayEngine {
 	/** Records one effect in persistent data and emits its event; answers whether data changed. */
 	#record(effect: Exclude<Effect, { type: "error" }>): boolean {
 		let persistent = this.#persistent;
+		if (this.#replay !== null && effect.type !== "scene" && effect.type !== "line") return false;
 		switch (effect.type) {
 			case "scene":
 				this.#runtime.emit("scene", { scene: effect.scene });
@@ -552,6 +568,7 @@ export class PlayEngine {
 				return null;
 			}
 			case "goto":
+				if (this.#outside(directive.scene.name)) return { key: null, scene: work.cursor.scene };
 				work.cursor = { scene: directive.scene.name, path: null, anchor: null, after: false };
 				return null;
 			case "call":
@@ -578,6 +595,14 @@ export class PlayEngine {
 				this.#stage(directive, work.stage);
 				return null;
 		}
+	}
+
+	/** Reports whether a jump to `scene` leaves the bound of the replay this play is. */
+	#outside(scene: string): boolean {
+		let replay = this.#replay;
+		if (replay === null) return false;
+		if (replay.scope === "scene") return scene !== replay.scene;
+		return this.#runtime.scene(scene)?.chapter?.name !== replay.chapter;
 	}
 
 	/** Starts a track or a sound on its channel. */

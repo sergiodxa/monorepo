@@ -24,7 +24,7 @@ import type {
 import type { SceneModule } from "./directives.js";
 import type { Cursor, Live, NovelRuntime } from "./engine.js";
 import type { Emit, NovelEventName, NovelListener, NovelPlugin } from "./events.js";
-import type { Ending, Frame, GameState, Reply, StopFrame } from "./frames.js";
+import type { Ending, Frame, GameState, ReplayScope, Reply, StopFrame } from "./frames.js";
 import type { Lazy } from "./lazy.js";
 import type { NovelLink, ReachedScene, ReachOptions } from "./links.js";
 import type { Persistent } from "./persistent.js";
@@ -149,6 +149,12 @@ export interface StartOptions {
 	 * or none, starts the play from empty data.
 	 */
 	persistent?: unknown;
+	/**
+	 * Plays a replay of the scene, or its chapter, the play starts in: it finishes at a `goto`
+	 * past that bound and records only the lines it shows, so `chosen`, `endings`, `chapters` and
+	 * `unlocked` stay as they were and their events stay silent.
+	 */
+	replay?: ReplayScope;
 }
 
 /** Where a tool sends a play's events, and whether the app's listeners still receive them. */
@@ -385,6 +391,7 @@ export class Novel {
 			live.data.live,
 			live.data.playTime,
 			readPersistent(options.persistent),
+			options.replay,
 		);
 		play = createPlay(engine);
 		return success(play);

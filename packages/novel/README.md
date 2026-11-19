@@ -127,7 +127,7 @@ createNovel({
 ## Entry points
 
 - `@sdxc/novel`: declarations, `createScene`, `createNovel`, `lazy`, and the frame, reply, state and event types.
-- `@sdxc/novel/ui`: `NovelPlayer` and the parts it is built from (`Stage`, `Textbox`, `ChoiceMenu`, `Backlog`, `SaveScreen`, `SettingsScreen`, `QuickMenu`, `AudioMixer`), as `remix/component` components.
+- `@sdxc/novel/ui`: `NovelPlayer` and the parts it is built from (`Stage`, `Textbox`, `ChoiceMenu`, `Backlog`, `SaveScreen`, `SettingsScreen`, `QuickMenu`, `AudioMixer`), and the library screens (`Memories`, `Gallery`, `MusicRoom`, `EndingsList`, `ChapterSelect`, `SceneReplay`), as `remix/component` components.
 - `@sdxc/novel/test`: `createTestPlay`, which drives a play by naming each reply; `check`, the static checks over every scene; and `explore`, which plays every combination of choices.
 - `@sdxc/novel/dev`: `createDevTools` and the `NovelDevTools` panel, for development builds only.
 - `@sdxc/novel/offline` and `@sdxc/novel/offline/worker`: `registerOffline` for the page and `serveOffline` for an opt-in service worker.
@@ -169,6 +169,16 @@ export const Game = clientEntry(import.meta.url, function Game() {
 		/>
 	);
 });
+```
+
+The player's Extras menu opens Memories, the CG gallery, the music room, the endings list, chapter select and scene replay. Each is also a component a title screen can place itself, reading the stored persistent data; a chosen chapter or scene starts as a replay, which saves nothing and records only the lines it shows:
+
+```tsx
+<ChapterSelect
+	novel={novel}
+	persistent={loadPersistent()}
+	onSelect={(scene) => play({ scene, replay: "chapter", persistent: loadPersistent() })}
+/>
 ```
 
 Lines may use MessageFormat markup: `{#b}`, `{#i}` and `{#shake}` style their text, `{#speed rate=2}…{/speed}` types its text at that multiple of the reader's text speed (half without `rate`), and `{#pause ms=600/}` holds the typewriter (400ms without `ms`). Pass `markup` to add your own names, as elements or as components receiving `Trans.MarkupProps`.

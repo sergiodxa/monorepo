@@ -1,7 +1,7 @@
 /**
  * `NovelPlayer`: owns a play, renders its current frame on the stage with the textbox, menu,
  * captions and quick menu, and wires every input (click, keys, wheel, touch, gamepad) and screen
- * (backlog, saves, settings). Storage stays the app's, through `onSave` and `onSettingsChange`.
+ * (backlog, saves, settings, the library extras). Storage stays the app's, through its callbacks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,18 +11,25 @@ import type { Trans } from "@sdxc/i18n/ui";
 import type { Handle, Props as TagProps, RemixElement, RemixNode } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
+import { Dialog } from "@sdxc/ui";
 import { css, on, ref } from "remix/component";
 
-import type { CustomFrame, Ending, GameState, Reply } from "../frames.js";
+import type { SceneDeclaration } from "../declarations.js";
+import type { CustomFrame, Ending, GameState, ReplayScope, Reply } from "../frames.js";
 import type { Novel, StartOptions } from "../novel.js";
 
 import type { NovelLabels, NovelSettings, PlayerAction, StoredSettings } from "./settings.js";
 
 import { Backlog } from "./backlog.js";
+import { ChapterSelect, SceneReplay } from "./chapters.js";
 import { ChoiceMenu } from "./choice-menu.js";
 import { Director } from "./director.js";
+import { EndingsList } from "./endings.js";
+import { Gallery } from "./gallery.js";
 import { gamepadActions, moveFocus, swipeDirection } from "./input.js";
+import { Memories } from "./memories.js";
 import { Message } from "./message.js";
+import { MusicRoom } from "./music-room.js";
 import { QuickMenu } from "./quick-menu.js";
 import { QUICK_SLOT, SaveScreen } from "./saves.js";
 import { SettingsScreen } from "./settings-screen.js";
@@ -50,6 +57,17 @@ export namespace NovelPlayer {
 
 	/** A component that renders a custom frame, written by the app. */
 	export type Interaction = (handle: Handle<InteractionProps>) => () => RemixNode;
+
+	/** Props of a library screen's dialog. */
+	export interface ScreenProps {
+		id: string;
+		title: string;
+		closeLabel: string;
+		/** True while the dialog is open, which is when its content renders and loads. */
+		open: boolean;
+		onToggle: (open: boolean) => void;
+		children?: RemixNode;
+	}
 
 	/** Props {@link NovelPlayer} accepts. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
@@ -85,6 +103,15 @@ export namespace NovelPlayer {
 		onEnding?: (ending: Ending) => void;
 		/** Replaces any of the interface's English labels. */
 		labels?: Partial<NovelLabels>;
+		/**
+		 * Offers the library screens (Memories, gallery, music room, endings, chapter select and
+		 * scene replay) from an extras menu.
+		 *
+		 * @default true
+		 */
+		extras?: boolean;
+		/** Each music track's title as a message key, by asset id, for the music room. */
+		musicTitles?: Readonly<Record<string, string>>;
 		/** Markup elements for lines, beside `b`, `i`, `shake`, `speed` and `pause`. */
 		markup?: Record<string, RemixElement | Trans.MarkupComponent>;
 	}
@@ -116,6 +143,16 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 		load: `${handle.id}-load`.replace(/[^\w-]/g, "-"),
 		settings: `${handle.id}-settings`.replace(/[^\w-]/g, "-"),
 	};
+	let extras = {
+		memories: `${handle.id}-memories`.replace(/[^\w-]/g, "-"),
+		gallery: `${handle.id}-gallery`.replace(/[^\w-]/g, "-"),
+		music: `${handle.id}-music`.replace(/[^\w-]/g, "-"),
+		endings: `${handle.id}-endings`.replace(/[^\w-]/g, "-"),
+		chapters: `${handle.id}-chapters`.replace(/[^\w-]/g, "-"),
+		scenes: `${handle.id}-scenes`.replace(/[^\w-]/g, "-"),
+	};
+	/** The library screen open now, and the persistent data it reads, taken as it opened. */
+	let screen: { id: string; persistent: unknown } | undefined;
 
 	let director = new Director({
 		novel: () => handle.props.novel,
@@ -167,6 +204,29 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 		if (state !== undefined) void director.load(state);
 	}
 
+	/**
+	 * Tracks which library screen is open, taking the play's persistent data as it opens so the
+	 * screen reads one value; closing the music room hands the music back to the frame.
+	 */
+	function toggleScreen(id: string, open: boolean): void {
+		if (open) {
+			screen = { id, persistent: director.persistent ?? handle.props.start?.persistent };
+		} else if (screen?.id === id) {
+			screen = undefined;
+			let frame = director.frame;
+			if (id === extras.music && frame !== undefined) {
+				director.mixer.reconcile(frame.audio, intl(handle).locale, true);
+			}
+		}
+		void handle.update();
+	}
+
+	/** Closes the open library screen and starts a replay from the scene it picked. */
+	function startReplay(scene: SceneDeclaration, scope: ReplayScope): void {
+		root?.querySelector<HTMLDialogElement>("dialog[open]")?.close();
+		void director.replay(scene, scope);
+	}
+
 	/** Stores changed settings and hands them to the app. */
 	function changeSettings(next: NovelSettings): void {
 		settings = next;
@@ -197,6 +257,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 			toggleHidden();
 			return;
 		}
+		if (director.replaying && (action === "save" || action === "quickSave")) return;
 		if (action === "advance") director.advance();
 		else if (action === "auto") director.toggleAuto();
 		else if (action === "skip") director.toggleSkip();
@@ -208,6 +269,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 		else if (action === "backlog") show(ids.backlog);
 		else if (action === "save") show(ids.save);
 		else if (action === "load") show(ids.load);
+		else if (action === "endReplay") void director.endReplay();
 		else show(ids.settings);
 	}
 
@@ -304,6 +366,8 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 			onEnding: _onEnding,
 			labels: labelOverrides,
 			markup,
+			extras: showExtras = true,
+			musicTitles,
 			mix,
 			...rest
 		} = handle.props;
@@ -329,6 +393,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 				data-auto={String(director.auto)}
 				data-skip={String(director.skipping)}
 				data-hidden={String(hidden)}
+				data-replay={String(director.replaying)}
 				data-dyslexia={String(settings.dyslexiaFont)}
 				style={{ "--novel-font-scale": settings.fontSize }}
 				mix={[
@@ -464,6 +529,8 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 							auto={director.auto}
 							skip={director.skipping}
 							dialogs={ids}
+							extras={showExtras ? extras : undefined}
+							replay={director.replaying}
 							labels={labels}
 							onAction={run}
 						/>
@@ -499,7 +566,121 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 					labels={labels}
 					onChange={changeSettings}
 				/>
+				{showExtras ? (
+					<>
+						<Screen
+							id={extras.memories}
+							title={labels.memories}
+							closeLabel={labels.close}
+							open={screen?.id === extras.memories}
+							onToggle={(open) => toggleScreen(extras.memories, open)}
+						>
+							<Memories
+								novel={handle.props.novel}
+								persistent={screen?.persistent}
+								labels={labels}
+								onReplayVoice={(line) => {
+									if (line.voice === null) return;
+									void director.mixer.resume();
+									void director.mixer.playVoice(line.voice);
+								}}
+							/>
+						</Screen>
+						<Screen
+							id={extras.gallery}
+							title={labels.gallery}
+							closeLabel={labels.close}
+							open={screen?.id === extras.gallery}
+							onToggle={(open) => toggleScreen(extras.gallery, open)}
+						>
+							<Gallery novel={handle.props.novel} persistent={screen?.persistent} labels={labels} />
+						</Screen>
+						<Screen
+							id={extras.music}
+							title={labels.musicRoom}
+							closeLabel={labels.close}
+							open={screen?.id === extras.music}
+							onToggle={(open) => toggleScreen(extras.music, open)}
+						>
+							<MusicRoom
+								novel={handle.props.novel}
+								persistent={screen?.persistent}
+								mixer={director.mixer}
+								titles={musicTitles}
+								labels={labels}
+							/>
+						</Screen>
+						<Screen
+							id={extras.endings}
+							title={labels.endings}
+							closeLabel={labels.close}
+							open={screen?.id === extras.endings}
+							onToggle={(open) => toggleScreen(extras.endings, open)}
+						>
+							<EndingsList
+								novel={handle.props.novel}
+								persistent={screen?.persistent}
+								labels={labels}
+							/>
+						</Screen>
+						<Screen
+							id={extras.chapters}
+							title={labels.chapterSelect}
+							closeLabel={labels.close}
+							open={screen?.id === extras.chapters}
+							onToggle={(open) => toggleScreen(extras.chapters, open)}
+						>
+							<ChapterSelect
+								novel={handle.props.novel}
+								persistent={screen?.persistent}
+								labels={labels}
+								onSelect={(scene) => startReplay(scene, "chapter")}
+							/>
+						</Screen>
+						<Screen
+							id={extras.scenes}
+							title={labels.sceneReplay}
+							closeLabel={labels.close}
+							open={screen?.id === extras.scenes}
+							onToggle={(open) => toggleScreen(extras.scenes, open)}
+						>
+							<SceneReplay
+								novel={handle.props.novel}
+								persistent={screen?.persistent}
+								labels={labels}
+								onSelect={(scene) => startReplay(scene, "scene")}
+							/>
+						</Screen>
+					</>
+				) : null}
 			</div>
+		);
+	};
+}
+
+/**
+ * A library screen's modal dialog. Its content renders only while it is open, so a screen loads
+ * the scenes it reads when the reader opens it and reads the persistent data of that moment.
+ */
+function Screen(handle: Handle<NovelPlayer.ScreenProps>) {
+	return () => {
+		let { id, title, closeLabel, open, onToggle, children } = handle.props;
+		return (
+			<Dialog
+				id={id}
+				aria-labelledby={`${id}-title`}
+				data-novel-screen=""
+				mix={[
+					css({ inlineSize: "min(48rem, 94vw)" }),
+					on("toggle", (event) => onToggle((event as ToggleEvent).newState === "open")),
+				]}
+			>
+				<Dialog.Header>
+					<Dialog.Title id={`${id}-title`}>{title}</Dialog.Title>
+				</Dialog.Header>
+				<div mix={css({ maxBlockSize: "65vh", overflowY: "auto" })}>{open ? children : null}</div>
+				<Dialog.Close commandfor={id} aria-label={closeLabel} />
+			</Dialog>
 		);
 	};
 }

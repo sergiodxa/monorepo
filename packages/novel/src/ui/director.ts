@@ -9,9 +9,11 @@
 
 import { isFailure } from "@sdxc/result";
 
+import type { SceneDeclaration } from "../declarations.js";
 import type { NovelError } from "../errors.js";
-import type { Ending, GameState, Reply, StopFrame } from "../frames.js";
+import type { Ending, GameState, ReplayScope, Reply, StopFrame } from "../frames.js";
 import type { Novel, Play, StartOptions } from "../novel.js";
+import type { Persistent } from "../persistent.js";
 
 import type { BacklogEntry } from "./backlog.js";
 import type { NovelSettings } from "./settings.js";
@@ -72,6 +74,10 @@ export class Director {
 	backlog: BacklogEntry[] = [];
 	/** True when an error stopped the play before its first stop, which {@link Director.retry} retries. */
 	stalled = false;
+	/** True while the play is a replay, which never saves. */
+	replaying = false;
+	/** The play a replay interrupted, resumed with its backlog when the replay ends. */
+	#resume: { state: GameState; backlog: BacklogEntry[] } | undefined;
 	#host: DirectorHost;
 	#play: Play | undefined;
 	#sequence = 0;
@@ -106,14 +112,67 @@ export class Director {
 		return this.#play?.state;
 	}
 
+	/** Persistent data as the current play has updated it, or `undefined` before a play starts. */
+	get persistent(): Persistent | undefined {
+		return this.#play?.persistent;
+	}
+
 	/**
 	 * Saves the play through `play.save()`, which emits the novel's `save` event.
 	 *
 	 * @param slot - The slot name the event and the returned state carry.
-	 * @returns The play as JSON, or `undefined` before the play starts.
+	 * @returns The play as JSON, or `undefined` before the play starts and during a replay.
 	 */
 	save(slot: string): GameState | undefined {
+		if (this.replaying) return undefined;
 		return this.#play?.save(slot);
+	}
+
+	/**
+	 * Replays a scene, or plays its chapter, as a replay that records only the lines it shows.
+	 * The play it interrupts is kept and resumes at the same stop when the replay ends.
+	 *
+	 * @param scene - The scene to start in.
+	 * @param scope - Ends the replay on leaving the scene, or its chapter.
+	 */
+	async replay(scene: SceneDeclaration, scope: ReplayScope): Promise<void> {
+		let play = this.#play;
+		if (
+			play !== undefined &&
+			!this.replaying &&
+			this.ending === undefined &&
+			this.frame !== undefined
+		) {
+			this.#resume = { state: play.state, backlog: this.backlog };
+		}
+		let persistent = play?.persistent;
+		await this.begin(
+			persistent === undefined ? { scene, replay: scope } : { scene, replay: scope, persistent },
+		);
+	}
+
+	/**
+	 * Ends a replay: resumes the play it interrupted with the lines the replay recorded, or,
+	 * when it interrupted none, finishes like the end of a play.
+	 */
+	async endReplay(): Promise<void> {
+		if (!this.replaying) return;
+		let resume = this.#resume;
+		if (resume === undefined) {
+			this.#cancel();
+			this.#mixer?.stopVoice();
+			this.replaying = false;
+			this.ending = { key: null, scene: this.frame?.scene ?? "" };
+			this.phase = "idle";
+			await this.#host.render();
+			this.#host.onEnding(this.ending);
+			return;
+		}
+		let persistent = this.#play?.persistent;
+		await this.begin(
+			persistent === undefined ? { from: resume.state } : { from: resume.state, persistent },
+			resume.backlog,
+		);
 	}
 
 	/**
@@ -129,11 +188,13 @@ export class Director {
 
 	/**
 	 * Starts a play: new, from a scene, or from a save. A refused save shows its error and keeps
-	 * nothing of the previous play.
+	 * nothing of the previous play. A play started without `replay` forgets any interrupted play.
 	 *
 	 * @param options - Where the play starts.
+	 * @param backlog - The lines the backlog starts with.
 	 */
-	async begin(options: StartOptions = {}): Promise<void> {
+	async begin(options: StartOptions = {}, backlog: BacklogEntry[] = []): Promise<void> {
+		if (options.replay === undefined) this.#resume = undefined;
 		this.#cancel();
 		this.#mixer?.stopVoice();
 		let started = this.#host.novel().start(options);
@@ -143,7 +204,8 @@ export class Director {
 			return;
 		}
 		this.#play = started.data;
-		this.backlog = [];
+		this.replaying = options.replay !== undefined;
+		this.backlog = backlog;
 		this.ending = undefined;
 		this.error = undefined;
 		await this.#step(undefined);
@@ -272,6 +334,11 @@ export class Director {
 		let result = await play.next(reply);
 		if (play !== this.#play) return;
 		if (result.done === true) {
+			if (this.replaying && this.#resume !== undefined) {
+				await this.endReplay();
+				return;
+			}
+			this.replaying = false;
 			this.ending = result.value;
 			this.phase = "idle";
 			await this.#host.render();

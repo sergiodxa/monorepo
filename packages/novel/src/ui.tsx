@@ -1,7 +1,7 @@
 /**
  * The player UI as `remix/component` components: `NovelPlayer`, which owns a play and sequences
- * its frames, and the presentational parts it is built from (stage, textbox, choice menu,
- * backlog, save and settings screens), each usable alone so a game can replace any of them.
+ * its frames, and the parts it is built from (stage, textbox, choice menu, backlog, save and
+ * settings screens, library extras), each usable alone so a game can build its own screens.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,15 @@ export type { MixerSnapshot } from "./ui/audio.js";
 export type { BacklogEntry } from "./ui/backlog.js";
 export type { Column } from "./ui/layout.js";
 export type { GamepadAction } from "./ui/input.js";
+export type {
+	LibraryAsset,
+	LibraryChapter,
+	LibraryEnding,
+	LibraryScene,
+	MemoryLine,
+	NovelLibrary,
+	SceneLine,
+} from "./ui/library.js";
 export type { Phase } from "./ui/director.js";
 export type {
 	AudioChannel,
@@ -24,10 +33,16 @@ export type { RunningTransition } from "./ui/transitions.js";
 
 export { AudioMixer } from "./ui/audio.js";
 export { Backlog } from "./ui/backlog.js";
+export { ChapterSelect, SceneReplay } from "./ui/chapters.js";
 export { ChoiceMenu, timeoutOption } from "./ui/choice-menu.js";
+export { EndingsList } from "./ui/endings.js";
+export { Gallery } from "./ui/gallery.js";
 export { gamepadActions, moveFocus, swipeDirection } from "./ui/input.js";
 export { columnOf, stillStage } from "./ui/layout.js";
+export { endingKeys, readLibrary, sceneLines } from "./ui/library.js";
+export { Memories } from "./ui/memories.js";
 export { lineMarkup, Message } from "./ui/message.js";
+export { MusicRoom } from "./ui/music-room.js";
 export { NovelPlayer } from "./ui/player.js";
 export { QuickMenu } from "./ui/quick-menu.js";
 export { QUICK_SLOT, SaveScreen, SlotThumbnail } from "./ui/saves.js";

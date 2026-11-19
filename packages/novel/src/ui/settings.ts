@@ -92,6 +92,22 @@ export interface NovelLabels {
 	selfVoicing: string;
 	retry: string;
 	timeLeft: string;
+	extras: string;
+	memories: string;
+	gallery: string;
+	musicRoom: string;
+	endings: string;
+	chapterSelect: string;
+	sceneReplay: string;
+	loading: string;
+	locked: string;
+	/** Shown in place of an ending's name until the reader reaches it. */
+	unknownEnding: string;
+	/** What Memories says before the reader has read a line. */
+	noMemories: string;
+	play: string;
+	stop: string;
+	endReplay: string;
 }
 
 /** English labels, each replaced by the matching key of the player's `labels` prop. */
@@ -126,6 +142,20 @@ export const DEFAULT_LABELS: NovelLabels = {
 	selfVoicing: "Read text aloud",
 	retry: "Try again",
 	timeLeft: "Time left",
+	extras: "Extras",
+	memories: "Memories",
+	gallery: "Gallery",
+	musicRoom: "Music room",
+	endings: "Endings",
+	chapterSelect: "Chapters",
+	sceneReplay: "Scene replay",
+	loading: "Loading…",
+	locked: "Locked",
+	unknownEnding: "???",
+	noMemories: "Nothing to remember yet.",
+	play: "Play",
+	stop: "Stop",
+	endReplay: "End replay",
 };
 
 /** What a key does in the player. */
@@ -141,7 +171,8 @@ export type PlayerAction =
 	| "quickLoad"
 	| "save"
 	| "load"
-	| "settings";
+	| "settings"
+	| "endReplay";
 
 /**
  * The keyboard map, by `KeyboardEvent.key`. Holding Control also skips for as long as it is
