@@ -198,6 +198,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Link`, `NavLink`, `LinkButton` — an inline anchor, a navigation link, and a link styled as a
   button.
 - `Tabs` — tabs driven by routing: the `.Tab` pointing at the current page is selected.
+- `StepIndicator` — numbered steps of a flow spread over several pages; done steps link back.
 - `Breadcrumbs`, `Pagination`, `Sidebar` — a trail of parents, a pager landmark, and an app shell
   rail whose collapse rides a checkbox's `:checked`.
 - `Disclosure`, `Accordion` — `<details>` sections, alone or stacked.
@@ -332,6 +333,8 @@ one the page uses in the browser entry.
   `.Note`, `.Steps` and `.Step` (an icon, a running state, output it opens onto).
 - `Composer` — the message form, with `.Input` (grows to twelve lines), `.Toolbar` and `.Hint`;
   `ComposerSubmit` is its send button, Enter to send, and Stop while a reply streams.
+- `ComposerFormat`, `EmojiPicker`, `MentionMenu` — composer islands: Markdown buttons and shortcuts
+  (`applyFormat`), an emoji grid that inserts or submits (`EMOJI`), and `@` suggestions (`mentionQuery`).
 - `revealStream(root)` — replays a server-rendered reply word by word; `streamTarget()` styles it.
 
 | Helper                  | Host                                       | Adds                                                  |
@@ -380,6 +383,9 @@ Dashboard and workspace components.
   pointer-positioned menu.
 - `PageHeader` — a screen's title row and tabs; tabs that overflow fold into a More menu.
 - `SectionBar` — a sticky row of chips linking to a long page's sections; the chip of the section being read follows the scroll (island `@sdxc/ui/app/section-bar`).
+- `Amount` — money from integer minor units and an ISO code, formatted by `Intl`; `formatAmount()` gives the text.
+- `Ledger` — money movements grouped by day, each day headed by its total, each row one link.
+- `PaymentCard` — a drawn card face with a masked number, a chip or "Virtual" tag, and a frozen state.
 - `ProfilePicker` — a shared account's "who is using this?" grid; each `.Profile` is a submit button.
 - `CommandPalette` — a ⌘K command list; `CommandPalette.Finder` is a fuzzy file finder page.
 - `FilterMenu` — a filterable popover of links, radios or checkboxes, posted as a form on close.
