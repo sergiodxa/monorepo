@@ -28,6 +28,7 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/app/auto-refresh": () => import("@sdxc/ui/app/auto-refresh"),
 	"@sdxc/ui/app/board": () => import("@sdxc/ui/app/board"),
 	"@sdxc/ui/app/command-palette": () => import("@sdxc/ui/app/command-palette"),
+	"@sdxc/ui/app/day-strip": () => import("@sdxc/ui/app/day-strip"),
 	"@sdxc/ui/app/detail-sheet": () => import("@sdxc/ui/app/detail-sheet"),
 	"@sdxc/ui/app/filter-bar": () => import("@sdxc/ui/app/filter-bar"),
 	"@sdxc/ui/app/gantt": () => import("@sdxc/ui/app/gantt"),

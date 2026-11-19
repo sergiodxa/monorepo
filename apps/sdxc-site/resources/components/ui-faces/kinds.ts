@@ -70,6 +70,7 @@ export const FACE_KIND = {
 	"cta-group": "cta",
 	curriculum: "docs-steps",
 	"danger-zone": "danger-zone",
+	"day-strip": "tabs",
 	"date-field": "field",
 	"date-picker": "date-picker",
 	"date-range-picker": "date-range",

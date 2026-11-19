@@ -38,6 +38,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/app/code-view": () => import("@sdxc/ui/app/code-view"),
 	"@sdxc/ui/app/command-palette": () => import("@sdxc/ui/app/command-palette"),
 	"@sdxc/ui/app/contribution-graph": () => import("@sdxc/ui/app/contribution-graph"),
+	"@sdxc/ui/app/day-strip": () => import("@sdxc/ui/app/day-strip"),
 	"@sdxc/ui/app/detail-sheet": () => import("@sdxc/ui/app/detail-sheet"),
 	"@sdxc/ui/app/diff": () => import("@sdxc/ui/app/diff"),
 	"@sdxc/ui/app/filter-bar": () => import("@sdxc/ui/app/filter-bar"),
