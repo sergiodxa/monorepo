@@ -121,7 +121,7 @@ ctx.choose(
 
 ### Render the player
 
-A novel holds functions, so it cannot travel from the server as props: render `NovelPlayer` inside a client entry of your own that imports the novel. The player reads its translator from `IntlProvider` (or `setIntl()`) in `@sdxc/i18n/ui`, and fills its parent with a letterboxed 16:9 stage.
+A novel holds functions, so it cannot travel from the server as props: render the player inside a client entry of your own that imports the novel. `NovelPlayer.Default` is the whole player in one component; it reads its translator from `IntlProvider` (or `setIntl()`) in `@sdxc/i18n/ui`, and fills its parent with a letterboxed 16:9 stage.
 
 ```tsx
 import { createI18n } from "@sdxc/i18n";
@@ -137,11 +137,44 @@ export let Game = clientEntry("/app/game.tsx#Game", function Game() {
 	return () => (
 		<div mix={css({ blockSize: "100dvh" })}>
 			<IntlProvider intl={i18n}>
-				<NovelPlayer novel={novel} />
+				<NovelPlayer.Default novel={novel} />
 			</IntlProvider>
 		</div>
 	);
 });
+```
+
+### Compose your own player
+
+`NovelPlayer` is a provider: place the parts you want inside it, apply the input mixins you want to it, and listen to its events with `on()`. Leaving a part out removes it.
+
+```tsx
+import { keyboardControls, NovelPlayer, touchControls } from "@sdxc/novel/ui";
+import { css, on } from "remix/component";
+
+import { showCredits } from "./credits.js";
+import { novel } from "./novel.js";
+
+let player = (
+	<NovelPlayer
+		novel={novel}
+		mix={[
+			keyboardControls(),
+			touchControls(),
+			css({ "--novel-textbox-background": "rgb(0 0 0 / 0.8)" }),
+			on("novel:ending", (event) => showCredits(event.ending.key)),
+		]}
+	>
+		<NovelPlayer.Stage>
+			<NovelPlayer.Textbox />
+			<NovelPlayer.Choices />
+			<NovelPlayer.QuickMenu />
+		</NovelPlayer.Stage>
+		<NovelPlayer.Backlog />
+		<NovelPlayer.Saves slots={3} />
+		<NovelPlayer.Settings />
+	</NovelPlayer>
+);
 ```
 
 ### Test the story
@@ -330,29 +363,116 @@ The one error the engine reports, on `error` frames, `error` events and failed `
 
 ### `@sdxc/novel/ui`
 
-The player and the parts it is built from, as `remix/component` components; each part renders alone, so a game can build its own screens. Every component reads its translator through `intl(handle)` from `@sdxc/i18n/ui`.
+The player as `remix/component` components: `NovelPlayer` is a provider that owns a play, the parts placed inside it draw that play, mixins add input, and headless behavior classes hold the logic the parts are built on. A part of your own reads the same context the built-in parts read, so any of them can be replaced. Every component reads its translator through `intl(handle)` from `@sdxc/i18n/ui`.
 
 #### `NovelPlayer`
 
-Owns a play, renders its current frame and wires every input and screen. Render it inside your own client entry, since the novel it takes holds functions. It accepts the attributes of a `div` beside its own props:
+Owns a play and publishes it to the parts inside it; it draws nothing but its children. Render it inside your own client entry, since the novel it takes holds functions. It accepts the attributes of a `div`, `mix` included, beside its own props:
 
 - `novel`: The novel, with its scenes mapped
 - `start`: The `StartOptions` the play starts from: a `scene`, `state`, `seed`, a save through `from`, and `persistent` data. The player reads it once, so mount a new player (change its `key`) to start another play
 - `settings`: The `StoredSettings` the app kept; missing fields take `DEFAULT_SETTINGS`
-- `onSettingsChange`: Called with the whole `NovelSettings` whenever the reader changes one
-- `saves`: The stored saves by slot name, which the save and load screens show; slots are `"quick"` and `"1"` to `"<slots>"`
-- `onSave`: Called with the slot and the `GameState`; the save also reaches the novel's `save` event
-- `slots`: How many numbered slots the save and load screens show beside the quick slot (default `6`)
-- `focus`: Enlarges and raises the speaker and dims everyone else (default `true`)
-- `renderInteraction`: A component receiving `{ frame, respond }` for custom frames; without it a custom frame shows the stage and waits
-- `onEnding`: Called when the play reaches an ending or runs out of story
+- `saves`: The stored saves by slot name, which the save and load screens show; slots are `"quick"` and `"1"` upward
 - `labels`: Replaces any of the interface's English words (`NovelLabels`)
-- `extras`: Offers Memories, the gallery, the music room, endings, chapter select and scene replay from an extras menu (default `true`)
-- `prefetch`: How many jumps ahead to prefetch modules, images, sounds, voices and music as the play enters a scene, or `false` (default `1`)
-- `musicTitles`: Each track's title as a message key, by asset id, for the music room
 - `markup`: Line markup elements or `Trans.MarkupComponent`s beside `b`, `i`, `shake`, `speed` and `pause`
+- `prefetch`: How many jumps ahead to prefetch modules, images, sounds, voices and music as the play enters a scene, or `false` (default `1`)
+- `children`: The parts
 
-A click on the stage finishes a running transition, then the line being typed, then advances; the wheel rolls back (up) and advances (down), and holding Control skips. On touch screens a tap advances, a swipe up rolls back and a swipe down opens the backlog. Keys follow `KEYMAP`:
+```tsx
+<NovelPlayer novel={novel} mix={[keyboardControls(), touchControls(), gamepadControls()]}>
+	<NovelPlayer.Stage>
+		<NovelPlayer.Textbox />
+		<NovelPlayer.Choices />
+		<NovelPlayer.Interaction name="fishing" component={Fishing} />
+		<NovelPlayer.QuickMenu>
+			<NovelPlayer.Extras>
+				<Memories />
+				<Gallery />
+				<EndingsList />
+			</NovelPlayer.Extras>
+		</NovelPlayer.QuickMenu>
+	</NovelPlayer.Stage>
+	<NovelPlayer.Backlog />
+	<NovelPlayer.Saves slots={6} />
+	<NovelPlayer.Settings />
+</NovelPlayer>
+```
+
+The root carries `data-novel-player` with `data-phase`, `data-auto`, `data-skip`, `data-hidden`, `data-replay` and `data-dyslexia` for styling.
+
+#### `NovelPlayer.Default`
+
+The whole player in one component: every part below, the six library screens under an Extras menu, and the three input mixins. It takes the provider's props, and its children (such as `NovelPlayer.Interaction`) are drawn on the stage. A game that needs a different slot count, no speaker focus or music titles composes its own player instead.
+
+```tsx
+<NovelPlayer.Default novel={novel} settings={stored} saves={saves}>
+	<NovelPlayer.Interaction name="fishing" component={Fishing} />
+</NovelPlayer.Default>
+```
+
+#### `NovelPlayer.Context`
+
+What `handle.context.get(NovelPlayer)` answers inside a player: one stable object whose getters always read the current play, so a part or mixin can keep it from setup.
+
+- State: `novel`, `element` (the root), `dialog` (the open dialog, or `null`), `frame`, `phase`, `ending`, `error`, `stalled`, `instant` (true while skipping or under reduced motion), `hidden`, `replaying`, `persistent`, `labels`, `locale`, `markup` and `ids` (each screen's dialog id)
+- Behaviors: `typewriter` (`RevealModel`), `auto` (`AutoModel`), `skip` (`SkipModel`), `backlog` (`BacklogModel`), `saves` (`SaveSlots`), `settings` (`SettingsModel`), `countdown` (`CountdownModel`), `mixer` (`AudioMixer`) and `prefetcher` (`Prefetcher`)
+- Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument), `toggleFullscreen()`, `replay(scene, scope)`, `endReplay()`, `open(screen)` and `retry()`
+
+```tsx
+import type { Handle } from "remix/component";
+
+import { Message, NovelPlayer } from "@sdxc/novel/ui";
+import { on } from "remix/component";
+
+function PhoneChoices(handle: Handle) {
+	let player = handle.context.get(NovelPlayer);
+	return () => {
+		let frame = player.frame;
+		if (frame?.type !== "choice") return null;
+		return (
+			<ul>
+				{frame.options.map((option) => (
+					<li key={option.id}>
+						<button
+							type="button"
+							disabled={option.disabled}
+							mix={on("click", () => player.answer(frame.choose(option.id)))}
+						>
+							<Message i18nKey={option.label} />
+						</button>
+					</li>
+				))}
+			</ul>
+		);
+	};
+}
+```
+
+#### Events: `NovelSaveEvent`, `NovelSettingsEvent` and `NovelEndingEvent`
+
+The player dispatches these from its root, and they bubble, so `on()` on the player or any ancestor hears them with typed fields:
+
+- `novel:save` (`slot`, `state`): The reader saved; the save also reaches the novel's `save` event
+- `novel:settings` (`settings`): The reader changed a setting; the event carries the whole `NovelSettings`
+- `novel:ending` (`ending`): The play reached an ending or ran out of story
+
+```tsx
+<NovelPlayer.Default
+	novel={novel}
+	mix={[
+		on("novel:settings", (event) =>
+			localStorage.setItem("settings", JSON.stringify(event.settings)),
+		),
+		on("novel:ending", (event) => showCredits(event.ending.key)),
+	]}
+/>
+```
+
+#### `keyboardControls(options?)`, `touchControls()` and `gamepadControls()`
+
+Input as mixins on the player, so a game applies only the controls it wants. Each one stands down while a dialog or a field has focus, and a click or tap on the stage advances without any of them.
+
+`keyboardControls({ keymap? })` follows `KEYMAP` unless given a map of `KeyboardEvent.key` to `PlayerAction`, and holding Control skips:
 
 | Key          | Action           | Key    | Action      |
 | ------------ | ---------------- | ------ | ----------- |
@@ -362,49 +482,73 @@ A click on the stage finishes a running transition, then the line being typed, t
 | `s`, `o`     | Save, load       | `f`    | Full screen |
 | `q`, `w`     | Quick save, load | Escape | Settings    |
 
-With a standard-mapping gamepad, A presses the focused control or advances, B closes the open screen or hides the interface, the shoulder buttons roll back (left) and skip (right), Start opens the settings, and the D-pad moves focus. A replay offers no saving and an End replay button.
+`touchControls()` adds swipes (up rolls back, down opens the backlog) and the wheel (up rolls back, down advances). `gamepadControls()` reads a standard-mapping gamepad: A presses the focused control or advances, B closes the open screen or hides the interface, the shoulder buttons roll back (left) and skip (right), Start opens the settings, and the D-pad moves focus.
 
-The root carries `data-novel-player` with `data-phase`, `data-auto`, `data-skip`, `data-hidden`, `data-replay` and `data-dyslexia` for styling, and `--novel-letterbox` sets the color around the stage.
+#### Parts
 
-#### `Stage`, `Scenery` and `CharacterSprite`
+Each part is a member of `NovelPlayer` and is also exported under its own name. Every one renders a real element that takes `mix`, and renders nothing while it has nothing to show.
 
-`<Stage stage locale focus? transitions? instant?>` draws a frame's stage on a 16:9 surface letterboxed inside any box, with its children (a textbox, a menu, an interaction) above the characters, so the same component draws a play and a save thumbnail. `Scenery` is one background or image layer, and `CharacterSprite` one character, with `data-speaking` for focus and `data-exiting` while it leaves.
+- `NovelPlayer.Stage` (`Stage`): The 16:9 stage, letterboxed inside any box, with its children above the characters; a click finishes a transition, then the line being typed, then advances. `focus` (default `true`) enlarges and raises the speaker and dims everyone else. Given a `stage` prop it draws that still stage instead of the play, which is how `SlotThumbnail` works
+- `NovelPlayer.Textbox` (`Textbox`): The line's box, a live region holding the whole line from the start; without children it draws `NamePlate`, `Line` and `NextIndicator`, and with children it draws those
+- `NovelPlayer.NamePlate` (`NamePlate`), `NovelPlayer.Line` (`Line`) and `NovelPlayer.NextIndicator` (`NextIndicator`): The speaker's name in their color, the typed line with its markup, and the sign that the line is complete
+- `NovelPlayer.Captions` (`Captions`): The captions of the frame's sounds
+- `NovelPlayer.Choices` (`ChoiceMenu`): A menu, with a locked option disabled with its reason, a taken one marked `data-chosen`, and a timed menu counting down
+- `NovelPlayer.Interaction` (`Interaction`): `name` and `component`; draws `component` with `{ frame, respond }` when a custom frame's `interaction` is `name`, typed from `NovelTypes["interactions"]`
+- `NovelPlayer.QuickMenu` (`QuickMenu`): The buttons over the stage (auto, skip, backlog, save, load, quick save and load, settings, hide, full screen, and End replay during a replay), then its children
+- `NovelPlayer.Backlog` (`Backlog`): A modal dialog of the lines read, oldest first, each with a button that replays its voice
+- `NovelPlayer.Saves` (`SaveScreen`): The save and load dialogs, with `slots` numbered slots beside the quick one (default `6`); a replay offers no saving
+- `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting
+- `NovelPlayer.Extras` (`Extras`): An Extras menu offering the library screens given as its children, each in its own modal dialog
 
-#### `Textbox` and `Captions`
+#### Theme: `NOVEL_THEME_VARIABLES`
 
-`<Textbox frame typing textSpeed complete? onRevealed? markup?>` draws a line's speaker in their color and types the line out; it is a live region holding the whole line from the start, so a screen reader reads it at once. `<Captions sounds>` shows the captions of a frame's sounds.
+Every color, image, size and timing the parts draw is a `--novel-*` custom property, and `NOVEL_THEME_VARIABLES` maps each name to its default. Set them with `css()` on the player or any ancestor; image frames work through the `border-image` variables:
+
+```tsx
+<NovelPlayer.Default
+	novel={novel}
+	mix={css({
+		"--novel-textbox-background": "rgb(30 20 10 / 0.85)",
+		"--novel-textbox-border-image-source": "url(/ui/frame.png)",
+		"--novel-textbox-border-image-slice": "24",
+		"--novel-textbox-border-image-width": "24px",
+		"--novel-nameplate-font-family": "Caveat, cursive",
+		"--novel-next-content": '"❤"',
+		"--novel-accent": "#e8a55c",
+	})}
+/>
+```
+
+The variables cover the player and stage (`letterbox`, `color`, `accent`, `stage-background`, transitions, character height), speaker focus (`focus-scale`, `focus-lift`, `focus-filter`, `dim-brightness`, `dim-filter`), the text (font, size, leading, tracking, color, shadow), the textbox (background, border, `border-image-*`, padding, radius, shadow, backdrop filter, position, inset, sizes), the name plate (background, `border-image-*`, font, color, offset), the next-line indicator (`next-content`, `next-image`, size, color, animation), the choices (gap, prompt, option background, border, `border-image-*`, hover, focus and disabled states, the countdown bar), the quick menu, the dialogs (background, color, `border-image-*`), captions, the ending overlay and errors.
+
+#### Behaviors
+
+Headless classes behind the parts. Each extends `TypedEventTarget` and dispatches `change` when its state moves, and none touches the DOM, so a custom part subscribes to the player's instance (`player.typewriter`, `player.auto`…) and draws it however it likes.
+
+- `RevealModel`: A line's reveal: `begin(line, complete?)`, `start()`, `finish()` (the typing ended), `reveal()` (show it whole), `clear()`, with `status` (`idle`, `waiting`, `typing`, `revealed`), `complete` and `speed` in characters per second
+- `AutoModel`: Auto mode: `set(enabled)`, `toggle()`, `wait(line, advance)` (advances after the line's voice and delay), `cancel()`; `AUTO_PER_CHARACTER_MS` is the time added per character of an unvoiced line
+- `SkipModel`: Skip, toggled or held: `toggle()`, `hold(held)`, `stop()`, `active`, and `passes(frame, mode)`, whether skipping goes past a frame; `SKIP_STEP_MS` is the pace between skipped stops
+- `BacklogModel`: The lines read, `record(frame, locale)` and `leave(frame)` on rollback, kept to a fixed size, as `entries`
+- `SaveSlots`: The saves by slot: `get(slot)`, `put(slot, state)`, `replace(stored)` and `all`; `QUICK_SLOT` (`"quick"`) is the slot quick save writes
+- `SettingsModel`: The reader's settings: `value`, `set(next)`, `update(patch)`, `setVolume(channel, value)`, completed with `DEFAULT_SETTINGS`
+- `CountdownModel`: A timed menu's clock: `start(frame)`, `cancel()`, `endsAt`, and an `expire` event (`CountdownExpireEvent`) with the option `timeoutOption(frame)` picks, its `default` or else its first available option
+- `Prefetcher`: Warms the files of the scenes ahead as the play enters a scene, four at a time
 
 #### `Message` and `lineMarkup(): Record<string, RemixElement | Trans.MarkupComponent>`
 
 `<Message i18nKey values? markup?>` renders a message with the built-in line effects plus any `markup` adds or replaces. `lineMarkup()` answers a fresh map of those built-in effects for `Trans`.
 
-#### `ChoiceMenu` and `timeoutOption(frame: ChoiceFrame): string | undefined`
+#### `SlotThumbnail` and `RangeSetting`
 
-`<ChoiceMenu frame onChoose timeLeftLabel?>` draws a menu: a locked option disabled with its reason, a taken one marked `data-chosen`, and a timed menu counting down. `timeoutOption` is the option a timed menu takes when it runs out: its `default`, else its first available option.
-
-#### `Backlog`
-
-`<Backlog id entries labels onReplayVoice?>` is a modal `<dialog>` listing `BacklogEntry` lines oldest first, scrolled to the newest, each with a button that replays its voice.
-
-#### `SaveScreen`, `SlotThumbnail` and `QUICK_SLOT`
-
-`<SaveScreen id mode slots saves locale onSelect labels>` is a modal `<dialog>` of slots that saves into any slot (`mode: "save"`) or resumes a filled one (`mode: "load"`). `<SlotThumbnail state locale>` draws a saved stage as a miniature, and `QUICK_SLOT` (`"quick"`) is the slot quick save writes.
-
-#### `SettingsScreen` and `RangeSetting`
-
-`<SettingsScreen id settings onChange labels>` is a modal `<dialog>` for every presentation setting, and `<RangeSetting label name value min max step onInput>` one labeled slider that reports as the reader drags.
-
-#### `QuickMenu`
-
-`<QuickMenu auto skip dialogs extras? replay? onAction labels>` draws the menu over the stage: buttons open the dialogs by id and report the other actions through `onAction`, and none of them advances the story.
+`<SlotThumbnail state locale>` draws a saved stage as a miniature, and `<RangeSetting label name value min max step onInput>` one labeled slider that reports as the reader drags.
 
 #### `Memories`, `Gallery`, `MusicRoom` and `EndingsList`
 
-The library screens, each taking `novel`, the stored `persistent` value (keep one value while the screen shows) and optional `labels`. `Memories` lists the lines read, scene by scene, with `onReplayVoice` to play a line's voice again; `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens.
+The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, and replays a line's voice; `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens.
 
 #### `ChapterSelect` and `SceneReplay`
 
-`<ChapterSelect novel persistent onSelect labels?>` lists the titled chapters and reports a reached one's first mapped scene; `SceneReplay` lists the titled scenes under their chapters and reports the one picked. Start the reported scene with `replay: "chapter"` or `"scene"`.
+`ChapterSelect` lists the titled chapters and `SceneReplay` the titled scenes under their chapters. Inside a player, picking one starts a `"chapter"` or `"scene"` replay; outside one, `onSelect` reports the scene, to start with `replay: "chapter"` or `"scene"`.
 
 #### `AudioMixer`
 
@@ -438,7 +582,7 @@ interface NovelSettings {
 
 #### `KEYMAP` and `gamepadActions(previous: readonly boolean[], current: readonly boolean[]): GamepadAction[]`
 
-The keyboard map by `KeyboardEvent.key`, and the actions of the gamepad buttons pressed since the previous poll, in button order.
+The default keyboard map `keyboardControls()` follows, by `KeyboardEvent.key`, and the actions of the gamepad buttons pressed since the previous poll, in button order, for a game that reads gamepads itself.
 
 #### `resolveSource(source: AssetSource, locale: string): string`
 
@@ -454,9 +598,12 @@ The scenery transitions the player draws itself as View Transitions (any other n
 
 #### Types from `@sdxc/novel/ui`
 
-- `NovelPlayer.Props`, `NovelPlayer.Interaction`, `NovelPlayer.InteractionProps`: The player's props, and the component `renderInteraction` takes with the `{ frame, respond }` it receives.
-- `NovelPlayer.LibraryProps`, `NovelPlayer.ScreenProps`: The props of the player's own library dialogs.
-- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
+- `NovelPlayer.Props`, `NovelPlayer.DefaultProps`, `NovelPlayer.Context`, `NovelPlayer.Screen`, `NovelPlayer.Markup`: The provider's props, `Default`'s, the context its parts read, the screens `open()` takes and the markup map.
+- `Interaction.Props`, `Interaction.ComponentProps`, `InteractionName`: An interaction part's props, the `{ frame, respond }` its component receives with the frame narrowed to `name`, and the declared interaction names.
+- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Extras.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
+- `keyboardControls.Options`: The keymap the keyboard mixin takes.
+- `RevealStatus`: Where a line's reveal stands.
+- `NovelThemeVariable`: A `--novel-*` variable name.
 - `NovelSettings`, `StoredSettings`, `AudioChannel`, `SkipMode`, `NovelLabels`, `PlayerAction`, `GamepadAction`: The settings and labels above, and what a key or a gamepad button does.
 - `NovelLibrary`, `LibraryChapter`, `LibraryScene`, `LibraryAsset`, `LibraryEnding`, `SceneLine`, `MemoryLine`: What `readLibrary` and `sceneLines` answer.
 - `BacklogEntry`: A line as the backlog keeps it, with its values, speakers and voice for the reader's locale.
@@ -533,7 +680,7 @@ The scene graph as a [Mermaid](https://mermaid.js.org) flowchart (a box per scen
 
 - `DevToolsOptions`, `DevEvent`, `ReloadResult`, `ResetOptions`, `DevProblems`: The options and answers above; a logged event carries an `id` counting up and `at`, its `Date.now()`.
 - `SceneGraph`, `GraphScene`, `GraphEdge`, `MissingMessage`: Every declared scene (with `mapped` and its endings), every `goto` and `call` between them, and a key one locale's catalog lacks.
-- `NovelDevTools.Props`, `NovelDevTools.SectionProps`: The panel's props and those of its sections.
+- `NovelDevTools.Props`: The panel's props.
 
 ### `@sdxc/novel/offline`
 
@@ -596,7 +743,7 @@ The cache policy as pure functions: a version's cache name (`sdxc-novel:<version
 
 ## Pattern: Storing Saves, Settings And Persistent Data
 
-The novel stores nothing: it emits JSON and the app keeps it. Store saves from the `save` event and persistent data from `persist`, hand them back on the next start, and pass settings through the player. Storage is read once the entry runs in the browser.
+The novel stores nothing: it emits JSON and the app keeps it. Store saves from the `save` event and persistent data from `persist`, hand them back on the next start, and store settings from the player's `novel:settings` event. Storage is read once the entry runs in the browser.
 
 ```tsx
 import type { GameState } from "@sdxc/novel";
@@ -604,7 +751,7 @@ import type { StoredSettings } from "@sdxc/novel/ui";
 import type { Handle } from "remix/component";
 
 import { NovelPlayer } from "@sdxc/novel/ui";
-import { clientEntry } from "remix/component";
+import { clientEntry, on } from "remix/component";
 
 import { novel } from "./novel.js";
 
@@ -627,12 +774,14 @@ export let Game = clientEntry("/app/game.tsx#Game", function Game(handle: Handle
 
 	return () =>
 		saves === undefined ? null : (
-			<NovelPlayer
+			<NovelPlayer.Default
 				novel={novel}
 				start={{ from: saves.quick, persistent: read("persistent") }}
 				saves={saves}
 				settings={read("settings") as StoredSettings | undefined}
-				onSettingsChange={(settings) => localStorage.setItem("settings", JSON.stringify(settings))}
+				mix={on("novel:settings", (event) =>
+					localStorage.setItem("settings", JSON.stringify(event.settings)),
+				)}
 			/>
 		);
 });
@@ -712,14 +861,14 @@ let novel = createNovel({
 
 ## Pattern: A Custom Interaction
 
-Declare the interaction's input and output, hand the screen to it from a scene, and render the custom frame with your own component; the engine validates the output and stores it at `into`.
+Declare the interaction's input and output, hand the screen to it from a scene, and render the custom frame with your own component through `NovelPlayer.Interaction`; the engine validates the output and stores it at `into`.
 
 ```tsx
 import type { Handle } from "remix/component";
 
 import * as s from "remix/data-schema";
 import { createScene, interaction, interactions } from "@sdxc/novel";
-import { NovelPlayer } from "@sdxc/novel/ui";
+import { Interaction, NovelPlayer } from "@sdxc/novel/ui";
 import { on } from "remix/component";
 
 import { CAST, novel, SCENES } from "./novel.js";
@@ -737,10 +886,9 @@ let lake = createScene(SCENES.lake, (ctx) => [
 	ctx.when((state) => state.lastCatch.caught >= 3, [ctx.say(CAST.mika, "lake.impressed")]),
 ]);
 
-function Fishing(handle: Handle<NovelPlayer.InteractionProps>) {
+function Fishing(handle: Handle<Interaction.ComponentProps<"fishing">>) {
 	return () => {
 		let { frame, respond } = handle.props;
-		if (frame.interaction !== "fishing") return null;
 		return (
 			<button type="button" mix={on("click", () => respond(frame.complete({ caught: 4 })))}>
 				Reel in
@@ -749,10 +897,14 @@ function Fishing(handle: Handle<NovelPlayer.InteractionProps>) {
 	};
 }
 
-let player = <NovelPlayer novel={novel} renderInteraction={Fishing} />;
+let player = (
+	<NovelPlayer.Default novel={novel}>
+		<NovelPlayer.Interaction name="fishing" component={Fishing} />
+	</NovelPlayer.Default>
+);
 ```
 
-Add `interactions: typeof INTERACTIONS` to `NovelTypes` so `frame.interaction` narrows the input and output, and give `explore()` the outputs to try: `explore(novel, { interactions: { fishing: () => [{ caught: 0 }, { caught: 5 }] } })`.
+Add `interactions: typeof INTERACTIONS` to `NovelTypes` so `name` is checked and the frame narrows the input and output, and give `explore()` the outputs to try: `explore(novel, { interactions: { fishing: () => [{ caught: 0 }, { caught: 5 }] } })`.
 
 ## Pattern: A Title Screen With Chapter Select
 
@@ -769,7 +921,7 @@ import { novel } from "./novel.js";
 function Title(handle: Handle<{ persistent: unknown }>) {
 	let start: StartOptions | undefined;
 	return () => {
-		if (start !== undefined) return <NovelPlayer novel={novel} start={start} />;
+		if (start !== undefined) return <NovelPlayer.Default novel={novel} start={start} />;
 		return (
 			<ChapterSelect
 				novel={novel}
@@ -848,7 +1000,7 @@ export let DevGame = clientEntry("/app/dev-game.tsx#DevGame", function DevGame(h
 	return () =>
 		devtools === undefined ? null : (
 			<>
-				<NovelPlayer key={restarts} novel={novel} start={start} />
+				<NovelPlayer.Default key={restarts} novel={novel} start={start} />
 				<NovelDevTools devtools={devtools} />
 			</>
 		);
