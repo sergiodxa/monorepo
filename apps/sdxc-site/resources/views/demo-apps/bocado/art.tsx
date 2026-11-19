@@ -19,28 +19,322 @@ const INK = "oklch(0.3 0.04 40)";
 /** The shapes of one dish inside a 120 × 120 drawing. */
 function dishShapes(dish: Dish): RemixNode {
 	switch (dish) {
-		case "taco":
+		case "empanada":
 			return (
 				<>
-					<path d="M18 78a42 42 0 0 1 84 0Z" fill="oklch(0.86 0.12 85)" />
+					<path d="M14 80a46 40 0 0 1 92 0Z" fill="oklch(0.8 0.13 75)" />
+					<path d="M20 78a40 34 0 0 1 80 0" fill="oklch(0.86 0.12 82)" />
 					<path
-						d="M26 74c6-14 14-20 22-18s10-10 18-9 12 9 18 8 12 8 12 19Z"
-						fill="oklch(0.62 0.17 145)"
+						d="M16 80q4-7 8 0t8 0 8 0 8 0 8 0 8 0 8 0 8 0 8 0 8 0 8 0"
+						fill="none"
+						stroke="oklch(0.68 0.14 60)"
+						stroke-width="5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
 					/>
-					<circle cx="44" cy="62" r="6" fill="oklch(0.62 0.2 30)" />
-					<circle cx="64" cy="56" r="5.5" fill="oklch(0.62 0.2 30)" />
-					<circle cx="80" cy="64" r="5" fill="oklch(0.62 0.2 30)" />
 					<path
-						d="M38 70h14M58 66h10M74 72h12"
-						stroke="oklch(0.95 0.03 95)"
+						d="M40 58q6-4 12 0M62 52q6-4 12 0"
+						stroke="oklch(0.7 0.13 60)"
+						stroke-width="2.5"
+						fill="none"
+						stroke-linecap="round"
+					/>
+					<circle cx="58" cy="66" r="2.4" fill="oklch(0.7 0.13 60)" />
+				</>
+			);
+		case "steak":
+			return (
+				<>
+					<ellipse cx="60" cy="76" rx="50" ry="22" fill="oklch(0.93 0.02 90)" />
+					<path
+						d="M24 66c0-16 16-26 36-26s38 8 38 22-14 22-34 22c-10 0-14-4-22-4s-18-2-18-14Z"
+						fill="oklch(0.45 0.1 35)"
+					/>
+					<path
+						d="M30 66c2-12 14-20 30-20"
+						stroke="oklch(0.85 0.05 80)"
+						stroke-width="5"
+						fill="none"
+						stroke-linecap="round"
+					/>
+					<path
+						d="M44 54 56 74M60 50l12 22M76 52l10 18"
+						stroke="oklch(0.3 0.06 35)"
 						stroke-width="3.5"
 						stroke-linecap="round"
 					/>
 					<path
-						d="M18 78a42 42 0 0 1 84 0"
-						fill="none"
-						stroke="oklch(0.74 0.13 70)"
+						d="M74 82c6 2 12 0 16-4"
+						stroke="oklch(0.6 0.16 140)"
 						stroke-width="5"
+						stroke-linecap="round"
+						fill="none"
+					/>
+				</>
+			);
+		case "choripan":
+			return (
+				<>
+					<path
+						d="M12 70c0-14 20-22 48-22s48 8 48 22c0 10-20 16-48 16S12 80 12 70Z"
+						fill="oklch(0.76 0.13 70)"
+					/>
+					<rect x="16" y="54" width="88" height="16" rx="8" fill="oklch(0.48 0.13 35)" />
+					<path
+						d="M30 58v8M46 57v9M62 57v9M78 57v9M94 58v8"
+						stroke="oklch(0.38 0.1 30)"
+						stroke-width="2.5"
+						stroke-linecap="round"
+					/>
+					<path
+						d="M22 56q8-6 16 0t16 0 16 0 16 0 14 0"
+						fill="none"
+						stroke="oklch(0.58 0.16 140)"
+						stroke-width="4"
+						stroke-linecap="round"
+					/>
+					<path
+						d="M14 70c10 6 82 6 92 0"
+						stroke="oklch(0.86 0.1 80)"
+						stroke-width="3"
+						fill="none"
+					/>
+				</>
+			);
+		case "provoleta":
+			return (
+				<>
+					<circle cx="60" cy="66" r="44" fill="oklch(0.32 0.02 40)" />
+					<circle cx="60" cy="64" r="34" fill="oklch(0.88 0.11 85)" />
+					<path
+						d="M38 50l44 30M34 66l40 26M48 40l40 26"
+						stroke="oklch(0.66 0.14 60)"
+						stroke-width="4"
+						stroke-linecap="round"
+					/>
+					<circle cx="48" cy="60" r="2.2" fill="oklch(0.55 0.14 140)" />
+					<circle cx="66" cy="54" r="2.2" fill="oklch(0.55 0.14 140)" />
+					<circle cx="70" cy="74" r="2.2" fill="oklch(0.55 0.2 30)" />
+					<circle cx="52" cy="78" r="2.2" fill="oklch(0.55 0.2 30)" />
+				</>
+			);
+		case "milanesa":
+			return (
+				<>
+					<ellipse cx="60" cy="76" rx="50" ry="22" fill="oklch(0.94 0.02 90)" />
+					<path
+						d="M20 68c2-16 18-26 40-26s38 10 38 24-16 22-38 22-42-6-40-20Z"
+						fill="oklch(0.7 0.13 65)"
+					/>
+					<circle cx="40" cy="62" r="1.8" fill="oklch(0.55 0.12 55)" />
+					<circle cx="56" cy="56" r="1.8" fill="oklch(0.55 0.12 55)" />
+					<circle cx="72" cy="60" r="1.8" fill="oklch(0.55 0.12 55)" />
+					<circle cx="50" cy="74" r="1.8" fill="oklch(0.55 0.12 55)" />
+					<circle cx="68" cy="76" r="1.8" fill="oklch(0.55 0.12 55)" />
+					<path d="M86 40a12 12 0 0 1 16 16Z" fill="oklch(0.9 0.16 105)" />
+					<path
+						d="M88 44a8 8 0 0 1 10 10"
+						stroke="oklch(0.97 0.05 105)"
+						stroke-width="2"
+						fill="none"
+					/>
+				</>
+			);
+		case "pasta":
+			return (
+				<>
+					<ellipse cx="60" cy="72" rx="50" ry="26" fill="oklch(0.95 0.01 90)" />
+					<ellipse cx="60" cy="68" rx="36" ry="18" fill="oklch(0.88 0.11 90)" />
+					<path
+						d="M30 66q10-10 20 0t20 0 20 0M34 74q10-8 18 0t18 0 16 0"
+						fill="none"
+						stroke="oklch(0.8 0.12 85)"
+						stroke-width="3"
+						stroke-linecap="round"
+					/>
+					<path d="M38 62c8-12 34-14 44 0-10 8-34 8-44 0Z" fill="oklch(0.55 0.18 30)" />
+					<path d="M52 56c3-4 7-4 10 0-3 2-7 2-10 0Z" fill="oklch(0.6 0.16 145)" />
+					<circle cx="70" cy="58" r="2" fill="oklch(0.96 0.03 95)" />
+					<circle cx="46" cy="60" r="2" fill="oklch(0.96 0.03 95)" />
+				</>
+			);
+		case "sushi":
+			return (
+				<>
+					<rect x="12" y="76" width="96" height="14" rx="4" fill="oklch(0.62 0.08 60)" />
+					<g>
+						<circle cx="34" cy="62" r="17" fill="oklch(0.3 0.04 160)" />
+						<circle cx="34" cy="62" r="13" fill="oklch(0.97 0.01 90)" />
+						<circle cx="34" cy="62" r="6" fill="oklch(0.72 0.14 40)" />
+						<circle cx="30" cy="66" r="3" fill="oklch(0.7 0.13 135)" />
+					</g>
+					<g>
+						<circle cx="70" cy="60" r="17" fill="oklch(0.3 0.04 160)" />
+						<circle cx="70" cy="60" r="13" fill="oklch(0.97 0.01 90)" />
+						<circle cx="70" cy="60" r="6" fill="oklch(0.72 0.14 40)" />
+						<circle cx="74" cy="56" r="3" fill="oklch(0.7 0.13 135)" />
+					</g>
+					<path d="M90 70c6-10 14-12 18-6-4 8-12 10-18 6Z" fill="oklch(0.75 0.15 130)" />
+					<path d="M86 34 106 18" stroke={INK} stroke-width="3" stroke-linecap="round" />
+				</>
+			);
+		case "ceviche":
+			return (
+				<>
+					<path d="M12 54h96a48 44 0 0 1-96 0Z" fill="oklch(0.95 0.02 220)" />
+					<ellipse cx="60" cy="54" rx="48" ry="14" fill="oklch(0.92 0.05 110)" />
+					<rect x="34" y="44" width="12" height="10" rx="3" fill="oklch(0.97 0.01 90)" />
+					<rect x="52" y="40" width="13" height="10" rx="3" fill="oklch(0.97 0.01 90)" />
+					<rect x="66" y="48" width="12" height="10" rx="3" fill="oklch(0.97 0.01 90)" />
+					<path
+						d="M28 52q6-4 10 0M74 44q6-4 10 0"
+						stroke="oklch(0.55 0.15 330)"
+						stroke-width="3"
+						stroke-linecap="round"
+						fill="none"
+					/>
+					<circle cx="86" cy="52" r="7" fill="oklch(0.85 0.14 90)" />
+					<path d="M86 30a12 12 0 0 1 14 14Z" fill="oklch(0.8 0.18 130)" />
+					<path d="M18 66h84" stroke="oklch(0.86 0.02 220)" stroke-width="2" />
+				</>
+			);
+		case "paella":
+			return (
+				<>
+					<path d="M2 66h18M100 66h18" stroke={INK} stroke-width="6" stroke-linecap="round" />
+					<ellipse cx="60" cy="66" rx="46" ry="26" fill="oklch(0.32 0.02 40)" />
+					<ellipse cx="60" cy="64" rx="40" ry="21" fill="oklch(0.8 0.15 80)" />
+					<path d="M38 56c4-6 10-6 12 0-4 4-8 4-12 0Z" fill="oklch(0.68 0.16 40)" />
+					<path d="M66 70c4-6 10-6 12 0-4 4-8 4-12 0Z" fill="oklch(0.68 0.16 40)" />
+					<ellipse cx="72" cy="54" rx="7" ry="4" fill="oklch(0.25 0.03 260)" />
+					<ellipse cx="46" cy="72" rx="7" ry="4" fill="oklch(0.25 0.03 260)" />
+					<circle cx="56" cy="62" r="2.5" fill="oklch(0.6 0.16 145)" />
+					<circle cx="84" cy="64" r="2.5" fill="oklch(0.6 0.16 145)" />
+					<path d="M26 60a10 10 0 0 1 12-8Z" fill="oklch(0.9 0.16 105)" />
+				</>
+			);
+		case "tart":
+			return (
+				<>
+					<ellipse cx="60" cy="70" rx="48" ry="28" fill="oklch(0.74 0.12 70)" />
+					<ellipse cx="60" cy="66" rx="40" ry="22" fill="oklch(0.84 0.12 85)" />
+					<path
+						d="M22 66q4-6 8 0t8 0M82 66q4-6 8 0t8 0"
+						stroke="oklch(0.68 0.12 65)"
+						stroke-width="2.5"
+						fill="none"
+					/>
+					<path d="M60 66 96 60a40 22 0 0 0-14-12Z" fill="oklch(0.6 0.14 135)" opacity="0.85" />
+					<circle cx="44" cy="62" r="4" fill="oklch(0.95 0.03 95)" />
+					<circle cx="56" cy="74" r="4" fill="oklch(0.95 0.03 95)" />
+					<circle cx="40" cy="74" r="3" fill="oklch(0.62 0.15 55)" />
+				</>
+			);
+		case "croqueta":
+			return (
+				<>
+					<ellipse cx="60" cy="74" rx="48" ry="18" fill="oklch(0.94 0.02 90)" />
+					<rect
+						x="20"
+						y="50"
+						width="30"
+						height="20"
+						rx="10"
+						fill="oklch(0.68 0.13 60)"
+						transform="rotate(-12 35 60)"
+					/>
+					<rect
+						x="48"
+						y="58"
+						width="30"
+						height="20"
+						rx="10"
+						fill="oklch(0.66 0.13 58)"
+						transform="rotate(8 63 68)"
+					/>
+					<rect
+						x="72"
+						y="46"
+						width="30"
+						height="20"
+						rx="10"
+						fill="oklch(0.7 0.13 62)"
+						transform="rotate(-4 87 56)"
+					/>
+					<path
+						d="M30 52h4M58 64h4M84 50h4"
+						stroke="oklch(0.82 0.1 80)"
+						stroke-width="2.4"
+						stroke-linecap="round"
+					/>
+					<path
+						d="M90 76c6-2 10 0 12 4"
+						stroke="oklch(0.9 0.08 95)"
+						stroke-width="5"
+						stroke-linecap="round"
+						fill="none"
+					/>
+				</>
+			);
+		case "alfajor":
+			return (
+				<>
+					<ellipse cx="60" cy="80" rx="38" ry="12" fill="oklch(0.86 0.06 80)" />
+					<rect x="22" y="62" width="76" height="16" rx="8" fill="oklch(0.58 0.11 60)" />
+					<ellipse cx="60" cy="60" rx="38" ry="12" fill="oklch(0.88 0.06 82)" />
+					<path
+						d="M28 70c10 3 54 3 64 0"
+						stroke="oklch(0.95 0.02 90)"
+						stroke-width="3"
+						fill="none"
+					/>
+					<circle cx="44" cy="58" r="1.6" fill="oklch(0.97 0.01 90)" />
+					<circle cx="58" cy="56" r="1.6" fill="oklch(0.97 0.01 90)" />
+					<circle cx="72" cy="60" r="1.6" fill="oklch(0.97 0.01 90)" />
+					<circle cx="64" cy="64" r="1.6" fill="oklch(0.97 0.01 90)" />
+				</>
+			);
+		case "mate":
+			return (
+				<>
+					<path d="M34 50c-8 14-6 36 6 46h40c12-10 14-32 6-46Z" fill="oklch(0.55 0.1 60)" />
+					<rect x="34" y="44" width="52" height="10" rx="3" fill="oklch(0.78 0.04 80)" />
+					<ellipse cx="60" cy="48" rx="24" ry="5" fill="oklch(0.58 0.14 135)" />
+					<path
+						d="M66 48 82 10"
+						stroke="oklch(0.78 0.04 80)"
+						stroke-width="4"
+						stroke-linecap="round"
+					/>
+					<path d="M80 12h6" stroke="oklch(0.78 0.04 80)" stroke-width="4" stroke-linecap="round" />
+					<path
+						d="M42 70c6 4 30 4 36 0"
+						stroke="oklch(0.45 0.09 55)"
+						stroke-width="3"
+						fill="none"
+					/>
+				</>
+			);
+		case "flan":
+			return (
+				<>
+					<ellipse cx="60" cy="88" rx="46" ry="12" fill="oklch(0.94 0.02 90)" />
+					<path d="M32 86 40 46h40l8 40Z" fill="oklch(0.86 0.12 85)" />
+					<path d="M40 46h40l2 10c-6 4-12 0-16 4s-14 2-18-2-8 0-10-2Z" fill="oklch(0.5 0.12 50)" />
+					<path
+						d="M28 86c10 4 54 4 64 0"
+						stroke="oklch(0.55 0.12 50)"
+						stroke-width="4"
+						fill="none"
+						stroke-linecap="round"
+					/>
+					<circle cx="60" cy="38" r="9" fill="oklch(0.97 0.01 90)" />
+					<path
+						d="M86 72c6-2 10 2 10 8"
+						stroke="oklch(0.62 0.12 55)"
+						stroke-width="6"
+						stroke-linecap="round"
+						fill="none"
 					/>
 				</>
 			);
@@ -149,51 +443,6 @@ function dishShapes(dish: Dish): RemixNode {
 					/>
 				</>
 			);
-		case "arepa":
-			return (
-				<>
-					<ellipse cx="60" cy="72" rx="40" ry="20" fill="oklch(0.84 0.12 85)" />
-					<path d="M24 64q18-14 36-6t36 6" fill="oklch(0.6 0.15 145)" />
-					<path
-						d="M26 66c10-6 24-6 34 0s24 6 34 0"
-						stroke="oklch(0.95 0.03 95)"
-						stroke-width="7"
-						stroke-linecap="round"
-						fill="none"
-					/>
-					<ellipse cx="60" cy="52" rx="38" ry="18" fill="oklch(0.86 0.12 88)" />
-					<circle cx="44" cy="48" r="2.5" fill="oklch(0.7 0.13 60)" />
-					<circle cx="66" cy="44" r="2.5" fill="oklch(0.7 0.13 60)" />
-					<circle cx="78" cy="54" r="2.5" fill="oklch(0.7 0.13 60)" />
-					<circle cx="54" cy="58" r="2.5" fill="oklch(0.7 0.13 60)" />
-				</>
-			);
-		case "curry":
-			return (
-				<>
-					<ellipse cx="60" cy="64" rx="48" ry="34" fill="oklch(0.55 0.08 60)" />
-					<ellipse cx="60" cy="60" rx="42" ry="28" fill="oklch(0.65 0.17 50)" />
-					<path
-						d="M30 58q8-6 16 0t16 0 16 0 14 0"
-						fill="none"
-						stroke="oklch(0.9 0.05 80)"
-						stroke-width="3"
-					/>
-					<rect x="38" y="50" width="12" height="10" rx="3" fill="oklch(0.85 0.06 70)" />
-					<rect x="64" y="58" width="13" height="10" rx="3" fill="oklch(0.85 0.06 70)" />
-					<path
-						d="M52 44c3-4 7-4 9 0-3 2-6 2-9 0ZM78 48c3-4 7-4 9 0-3 2-6 2-9 0Z"
-						fill="oklch(0.6 0.16 145)"
-					/>
-					<path
-						d="M84 22c10 0 14 8 10 14"
-						stroke="oklch(0.9 0.02 90)"
-						stroke-width="3"
-						fill="none"
-						stroke-linecap="round"
-					/>
-				</>
-			);
 		case "pastry":
 			return (
 				<>
@@ -264,28 +513,6 @@ function dishShapes(dish: Dish): RemixNode {
 						d="M48 70h6M62 66h6M74 70h5"
 						stroke="oklch(0.45 0.12 40)"
 						stroke-width="3"
-						stroke-linecap="round"
-					/>
-				</>
-			);
-		case "falafel":
-			return (
-				<>
-					<path d="M18 56a42 42 0 0 0 84 0Z" fill="oklch(0.88 0.06 85)" />
-					<path d="M18 56a42 42 0 0 1 84 0" fill="oklch(0.92 0.05 88)" />
-					<circle cx="40" cy="48" r="10" fill="oklch(0.5 0.1 70)" />
-					<circle cx="60" cy="42" r="10" fill="oklch(0.46 0.1 75)" />
-					<circle cx="80" cy="48" r="10" fill="oklch(0.5 0.1 70)" />
-					<path
-						d="M30 60c10-4 50-4 60 0"
-						stroke="oklch(0.62 0.15 145)"
-						stroke-width="6"
-						stroke-linecap="round"
-					/>
-					<path
-						d="M34 66c10 3 42 3 52 0"
-						stroke="oklch(0.62 0.18 350)"
-						stroke-width="4"
 						stroke-linecap="round"
 					/>
 				</>

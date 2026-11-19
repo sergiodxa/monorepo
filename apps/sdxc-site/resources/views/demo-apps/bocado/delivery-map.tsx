@@ -1,7 +1,7 @@
 /**
- * The tracking screen's map: Roma and Condesa in Mexico City on real streets, the restaurant
- * and the door as pins, and the courier riding the route between them. Every route was traced
- * once along the streets a car may take, so the line never cuts through a block.
+ * The tracking screen's map: Palermo and Villa Crespo in Buenos Aires on real streets, the
+ * restaurant and the door as pins, and the courier riding the route between them. Every route
+ * was traced once along the streets a car may take, so the line never cuts through a block.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -14,7 +14,7 @@ import { CUISINES, findRestaurant } from "./data";
 import { BocadoMark } from "./shell";
 
 /** The two cards the miniature shows. */
-const CARDS = ["comal-y-cobre", "lantern-noodle"];
+const CARDS = ["tres-empanadas", "todo-con-philadelphia"];
 
 /** Renders the miniature on its own cream ground, whatever the gallery's scheme. */
 export function BocadoThumbnail() {

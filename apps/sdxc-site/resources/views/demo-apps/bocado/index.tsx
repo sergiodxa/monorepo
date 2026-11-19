@@ -347,8 +347,8 @@ function placeOrder(form: FormData, cookie: string | null) {
 const SCREENS = [
 	"",
 	"search",
-	"search?q=dumpling",
-	"search?cuisine=tacos",
+	"search?q=ceviche",
+	"search?cuisine=empanadas",
 	"search?free=1&sort=fastest",
 	"search?q=zzz",
 	"search?rating=4.8&price=1&fast=1",

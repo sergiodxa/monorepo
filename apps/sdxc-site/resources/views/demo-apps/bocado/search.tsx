@@ -178,7 +178,7 @@ function DishMatches(handle: Handle<{ q: string }>) {
 					{matches.map(({ item, restaurant }) => (
 						<li>
 							<a
-								href={href(`r/${restaurant.id}#dish-${item.id}`)}
+								href={`${href(`r/${restaurant.id}`)}#dish-${item.id}`}
 								data-main-scroll-top=""
 								mix={[
 									raw({
@@ -358,7 +358,7 @@ export default function SearchPage(handle: Handle<SearchPage.Props>) {
 							name="q"
 							value={query.q}
 							aria-label="Search restaurants and dishes"
-							placeholder="Tacos, ramen, a restaurant…"
+							placeholder="Empanadas, ramen, a restaurant…"
 							autocomplete="off"
 							mix={[
 								raw({
