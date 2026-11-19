@@ -42,8 +42,8 @@ export namespace StepIndicator {
 }
 
 /**
- * Renders the row of steps as an ordered list in a `nav`, so a screen reader announces how
- * many steps there are and which one is current.
+ * Renders the row of steps as an ordered list in a `nav` spanning its container, so a
+ * screen reader announces how many steps there are and which one is current.
  *
  * @example
  * <StepIndicator label="Transfer steps">
@@ -137,18 +137,27 @@ StepIndicator.Step = function StepIndicatorStep(handle: Handle<StepIndicator.Ste
 							gap: "0.5rem",
 							color: "var(--ui-neutral-fg-muted, GrayText)",
 						}),
-						/** A line leads into every step after the first, filled once the reader passes it. */
+						/**
+						 * Every step after the first grows to share the row, and a line leads into it that
+						 * stretches across the gap; the line fills in the brand colour once the reader has
+						 * reached that step, so the row reads as how far along the flow they are.
+						 */
+						when("&:not(:first-child)", raw({ flex: "1 1 0", minInlineSize: "0" })),
 						when(
 							"&:not(:first-child)::before",
 							raw({
 								content: "''",
 								display: "block",
-								inlineSize: "clamp(0.75rem, 6cqi, 3rem)",
-								blockSize: "1.5px",
+								flex: "1 1 auto",
+								minInlineSize: "0.75rem",
+								blockSize: "2px",
 								borderRadius: "1px",
-								backgroundColor: "currentcolor",
-								opacity: "0.4",
+								backgroundColor: "var(--ui-neutral-border, GrayText)",
 							}),
+						),
+						when(
+							"&[data-state='complete']::before, &[data-state='current']::before",
+							raw({ backgroundColor: "var(--ui-brand-bg-solid, LinkText)" }),
 						),
 						when(
 							"&[data-state='complete'], &[data-state='current']",

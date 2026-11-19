@@ -76,6 +76,20 @@ describe("StepIndicator", () => {
 		document.documentElement.removeAttribute("style");
 	});
 
+	test("spans its container and fills the lines up to the current step", () => {
+		document.documentElement.style.setProperty("--ui-brand-bg-solid", "rgb(200, 80, 40)");
+		document.documentElement.style.setProperty("--ui-neutral-border", "rgb(220, 220, 220)");
+		let host = mount(640);
+		let steps = [...host.querySelectorAll<HTMLElement>("ol > li")];
+		let last = steps[2]!.getBoundingClientRect();
+		expect(Math.round(last.right)).toBe(Math.round(host.getBoundingClientRect().right));
+		let lines = steps.map((step) => getComputedStyle(step, "::before"));
+		expect(lines[1]!.backgroundColor).toBe("rgb(200, 80, 40)");
+		expect(lines[2]!.backgroundColor).toBe("rgb(220, 220, 220)");
+		expect(Number.parseFloat(lines[2]!.width)).toBeGreaterThan(100);
+		document.documentElement.removeAttribute("style");
+	});
+
 	test("keeps every name visible where the row fits", () => {
 		let host = mount(640);
 		for (let label of host.querySelectorAll<HTMLElement>('[data-slot="step-indicator-label"]')) {
