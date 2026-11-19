@@ -34,7 +34,16 @@ import type {
 	StoryPosition,
 } from "./frames.js";
 import type { Persistent } from "./persistent.js";
-import type { Audio, Fraction, Position, Stage, StageCharacter, StageScenery } from "./stage.js";
+import type {
+	Audio,
+	CharacterTransition,
+	Fraction,
+	FrameStage,
+	Position,
+	Stage,
+	StageCharacter,
+	StageScenery,
+} from "./stage.js";
 import type { NovelState, PlayTools, StateRecord } from "./types.js";
 
 import { directiveAt, enterOption, menuAnchor, nextPath, optionOf } from "./anchors.js";
@@ -178,11 +187,12 @@ export class PlayEngine {
 	get state(): GameState {
 		let live = this.#current?.snapshot ?? this.#live;
 		let scene = this.#runtime.scene(live.cursor.scene);
+		let { exits: _exits, ...stage } = live.stage;
 		return structuredClone({
 			version: this.#runtime.version,
 			position: this.#anchor(live.cursor),
 			stack: live.stack.map((entry) => this.#anchor(entry)),
-			stage: live.stage,
+			stage,
 			audio: live.audio,
 			state: live.state as NovelState,
 			random: live.random,
@@ -619,10 +629,11 @@ export class PlayEngine {
 				);
 				let placed = drawCharacter(directive.character, entering);
 				stage.characters = [...stage.characters.filter((entry) => entry.id !== placed.id), placed];
+				forgetExit(stage, placed.id);
 				return;
 			}
 			case "exit":
-				stage.characters = stage.characters.filter((entry) => entry.id !== directive.character.id);
+				leave(stage, directive.character.id, directive.transition);
 				return;
 			case "express":
 				stage.characters = stage.characters.map((entry) => {
@@ -835,12 +846,13 @@ function clearOneShots(work: Live): void {
 	if (background !== null) delete background.transition;
 	if (image !== null) delete image.transition;
 	for (let character of work.stage.characters) delete character.transition;
+	delete work.stage.exits;
 	work.audio.sounds = [];
 }
 
 /** The stage as a frame shows it, marking the speakers. */
-function frameStage(stage: Stage, speakers: Set<string>) {
-	return {
+function frameStage(stage: Stage, speakers: Set<string>): FrameStage {
+	let shown: FrameStage = {
 		background: stage.background === null ? null : { ...stage.background },
 		image: stage.image === null ? null : { ...stage.image },
 		characters: stage.characters.map((character) => ({
@@ -848,6 +860,30 @@ function frameStage(stage: Stage, speakers: Set<string>) {
 			speaking: speakers.has(character.id),
 		})),
 	};
+	if (stage.exits !== undefined) shown.exits = structuredClone(stage.exits);
+	return shown;
+}
+
+/**
+ * Takes a character off stage and records how it left, as it last stood and with the exit's
+ * transition alone, so the stop's frame can animate the exit. A character not on stage leaves
+ * no record.
+ */
+function leave(stage: Stage, id: string, transition: CharacterTransition | undefined): void {
+	let leaving = stage.characters.find((entry) => entry.id === id);
+	if (leaving === undefined) return;
+	stage.characters = stage.characters.filter((entry) => entry.id !== id);
+	let { transition: _entrance, ...stood } = leaving;
+	let exit = withDefined<StageCharacter>(stood, { transition });
+	stage.exits = [...(stage.exits ?? []).filter((entry) => entry.id !== id), exit];
+}
+
+/** Drops the exit of a character that came back before the stop, which then never left. */
+function forgetExit(stage: Stage, id: string): void {
+	if (stage.exits === undefined) return;
+	let exits = stage.exits.filter((entry) => entry.id !== id);
+	if (exits.length === 0) delete stage.exits;
+	else stage.exits = exits;
 }
 
 /**

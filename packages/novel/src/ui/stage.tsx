@@ -17,17 +17,16 @@ import { columnOf } from "./layout.js";
 import { resolveSource } from "./source.js";
 import { BUILT_IN_TRANSITIONS, prefersReducedMotion } from "./transitions.js";
 
-/** How long a removed character or replaced sprite takes to fade out. */
-const EXIT_MS = 250;
+/** How long a replaced sprite takes to fade out while its character crossfades expressions. */
+const SPRITE_OUT_MS = 250;
 
 /**
- * Fades an element out before it leaves the DOM: a character always, and a sprite only while its
- * character crossfades expressions. Skip mode and reduced motion remove it at once.
+ * Fades a replaced sprite out before it leaves the DOM while its character crossfades with
+ * `fade`. Skip mode and reduced motion remove it at once.
  */
-const fadeOnRemove = createMixin<HTMLElement, [scope: "character" | "sprite"]>(
+const fadeOnRemove = createMixin<HTMLElement>(
 	(handle) => {
 		let node: HTMLElement | undefined;
-		let scope: "character" | "sprite" = "character";
 		handle.addEventListener("insert", (event) => {
 			node = event.node;
 		});
@@ -35,21 +34,18 @@ const fadeOnRemove = createMixin<HTMLElement, [scope: "character" | "sprite"]>(
 			let element = node;
 			if (element === undefined) return;
 			if (element.closest('[data-instant="true"]') !== null || prefersReducedMotion()) return;
-			if (scope === "sprite" && element.closest('[data-transition="fade"]') === null) return;
+			if (element.closest('[data-transition="fade"]:not([data-exiting="true"])') === null) return;
 			event.persistNode(async (signal) => {
 				if (signal.aborted) return;
 				let animation = element.animate([{ opacity: 1 }, { opacity: 0 }], {
-					duration: EXIT_MS,
+					duration: SPRITE_OUT_MS,
 					fill: "forwards",
 				});
 				signal.addEventListener("abort", () => animation.cancel(), { once: true });
 				await animation.finished.catch(() => undefined);
 			});
 		});
-		return (next) => {
-			scope = next;
-			return handle.element;
-		};
+		return () => handle.element;
 	},
 	{ ssr: false },
 );
@@ -93,6 +89,13 @@ export namespace Stage {
 	export interface CharacterProps {
 		character: FrameCharacter;
 		locale: string;
+		/**
+		 * Draws the character leaving with `character.transition` as its exit: `fade` fades out,
+		 * `slide` slides toward the nearer edge, and a custom name is a class the app animates.
+		 *
+		 * @default false
+		 */
+		exiting?: boolean;
 	}
 }
 
@@ -141,6 +144,10 @@ export function Stage(handle: Handle<Stage.Props>) {
 						"@keyframes novel-out-early": { "0%": { opacity: 1 }, "50%, 100%": { opacity: 0 } },
 						"@keyframes novel-hold": { from: { opacity: 1 }, to: { opacity: 1 } },
 						"@keyframes novel-gone": { from: { opacity: 0 }, to: { opacity: 0 } },
+						"@keyframes novel-character-out": { to: { opacity: 0 } },
+						"@keyframes novel-character-slide-out": {
+							to: { opacity: 0, translate: "var(--novel-slide-from) 0" },
+						},
 						"@keyframes novel-from-right": { from: { translate: "100% 0" } },
 						"@keyframes novel-from-left": { from: { translate: "-100% 0" } },
 						"@keyframes novel-from-below": { from: { translate: "0 100%" } },
@@ -252,6 +259,14 @@ export function Stage(handle: Handle<Stage.Props>) {
 					{stage.characters.map((character) => (
 						<CharacterSprite key={character.id} character={character} locale={locale} />
 					))}
+					{(stage.exits ?? []).map((character) => (
+						<CharacterSprite
+							key={character.id}
+							character={{ ...character, speaking: false }}
+							locale={locale}
+							exiting
+						/>
+					))}
 					<Scenery
 						layer="image"
 						scenery={stage.image}
@@ -314,12 +329,12 @@ export function Scenery(handle: Handle<Stage.SceneryProps>) {
 
 /**
  * A character standing in its column: sprites or layers stacked as `<img>` elements, bottom
- * aligned and never wider than the column. `data-speaking` carries speaker focus, and a custom
- * transition's name is the element's class.
+ * aligned and never wider than the column. `data-speaking` carries speaker focus, a leaving
+ * character carries `data-exiting`, and a custom transition's name is the element's class.
  */
 export function CharacterSprite(handle: Handle<Stage.CharacterProps>) {
 	return () => {
-		let { character, locale } = handle.props;
+		let { character, locale, exiting = false } = handle.props;
 		let column = columnOf(character.at);
 		let custom =
 			character.transition !== undefined &&
@@ -333,6 +348,8 @@ export function CharacterSprite(handle: Handle<Stage.CharacterProps>) {
 				data-id={character.id}
 				data-speaking={String(character.speaking)}
 				data-transition={character.transition}
+				data-exiting={exiting ? "true" : undefined}
+				aria-hidden={exiting ? "true" : undefined}
 				class={custom}
 				style={{
 					left: column.left,
@@ -340,7 +357,6 @@ export function CharacterSprite(handle: Handle<Stage.CharacterProps>) {
 					"--novel-slide-from": column.leftSide ? "-30%" : "30%",
 				}}
 				mix={[
-					fadeOnRemove("character"),
 					css({
 						position: "absolute",
 						bottom: 0,
@@ -360,8 +376,23 @@ export function CharacterSprite(handle: Handle<Stage.CharacterProps>) {
 								"transform 200ms ease, filter 200ms ease, left 400ms ease, translate 400ms ease, opacity 400ms ease",
 							"@starting-style": { opacity: 0, translate: "var(--novel-slide-from) 0" },
 						},
+						'&[data-exiting="true"]': { zIndex: 0 },
+						'&[data-exiting="true"]:not([data-transition])': { visibility: "hidden" },
+						'&[data-exiting="true"][data-transition="fade"]': {
+							animation: "novel-character-out 400ms ease forwards",
+						},
+						'&[data-exiting="true"][data-transition="slide"]': {
+							animation: "novel-character-slide-out 400ms ease forwards",
+						},
 						'[data-instant="true"] &': { transition: "none" },
-						"@media (prefers-reduced-motion: reduce)": { transition: "none" },
+						'[data-instant="true"] &[data-exiting="true"]': {
+							animation: "none",
+							visibility: "hidden",
+						},
+						"@media (prefers-reduced-motion: reduce)": {
+							transition: "none",
+							'&[data-exiting="true"]': { animation: "none", visibility: "hidden" },
+						},
 					}),
 				]}
 			>
@@ -373,7 +404,7 @@ export function CharacterSprite(handle: Handle<Stage.CharacterProps>) {
 							alt=""
 							src={url}
 							mix={[
-								fadeOnRemove("sprite"),
+								fadeOnRemove(),
 								css({
 									position: "absolute",
 									inset: 0,

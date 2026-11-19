@@ -235,6 +235,86 @@ describe("Stage", () => {
 		expect(result.$('[data-id="ren"]')!.classList.contains("spin")).toBe(true);
 	});
 
+	test("animates a character leaving with fade out from where it stood", async () => {
+		let stage: FrameStage = { ...EMPTY, characters: [character("mika", "1/3", false)] };
+		let result = mount(stage, { width: 800, height: 450 });
+		let before = result.$('[data-id="mika"]')!;
+		await result.act(() =>
+			result.root.render(
+				<Stage
+					stage={{
+						...EMPTY,
+						exits: [{ ...character("mika", "1/3", false), transition: "fade" }],
+					}}
+					locale="en"
+				/>,
+			),
+		);
+		let leaving = result.$('[data-id="mika"]')!;
+		expect(leaving).toBe(before);
+		expect(leaving.dataset["exiting"]).toBe("true");
+		let animations = finiteAnimations(result.$("[data-novel-stage]")!);
+		expect(animations.map((animation) => (animation as CSSAnimation).animationName)).toContain(
+			"novel-character-out",
+		);
+		await settle(result.$("[data-novel-stage]")!);
+		expect(getComputedStyle(leaving).opacity).toBe("0");
+		expect(placed(result, "mika")).toEqual({ left: 0, width: 267 });
+	});
+
+	test("slides a leaving character toward the nearer edge of the stage", async () => {
+		let result = mount(
+			{
+				...EMPTY,
+				exits: [
+					{ ...character("mika", "1/3", false), transition: "slide" },
+					{ ...character("ren", "3/3", false), transition: "slide" },
+				],
+			},
+			{ width: 900, height: 506.25 },
+		);
+		for (let animation of finiteAnimations(result.$("[data-novel-stage]")!)) {
+			animation.pause();
+			animation.currentTime = 399;
+		}
+		expect(placed(result, "mika").left).toBeLessThan(-80);
+		expect(placed(result, "ren").left).toBeGreaterThan(680);
+	});
+
+	test("draws a custom exit as a class, and an exit without a transition hidden at once", () => {
+		let result = mount(
+			{
+				...EMPTY,
+				exits: [
+					{ ...character("mika", "1/3", false), transition: "vanish" },
+					character("ren", "3/3", false),
+				],
+			},
+			{ width: 800, height: 450 },
+		);
+		let mika = result.$('[data-id="mika"]')!;
+		expect(mika.classList.contains("vanish")).toBe(true);
+		expect(mika.dataset["exiting"]).toBe("true");
+		expect(getComputedStyle(result.$('[data-id="ren"]')!).visibility).toBe("hidden");
+	});
+
+	test("hides a leaving character at once in skip mode", () => {
+		let container = document.createElement("div");
+		container.style.width = "800px";
+		container.style.height = "450px";
+		document.body.append(container);
+		mounted = render(
+			<Stage
+				stage={{ ...EMPTY, exits: [{ ...character("mika", "1/3", false), transition: "fade" }] }}
+				locale="en"
+				instant
+			/>,
+			{ container },
+		);
+		expect(finiteAnimations(mounted.$("[data-novel-stage]")!)).toEqual([]);
+		expect(getComputedStyle(mounted.$('[data-id="mika"]')!).visibility).toBe("hidden");
+	});
+
 	test("draws the background under the characters and the full-screen image over them", () => {
 		let result = mount(
 			{

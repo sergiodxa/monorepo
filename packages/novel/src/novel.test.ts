@@ -731,6 +731,63 @@ function oneScene(
 	return novel;
 }
 
+describe("exits", () => {
+	test("puts each departing character on the frame where it left, as it last stood", async () => {
+		let play = createTestPlay(
+			oneScene((ctx) => [
+				ctx.enter(CAST.mika, { at: "left", expression: "smile", transition: "fade" }),
+				ctx.enter(CAST.ren, { at: "right", layers: { body: "casual", face: "neutral" } }),
+				ctx.narrate("opening.welcome"),
+				ctx.exit(CAST.mika, { transition: "slide" }),
+				ctx.exit(CAST.ren),
+				ctx.narrate("opening.lucky"),
+				ctx.narrate("opening.unlucky"),
+			]),
+		);
+		let welcome = await play.advance();
+		expect(welcome?.stage.exits).toBeUndefined();
+
+		let lucky = await play.advance();
+		expect(lucky?.stage.characters).toEqual([]);
+		expect(lucky?.stage.exits).toEqual([
+			{
+				id: "mika",
+				at: "1/3",
+				expression: "smile",
+				images: ["/mika/smile.webp"],
+				transition: "slide",
+			},
+			{
+				id: "ren",
+				at: "3/3",
+				layers: { body: "casual", face: "neutral" },
+				images: ["/ren/body-casual.webp", "/ren/face-neutral.webp"],
+			},
+		]);
+		expect(play.play.state.stage.exits).toBeUndefined();
+
+		let unlucky = await play.advance();
+		expect(unlucky?.stage.exits).toBeUndefined();
+	});
+
+	test("forgets the exit of a character who comes back before the stop", async () => {
+		let play = createTestPlay(
+			oneScene((ctx) => [
+				ctx.enter(CAST.mika, { at: "left" }),
+				ctx.narrate("opening.welcome"),
+				ctx.exit(CAST.mika, { transition: "fade" }),
+				ctx.exit(CAST.ren, { transition: "fade" }),
+				ctx.enter(CAST.mika, { at: "right" }),
+				ctx.narrate("opening.lucky"),
+			]),
+		);
+		await play.advance();
+		let lucky = await play.advance();
+		expect(lucky?.stage.exits).toBeUndefined();
+		expect(lucky?.stage.characters.map((entry) => entry.at)).toEqual(["3/3"]);
+	});
+});
+
 describe("versions and migrations", () => {
 	test("stamps a save with the novel's version", async () => {
 		let play = start();

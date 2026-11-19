@@ -75,6 +75,12 @@ export interface Stage {
 	background: StageScenery | null;
 	image: StageScenery | null;
 	characters: StageCharacter[];
+	/**
+	 * The characters that left since the previous stop, each as it last stood, with `transition`
+	 * naming the exit it was given. Set only on the stop where they left, so a re-rendered frame
+	 * never animates an exit twice and a save never carries one.
+	 */
+	exits?: StageCharacter[];
 }
 
 /** A character as a frame shows it, with speaker focus. */
