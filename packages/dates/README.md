@@ -62,25 +62,6 @@ await doWork();
 let tookMs = elapsed(startedAt);
 ```
 
-### Repeat an event
-
-A series keeps its first occurrence's wall-clock time in its zone, so a 09:00 meeting stays at 09:00 local across DST while its UTC instant moves.
-
-```typescript
-import { expandRecurrence } from "@sdxc/dates";
-
-let standup = { start: new Date("2026-03-02T14:00:00Z"), end: new Date("2026-03-02T14:15:00Z") };
-let march = { start: new Date("2026-03-01T05:00:00Z"), end: new Date("2026-04-01T04:00:00Z") };
-
-expandRecurrence(
-	standup,
-	{ frequency: "weekly", weekdays: [1, 3], exceptions: ["2026-03-11"] },
-	march,
-	"America/New_York",
-);
-// 09:00 New York every Monday and Wednesday but March 11: 14:00Z, then 13:00Z from March 9
-```
-
 ### Read untrusted input
 
 Parsers return a `Result` instead of throwing or producing an `Invalid Date`.
@@ -305,12 +286,6 @@ The supported zones grouped by IANA area (`"America"`, `"Europe"`, ...); `"UTC"`
 
 The runtime clock's zone: the browser's setting on a page, usually `"UTC"` on a server.
 
-### Repeating events
-
-#### `expandRecurrence(first: TimeSpan, rule: Recurrence, window: TimeSpan, timeZone: TimeZone): Occurrence[]`
-
-Every occurrence overlapping the half-open `window`, earliest first, each lasting as long as `first`. `rule.frequency` is `"daily"`, `"weekly"`, `"monthly"` or `"yearly"`, repeated every `interval` (default `1`); `weekdays` picks days in each Monday-first week. The series ends at `count` occurrences or after `until` (inclusive), and `exceptions` lists day keys to skip, which still count toward `count` and `index` as in RFC 5545. A monthly 31st skips shorter months and a yearly February 29th waits for leap years; a start time a DST gap skips lands that much later, and a repeated one takes its earlier instant. One call steps through at most 10,000 periods.
-
 ### Errors
 
 `InvalidDateError` (rejected value on `error.input`), `InvalidDayKeyError` and `InvalidDateTimeLocalError` (on `error.text`), `InvalidDayRangeError` (`error.problem` and `error.range`), and `InvalidZonedDateTimeError` (`error.problem` and `error.text`) are the classes the parsers return inside a failure.
@@ -342,9 +317,6 @@ The wall-clock math the operations above are built on, for code that reads or wr
 - `DayRange`: `{ from: string; to: string }`, inclusive day keys.
 - `DayRangeProblem`: `"invalid" | "reversed" | "tooLate" | "tooLong"`.
 - `TimeZoneGroup`: `{ region: string; zones: readonly TimeZone[] }`.
-- `Recurrence`: `{ frequency: Frequency; interval?; weekdays?: Weekday[]; count?; until?: Date; exceptions?: string[] }`.
-- `Occurrence`: `{ start: Date; end: Date; index: number }`, `index` counted from the first occurrence.
-- `TimeSpan`: `{ start: Date; end: Date }`.
 - `DateStyle`, `TimeStyle`: `"full" | "long" | "medium" | "short"`.
 - Every options interface named in a signature above is exported.
 
