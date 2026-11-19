@@ -140,6 +140,9 @@ describe("namespace groups", () => {
 		expect(titles("Video")).toEqual([
 			"Foundations",
 			"EpisodeList",
+			"ReelFeed",
+			"StoryRing",
+			"StoryViewer",
 			"TitleHero",
 			"VideoCard",
 			"VideoPlayer",

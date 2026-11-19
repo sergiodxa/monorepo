@@ -73,6 +73,8 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/landing/usage-estimate": () => import("@sdxc/ui/landing/usage-estimate"),
 	"@sdxc/ui/map-canvas": () => import("@sdxc/ui/map-canvas"),
 	"@sdxc/ui/relative-time": () => import("@sdxc/ui/relative-time"),
+	"@sdxc/ui/video/reel-feed": () => import("@sdxc/ui/video/reel-feed"),
+	"@sdxc/ui/video/story-viewer": () => import("@sdxc/ui/video/story-viewer"),
 	"@sdxc/ui/video/video-player": () => import("@sdxc/ui/video/video-player"),
 	"@sdxc/ui/video/video-shelf": () => import("@sdxc/ui/video/video-shelf"),
 };
