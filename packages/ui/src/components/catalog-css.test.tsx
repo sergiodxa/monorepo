@@ -90,6 +90,14 @@ const PROBE_PROPS = {
  * different shape, keyed by the component's export name and spread over {@link PROBE_PROPS}.
  */
 const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
+	Lightbox: { id: "a", label: "a", photos: [{ alt: "a" }], lightbox: "a" },
+	RangeMonths: {
+		month: "2026-03",
+		start: undefined,
+		href: () => "/a",
+		labels: { previous: "a", next: "a" },
+	},
+	RatingBreakdown: { score: 4.5, kind: "stars", label: "a", value: 0.5, display: "a" },
 	ContributionGraph: {
 		start: "2026-01-01",
 		end: "2026-01-14",
