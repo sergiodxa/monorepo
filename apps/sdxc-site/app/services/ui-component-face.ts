@@ -181,11 +181,13 @@ const CATALOGUE = [
 	{ slug: "banner", module: "components" },
 	{ slug: "bento", module: "landing" },
 	{ slug: "board", module: "app" },
+	{ slug: "boarding-pass", module: "travel" },
 	{ slug: "breadcrumbs", module: "components" },
 	{ slug: "bubble", module: "chat" },
 	{ slug: "button", module: "components" },
 	{ slug: "calendar", module: "components" },
 	{ slug: "callout", module: "docs" },
+	{ slug: "car-offer", module: "travel" },
 	{ slug: "card", module: "components" },
 	{ slug: "carousel", module: "components" },
 	{ slug: "cart-line", module: "commerce" },
@@ -257,6 +259,8 @@ const CATALOGUE = [
 	{ slug: "event-ticker", module: "landing" },
 	{ slug: "fan-out-diagram", module: "landing" },
 	{ slug: "faq-band", module: "landing" },
+	{ slug: "fare-calendar", module: "travel" },
+	{ slug: "fare-options", module: "travel" },
 	{ slug: "feature", module: "landing" },
 	{ slug: "feature-band", module: "landing" },
 	{ slug: "field-error", module: "components" },
@@ -264,6 +268,9 @@ const CATALOGUE = [
 	{ slug: "file-trigger", module: "app" },
 	{ slug: "filter-bar", module: "app" },
 	{ slug: "filter-menu", module: "app" },
+	{ slug: "flight-itinerary", module: "travel" },
+	{ slug: "flight-option", module: "travel" },
+	{ slug: "flight-segment", module: "travel" },
 	{ slug: "flow-diagram", module: "landing" },
 	{ slug: "form", module: "components" },
 	{ slug: "free-busy", module: "app" },
@@ -323,6 +330,7 @@ const CATALOGUE = [
 	{ slug: "order-tracker", module: "commerce" },
 	{ slug: "otp-field", module: "components" },
 	{ slug: "overlay-arrow", module: "components" },
+	{ slug: "package-savings", module: "travel" },
 	{ slug: "page-actions", module: "docs" },
 	{ slug: "page-header", module: "app" },
 	{ slug: "payment-card", module: "finance" },
@@ -362,6 +370,7 @@ const CATALOGUE = [
 	{ slug: "scroll-area", module: "components" },
 	{ slug: "scroll-scene", module: "landing" },
 	{ slug: "search-field", module: "components" },
+	{ slug: "seat-map", module: "travel" },
 	{ slug: "section", module: "components" },
 	{ slug: "section-bar", module: "components" },
 	{ slug: "segmented-stage", module: "landing" },
@@ -417,6 +426,7 @@ const CATALOGUE = [
 	{ slug: "tooltip", module: "components" },
 	{ slug: "track-list", module: "audio" },
 	{ slug: "tree", module: "app" },
+	{ slug: "trip-timeline", module: "travel" },
 	{ slug: "typed-terminal", module: "landing" },
 	{ slug: "typeset", module: "components" },
 	{ slug: "typing-indicator", module: "chat" },
@@ -445,6 +455,216 @@ function graphTone(level: number): Tone {
  * inside the shared window / device / docs chrome.
  */
 const OVERRIDES: Record<string, Shape[]> = {
+	"seat-map": windowScene([
+		{ kind: "path", d: "M53 90 L53 46 Q53 27 80 27 Q107 27 107 46 L107 90 Z", tone: "chrome" },
+		...[10, 11, 12, 13].flatMap((row, r): Shape[] => {
+			let y = 44 + r * 11;
+			let tones: Tone[][] = [
+				["accent", "surface", "surface", "label", "surface", "surface"],
+				["surface", "label", "surface", "surface", "surface", "label"],
+				["surface", "surface", "label", "surface", "surface", "surface"],
+				["label", "surface", "surface", "surface", "label", "surface"],
+			];
+			return [
+				txt(String(row), 80, y + 5.5, 4.5, "muted", { align: "center" }),
+				...[57, 64, 71, 83, 90, 97].map((x, c): Shape => ({
+					kind: "rect",
+					x,
+					y,
+					w: 6,
+					h: 8,
+					r: 2,
+					tone: tones[r]?.[c] ?? "surface",
+					ring: true,
+				})),
+			];
+		}),
+	]),
+	"fare-calendar": windowScene([
+		txt("March", 80, 34, 7, "ink", { align: "center", font: "semibold" }),
+		...Array.from({ length: 21 }, (_, index): Shape[] => {
+			let x = 24 + (index % 7) * 16;
+			let y = 40 + Math.floor(index / 7) * 16;
+			let cheap = index === 2 || index === 9 || index === 16;
+			let tone: Tone = cheap ? "accent" : "surface";
+			return [
+				{ kind: "rect", x, y, w: 14, h: 14, r: 3, tone, ring: true },
+				txt(String(index + 1), x + 7, y + 7, 4.5, cheap ? "surface" : "ink", { align: "center" }),
+				{
+					kind: "line",
+					x1: x + 4,
+					y1: y + 10.5,
+					x2: x + 10,
+					y2: y + 10.5,
+					tone: cheap ? "surface" : "label",
+					weight: 1.2,
+				},
+			];
+		}).flat(),
+	]),
+	"boarding-pass": windowScene([
+		{ kind: "rect", x: 44, y: 27, w: 72, h: 60, r: 5, tone: "surface", ring: true },
+		{ kind: "rect", x: 44, y: 27, w: 72, h: 10, r: 5, tone: "accent" },
+		{ kind: "rect", x: 44, y: 32, w: 72, h: 5, tone: "accent" },
+		txt("MRW", 49, 48, 8, "ink", { font: "semibold" }),
+		txt("VLS", 111, 48, 8, "ink", { font: "semibold", align: "end" }),
+		{ kind: "line", x1: 73, y1: 45, x2: 87, y2: 45, tone: "hairline", weight: 1 },
+		{ kind: "line", x1: 49, y1: 56, x2: 64, y2: 56, tone: "label", weight: 2 },
+		{ kind: "line", x1: 72, y1: 56, x2: 84, y2: 56, tone: "label", weight: 2 },
+		{ kind: "line", x1: 92, y1: 56, x2: 111, y2: 56, tone: "label", weight: 2 },
+		{ kind: "line", x1: 49, y1: 63, x2: 111, y2: 63, tone: "hairline", weight: 1 },
+		{ kind: "circle", cx: 44, cy: 63, r: 3, tone: "surface" },
+		{ kind: "circle", cx: 116, cy: 63, r: 3, tone: "surface" },
+		{ kind: "rect", x: 71, y: 67, w: 18, h: 18, r: 1, tone: "ink" },
+		...[
+			[72, 68],
+			[84, 68],
+			[72, 80],
+		].flatMap(([x = 0, y = 0]): Shape[] => [
+			{ kind: "rect", x, y, w: 4, h: 4, tone: "surface" },
+			{ kind: "rect", x: x + 1, y: y + 1, w: 2, h: 2, tone: "ink" },
+		]),
+	]),
+	"flight-segment": windowScene([
+		{ kind: "rect", x: 24, y: 30, w: 12, h: 12, r: 3, tone: "accent" },
+		txt("Larkwing Air", 40, 35, 5.5, "ink", { font: "semibold" }),
+		txt("LW 214", 40, 41, 4.5, "muted"),
+		txt("22:40", 24, 60, 9, "ink", { font: "semibold" }),
+		txt("MRW", 24, 68, 5.5, "muted", { font: "semibold" }),
+		txt("7h 25m", 74, 54, 4.5, "muted", { align: "center" }),
+		{ kind: "circle", cx: 52, cy: 59, r: 1.6, tone: "hairline" },
+		{ kind: "line", x1: 54, y1: 59, x2: 95, y2: 59, tone: "hairline", weight: 1 },
+		{ kind: "circle", cx: 74, cy: 59, r: 2, tone: "accent" },
+		{ kind: "path", d: "M97 56.5 L101 59 L97 61.5 Z", tone: "muted" },
+		txt("1 stop · VLS", 74, 66, 4.5, "muted", { align: "center" }),
+		txt("06:05", 128, 60, 9, "ink", { align: "end", font: "semibold" }),
+		txt("+1", 135, 54, 4.5, "accent", { align: "end" }),
+		txt("OSK", 128, 68, 5.5, "muted", { align: "end", font: "semibold" }),
+		{ kind: "line", x1: 24, y1: 75, x2: 136, y2: 75, tone: "hairline", weight: 1 },
+		txt("Aerion 320neo · Economy", 24, 83, 4.5, "muted"),
+	]),
+	"flight-itinerary": windowScene([
+		txt("Outbound · Fri 14 Mar", 24, 33, 5.5, "ink", { font: "semibold" }),
+		txt("1 stop · 15h 20m", 136, 33, 4.5, "muted", { align: "end" }),
+		txt("18:10", 24, 46, 7.5, "ink", { font: "semibold" }),
+		{ kind: "line", x1: 50, y1: 43.5, x2: 104, y2: 43.5, tone: "hairline", weight: 1 },
+		{ kind: "circle", cx: 77, cy: 43.5, r: 1.8, tone: "accent" },
+		{ kind: "path", d: "M105 41 L109 43.5 L105 46 Z", tone: "muted" },
+		txt("09:30", 136, 46, 7.5, "ink", { align: "end", font: "semibold" }),
+		txt("Flight details", 24, 56, 4.5, "accent"),
+		{ kind: "stroke", d: "M55 53.5 L57 55.5 L59 53.5", tone: "accent", weight: 0.9 },
+		{ kind: "line", x1: 24, y1: 61, x2: 136, y2: 61, tone: "hairline", weight: 1 },
+		txt("LW 214 · MRW-VLS", 24, 68, 4.5, "ink"),
+		{ kind: "rect", x: 24, y: 71, w: 112, h: 7, r: 2, tone: "chrome" },
+		txt("10h 05m layover in VLS", 28, 76, 4, "muted"),
+		txt("LW 731 · VLS-OSK", 24, 86, 4.5, "ink"),
+	]),
+	"flight-option": windowScene([
+		{ kind: "rect", x: 22, y: 28, w: 116, h: 56, r: 5, tone: "surface", ring: true },
+		{ kind: "rect", x: 26, y: 32, w: 20, h: 6, r: 3, tone: "accent" },
+		txt("Cheapest", 36, 36.6, 3.6, "surface", { align: "center" }),
+		txt("08:40", 26, 48, 6, "ink", { font: "semibold" }),
+		{ kind: "line", x1: 45, y1: 46, x2: 74, y2: 46, tone: "hairline", weight: 1 },
+		txt("10:55", 94, 48, 6, "ink", { align: "end", font: "semibold" }),
+		txt("22:10", 26, 62, 6, "ink", { font: "semibold" }),
+		{ kind: "line", x1: 45, y1: 60, x2: 74, y2: 60, tone: "hairline", weight: 1 },
+		{ kind: "circle", cx: 59.5, cy: 60, r: 1.5, tone: "accent" },
+		txt("06:05", 94, 62, 6, "ink", { align: "end", font: "semibold" }),
+		{ kind: "line", x1: 100, y1: 30, x2: 100, y2: 82, tone: "hairline", weight: 1 },
+		txt("$412", 134, 50, 8, "ink", { align: "end", font: "semibold" }),
+		txt("round trip", 134, 56, 3.8, "muted", { align: "end" }),
+		{ kind: "rect", x: 108, y: 66, w: 26, h: 9, r: 3, tone: "ink" },
+		txt("Select", 121, 72, 4, "surface", { align: "center" }),
+	]),
+	"fare-options": windowScene(
+		(
+			[
+				["Basic", "$412", 22, false],
+				["Standard", "$468", 61, true],
+				["Flex", "$544", 100, false],
+			] as Array<[string, string, number, boolean]>
+		).flatMap(([title, price, x, chosen]): Shape[] => [
+			...(chosen
+				? [{ kind: "rect", x: x - 1, y: 29, w: 40, h: 58, r: 5, tone: "accent" } as Shape]
+				: []),
+			{ kind: "rect", x, y: 30, w: 38, h: 56, r: 4, tone: "surface", ring: !chosen },
+			txt(title, x + 4, 38, 4.5, "ink", { font: "semibold" }),
+			{ kind: "circle", cx: x + 33, cy: 36.5, r: 2.2, tone: chosen ? "accent" : "hairline" },
+			txt(price, x + 4, 50, 7, "ink", { font: "semibold" }),
+			...[60, 68, 76].flatMap((y, row): Shape[] => [
+				{
+					kind: "stroke",
+					d: `M${x + 4} ${y} L${x + 5.5} ${y + 1.5} L${x + 8} ${y - 1.5}`,
+					tone: row < (chosen ? 3 : 1) ? "accent" : "label",
+					weight: 0.9,
+				},
+				{ kind: "line", x1: x + 11, y1: y, x2: x + 31, y2: y, tone: "label", weight: 1.2 },
+			]),
+		]),
+	),
+	"car-offer": windowScene([
+		{ kind: "rect", x: 22, y: 30, w: 40, h: 28, r: 4, tone: "chrome" },
+		{
+			kind: "path",
+			d: "M26 50 L28 44 L36 43 L41 38 L52 38 L56 44 L59 45 L59 50 Z",
+			tone: "accent",
+		},
+		{ kind: "circle", cx: 33, cy: 50, r: 3, tone: "ink" },
+		{ kind: "circle", cx: 52, cy: 50, r: 3, tone: "ink" },
+		txt("Compact", 68, 36, 5.5, "ink", { font: "semibold" }),
+		txt("Velo C3 or similar", 68, 42, 4, "muted"),
+		{ kind: "rect", x: 68, y: 46, w: 16, h: 6, r: 2, tone: "chrome", ring: true },
+		{ kind: "rect", x: 86, y: 46, w: 16, h: 6, r: 2, tone: "chrome", ring: true },
+		{ kind: "rect", x: 104, y: 46, w: 16, h: 6, r: 2, tone: "chrome", ring: true },
+		txt("Tallow Rent · 8.6", 68, 60, 4, "muted"),
+		{ kind: "line", x1: 22, y1: 66, x2: 138, y2: 66, tone: "hairline", weight: 1 },
+		txt("$38", 22, 78, 8, "ink", { font: "semibold" }),
+		txt("/ day", 38, 78, 4, "muted"),
+		txt("$266 total", 22, 85, 3.8, "muted"),
+		{ kind: "rect", x: 106, y: 71, w: 32, h: 10, r: 3, tone: "ink" },
+		txt("View deal", 122, 77.5, 4, "surface", { align: "center" }),
+	]),
+	"package-savings": windowScene([
+		txt("Flight + Hotel + Car", 22, 34, 5, "ink", { font: "semibold" }),
+		...(
+			[
+				["Flights", "$684", 44],
+				["5 nights", "$824", 55],
+				["Car", "$190", 66],
+			] as Array<[string, string, number]>
+		).flatMap(([label, price, y]): Shape[] => [
+			{ kind: "rect", x: 22, y: y - 5, w: 6, h: 6, r: 1.5, tone: "chrome" },
+			txt(label, 31, y, 4.5, "ink"),
+			txt(price, 84, y, 4.5, "muted", { align: "end" }),
+			{ kind: "line", x1: 72, y1: y - 1.5, x2: 84, y2: y - 1.5, tone: "muted", weight: 0.6 },
+		]),
+		{ kind: "rect", x: 90, y: 30, w: 48, h: 50, r: 5, tone: "chrome", ring: true },
+		{ kind: "rect", x: 94, y: 34, w: 40, h: 7, r: 3.5, tone: "accent" },
+		txt("You save $212", 114, 39, 3.8, "surface", { align: "center" }),
+		txt("$1,698", 94, 50, 4, "muted"),
+		{ kind: "line", x1: 94, y1: 48.5, x2: 107, y2: 48.5, tone: "muted", weight: 0.6 },
+		txt("$1,486", 94, 62, 8, "ink", { font: "semibold" }),
+		{ kind: "rect", x: 94, y: 67, w: 40, h: 9, r: 3, tone: "ink" },
+		txt("Book", 114, 73, 4, "surface", { align: "center" }),
+	]),
+	"trip-timeline": windowScene([
+		txt("Fri 14 Mar", 22, 33, 5.5, "ink", { font: "semibold" }),
+		{ kind: "line", x1: 22, y1: 36, x2: 138, y2: 36, tone: "hairline", weight: 1 },
+		{ kind: "line", x1: 30, y1: 46, x2: 30, y2: 76, tone: "hairline", weight: 1.2 },
+		...(
+			[
+				["08:40", "LW 214 to Vellis", 46, "accent"],
+				["11:30", "Tallow Rent pickup", 61, "label"],
+				["15:00", "Hotel Saltmarsh", 76, "label"],
+			] as Array<[string, string, number, Tone]>
+		).flatMap(([time, title, y, tone]): Shape[] => [
+			{ kind: "circle", cx: 30, cy: y, r: 4.5, tone, ring: true },
+			txt(title, 39, y - 0.5, 4.8, "ink", { font: "semibold" }),
+			txt(time, 39, y + 5, 3.8, "muted"),
+		]),
+		{ kind: "rect", x: 112, y: 41, w: 24, h: 6, r: 3, tone: "accent" },
+		txt("Confirmed", 124, 45.4, 3.4, "surface", { align: "center" }),
+	]),
 	amount: windowScene([
 		txt("Balance", 28, 38, 6, "muted"),
 		txt("€12,840", 28, 56, 15, "ink", { font: "semibold" }),
