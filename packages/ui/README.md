@@ -379,6 +379,7 @@ Dashboard and workspace components.
 - `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
   pointer-positioned menu.
 - `PageHeader` — a screen's title row and tabs; tabs that overflow fold into a More menu.
+- `SectionBar` — a sticky row of chips linking to a long page's sections; the chip of the section being read follows the scroll (island `@sdxc/ui/app/section-bar`).
 - `ProfilePicker` — a shared account's "who is using this?" grid; each `.Profile` is a submit button.
 - `CommandPalette` — a ⌘K command list; `CommandPalette.Finder` is a fuzzy file finder page.
 - `FilterMenu` — a filterable popover of links, radios or checkboxes, posted as a form on close.
