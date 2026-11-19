@@ -150,6 +150,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"highlight",
 			"lazy-route",
 			"lazy-frame",
+			"novel",
 			"qr",
 			"raster",
 		],
