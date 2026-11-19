@@ -12,6 +12,7 @@ import type { ComponentModule } from "~/app/services/components";
 import APP from "~/resources/content/foundations/app";
 import CHAT from "~/resources/content/foundations/chat";
 import COLOR from "~/resources/content/foundations/color";
+import COMMERCE from "~/resources/content/foundations/commerce";
 import COMPONENTS from "~/resources/content/foundations/components";
 import DOCS from "~/resources/content/foundations/docs";
 import LANDING from "~/resources/content/foundations/landing";
@@ -72,6 +73,7 @@ const FOUNDATIONS_BY_MODULE: Record<ComponentModule, Foundations> = {
 	color: COLOR,
 	app: APP,
 	video: VIDEO,
+	commerce: COMMERCE,
 };
 
 /** Every namespace's Foundations, in the order the sidebar lists the namespaces. */

@@ -29,7 +29,8 @@ export type ComponentModule =
 	| "chat"
 	| "color"
 	| "app"
-	| "video";
+	| "video"
+	| "commerce";
 
 /** One catalogue page as the tree lists it, sorted into the group it belongs to. */
 export interface CatalogueEntry extends ComponentEntry {
