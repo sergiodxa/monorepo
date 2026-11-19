@@ -497,7 +497,9 @@ Places on a map, with the list they belong to.
   `MapCanvasSync` lights a pin and the list row sharing its `mapKey`.
 - `GeoMap` — a real map by longitude and latitude: server SVG with HTML `.Marker`s (clusters, `.Popup`),
   `.Route` and `.RouteMarker`, `.Area` for "search this area"; the `@sdxc/ui/map/map` island runs it
-  on MapLibre (an optional peer) over your GeoJSON basemap or a style URL.
+  on MapLibre (an optional peer) over OpenFreeMap's light and dark styles by default (allow
+  `https://tiles.openfreemap.org` in `connect-src` and `img-src`, and `blob:` in `worker-src`), or
+  your own GeoJSON basemap or style URL.
 - `mapLink(key)`, `mapLinks()` — mixins that light every element sharing a `data-map-key` while one
   is hovered or focused, so a list row and its pin highlight together.
 
