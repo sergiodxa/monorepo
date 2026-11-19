@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatAmount } from "@sdxc/money";
+
 import { demoAppActionHref, demoAppHref, demoAppStreamHref } from "~/resources/views/demo-apps";
 
 /** The folder name the app is served under. */
@@ -1346,8 +1348,8 @@ export const TIPS = [0, 10, 15, 20] as const;
 /** What priority delivery adds, in cents, for a courier who goes straight to the door. */
 export const PRIORITY_FEE = 249;
 
-/** The service fee as a fraction of the subtotal, with its floor in cents. */
-export const SERVICE_RATE = 0.08;
+/** The service fee as a percent of the subtotal, with its floor in cents. */
+export const SERVICE_PERCENT = 8;
 
 /** The smallest service fee, in cents. */
 export const SERVICE_MIN = 99;
@@ -1452,13 +1454,16 @@ export function findChoice(restaurant: Restaurant, id: string): Choice | undefin
 	return undefined;
 }
 
+/** The currency every price in Bocado's city is in. */
+export const CURRENCY = "USD";
+
 /**
- * Formats cents as dollars with two decimals.
+ * Writes cents as the city's prices read, in US English.
  *
  * @example money(1150) // "$11.50"
  */
 export function money(cents: number): string {
-	return `$${(cents / 100).toFixed(2)}`;
+	return formatAmount(cents, CURRENCY, { locale: "en-US" });
 }
 
 /**

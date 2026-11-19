@@ -291,11 +291,7 @@ function DishDialog(handle: Handle<DishDialog.Props>) {
 				submitLabel={iife(() => {
 					if (closed) return `Opens at ${restaurant.opensAt}`;
 					if (other !== undefined) {
-						return (
-							<>
-								Start a new cart with <span data-options-qty="">1</span>
-							</>
-						);
+						return "Start a new cart";
 					}
 					return (
 						<>

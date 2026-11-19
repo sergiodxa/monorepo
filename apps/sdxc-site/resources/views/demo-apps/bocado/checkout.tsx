@@ -19,6 +19,7 @@ import {
 	ZapIcon,
 } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
+import { percentOf } from "@sdxc/money";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { LinkButton } from "@sdxc/ui";
@@ -707,7 +708,7 @@ export function CheckoutPage(handle: Handle<CheckoutPage.Props>) {
 													}),
 												]}
 											>
-												{money(Math.round((totals.subtotal * tip) / 100))}
+												{money(percentOf(totals.subtotal, tip))}
 											</span>
 										</label>
 									))}

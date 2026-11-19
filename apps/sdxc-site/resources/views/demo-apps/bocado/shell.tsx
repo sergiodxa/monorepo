@@ -390,7 +390,11 @@ function CartButton(handle: Handle<{ visitor: Visitor; back: string; current: bo
 					type="button"
 					popovertarget={CART_PANEL}
 					data-cart-button={String(count)}
-					aria-label={count === 0 ? "Cart, empty" : `Cart, ${count} items, ${money(subtotal)}`}
+					aria-label={
+						count === 0
+							? "Cart, empty"
+							: `Cart, ${count} ${count === 1 ? "item" : "items"}, ${money(subtotal)}`
+					}
 					aria-current={current ? "page" : undefined}
 					mix={[
 						barButton(),
@@ -609,7 +613,10 @@ namespace BocadoShell {
 	}
 }
 
-/** Renders a screen in Bocado's frame: the top bar, the content, the footer and the phone bars. */
+/**
+ * Renders a screen in Bocado's frame: the top bar, the content, the footer and the phone bars.
+ * On a phone it lifts the page's toasts above the tab bar and the floating cart, so neither hides one.
+ */
 export default function BocadoShell(handle: Handle<BocadoShell.Props>) {
 	return () => {
 		let { back, children, current, visitor } = handle.props;
@@ -624,6 +631,15 @@ export default function BocadoShell(handle: Handle<BocadoShell.Props>) {
 						flexDirection: "column",
 						minBlockSize: "100dvh",
 						backgroundColor: "var(--ui-bg)",
+						[`@media not ${WIDE}`]: {
+							":root:has(&) [data-slot='region'][data-placement^='bottom']": {
+								paddingBlockEnd: `calc(${TAB_BAR_BLOCK_SIZE} + env(safe-area-inset-bottom, 0px) + 0.75rem)`,
+							},
+							":root:has(&):has([data-floating-cart]) [data-slot='region'][data-placement^='bottom']":
+								{
+									paddingBlockEnd: `calc(${TAB_BAR_BLOCK_SIZE} + env(safe-area-inset-bottom, 0px) + 4.5rem)`,
+								},
+						},
 					}),
 				]}
 			>

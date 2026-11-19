@@ -235,6 +235,9 @@ export function TrackingPage(handle: Handle<TrackingPage.Props>) {
 							display: "grid",
 							gap: "1.5rem",
 							paddingBlockStart: "1.5rem",
+							"& [data-map-marker]": { transition: "opacity 300ms ease" },
+							"&:is([data-order-state='placed'], [data-order-state='accepted'], [data-order-state='preparing']) [data-map-marker]":
+								{ opacity: "0" },
 							"@media (min-width: 60rem)": {
 								gridTemplateColumns: "minmax(0, 1fr) 22rem",
 								alignItems: "start",

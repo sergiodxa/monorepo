@@ -151,6 +151,13 @@ describe("Bocado's cart", () => {
 		expect(gone.headers.getSetCookie()[0]).toMatch(/^bocado\.cart=; .*Max-Age=0/);
 	});
 
+	test("names the cart button's count in the singular for one item", async () => {
+		let body = await (
+			await fetchApp("/demo/apps/bocado/cart", { headers: { Cookie: ONE_TACO } })
+		).text();
+		expect(body).toContain('aria-label="Cart, 1 item, $11.50"');
+	});
+
 	test("returns a post only to Bocado's own pages", async () => {
 		let away = await post("address", [
 			["address", "studio"],

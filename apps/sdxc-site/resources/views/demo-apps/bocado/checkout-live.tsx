@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/component";
 
+import { formatAmount, percentOf } from "@sdxc/money";
 import { clientEntry } from "remix/component";
 
 namespace CheckoutLive {
@@ -19,12 +20,12 @@ namespace CheckoutLive {
 }
 
 /**
- * Formats cents as dollars, as the server does.
+ * Writes cents the way the server does.
  *
  * @example dollars(1150) // "$11.50"
  */
 function dollars(cents: number): string {
-	return `$${(cents / 100).toFixed(2)}`;
+	return formatAmount(cents, "USD", { locale: "en-US" });
 }
 
 /** Reprices the summary for the form's tip and speed. */
@@ -33,7 +34,7 @@ function reprice(form: HTMLFormElement) {
 	let subtotal = read("subtotal");
 	let data = new FormData(form);
 	let tipPercent = Number(data.get("tip") ?? "0");
-	let tip = Math.round((subtotal * tipPercent) / 100);
+	let tip = percentOf(subtotal, tipPercent);
 	let priority = data.get("speed") === "priority" ? read("priorityFee") : 0;
 	let total = subtotal + read("delivery") + read("service") + priority + tip;
 	let set = (selector: string, text: string) => {

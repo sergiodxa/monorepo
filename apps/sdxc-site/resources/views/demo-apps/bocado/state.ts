@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { percentOf } from "@sdxc/money";
+
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 
 import type { Address, Line, Order, Restaurant } from "./data";
@@ -15,7 +17,7 @@ import {
 	ADDRESSES,
 	PRIORITY_FEE,
 	SERVICE_MIN,
-	SERVICE_RATE,
+	SERVICE_PERCENT,
 	SLUG,
 	findAddress,
 	findChoice,
@@ -324,9 +326,9 @@ export function priceLines(
 	options: { tip: number; priority: boolean },
 ): Totals {
 	let subtotal = lines.reduce((sum, line) => sum + lineTotal(restaurant, line), 0);
-	let service = Math.max(Math.round(subtotal * SERVICE_RATE), SERVICE_MIN);
+	let service = Math.max(percentOf(subtotal, SERVICE_PERCENT), SERVICE_MIN);
 	let priority = options.priority ? PRIORITY_FEE : 0;
-	let tip = Math.round((subtotal * options.tip) / 100);
+	let tip = percentOf(subtotal, options.tip);
 	let delivery = restaurant.fee;
 	return {
 		subtotal,
