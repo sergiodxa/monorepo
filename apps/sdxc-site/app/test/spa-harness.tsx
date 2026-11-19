@@ -62,6 +62,7 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/docs/table-of-contents": () => import("@sdxc/ui/docs/table-of-contents"),
 	"@sdxc/ui/lightbox": () => import("@sdxc/ui/lightbox"),
 	"@sdxc/ui/map/map-canvas": () => import("@sdxc/ui/map/map-canvas"),
+	"@sdxc/ui/map/map": () => import("@sdxc/ui/map/map"),
 	"@sdxc/ui/relative-time": () => import("@sdxc/ui/relative-time"),
 	"@sdxc/ui/video/reel-feed": () => import("@sdxc/ui/video/reel-feed"),
 	"@sdxc/ui/video/story-viewer": () => import("@sdxc/ui/video/story-viewer"),

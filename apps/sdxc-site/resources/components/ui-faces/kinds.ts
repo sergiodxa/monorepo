@@ -152,6 +152,7 @@ export const FACE_KIND = {
 	logo: "logo",
 	"logo-cloud": "landing-logos",
 	"logo-sentence": "landing-logos",
+	map: "image",
 	"map-canvas": "image",
 	marker: "chat-marker",
 	marquee: "landing-ticker",

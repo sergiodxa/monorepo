@@ -305,6 +305,7 @@ const CATALOGUE = [
 	{ slug: "logo", module: "components" },
 	{ slug: "logo-cloud", module: "landing" },
 	{ slug: "logo-sentence", module: "landing" },
+	{ slug: "map", module: "map" },
 	{ slug: "map-canvas", module: "map" },
 	{ slug: "marker", module: "chat" },
 	{ slug: "marquee", module: "landing" },
@@ -456,6 +457,20 @@ function graphTone(level: number): Tone {
  * inside the shared window / device / docs chrome.
  */
 const OVERRIDES: Record<string, Shape[]> = {
+	map: windowScene([
+		{ kind: "rect", x: 20, y: 27, w: 120, h: 59, r: 4, tone: "label" },
+		{ kind: "path", d: "M30 40 L70 32 L112 36 L128 56 L118 78 L76 82 L36 74 L26 56 Z", tone: "chrome" },
+		{ kind: "line", x1: 34, y1: 70, x2: 120, y2: 44, tone: "surface", weight: 2.5 },
+		{ kind: "line", x1: 72, y1: 33, x2: 80, y2: 81, tone: "surface", weight: 1.5 },
+		{ kind: "circle", cx: 52, cy: 52, r: 6, tone: "accent" },
+		txt("2", 52, 54.5, 6, "surface", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 84, y: 54, w: 20, h: 9, r: 4.5, tone: "ink" },
+		txt("$240", 94, 60.5, 5.5, "surface", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 96, y: 34, w: 20, h: 9, r: 4.5, tone: "surface", ring: true },
+		txt("$95", 106, 40.5, 5.5, "ink", { align: "center", font: "semibold" }),
+		{ kind: "rect", x: 128, y: 31, w: 8, h: 8, r: 2, tone: "surface", ring: true },
+		{ kind: "rect", x: 128, y: 41, w: 8, h: 8, r: 2, tone: "surface", ring: true },
+	]),
 	"seat-map": windowScene([
 		{ kind: "path", d: "M53 90 L53 46 Q53 27 80 27 Q107 27 107 46 L107 90 Z", tone: "chrome" },
 		...[10, 11, 12, 13].flatMap((row, r): Shape[] => {

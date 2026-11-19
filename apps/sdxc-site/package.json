@@ -63,6 +63,7 @@
 		"@sdxc/user-agent": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
 		"@sdxc/validate": "workspace:*",
+		"maplibre-gl": "6.17.0",
 		"remix": "3.2.0"
 	},
 	"devDependencies": {

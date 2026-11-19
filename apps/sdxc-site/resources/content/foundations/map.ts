@@ -15,15 +15,16 @@ const MAP: Foundations = {
 	summary:
 		"What @sdxc/ui/map is for, the server-first rules its maps share, and every variable it reads.",
 	importPath: "@sdxc/ui/map",
-	source: "ui/src/map/map-canvas.tsx",
+	source: "ui/src/map/map.tsx",
 	intro: [
 		"Places on a map beside the list they belong to: price pins for stays, a courier riding a route, a pin that lights up while its row is hovered.",
-		"A map renders on the server, so its pins are real links before any script loads; script only adds what a picture cannot do on its own.",
+		"A map renders on the server, so its pins are real links before any script loads. `GeoMap` then hands the same markers to MapLibre for dragging and zooming; `MapCanvas` stays a drawing.",
 	],
 	reachFor: [
 		"Search results whose rows and pins should point at each other.",
 		"A delivery or ride whose marker moves along a route as it streams.",
 		"A listing's location, drawn in the page with no third-party map.",
+		'A real map of places by longitude and latitude, with clusters and "search this area".',
 	],
 	ideas: [
 		{
@@ -37,6 +38,10 @@ const MAP: Foundations = {
 		{
 			title: "Linked by key",
 			body: "Rows and pins sharing a `data-map-key` light each other through `mapLink` or one `MapCanvasSync`.",
+		},
+		{
+			title: "Your own basemap",
+			body: "`GeoMap` draws a GeoJSON region you ship, so no tile host or glyph server is involved; a style URL works too.",
 		},
 		{
 			title: "Progress as a variable",
@@ -59,12 +64,27 @@ const MAP: Foundations = {
 			],
 		},
 		{
+			title: "GeoMap basemap",
+			lead: "Each defaults to a mix with the page background, so the map follows dark mode.",
+			variables: [
+				{ name: "--ui-map-land", default: "a tint of the background", controls: "Land polygons." },
+				{ name: "--ui-map-water", default: "a blue mix", controls: "Seas, lakes and rivers." },
+				{ name: "--ui-map-park", default: "a green mix", controls: "Parks and woods." },
+				{
+					name: "--ui-map-road",
+					default: "the raised surface",
+					controls: "Roads, major ones wider.",
+				},
+				{ name: "--ui-map-label", default: "the muted text", controls: "Place names." },
+			],
+		},
+		{
 			title: "Routes and markers",
 			variables: [
 				{ name: "--ui-map-route-color", default: "the brand solid", controls: "A route's line." },
 				{
 					name: "--ui-map-route-width",
-					default: "4",
+					default: "3",
 					controls: "A route's line width, in viewBox units.",
 				},
 				{
