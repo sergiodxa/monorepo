@@ -22,6 +22,7 @@ export const FACE_KIND = {
 	attachment: "chat-attach",
 	"author-band": "landing-author",
 	"auto-refresh": "status-strip",
+	autocomplete: "select",
 	avatar: "avatar",
 	badge: "badge",
 	banner: "banner",

@@ -161,6 +161,7 @@ const CATALOGUE = [
 	{ slug: "attachment", module: "chat" },
 	{ slug: "author-band", module: "landing" },
 	{ slug: "auto-refresh", module: "app" },
+	{ slug: "autocomplete", module: "components" },
 	{ slug: "avatar", module: "components" },
 	{ slug: "badge", module: "components" },
 	{ slug: "banner", module: "components" },
@@ -402,6 +403,18 @@ function graphTone(level: number): Tone {
  * inside the shared window / device / docs chrome.
  */
 const OVERRIDES: Record<string, Shape[]> = {
+	autocomplete: windowScene([
+		{ kind: "rect", x: 28, y: 28, w: 104, h: 14, r: 4, tone: "surface", ring: true },
+		txt("Lis", 34, 38, 7, "ink"),
+		{ kind: "rect", x: 28, y: 46, w: 104, h: 38, r: 6, tone: "surface", ring: true },
+		{ kind: "rect", x: 31, y: 49, w: 98, h: 11, r: 3, tone: "accent" },
+		{ kind: "circle", cx: 38, cy: 54.5, r: 3, tone: "surface" },
+		{ kind: "line", x1: 45, y1: 54.5, x2: 90, y2: 54.5, tone: "surface", weight: 1.4 },
+		{ kind: "circle", cx: 38, cy: 67, r: 3, tone: "hairline" },
+		{ kind: "line", x1: 45, y1: 67, x2: 100, y2: 67, tone: "label", weight: 1.4 },
+		{ kind: "circle", cx: 38, cy: 77, r: 3, tone: "hairline" },
+		{ kind: "line", x1: 45, y1: 77, x2: 84, y2: 77, tone: "label", weight: 1.4 },
+	]),
 	lightbox: windowScene([
 		{ kind: "rect", x: 16, y: 23, w: 128, h: 67, r: 8, tone: "ink" },
 		{ kind: "rect", x: 16, y: 23, w: 128, h: 10, tone: "ink" },
