@@ -128,6 +128,7 @@ A page that sticks to baseline behavior ships no library JavaScript at all.
 | `@sdxc/ui/color`       | Colour fields, pickers, sliders, swatches, area and wheel.                        |
 | `@sdxc/ui/app`         | Dashboard and workspace components: charts, tables, lists, toasts.                |
 | `@sdxc/ui/video`       | A video player, plus the cards, shelves and episode lists a library browses with. |
+| `@sdxc/ui/audio`       | A music app's track table, tiles, player bar, queue and the queue helpers.        |
 | `@sdxc/ui/<ns>/<name>` | One namespace component, by its file name: `@sdxc/ui/docs/steps`.                 |
 | `@sdxc/ui/mixins`      | Opt-in DOM behaviors applied through `mix`.                                       |
 | `@sdxc/ui/behaviors`   | Headless state classes built on `TypedEventTarget`.                               |
@@ -449,6 +450,21 @@ Dashboard and workspace components.
 - `StoryViewer` — full-screen `.Group`s of timed `.Segment`s under progress bars, with link tap
   zones; `StoryViewerSync` advances, pauses on hold and closes on a swipe down.
 - `StoryRing` — a picture in a seen or unseen story ring.
+
+### Audio (`@sdxc/ui/audio`)
+
+- `TrackList` — a track table whose `.Row`s show a number that turns into a `.PlayButton`
+  covering the row, artists, album, date added and length; the playing row is
+  `aria-current="true"` under an `Equalizer`, and narrow boxes keep number, title and length.
+- `MediaTile` — an album, playlist (square) or artist (round) as one link, with a `play` slot
+  over the art outside the link.
+- `PlayerBar` — the bar along a music app's foot: `.Track`, `.Button` (`pressed`, `primary`),
+  `.Seek` and `.Range`; `.Mini` is its phone form with an `expand` button and `actions`.
+- `QueueList` — `.Section`s of `.Item`s for "Now playing" and "Next up".
+- `Equalizer` — the playing mark, still inside any `[data-audio-paused]` ancestor.
+- `createPlayQueue`, `nextInQueue`, `previousInQueue`, `toggleShuffle`, `cycleRepeat`,
+  `jumpTo`, `upcoming` — the play order as data; `syncMediaSession` hands a track and the
+  player's commands to the system's media controls.
 
 ### Commerce (`@sdxc/ui/commerce`)
 

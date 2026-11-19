@@ -19,6 +19,8 @@
 		"./app/*": "./src/app/*.tsx",
 		"./video": "./src/video/index.ts",
 		"./video/*": "./src/video/*.tsx",
+		"./audio": "./src/audio/index.ts",
+		"./audio/*": "./src/audio/*.tsx",
 		"./commerce": "./src/commerce/index.ts",
 		"./commerce/*": "./src/commerce/*.tsx",
 		"./animations": "./src/animations/index.ts",
