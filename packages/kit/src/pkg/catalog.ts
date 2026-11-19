@@ -119,6 +119,7 @@ export const PACKAGES_WITHOUT_COMMAND_LINES: readonly string[] = [
 	"natural-dates",
 	"newsletter",
 	"no-www-middleware",
+	"novel",
 	"opml",
 	"outbound",
 	"pagination",
