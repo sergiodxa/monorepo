@@ -36,6 +36,7 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/app/optimistic-toggle": () => import("@sdxc/ui/app/optimistic-toggle"),
 	"@sdxc/ui/app/save-bar": () => import("@sdxc/ui/app/save-bar"),
 	"@sdxc/ui/app/save-status": () => import("@sdxc/ui/app/save-status"),
+	"@sdxc/ui/app/section-bar": () => import("@sdxc/ui/app/section-bar"),
 	"@sdxc/ui/app/selection-bar": () => import("@sdxc/ui/app/selection-bar"),
 	"@sdxc/ui/app/settings-section": () => import("@sdxc/ui/app/settings-section"),
 	"@sdxc/ui/app/split-view": () => import("@sdxc/ui/app/split-view"),
