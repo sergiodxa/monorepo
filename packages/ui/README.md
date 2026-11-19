@@ -178,6 +178,8 @@ Every export carries JSDoc, so the editor shows each full signature.
   text input with a `<datalist>`, and a `<search>` landmark.
 - `CharacterCount` — island: a ring and the characters left for a limited field; load
   `@sdxc/ui/character-count`, and check `countCharacters()` on the server.
+- `Autocomplete` — a text field over a styled, filtered suggestion list (icons, descriptions, a
+  heading), with a native `<datalist>` without script; load `@sdxc/ui/autocomplete` for its island.
 
 ### Components: overlays and menus
 
@@ -185,6 +187,8 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Modal`, `Drawer`, `Sheet` — `Dialog` presets: pop-in, edge-docked, and a fixed side column.
 - `DialogDismiss` — island closing its dialog on a backdrop press or a followed link; load `@sdxc/ui/dialog-dismiss` in the browser entry.
 - `Confirm` — a complete confirmation dialog; with `form` its confirm button submits a real form.
+- `Lightbox` — a full-screen photo viewer on `<dialog>`: scroll-snap slides with id links, opened by
+  `Lightbox.Trigger` at an `index`; load `@sdxc/ui/lightbox` for arrow keys and opening at a photo.
 - `Popover`, `Tooltip`, `HoverCard` — an anchored popover, a label shown on hover or focus of the
   preceding sibling, and a detail panel shown on hover or focus within.
 - `Menu`, `NavigationMenu` — popover menus, and a row of navigation panels.
@@ -214,6 +218,9 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Alert` — an inline status panel.
 - `Badge`, `TagGroup` — a status pill, and a labeled set of removable pills.
 - `Spinner` — a busy indicator.
+- `RatingBreakdown` — a review score with `.Group` lists of `.Bar` meters, per star or per category.
+- `PriceBreakdown` — a receipt `<dl>` of `.Line`s (`detail`, `tone="discount"`, a named `<output>`)
+  and a bold `.Total`.
 - `LabelChip` — a label pill in any colour whose text stays readable in both schemes.
 
 ### Components: layout and content
@@ -236,8 +243,14 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `HeadingScope`, `Heading` — a heading-depth scope, and the `<h1>`–`<h6>` that reads it.
   `Heading` accepts `size="display" | "chapter"` for landing type recipes.
 - `SharedElement` — a host with a stable view-transition name across page loads.
+- `MapCanvas` — a drawn map in one SVG viewBox: caller art, `.Route` (travelled share solid, the rest
+  dashed), `.Marker` (a glyph along a path at `progress`) and `.Pin` price pills as links or buttons;
+  `MapCanvasSync` lights a pin and the list row sharing its `mapKey`.
 - `Calendar`, `RangeCalendar`, `DatePicker`, `DateRangePicker` — month grids for a day or a range,
   and popover pickers around them; `Calendar` without children renders `<input type="date">`.
+- `RangeMonths` — consecutive month grids whose days are links the caller builds, for picking a
+  stay's range or a single date without script; booked days are struck through and a range never
+  crosses one.
 
 ### Landing (`@sdxc/ui/landing`)
 
@@ -518,6 +531,7 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `liveFrame(options)`            | a text input in a frame         | The frame reloaded from `src(value)` once typing pauses.                            |
 | `listboxKeys()`                 | `ListBox`                       | Arrow, Home/End and typeahead navigation.                                           |
 | `longPress(options?)`           | any element                     | Fires after a pointer holds still for `duration`.                                   |
+| `mapLink(key)`, `mapLinks()`    | a list row, or one hidden host  | Lights every element sharing `data-map-key` while one is hovered or focused.        |
 | `menuKeys(options?)`            | `Menu`                          | The ARIA menu pattern: roving focus, arrows, typeahead.                             |
 | `mirrorSelectedOption()`        | a `<selectedcontent>`           | Keeps the customizable select's trigger showing the chosen option.                  |
 | `otpSlots()`                    | an `OtpField` group             | Focus moving across slots, and pasted codes split.                                  |
