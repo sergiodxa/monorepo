@@ -127,6 +127,7 @@ createNovel({
 ## Entry points
 
 - `@sdxc/novel`: declarations, `createScene`, `createNovel`, `lazy`, and the frame, reply, state and event types.
+- `@sdxc/novel/ui`: `NovelPlayer` and the parts it is built from (`Stage`, `Textbox`, `ChoiceMenu`, `Backlog`, `SaveScreen`, `SettingsScreen`, `QuickMenu`, `AudioMixer`), as `remix/component` components.
 - `@sdxc/novel/test`: `createTestPlay`, which drives a play by naming each reply; `check`, the static checks over every scene; and `explore`, which plays every combination of choices.
 
 ```typescript
@@ -148,3 +149,24 @@ for (let ending of report.endings) {
 	expect(replay.ending?.key).toBe(ending.key);
 }
 ```
+
+Render the player inside your own client entry, since a novel holds functions and cannot travel as props. It reads its translator from `IntlProvider` or `setIntl()` in `@sdxc/i18n/ui`, and the screens use `@sdxc/ui`, so load `@sdxc/ui/theme.css`:
+
+```tsx
+import { NovelPlayer } from "@sdxc/novel/ui";
+import { clientEntry } from "remix/component";
+
+export const Game = clientEntry(import.meta.url, function Game() {
+	return () => (
+		<NovelPlayer
+			novel={novel}
+			start={{ from: loadSave(), persistent: loadPersistent() }}
+			settings={loadSettings()}
+			onSettingsChange={(settings) => localStorage.setItem("settings", JSON.stringify(settings))}
+			renderInteraction={Fishing}
+		/>
+	);
+});
+```
+
+Saves reach the novel's `save` event (and `onSave`), so `novel.on("save", …)` stores them; pass them back through `saves` for the load screen. Space, Enter and a click advance, `a` toggles auto, `k` or a held Control skips, ↑ and the wheel roll back, `l` opens the backlog, `q`/`w` quick save and load, `h` hides the interface, `f` goes full screen and Escape opens the settings.

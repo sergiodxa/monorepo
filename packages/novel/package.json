@@ -6,16 +6,19 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./test": "./src/test.ts"
+		"./test": "./src/test.ts",
+		"./ui": "./src/ui.tsx"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@sdxc/i18n": "workspace:*",
+		"@sdxc/icons": "workspace:*",
 		"@sdxc/random": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/types": "workspace:*",
+		"@sdxc/ui": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"
 	},

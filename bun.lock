@@ -2028,9 +2028,11 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/i18n": "workspace:*",
+        "@sdxc/icons": "workspace:*",
         "@sdxc/random": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/types": "workspace:*",
+        "@sdxc/ui": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },
