@@ -2113,6 +2113,19 @@ export default function MixinFace(handle: Handle<MixinFace.Props>) {
 			case "carouselControls":
 				body = <Keycaps keys={["‹", "›"]} />;
 				break;
+			case "carouselSync":
+				body = <Keycaps keys={["‹", "1 / 3", "›"]} />;
+				break;
+			case "lightboxControls":
+				body = <Keycaps keys={["←", "→", "Esc"]} />;
+				break;
+			case "autocomplete":
+				body = <FilterFace label="Where to?" />;
+				break;
+			case "mapLink":
+			case "mapLinks":
+				body = <SyncFace kind="pulse" />;
+				break;
 			case "mediaSync":
 				body = <Keycaps keys={["▶", "0:42"]} />;
 				break;
