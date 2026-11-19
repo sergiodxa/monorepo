@@ -45,14 +45,17 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/app/status-strip": () => import("@sdxc/ui/app/status-strip"),
 	"@sdxc/ui/app/table": () => import("@sdxc/ui/app/table"),
 	"@sdxc/ui/app/toasts": () => import("@sdxc/ui/app/toasts"),
-	"@sdxc/ui/carousel": () => import("@sdxc/ui/carousel"),
 	"@sdxc/ui/autocomplete": () => import("@sdxc/ui/autocomplete"),
+	"@sdxc/ui/carousel": () => import("@sdxc/ui/carousel"),
 	"@sdxc/ui/character-count": () => import("@sdxc/ui/character-count"),
 	"@sdxc/ui/chat/composer-submit": () => import("@sdxc/ui/chat/composer-submit"),
 	"@sdxc/ui/chat/composer-format": () => import("@sdxc/ui/chat/composer-format"),
 	"@sdxc/ui/chat/mention-menu": () => import("@sdxc/ui/chat/mention-menu"),
+	"@sdxc/ui/commerce/cart-drawer": () => import("@sdxc/ui/commerce/cart-drawer"),
+	"@sdxc/ui/commerce/facet-filters": () => import("@sdxc/ui/commerce/facet-filters"),
 	"@sdxc/ui/commerce/option-group": () => import("@sdxc/ui/commerce/option-group"),
 	"@sdxc/ui/commerce/order-tracker": () => import("@sdxc/ui/commerce/order-tracker"),
+	"@sdxc/ui/commerce/product-gallery": () => import("@sdxc/ui/commerce/product-gallery"),
 	"@sdxc/ui/confirm": () => import("@sdxc/ui/confirm"),
 	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),
 	"@sdxc/ui/docs/code-tabs-sync": () => import("@sdxc/ui/docs/code-tabs-sync"),
@@ -72,6 +75,8 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 		import("~/resources/views/demo-apps/main-frame-sync"),
 	"file:resources/views/demo-apps/murmur/player.tsx": () =>
 		import("~/resources/views/demo-apps/murmur/player"),
+	"file:resources/views/demo-apps/hangwell/recent-live.tsx": () =>
+		import("~/resources/views/demo-apps/hangwell/recent-live"),
 	"file:resources/views/demo-apps/wayfern/dates-field.tsx": () =>
 		import("~/resources/views/demo-apps/wayfern/dates-field"),
 	"file:resources/views/demo-apps/wayfern/guests-field.tsx": () =>
