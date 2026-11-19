@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 import { ArrowLeftIcon, PiggyBankIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { Button, Link, TextField } from "@sdxc/ui";
-import { Ledger } from "@sdxc/ui/app/ledger";
+import { Ledger } from "@sdxc/ui/finance/ledger";
 
 import type { Pot } from "./data";
 import type { Wallet } from "./state";

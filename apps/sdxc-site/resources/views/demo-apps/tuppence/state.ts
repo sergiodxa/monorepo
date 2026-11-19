@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { allocate } from "@sdxc/money";
 import * as s from "remix/data-schema";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
@@ -27,7 +28,6 @@ import {
 	findPot,
 	statement,
 } from "./data";
-import { allocate } from "./money";
 
 /** Every Tuppence cookie starts with this, which is how a request is known to be personal. */
 const COOKIE_PREFIX = "tuppence.";

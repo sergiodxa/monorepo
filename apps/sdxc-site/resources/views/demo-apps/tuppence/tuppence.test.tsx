@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { allocate, parseAmount } from "@sdxc/money";
 import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
 
 import { ACCOUNTS, findAccount, statement, toHome } from "./data";
 import { budgetStatuses, monthToDate, spendingByCategory } from "./figures";
-import { allocate, convert, parseAmount } from "./money";
 import { balanceOf, entries, readWallet } from "./state";
 
 /** Posts a form to a Tuppence action path with the given cookie. */
@@ -42,30 +42,11 @@ async function page(path: string, cookie = ""): Promise<string> {
 	return await response.text();
 }
 
-describe("Tuppence's money math", () => {
-	test("reads typed amounts into minor units, refusing more decimals than the currency has", () => {
-		expect(parseAmount("1,204.50", "EUR")).toBe(120450);
-		expect(parseAmount("€ 30", "EUR")).toBe(3000);
-		expect(parseAmount("12.5", "EUR")).toBe(1250);
-		expect(parseAmount("500", "JPY")).toBe(500);
-		expect(parseAmount("5.5", "JPY")).toBeNull();
-		expect(parseAmount("12.345", "EUR")).toBeNull();
-		expect(parseAmount("0", "EUR")).toBeNull();
-		expect(parseAmount("abc", "EUR")).toBeNull();
-	});
-
-	test("splits a bill into shares that add back to the total", () => {
-		expect(allocate(1000, 3)).toEqual([334, 333, 333]);
-		expect(allocate(-2341, 4)).toEqual([-586, -585, -585, -585]);
-		for (let parts = 1; parts <= 8; parts++) {
-			expect(allocate(4799, parts).reduce((sum, share) => sum + share, 0)).toBe(4799);
-		}
-	});
-
-	test("converts between currencies to the target's own minor unit", () => {
-		expect(convert(10000, "GBP", "EUR", 1.1712)).toBe(11712);
-		expect(convert(84500, "JPY", "EUR", 0.006104)).toBe(51579);
-		expect(convert(-2499, "USD", "EUR", 0.9248)).toBe(-2311);
+describe("Tuppence's money", () => {
+	test("reads amounts typed in the app's locale and converts at its rates", () => {
+		expect(parseAmount("1,204.50", "EUR", { locale: "en-IE" })).toBe(120450);
+		expect(toHome(10000, "GBP")).toBe(11712);
+		expect(toHome(84500, "JPY")).toBe(51579);
 	});
 });
 

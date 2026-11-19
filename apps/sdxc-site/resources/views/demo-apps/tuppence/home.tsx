@@ -23,7 +23,7 @@ import { raw } from "@sdxc/u/general";
 import { Link } from "@sdxc/ui";
 import { Chart } from "@sdxc/ui/app/chart";
 import { DayStrip } from "@sdxc/ui/app/day-strip";
-import { Ledger } from "@sdxc/ui/app/ledger";
+import { Ledger } from "@sdxc/ui/finance/ledger";
 
 import type { Wallet } from "./state";
 

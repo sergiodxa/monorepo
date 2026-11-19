@@ -7,14 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parseAmount } from "@sdxc/money";
 import { generateUUID } from "@sdxc/uuid/v7";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 
 import type { DemoApp, DemoAppRedirect, DemoAppRequest } from "~/resources/views/demo-apps";
 
-import { HOME, findAccount, findCard, findCategory, findPayee, findPot } from "./data";
-import { parseAmount } from "./money";
+import { HOME, LOCALE, findAccount, findCard, findCategory, findPayee, findPot } from "./data";
 import {
 	NOTE_LIMIT,
 	SPLIT_LIMIT,
@@ -131,7 +131,7 @@ function submitBudget(id: string, form: FormData, request: DemoAppRequest): Demo
 	let category = findCategory(id);
 	let parsed = s.parseSafe(BUDGET_FORM, form);
 	if (category === undefined || !category.spending || !parsed.success) return null;
-	let cents = parseAmount(parsed.value.amount, HOME);
+	let cents = parseAmount(parsed.value.amount, HOME, { locale: LOCALE });
 	if (cents === null)
 		return {
 			page: `budgets?edit=${category.id}`,
@@ -156,7 +156,7 @@ function submitMove(id: string, form: FormData, request: DemoAppRequest): DemoAp
 	if (pot === undefined || !parsed.success) return null;
 	let wallet = readWallet(request.cookie);
 	let { direction, amount } = parsed.value;
-	let cents = parseAmount(amount, HOME);
+	let cents = parseAmount(amount, HOME, { locale: LOCALE });
 	let main = findAccount("main")!;
 	let available = direction === "in" ? balanceOf(wallet, main) : potBalance(wallet, pot.id);
 	let retry = (error: string) =>

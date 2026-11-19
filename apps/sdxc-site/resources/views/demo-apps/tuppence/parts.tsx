@@ -25,7 +25,7 @@ import {
 } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { Heading, HeadingScope } from "@sdxc/ui";
-import { Amount } from "@sdxc/ui/app/amount";
+import { Amount } from "@sdxc/ui/amount";
 
 import type { CategoryId, Merchant } from "./data";
 

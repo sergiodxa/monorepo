@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 import { LockKeyholeOpenIcon, SnowflakeIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { Button } from "@sdxc/ui";
-import { PaymentCard } from "@sdxc/ui/app/payment-card";
+import { PaymentCard } from "@sdxc/ui/finance/payment-card";
 
 import type { Card } from "./data";
 import type { Wallet } from "./state";

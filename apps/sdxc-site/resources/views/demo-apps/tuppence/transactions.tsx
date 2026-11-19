@@ -9,13 +9,14 @@
 
 import type { Handle } from "remix/component";
 
+import { allocate } from "@sdxc/money";
 import { raw } from "@sdxc/u/general";
 import { Button, LinkButton, Select, TextArea } from "@sdxc/ui";
 import { setParamHref } from "@sdxc/ui/app";
 import { DetailSheet } from "@sdxc/ui/app/detail-sheet";
 import { Empty } from "@sdxc/ui/app/empty";
 import { FilterBar } from "@sdxc/ui/app/filter-bar";
-import { Ledger } from "@sdxc/ui/app/ledger";
+import { Ledger } from "@sdxc/ui/finance/ledger";
 
 import type { Entry, Wallet } from "./state";
 
@@ -33,7 +34,6 @@ import {
 	toHome,
 } from "./data";
 import { EntryRow } from "./ledger-parts";
-import { allocate } from "./money";
 import {
 	CategoryTile,
 	MerchantMark,

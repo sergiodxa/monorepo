@@ -10,15 +10,15 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { CircleCheckIcon, ChevronRightIcon } from "@sdxc/icons";
+import { formatAmount } from "@sdxc/money";
+import { parseAmount } from "@sdxc/money";
 import { raw } from "@sdxc/u/general";
 import { Button, Link, LinkButton, StepIndicator, TextField } from "@sdxc/ui";
-import { formatAmount } from "@sdxc/ui/app/amount";
 
 import type { Account, Payee } from "./data";
 import type { Wallet } from "./state";
 
 import { LOCALE, PAYEES, actionHref, findAccount, findMerchant, findPayee, href } from "./data";
-import { parseAmount } from "./money";
 import { DemoNote, MerchantMark, Money, Panel, SERIF, Screen, ScreenTitle } from "./parts";
 import { balanceOf } from "./state";
 
@@ -432,7 +432,7 @@ export function transferStep(
 		return amountStep(error === "amount" || error === "balance" ? error : null);
 	}
 	if (step === "review") {
-		let cents = parseAmount(typed, payee.currency);
+		let cents = parseAmount(typed, payee.currency, { locale: LOCALE });
 		if (cents === null) return amountStep("amount");
 		if (cents > balanceOf(wallet, sourceFor(payee))) return amountStep("balance");
 		return {

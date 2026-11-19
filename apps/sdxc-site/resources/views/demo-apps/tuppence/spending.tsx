@@ -8,8 +8,8 @@
 
 import type { Handle } from "remix/component";
 
+import { formatAmount } from "@sdxc/money";
 import { raw } from "@sdxc/u/general";
-import { formatAmount } from "@sdxc/ui/app/amount";
 import { Chart } from "@sdxc/ui/app/chart";
 
 import type { Wallet } from "./state";

@@ -9,9 +9,9 @@
 
 import type { Chart } from "@sdxc/ui/app/chart";
 
-import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
+import { convert } from "@sdxc/money";
 
-import { convert } from "./money";
+import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 
 /** The folder name, which is the app's slug. */
 export const SLUG = "tuppence";

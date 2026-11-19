@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 import { StickyNoteIcon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
 import { raw } from "@sdxc/u/general";
-import { Ledger } from "@sdxc/ui/app/ledger";
+import { Ledger } from "@sdxc/ui/finance/ledger";
 
 import type { Entry } from "./state";
 
