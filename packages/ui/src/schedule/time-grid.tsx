@@ -161,10 +161,10 @@ export namespace TimeGrid {
 /**
  * Client island: an invisible marker carrying the grid's opening scroll, its moving now line
  * and, when the grid can be edited, its drags and keyboard moves. Loads from
- * `@sdxc/ui/app/time-grid#TimeGridBehavior`.
+ * `@sdxc/ui/schedule/time-grid#TimeGridBehavior`.
  */
 export const TimeGridBehavior: EntryComponent<TimeGridBehaviorProps> = clientEntry(
-	"@sdxc/ui/app/time-grid#TimeGridBehavior",
+	"@sdxc/ui/schedule/time-grid#TimeGridBehavior",
 	function TimeGridBehavior(handle) {
 		return () => (
 			<span

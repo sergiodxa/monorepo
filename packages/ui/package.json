@@ -29,6 +29,8 @@
 		"./travel/*": "./src/travel/*.tsx",
 		"./finance": "./src/finance/index.ts",
 		"./finance/*": "./src/finance/*.tsx",
+		"./schedule": "./src/schedule/index.ts",
+		"./schedule/*": "./src/schedule/*.tsx",
 		"./animations": "./src/animations/index.ts",
 		"./behaviors": "./src/behaviors/index.ts",
 		"./mixins": "./src/mixins/index.ts",

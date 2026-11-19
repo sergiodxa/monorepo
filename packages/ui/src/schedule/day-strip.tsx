@@ -50,10 +50,10 @@ export namespace DayStrip {
 
 /**
  * Client island: keeps the current day in view once the strip is laid out, so a phone opens on
- * the day it shows. Loads from `@sdxc/ui/app/day-strip#DayStripScroll`.
+ * the day it shows. Loads from `@sdxc/ui/schedule/day-strip#DayStripScroll`.
  */
 export const DayStripScroll: EntryComponent<Record<never, never>> = clientEntry(
-	"@sdxc/ui/app/day-strip#DayStripScroll",
+	"@sdxc/ui/schedule/day-strip#DayStripScroll",
 	function DayStripScroll() {
 		return () => <span hidden data-slot="day-strip-scroll" mix={[dayStripScroll()]} />;
 	},

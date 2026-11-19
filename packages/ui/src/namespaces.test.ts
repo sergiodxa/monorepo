@@ -29,6 +29,7 @@ const NAMESPACES = [
 	"map",
 	"travel",
 	"finance",
+	"schedule",
 ];
 
 /** The helper subpaths every kit shares. */

@@ -396,13 +396,6 @@ Dashboard and workspace components.
   card and posts the card's own move form, which its menu also submits without script.
 - `Gantt` — a Gantt chart: grouped projects as bars on a month and week axis, with progress, today's line and a
   hatched tail for a late projection.
-- `TimeGrid` — a calendar's day, multi-day or week grid: overlapping events side by side, an
-  all-day lane, hour columns per time zone and a moving now line; with `edit`, a drag creates,
-  moves or resizes an event and Alt+arrows move the focused one, each posting a form.
-- `MonthView`, `Agenda`, `DayStrip` — a month of day cells with bars and "+N more", an agenda
-  grouped by day, and a phone's scrolling strip of days with a note under each.
-- `FreeBusy` — people's busy times side by side over one day, with outside-hours hatching and the
-  free slots everyone can make.
 - `RouteDialog` — a dialog the address opens (`?edit=42`): open without script, a modal once
   hydrated, and closing follows a link back to the address without it.
 - `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
@@ -520,6 +513,20 @@ Banking, budgeting and wallets.
 
 - `Ledger` — money movements grouped by day, each day headed by its total, each row one link.
 - `PaymentCard` — a drawn card face with a masked number, a chip or "Virtual" tag, and a frozen state.
+### Schedule (`@sdxc/ui/schedule`)
+
+Calendars, schedules and finding a time together.
+
+- `TimeGrid` — day, multi-day or week columns of hours: overlapping events side by side, an all-day
+  lane, an hour column per time zone and a moving now line; with `edit`, a drag creates, moves or
+  resizes an event and Alt+arrows move the focused one, each posting a form.
+- `MonthView`, `Agenda`, `DayStrip` — a month of day cells with bars and "+N more", an agenda grouped
+  by day, and a phone's scrolling strip of days with a note under each.
+- `FreeBusy` — people's busy times side by side over one day, with outside-hours hatching and the
+  free slots everyone can make.
+- `layoutTimedItems()`, `layoutSpanItems()` — the overlap columns and all-day rows the views place
+  events with, for a custom view.
+
 ### Component helpers
 
 - `readFormContext(handle): Form.Context | undefined` and
