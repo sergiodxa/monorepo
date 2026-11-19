@@ -1,7 +1,7 @@
 /**
- * Wayfern, an invented place to book stays: search by place, dates and party, results beside a
- * drawn map, listings with a photo viewer and a booking card, checkout with fake saved cards,
- * trips and wishlists. Fern green on warm sand; every picture is drawn, and trips live in cookies.
+ * Wayfern, an invented travel app: stays, flights, cars and packages from one search, results on
+ * a real map of an invented coast, checkout with fake saved cards, and one itinerary of trips
+ * that exports to calendars. Fern green on warm sand; every picture is drawn, trips live in cookies.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -392,11 +392,11 @@ const SCREENS = [
 
 export default {
 	name: "Wayfern",
-	kind: "Stays booking",
+	kind: "Travel booking",
 	tagline: "Somewhere quieter, booked in a minute.",
 	artDirection: "Fern green on warm sand, drawn landscapes.",
 	description:
-		"Wayfern, an invented place to book stays: search by place, dates and guests, results beside a map with price pins, listings with a photo viewer and a booking card, checkout, trips and wishlists.",
+		"Wayfern, an invented travel app: stays, flights, cars and packages from one search, results on a real map, seat maps and boarding passes, and one itinerary of trips that exports to calendars.",
 	theme: { brand: BRAND, neutral: NEUTRAL, tokens: TOKENS },
 	thumbnail: () => <WayfernThumbnail />,
 	screens: SCREENS,
