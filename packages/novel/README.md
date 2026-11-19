@@ -100,10 +100,11 @@ novel.on("save", ({ slot, state }) => localStorage.setItem(`save:${slot}`, JSON.
 novel.on("persist", (persistent) => localStorage.setItem("persistent", JSON.stringify(persistent)));
 novel.on("error", (error) => reportError(error));
 
-let play = novel.start({
+let started = novel.start({
 	from: JSON.parse(localStorage.getItem("save:1") ?? "null") ?? undefined,
 	persistent: JSON.parse(localStorage.getItem("persistent") ?? "null"),
 });
+if (started.status === "failure") showError(started.error); // an invalid or unmigratable save
 ```
 
 `play.state` is the play as JSON at the current stop, and `play.rollback()` returns to the previous stop. `scene`, `line`, `choice`, `ending`, `unlock` and `chapter` report what a play does, each listener receiving the payload and the play; `novel.use(plugin)` installs a function that registers listeners. A save carries the novel's `version`; `createNovel({ version: 2, migrate: { 1: (game) => success({ ...game, state: upgrade(game.state) }) } })` upgrades older saves step by step.
@@ -158,7 +159,7 @@ Render the player inside your own client entry, since a novel holds functions an
 import { NovelPlayer } from "@sdxc/novel/ui";
 import { clientEntry } from "remix/component";
 
-export const Game = clientEntry(import.meta.url, function Game() {
+export const Game = clientEntry("/app/game.tsx#Game", function Game() {
 	return () => (
 		<NovelPlayer
 			novel={novel}
