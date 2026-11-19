@@ -272,7 +272,7 @@ describe("declared bundle", () => {
 	});
 
 	test("checks another language's keys against the fallback's, but not its text", () => {
-		const en = { cart: { total: "{$count :number} items", empty: "Empty" } } as const;
+		let en = { cart: { total: "{$count :number} items", empty: "Empty" } } as const;
 
 		let es = { cart: { total: "{$count :number} artículos", empty: "Vacío" } };
 		expectTypeOf(es).toMatchTypeOf<LocaleMessages<typeof en>>();
@@ -281,7 +281,7 @@ describe("declared bundle", () => {
 });
 
 describe("prefixes", () => {
-	const en = {
+	let en = {
 		cart: { total: "{$count :number} items", empty: "Empty" },
 		forms: { create: { name: "Name", submit: "Create" }, edit: { name: "Name", danger: "Delete" } },
 	} as const;
