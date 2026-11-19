@@ -159,8 +159,10 @@ describe("scaffold", () => {
 			expect(form).toContain('type="datetime-local"');
 			expect(form).toContain('type="email"');
 			expect(form).toContain('type="url"');
-			let locale = JSON.parse(await read("resources/locales/en.json")) as Record<string, unknown>;
-			expect(locale.posts).toMatchObject({ index: { title: "Posts" }, fields: { body: "Body" } });
+			let locale = await read("resources/locales/en.ts");
+			expect(locale).toContain('\tposts: {\n\t\tindex: {\n\t\t\ttitle: "Posts",');
+			expect(locale).toContain('\t\t\tbody: "Body",');
+			expect(locale).toMatch(/\n\t},\n} as const;\n$/);
 
 			let checked = await typecheck(root);
 			expect(checked.output).toContain("Found no type errors");
@@ -238,9 +240,33 @@ describe("scaffold", () => {
 		expect(result.stdout).toContain("Would write app/models/post.ts:");
 		expect(result.stdout).toContain("Would write app/http/controllers/posts/edit.tsx:");
 		expect(result.stdout).toContain('+\t\tindex: get("/posts"),');
-		expect(result.stdout).toContain("+++ b/resources/locales/en.json");
+		expect(result.stdout).toContain("+++ b/resources/locales/en.ts");
 		expect(await files(root)).toEqual(before);
 	});
+
+	test(
+		"adds the copy to every bundle, JSON or module, and refuses one that already has it",
+		{ timeout: 60_000 },
+		async () => {
+			let root = unwrap(await materialize("app"));
+			DIRECTORIES.push(dirname(root));
+			let spanish = join(root, "resources/locales/es.json");
+			await writeFile(spanish, '{\n\t"home": { "title": "Hola" }\n}\n');
+
+			let planned = await invoke(["post", "title", "--dry-run"], root);
+
+			expect(planned.code, planned.stderr).toBe(0);
+			expect(planned.stdout).toContain("+++ b/resources/locales/en.ts");
+			expect(planned.stdout).toContain("+++ b/resources/locales/es.json");
+			expect(planned.stdout).toContain('+\t"posts": {');
+
+			await writeFile(spanish, '{\n\t"posts": {}\n}\n');
+			let refused = await invoke(["post", "title"], root);
+
+			expect(refused.code).toBe(1);
+			expect(refused.stderr).toContain('resources/locales/es.json already has "posts"');
+		},
+	);
 
 	test(
 		"--skip writes pages for a model make model wrote, and the app type checks",

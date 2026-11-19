@@ -77,6 +77,12 @@ const DECLARATIONS = new Set([
 	"app/mcp/resources/index.ts",
 ]);
 
+/**
+ * Where an app keeps its message bundles: data with no imports of their own, which the
+ * initializer that builds the translator and the code that types its keys both read.
+ */
+const LOCALES = "resources/locales/";
+
 /** Where an app's own middleware lives, which the router initializer composes into its chain. */
 const MIDDLEWARE = "app/http/middleware/";
 
@@ -113,13 +119,14 @@ export function layerOf(path: string): Layer | null {
 
 /**
  * Whether an import from `from` to `to` obeys the dependency rule. Unranked endpoints are left
- * alone so config and packages stay free to import, any layer reads a declaration module, and
- * an initializer reads the middleware its router's global chain lists.
+ * alone so config and packages stay free to import, any layer reads a declaration module or a
+ * message bundle, and an initializer reads the middleware its router's global chain lists.
  */
 export function allowsDependency(from: string, to: string): boolean {
 	let source = layerOf(from);
 	let target = layerOf(to);
 	if (source === null || target === null || isDeclaration(to)) return true;
+	if (normalize(to).startsWith(LOCALES)) return true;
 	if (source === "initializers" && normalize(to).startsWith(MIDDLEWARE)) return true;
 	return LAYER_RANK[source] <= LAYER_RANK[target];
 }

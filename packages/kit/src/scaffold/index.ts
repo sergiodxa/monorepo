@@ -89,6 +89,9 @@ const STAGED = ["app", "routes", "tsconfig.json"];
 /** The copy a scaffold adds to, one file per language. */
 const LOCALES = "resources/locales";
 
+/** A bundle file named by its language: JSON, or a module the app imports. */
+const LOCALE_BUNDLE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*\.(?:json|ts)$/;
+
 /**
  * Plans and writes the scaffold `input` describes in `project`, printing each file written and
  * edited and each package added; under `dryRun` it prints every file and the diff of every edit
@@ -704,25 +707,67 @@ function addOperations(source: string, names: readonly string[]): string | null 
 }
 
 /**
- * The edit of every `resources/locales/*.json` that adds the resource's copy under its plural
- * key. A file that already has that key, or does not parse, stops the scaffold.
+ * The edit of every bundle in `resources/locales/`, JSON or a module default-exporting an
+ * object literal, that adds the resource's copy under its plural key. A file that already has
+ * that key, or whose object cannot be found, stops the scaffold.
  */
 async function localeEdits(root: string, resource: Resource): Promise<Result<FileEdit[], Error>> {
 	let names = await wrap(() => readdir(join(root, LOCALES)));
 	if (isFailure(names)) return success([]);
 	let key = resource.plural.key;
 	let edits: FileEdit[] = [];
-	for (let name of names.data.filter((entry) => entry.endsWith(".json")).sort()) {
+	for (let name of names.data.filter((entry) => LOCALE_BUNDLE.test(entry)).sort()) {
 		let path = `${LOCALES}/${name}`;
 		let before = await wrap(() => readFile(join(root, path), "utf8"));
 		if (isFailure(before)) return before;
-		let parsed = wrap(() => JSON.parse(before.data) as Record<string, unknown>);
-		if (isFailure(parsed)) return failure(new Error(`${path}: ${parsed.error.message}`));
-		if (Object.hasOwn(parsed.data, key)) {
-			return failure(new Error(`${path} already has "${key}"; sdxc scaffold leaves it as it is`));
-		}
-		let after = { ...parsed.data, [key]: localeBlock(resource) };
-		edits.push({ path, before: before.data, after: `${JSON.stringify(after, null, "\t")}\n` });
+		let after = name.endsWith(".json")
+			? jsonLocaleEdit(before.data, key, resource)
+			: moduleLocaleEdit(before.data, key, resource);
+		if (isFailure(after)) return failure(new Error(`${path}${after.error.message}`));
+		edits.push({ path, before: before.data, after: after.data });
 	}
 	return success(edits);
+}
+
+/** A JSON bundle with the resource's copy added under `key`, or why it cannot take it. */
+function jsonLocaleEdit(source: string, key: string, resource: Resource): Result<string, Error> {
+	let parsed = wrap(() => JSON.parse(source) as Record<string, unknown>);
+	if (isFailure(parsed)) return failure(new Error(`: ${parsed.error.message}`));
+	if (Object.hasOwn(parsed.data, key)) return failure(alreadyHas(key));
+	let after = { ...parsed.data, [key]: localeBlock(resource) };
+	return success(`${JSON.stringify(after, null, "\t")}\n`);
+}
+
+/**
+ * A module bundle with the resource's copy added as the default-exported object's last
+ * property, before its closing brace and whatever `as const` or `satisfies` follows it.
+ */
+function moduleLocaleEdit(source: string, key: string, resource: Resource): Result<string, Error> {
+	if (new RegExp(`^\\t(?:${key}|"${key}"):`, "m").test(source)) return failure(alreadyHas(key));
+	let closing = [...source.matchAll(/^\}(?: as const)?(?: satisfies [^;]+)?;$/gm)].at(-1);
+	if (closing?.index === undefined) {
+		return failure(new Error(" has no default-exported object to add the copy to"));
+	}
+	let property = `\t${propertyName(key)}: ${objectLiteral(localeBlock(resource), 1)},\n`;
+	return success(`${source.slice(0, closing.index)}${property}${source.slice(closing.index)}`);
+}
+
+/** The refusal for a bundle that already has the resource's key. */
+function alreadyHas(key: string): Error {
+	return new Error(` already has "${key}"; sdxc scaffold leaves it as it is`);
+}
+
+/** `value` as a TypeScript object literal nested `depth` tabs deep, its strings as JSON writes them. */
+function objectLiteral(value: unknown, depth: number): string {
+	if (typeof value !== "object" || value === null) return JSON.stringify(value);
+	let indent = "\t".repeat(depth + 1);
+	let entries = Object.entries(value).map(
+		([name, entry]) => `${indent}${propertyName(name)}: ${objectLiteral(entry, depth + 1)},\n`,
+	);
+	return `{\n${entries.join("")}${"\t".repeat(depth)}}`;
+}
+
+/** `name` as an object literal writes it: bare when it is an identifier, quoted otherwise. */
+function propertyName(name: string): string {
+	return /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name);
 }

@@ -363,7 +363,7 @@ export function apiOperationNames(resource: Resource): string[] {
 }
 
 /**
- * The copy every `resources/locales/*.json` gains under the plural key: each page's title and
+ * The copy every bundle in `resources/locales/` gains under the plural key: each page's title and
  * buttons, a label per field, and the words a ticked and an unticked box read as.
  */
 export function localeBlock(resource: Resource): Record<string, unknown> {

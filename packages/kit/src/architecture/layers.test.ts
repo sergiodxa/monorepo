@@ -47,6 +47,12 @@ describe("allowsDependency", () => {
 		expect(allowsDependency("app/models/post.ts", "app/http/middleware/timing.ts")).toBe(false);
 	});
 
+	test("lets every layer read the message bundles", () => {
+		expect(allowsDependency("app/initializers/i18n.ts", "resources/locales/en.ts")).toBe(true);
+		expect(allowsDependency("app/services/messages.ts", "resources/locales/en.ts")).toBe(true);
+		expect(allowsDependency("app/initializers/i18n.ts", "resources/views/home.tsx")).toBe(false);
+	});
+
 	test("allows same-layer and unranked imports", () => {
 		expect(allowsDependency("app/services/a.ts", "app/services/b.ts")).toBe(true);
 		expect(allowsDependency("app/models/a.ts", "config/site.ts")).toBe(true);
