@@ -9,7 +9,7 @@
 
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import type { Messages, Translate } from "./i18n.js";
+import type { AppMessages, I18n, LocaleMessages, Messages, Translate } from "./i18n.js";
 
 import { createI18n } from "./i18n.js";
 
@@ -253,5 +253,20 @@ describe("typed values", () => {
 	test("takes any values for a message whose text widens to string", () => {
 		expect(i18n.t("widened", { name: "Ana" })).toBe("Hello Ana");
 		expect(i18n.t("widened")).toBe("Hello {$name}");
+	});
+});
+
+describe("declared bundle", () => {
+	test("defaults every translator to untyped keys when no app declares a bundle", () => {
+		expectTypeOf<AppMessages>().toEqualTypeOf<Messages>();
+		expectTypeOf<I18n>().toEqualTypeOf<I18n<Messages>>();
+	});
+
+	test("checks another language's keys against the fallback's, but not its text", () => {
+		const en = { cart: { total: "{$count :number} items", empty: "Empty" } } as const;
+
+		let es = { cart: { total: "{$count :number} artículos", empty: "Vacío" } };
+		expectTypeOf(es).toMatchTypeOf<LocaleMessages<typeof en>>();
+		expectTypeOf({ cart: { total: "x" } }).not.toMatchTypeOf<LocaleMessages<typeof en>>();
 	});
 });

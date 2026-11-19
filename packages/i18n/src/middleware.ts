@@ -15,7 +15,7 @@ import type { I18n, Messages } from "./lib/i18n.js";
 import type { LanguageDetectorOptions } from "./lib/language-detector.js";
 
 import { CurrentIntl, CurrentLocale, logError } from "./context.js";
-import { createI18n } from "./lib/i18n.js";
+import { createI18n, declaredI18n } from "./lib/i18n.js";
 import { LanguageDetector } from "./lib/language-detector.js";
 
 export { CurrentIntl, CurrentLocale } from "./context.js";
@@ -28,7 +28,7 @@ declare module "remix/router" {
 	interface RequestContext {
 		/** Language detected for the current request, always a supported language. */
 		locale: string;
-		/** Translator fixed to {@link locale} for the current request. */
+		/** Translator fixed to {@link locale}, typed by the bundle the app declares in `I18nTypes`. */
 		intl: I18n;
 	}
 }
@@ -64,12 +64,14 @@ export default function i18n(options: I18nMiddlewareOptions): Middleware {
 		context.set(CurrentLocale, locale, { property: "locale" });
 		context.set(
 			CurrentIntl,
-			createI18n({
-				locale,
-				fallbackLanguage: options.detection.fallbackLanguage,
-				resources: options.resources,
-				onError: logError,
-			}),
+			declaredI18n(
+				createI18n({
+					locale,
+					fallbackLanguage: options.detection.fallbackLanguage,
+					resources: options.resources,
+					onError: logError,
+				}),
+			),
 			{ property: "intl" },
 		);
 

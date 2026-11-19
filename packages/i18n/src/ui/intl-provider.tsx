@@ -58,6 +58,7 @@ export function setIntl(intl: I18n<any>): void {
 /**
  * Reads the translator published by the nearest ancestor {@link IntlProvider}, falling back to
  * the module-scoped default registered via {@link setIntl}, and throws when neither exists.
+ * Its keys and values are typed by the bundle the app declares in `I18nTypes`.
  *
  * @example
  * let message = intl(handle).t("greeting");

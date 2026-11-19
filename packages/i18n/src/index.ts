@@ -8,9 +8,12 @@
  */
 
 export type {
+	AppMessages,
 	I18n,
 	I18nErrorHandler,
 	I18nOptions,
+	I18nTypes,
+	LocaleMessages,
 	MessageKey,
 	MessageValues,
 	Messages,

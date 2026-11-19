@@ -8,7 +8,7 @@
  */
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { createI18n } from "../lib/i18n.js";
 
@@ -115,5 +115,16 @@ describe(Trans, () => {
 		);
 
 		expect(html).toBe("Hi there");
+	});
+});
+
+describe("Trans.ValuesProp", () => {
+	test("requires values exactly when the message's arguments are", () => {
+		expectTypeOf<Trans.ValuesProp<[values: { name: string }]>>().toEqualTypeOf<{
+			values: { name: string };
+		}>();
+		expectTypeOf<Trans.ValuesProp<[values?: Record<string, unknown>]>>().toEqualTypeOf<{
+			values?: Record<string, unknown>;
+		}>();
 	});
 });

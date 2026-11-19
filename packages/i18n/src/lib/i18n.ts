@@ -19,6 +19,31 @@ export interface Messages {
 }
 
 /**
+ * Augmented by an app to declare its fallback language's bundle once, which types the keys and
+ * values of every translator the package hands out: `ctx.intl`, `createTranslator`, `intl()`,
+ * `Trans`. Without it, every translator takes any key and any values.
+ *
+ * @example declare module "@sdxc/i18n" { interface I18nTypes { messages: typeof en } }
+ */
+// oxlint-disable-next-line typescript/no-empty-object-type -- the seam apps augment
+export interface I18nTypes {}
+
+/** The bundle an app declared through {@link I18nTypes}, or the untyped {@link Messages}. */
+export type AppMessages = I18nTypes extends { messages: infer R } ? R : Messages;
+
+/**
+ * The shape another language's bundle must have to stand beside the fallback `R`: every key
+ * `R` has and no other, each a string, so a missing or stale key fails to compile while the
+ * text stays free to differ.
+ *
+ * @template R - The fallback language's bundle.
+ * @example export default { cart: { empty: "Tu carrito está vacío" } } satisfies LocaleMessages<typeof en>;
+ */
+export type LocaleMessages<R> = {
+	readonly [K in keyof R]: R[K] extends string ? string : LocaleMessages<R[K]>;
+};
+
+/**
  * The dotted paths to every string leaf of `R`. A bundle with an index signature, such as the
  * untyped {@link Messages}, yields `string`, so any key type-checks.
  *
@@ -81,9 +106,9 @@ type ValuesArgument<P> = [keyof P] extends [never]
  * renderer's job. A key with no message in any language of the chain returns the key.
  * With a typed bundle, `values` is typed by the message's text; see {@link MessageValues}.
  *
- * @template R - The bundle the key union and values are derived from.
+ * @template R - The bundle the key union and values are derived from; the app's declared one by default.
  */
-export type Translate<R = Messages> = string extends keyof R
+export type Translate<R = AppMessages> = string extends keyof R
 	? (key: string, values?: Record<string, unknown>) => string
 	: <K extends MessageKey<R>>(key: K, ...values: MessageValues<R, K>) => string;
 
@@ -91,9 +116,9 @@ export type Translate<R = Messages> = string extends keyof R
  * Formats the message at `key` to MessageFormat parts, markup included, for a caller that
  * renders markup itself. A missing key yields one text part holding the key.
  *
- * @template R - The bundle the key union and values are derived from.
+ * @template R - The bundle the key union and values are derived from; the app's declared one by default.
  */
-export type TranslateParts<R = Messages> = string extends keyof R
+export type TranslateParts<R = AppMessages> = string extends keyof R
 	? (key: string, values?: Record<string, unknown>) => MessagePart[]
 	: <K extends MessageKey<R>>(key: K, ...values: MessageValues<R, K>) => MessagePart[];
 
@@ -101,9 +126,9 @@ export type TranslateParts<R = Messages> = string extends keyof R
  * A translator fixed to one language. It holds no mutable state, so one instance serves a
  * whole request. Accept `I18n<any>` to take a translator whatever bundle types its keys.
  *
- * @template R - The fallback language's bundle, which types the keys.
+ * @template R - The fallback language's bundle, which types the keys; the app's declared one by default.
  */
-export interface I18n<R = Messages> {
+export interface I18n<R = AppMessages> {
 	/** The requested language; copy comes from the first language of its chain with the key. */
 	readonly locale: string;
 	t: Translate<R>;
@@ -168,7 +193,7 @@ export function createI18n<
 		return compiled;
 	}
 
-	let i18n: I18n = {
+	let i18n: I18n<Messages> = {
 		locale,
 		onError,
 		t(key, values) {
@@ -181,6 +206,17 @@ export function createI18n<
 		},
 	};
 	return i18n as I18n<Resources[Fallback]>;
+}
+
+/**
+ * Types a translator over the bundle the app declared through {@link I18nTypes}. The resources
+ * a host was configured with are the app's own bundles, so their keys are the declared ones.
+ *
+ * @param i18n - A translator built over bundles typed as {@link Messages}.
+ * @returns The same translator, typed by the app's bundle.
+ */
+export function declaredI18n(i18n: I18n<Messages>): I18n {
+	return i18n as unknown as I18n;
 }
 
 /**

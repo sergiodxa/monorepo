@@ -109,6 +109,38 @@ function Teaser(handle: Handle<{ title: string; href: string }>) {
 }
 ```
 
+### Type every translator from one bundle
+
+Declare the fallback language's bundle `as const` and name it once in `I18nTypes`. Every translator the package hands out — `context.intl`, `createTranslator`, `intl(handle)` and `Trans` — then checks each key and the values its message reads. Type another language's bundle with `LocaleMessages`, so a missing or stale key fails to compile while its text stays free.
+
+```tsx
+// locales/en.ts
+export default { cart: { total: "{$count :number} items" } } as const;
+
+// locales/es.ts
+import type { LocaleMessages } from "@sdxc/i18n";
+import type en from "./en.js";
+
+export default { cart: { total: "{$count :number} artículos" } } satisfies LocaleMessages<
+	typeof en
+>;
+
+// i18n.ts
+import type en from "./locales/en.js";
+
+declare module "@sdxc/i18n" {
+	interface I18nTypes {
+		messages: typeof en;
+	}
+}
+
+context.intl.t("cart.total", { count: 3 });
+context.intl.t("cart.totl"); // type error: no such key
+<Trans i18nKey="cart.total" />; // type error: `values` is required
+```
+
+Without the declaration, every translator takes any key and any values.
+
 ### Translate without a request
 
 ```typescript
@@ -186,7 +218,7 @@ From `@sdxc/i18n/ui`. Registers the default `I18n` for `intl` in the browser; ca
 From `@sdxc/i18n/ui`. Renders a message with markup: `{#name}…{/name}` becomes `components[name]` with the enclosed content as children, and `{#name/}` the element alone.
 
 - `i18nKey`: The message key (`key` is reserved by `remix/component`)
-- `values`: The message's variables
+- `values`: The message's variables, required and typed by its text once the app declares `I18nTypes`
 - `components`: Elements keyed by markup name; markup without an entry renders its content unwrapped and reports through `onError`
 - `intl`: The translator to use; defaults to `intl(handle)`
 
@@ -195,7 +227,7 @@ From `@sdxc/i18n/ui`. Renders a message with markup: `{#name}…{/name}` becomes
 #### `I18n<R>`
 
 ```typescript
-interface I18n<R = Messages> {
+interface I18n<R = AppMessages> {
 	readonly locale: string;
 	t: Translate<R>; // (key, values?) => string
 	parts: TranslateParts<R>; // (key, values?) => MessagePart[]
@@ -207,7 +239,7 @@ interface I18n<R = Messages> {
 
 #### `Messages`, `MessageKey<R>` and `MessageValues<R, K>`
 
-`Messages` is a bundle: `{ [key: string]: string | Messages }`. `MessageKey<R>` is the union of dotted paths to `R`'s string leaves, so with typed bundles `t("inbox.unraed")` is a type error. Keys are typed by `resources[fallbackLanguage]` when the fallback is a literal; bundles typed as `Record<string, Messages>` give string keys. `IntlProvider`, `setIntl` and `Trans` accept `I18n<any>`.
+`Messages` is a bundle: `{ [key: string]: string | Messages }`. `MessageKey<R>` is the union of dotted paths to `R`'s string leaves, so with typed bundles `t("inbox.unraed")` is a type error. `createI18n` types keys by `resources[fallbackLanguage]` when the fallback is a literal; bundles typed as `Record<string, Messages>` give string keys. `IntlProvider`, `setIntl` and `Trans`'s `intl` prop accept `I18n<any>`.
 
 `MessageValues<R, K>` types `values` by the message's text when the bundle is declared `as const`, through `MessageParams` from `@sdxc/messageformat`; a message whose text widens to `string` takes any values.
 
@@ -218,6 +250,10 @@ let { t } = createI18n({ locale: "en", fallbackLanguage: "en", resources: { en }
 t("cart.total", { count: 3 }); // "3 items"
 t("cart.total", { count: "3" }); // type error: `:number` takes number | bigint
 ```
+
+#### `I18nTypes`, `AppMessages` and `LocaleMessages<R>`
+
+`I18nTypes` is the interface an app augments with `messages: typeof en`; `AppMessages` reads it back, or `Messages` when nothing is declared, and is the default bundle of `I18n`, `Translate`, `TranslateParts` and `Trans`. `LocaleMessages<R>` is the shape every other language's bundle satisfies: `R`'s keys, each a string.
 
 #### `LanguageDetectorOptions` and `DetectionMethod`
 

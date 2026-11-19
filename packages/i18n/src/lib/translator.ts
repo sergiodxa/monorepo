@@ -9,7 +9,7 @@
 
 import type { I18n, I18nErrorHandler, Messages, Translate } from "./i18n.js";
 
-import { createI18n } from "./i18n.js";
+import { createI18n, declaredI18n } from "./i18n.js";
 import { pick } from "./parser.js";
 
 /** Options that configure a {@link Translator}. */
@@ -71,12 +71,14 @@ export function createTranslator(options: TranslatorOptions): Translator {
 		let translation = translations.get(locale);
 
 		if (!translation) {
-			let intl = createI18n({
-				locale,
-				fallbackLanguage: options.fallbackLanguage,
-				resources: options.resources,
-				onError: options.onError,
-			});
+			let intl = declaredI18n(
+				createI18n({
+					locale,
+					fallbackLanguage: options.fallbackLanguage,
+					resources: options.resources,
+					onError: options.onError,
+				}),
+			);
 			translation = { locale, t: intl.t, intl };
 			translations.set(locale, translation);
 		}

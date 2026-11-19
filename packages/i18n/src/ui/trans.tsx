@@ -12,14 +12,24 @@ import type { Handle, RemixElement, RemixNode } from "remix/component";
 
 import { createElement } from "remix/component";
 
-import type { I18n } from "../lib/i18n.js";
+import type { AppMessages, I18n, MessageKey, MessageValues } from "../lib/i18n.js";
 
 import { partText } from "../lib/i18n.js";
 
 import { intl } from "./intl-provider.js";
 
 export namespace Trans {
-	export interface Props {
+	/**
+	 * Props for the message at `K`: `values` is required and typed by the message's variables
+	 * when the app declares its bundle, and takes any values when it does not.
+	 *
+	 * @template K - The message key, inferred from `i18nKey`.
+	 */
+	export type Props<K extends MessageKey<AppMessages> = MessageKey<AppMessages>> = KeyProps<K> &
+		ValuesProp<MessageValues<AppMessages, K>>;
+
+	/** The props every message takes, whatever its variables. */
+	export interface KeyProps<K extends string> {
 		/**
 		 * Translator to format through. Defaults to the nearest ancestor `IntlProvider`'s (via
 		 * `intl`); pass one to translate through a different translator.
@@ -29,12 +39,17 @@ export namespace Trans {
 		 * Message key to look up. Named `i18nKey` because `key` is `remix/component`'s own
 		 * reconciliation prop and never reaches `handle.props`.
 		 */
-		i18nKey: string;
-		/** Values for the message's variables. */
-		values?: Record<string, unknown>;
+		i18nKey: K;
 		/** Elements spliced in for each markup name in the message, keyed by that name. */
 		components?: Record<string, RemixElement>;
 	}
+
+	/** `values` as `t()` takes them: required exactly when the message's arguments are. */
+	export type ValuesProp<Values extends unknown[]> = Values extends [values: infer V]
+		? { values: V }
+		: Values extends [values?: infer V]
+			? { values?: V }
+			: never;
 }
 
 /**
@@ -48,10 +63,16 @@ export namespace Trans {
  * 	components={{ articleLink: <Link href={item.link} /> }}
  * />
  */
-export function Trans(handle: Handle<Trans.Props>) {
+export function Trans<K extends MessageKey<AppMessages>>(handle: Handle<Trans.Props<K>>) {
 	return () => {
-		let { i18nKey, values, components = {} } = handle.props;
-		let translator = handle.props.intl ?? intl(handle);
+		let {
+			i18nKey,
+			values,
+			components = {},
+		} = handle.props as Trans.KeyProps<K> & {
+			values?: Record<string, unknown>;
+		};
+		let translator: I18n<any> = handle.props.intl ?? intl(handle);
 		let parts = translator.parts(i18nKey, values);
 		return foldParts(parts, components, (error) => translator.onError(error, i18nKey));
 	};
