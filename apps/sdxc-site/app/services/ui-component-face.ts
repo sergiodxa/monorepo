@@ -125,7 +125,8 @@ type ModuleKind =
 	| "commerce"
 	| "audio"
 	| "map"
-	| "travel";
+	| "travel"
+	| "finance";
 
 /** Quiet stage wash in the site's brand hue — one step off the card, like DemoMiniature. */
 const WASH = {
@@ -165,6 +166,7 @@ const CATALOGUE = [
 	{ slug: "agenda", module: "app" },
 	{ slug: "alert", module: "components" },
 	{ slug: "alert-dialog", module: "components" },
+	{ slug: "amount", module: "components" },
 	{ slug: "anchor-heading", module: "docs" },
 	{ slug: "announcement-chip", module: "landing" },
 	{ slug: "app-shell", module: "app" },
@@ -212,8 +214,8 @@ const CATALOGUE = [
 	{ slug: "command", module: "components" },
 	{ slug: "command-palette", module: "app" },
 	{ slug: "composer", module: "chat" },
-	{ slug: "composer-format", module: "chat" },
 	{ slug: "composer-submit", module: "chat" },
+	{ slug: "composer-format", module: "chat" },
 	{ slug: "confirm", module: "components" },
 	{ slug: "context-menu", module: "app" },
 	{ slug: "contribution-graph", module: "app" },
@@ -287,6 +289,7 @@ const CATALOGUE = [
 	{ slug: "landing-header", module: "landing" },
 	{ slug: "landing-hero", module: "landing" },
 	{ slug: "landing-section", module: "landing" },
+	{ slug: "ledger", module: "finance" },
 	{ slug: "lightbox", module: "components" },
 	{ slug: "link", module: "components" },
 	{ slug: "link-button", module: "components" },
@@ -323,6 +326,7 @@ const CATALOGUE = [
 	{ slug: "overlay-arrow", module: "components" },
 	{ slug: "page-actions", module: "docs" },
 	{ slug: "page-header", module: "app" },
+	{ slug: "payment-card", module: "finance" },
 	{ slug: "profile-picker", module: "app" },
 	{ slug: "pagination", module: "components" },
 	{ slug: "phone-fan", module: "landing" },
@@ -387,6 +391,7 @@ const CATALOGUE = [
 	{ slug: "stat-strip", module: "landing" },
 	{ slug: "status-dot", module: "components" },
 	{ slug: "status-strip", module: "app" },
+	{ slug: "step-indicator", module: "components" },
 	{ slug: "step-list", module: "landing" },
 	{ slug: "steps", module: "docs" },
 	{ slug: "story-ring", module: "video" },
@@ -441,6 +446,45 @@ function graphTone(level: number): Tone {
  * inside the shared window / device / docs chrome.
  */
 const OVERRIDES: Record<string, Shape[]> = {
+	amount: windowScene([
+		txt("Balance", 28, 38, 6, "muted"),
+		txt("€12,840", 28, 56, 15, "ink", { font: "semibold" }),
+		txt(".56", 100, 56, 8, "ink", { font: "semibold" }),
+		{ kind: "line", x1: 28, y1: 64, x2: 132, y2: 64, tone: "hairline", weight: 1 },
+		txt("+€2,100.00", 28, 78, 7, "accent", { font: "semibold" }),
+		txt("€23.40", 132, 78, 7, "ink", { align: "end" }),
+	]),
+	ledger: windowScene([
+		txt("Today", 26, 36, 6, "muted", { font: "semibold" }),
+		txt("−€61.40", 134, 36, 6, "muted", { align: "end" }),
+		{ kind: "rect", x: 26, y: 42, w: 12, h: 12, r: 3, tone: "label" },
+		txt("Café Lumen", 44, 50, 6.5, "ink", { font: "semibold" }),
+		txt("€3.40", 134, 50, 6.5, "ink", { align: "end" }),
+		{ kind: "rect", x: 26, y: 58, w: 12, h: 12, r: 3, tone: "accent" },
+		txt("Tasca", 44, 66, 6.5, "ink", { font: "semibold" }),
+		txt("€58.00", 134, 66, 6.5, "ink", { align: "end" }),
+		txt("Yesterday", 26, 80, 6, "muted", { font: "semibold" }),
+		txt("+€2,100", 134, 80, 6, "accent", { align: "end" }),
+	]),
+	"payment-card": windowScene([
+		{ kind: "rect", x: 38, y: 30, w: 84, h: 53, r: 6, tone: "accent" },
+		txt("Tuppence", 44, 41, 6, "surface", { font: "semibold" }),
+		{ kind: "rect", x: 44, y: 49, w: 12, h: 9, r: 2, tone: "label" },
+		txt("•••• 4821", 44, 70, 6, "surface"),
+		txt("debit", 116, 78, 6, "surface", { align: "end", font: "semibold" }),
+	]),
+	"step-indicator": windowScene([
+		{ kind: "circle", cx: 34, cy: 52, r: 7, tone: "accent" },
+		{ kind: "stroke", d: "M30.5 52 L33 54.5 L37.5 49.5", weight: 1.4, tone: "surface" },
+		{ kind: "line", x1: 45, y1: 52, x2: 70, y2: 52, tone: "accent", weight: 1.4 },
+		{ kind: "circle", cx: 80, cy: 52, r: 7, tone: "accent" },
+		txt("2", 80, 55, 7, "surface", { align: "center", font: "semibold" }),
+		{ kind: "line", x1: 91, y1: 52, x2: 116, y2: 52, tone: "label", weight: 1.4 },
+		{ kind: "circle", cx: 126, cy: 52, r: 7, tone: "surface", ring: true },
+		txt("Payee", 34, 70, 5.5, "muted", { align: "center" }),
+		txt("Amount", 80, 70, 5.5, "ink", { align: "center", font: "semibold" }),
+		txt("Review", 126, 70, 5.5, "muted", { align: "center" }),
+	]),
 	autocomplete: windowScene([
 		{ kind: "rect", x: 28, y: 28, w: 104, h: 14, r: 4, tone: "surface", ring: true },
 		txt("Lis", 34, 38, 7, "ink"),

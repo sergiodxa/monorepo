@@ -16,6 +16,7 @@ import COLOR from "~/resources/content/foundations/color";
 import COMMERCE from "~/resources/content/foundations/commerce";
 import COMPONENTS from "~/resources/content/foundations/components";
 import DOCS from "~/resources/content/foundations/docs";
+import FINANCE from "~/resources/content/foundations/finance";
 import LANDING from "~/resources/content/foundations/landing";
 import MAP from "~/resources/content/foundations/map";
 import TRAVEL from "~/resources/content/foundations/travel";
@@ -80,6 +81,7 @@ const FOUNDATIONS_BY_MODULE: Record<ComponentModule, Foundations> = {
 	audio: AUDIO,
 	map: MAP,
 	travel: TRAVEL,
+	finance: FINANCE,
 };
 
 /** Every namespace's Foundations, in the order the sidebar lists the namespaces. */
