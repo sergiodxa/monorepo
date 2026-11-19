@@ -9,7 +9,16 @@
 
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import type { AppMessages, I18n, LocaleMessages, Messages, Translate } from "./i18n.js";
+import type {
+	AppMessages,
+	I18n,
+	LocaleMessages,
+	MessageAt,
+	MessageKey,
+	MessagePrefix,
+	Messages,
+	Translate,
+} from "./i18n.js";
 
 import { createI18n } from "./i18n.js";
 
@@ -268,5 +277,26 @@ describe("declared bundle", () => {
 		let es = { cart: { total: "{$count :number} artículos", empty: "Vacío" } };
 		expectTypeOf(es).toMatchTypeOf<LocaleMessages<typeof en>>();
 		expectTypeOf({ cart: { total: "x" } }).not.toMatchTypeOf<LocaleMessages<typeof en>>();
+	});
+});
+
+describe("prefixes", () => {
+	const en = {
+		cart: { total: "{$count :number} items", empty: "Empty" },
+		forms: { create: { name: "Name", submit: "Create" }, edit: { name: "Name", danger: "Delete" } },
+	} as const;
+
+	test("names every subtree a translator can be scoped to", () => {
+		expectTypeOf<MessagePrefix<typeof en>>().toEqualTypeOf<
+			"cart" | "forms" | "forms.create" | "forms.edit"
+		>();
+		expectTypeOf<MessagePrefix<Messages>>().toEqualTypeOf<string>();
+	});
+
+	test("reads the keys a subtree holds, and those every subtree of a union shares", () => {
+		expectTypeOf<MessageKey<MessageAt<typeof en, "cart">>>().toEqualTypeOf<"total" | "empty">();
+		expectTypeOf<
+			MessageKey<MessageAt<typeof en, "forms.create" | "forms.edit">>
+		>().toEqualTypeOf<"name">();
 	});
 });

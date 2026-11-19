@@ -53,6 +53,18 @@ export type MessageKey<R> = string extends keyof R
 	? string
 	: { [K in keyof R & string]: LeafKey<K, R[K]> }[keyof R & string];
 
+/**
+ * The dotted paths to every subtree of `R`, the prefixes a caller can scope a translator to.
+ * A bundle with an index signature yields `string`.
+ *
+ * @template R - The bundle the prefixes are read from.
+ */
+export type MessagePrefix<R> = string extends keyof R
+	? string
+	: {
+			[K in keyof R & string]: R[K] extends string ? never : K | `${K}.${MessagePrefix<R[K]>}`;
+		}[keyof R & string];
+
 /** The key `K` when `V` is a message, or `K.`-prefixed keys of `V` when it nests more. */
 type LeafKey<K extends string, V> = V extends string
 	? K
@@ -75,8 +87,15 @@ export type MessageValues<R, K extends string> = ValuesArgument<
 	UnionToIntersection<K extends string ? ParamsOf<MessageAt<R, K>> : never>
 >;
 
-/** The message at dotted key `K` in `R`. */
-type MessageAt<R, K extends string> = K extends keyof R
+/**
+ * The message or subtree at dotted path `K` in `R`; a union of paths yields the union of what
+ * each names, so `MessageKey<MessageAt<R, P>>` is the keys every subtree in `P` shares.
+ *
+ * @template R - The bundle the path is read from.
+ * @template K - The dotted path, to a message or to a subtree.
+ * @example type CartKey = MessageKey<MessageAt<typeof en, "cart">>; // "total" | "empty"
+ */
+export type MessageAt<R, K extends string> = K extends keyof R
 	? R[K]
 	: K extends `${infer Head}.${infer Tail}`
 		? Head extends keyof R

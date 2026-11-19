@@ -241,6 +241,8 @@ interface I18n<R = AppMessages> {
 
 `Messages` is a bundle: `{ [key: string]: string | Messages }`. `MessageKey<R>` is the union of dotted paths to `R`'s string leaves, so with typed bundles `t("inbox.unraed")` is a type error. `createI18n` types keys by `resources[fallbackLanguage]` when the fallback is a literal; bundles typed as `Record<string, Messages>` give string keys. `IntlProvider`, `setIntl` and `Trans`'s `intl` prop accept `I18n<any>`.
 
+`MessageAt<R, P>` is the message or subtree at a dotted path and `MessagePrefix<R>` the union of every subtree's path, so `MessageKey<MessageAt<R, "cart">>` types the keys a translator scoped to `cart.` takes; a union of paths keeps only the keys their subtrees share.
+
 `MessageValues<R, K>` types `values` by the message's text when the bundle is declared `as const`, through `MessageParams` from `@sdxc/messageformat`; a message whose text widens to `string` takes any values.
 
 ```typescript
