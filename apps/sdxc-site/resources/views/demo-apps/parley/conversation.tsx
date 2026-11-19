@@ -297,7 +297,14 @@ export function ConversationColumn(handle: Handle<ConversationColumn.Props>) {
 					>
 						<MessageScroller.Content
 							data-live-log="log"
-							mix={[raw({ paddingBlockEnd: "0.5rem", minInlineSize: "0", maxInlineSize: "100%" })]}
+							mix={[
+								raw({
+									paddingBlockEnd: "0.5rem",
+									paddingInline: "0",
+									minInlineSize: "0",
+									maxInlineSize: "100%",
+								}),
+							]}
 						>
 							<Beginning conversation={conversation} />
 							<Days days={days} place={place} editing={editing} current={current} now={now} />

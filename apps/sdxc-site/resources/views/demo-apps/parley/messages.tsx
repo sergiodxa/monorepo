@@ -496,33 +496,54 @@ export function RunGroup(handle: Handle<RunGroup.Props>) {
 	};
 }
 
-/** A day's separator, pinned to the top of the log while its day scrolls under it. */
+/**
+ * A day's separator, pinned to the top of the log while its day scrolls under it. Once pinned it
+ * drops its rules and keeps only the pill, so the lines never cross the messages passing beneath.
+ */
 function DaySeparator(handle: Handle<{ label: string }>) {
 	return () => (
-		<Marker
-			variant="separator"
+		<div
 			mix={[
 				raw({
 					position: "sticky",
 					insetBlockStart: "0",
 					zIndex: "2",
-					paddingBlock: "0.5rem",
-					paddingInline: "1.25rem",
-					"& [data-slot=marker-content]": {
-						fontWeight: "600",
-						fontSize: "0.75rem",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.125rem",
-						borderRadius: "999px",
-						border: "1px solid var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-bg)",
-						color: "var(--ui-neutral-fg-emphasis)",
-					},
+					containerType: "scroll-state",
+					pointerEvents: "none",
 				}),
 			]}
 		>
-			<Marker.Content>{handle.props.label}</Marker.Content>
-		</Marker>
+			<Marker
+				variant="separator"
+				mix={[
+					raw({
+						paddingBlock: "0.5rem",
+						paddingInline: "1.25rem",
+						"@container scroll-state(stuck: top)": {
+							"&::before, &::after": { opacity: "0" },
+						},
+					}),
+				]}
+			>
+				<Marker.Content
+					mix={[
+						raw({
+							fontWeight: "600",
+							fontSize: "0.75rem",
+							paddingInline: "0.75rem",
+							paddingBlock: "0.125rem",
+							borderRadius: "999px",
+							border: "1px solid var(--ui-neutral-border)",
+							backgroundColor: "var(--ui-bg)",
+							color: "var(--ui-neutral-fg-emphasis)",
+							pointerEvents: "auto",
+						}),
+					]}
+				>
+					{handle.props.label}
+				</Marker.Content>
+			</Marker>
+		</div>
 	);
 }
 
