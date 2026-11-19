@@ -117,7 +117,7 @@ export default function PackagesPage(handle: Handle<{ ctx: Screen }>) {
 							paddingInline: GUTTER,
 							paddingBlock: "1.25rem",
 							borderBlockEnd: "1px solid var(--ui-neutral-border)",
-							backgroundColor: "color-mix(in oklch, var(--ui-color-brand-50), var(--ui-bg) 50%)",
+							backgroundColor: "color-mix(in oklch, var(--ui-color-brand-500) 7%, var(--ui-bg))",
 						}),
 					]}
 				>

@@ -271,7 +271,7 @@ export default function Home(handle: Handle<Home.Props>) {
 							paddingInline: GUTTER,
 							paddingBlock: "clamp(2.5rem, 7vw, 5.5rem) clamp(2rem, 6vw, 4.5rem)",
 							background:
-								"linear-gradient(180deg, var(--ui-color-brand-50), color-mix(in oklch, var(--ui-color-brand-100), var(--ui-bg) 55%))",
+								"linear-gradient(180deg, color-mix(in oklch, var(--ui-color-brand-500) 12%, var(--ui-bg)), color-mix(in oklch, var(--ui-color-brand-500) 5%, var(--ui-bg)))",
 						}),
 					]}
 				>
@@ -480,7 +480,10 @@ export default function Home(handle: Handle<Home.Props>) {
 	};
 }
 
-/** Soft hills along the hero's foot, drawn in the brand's tints, so the search sits on a landscape. */
+/**
+ * Soft hills along the hero's foot, the brand mixed into the page's own background, so the search
+ * sits on a landscape that stays a tint in light mode and a deep green in dark mode.
+ */
 function HeroHills() {
 	return () => (
 		<svg
@@ -500,13 +503,11 @@ function HeroHills() {
 		>
 			<path
 				d="M0 120 C 180 60 320 90 480 110 S 820 40 1000 80 S 1150 110 1200 90 V220 H0Z"
-				fill="var(--ui-color-brand-100)"
-				opacity="0.8"
+				fill="color-mix(in oklch, var(--ui-color-brand-500) 16%, var(--ui-bg))"
 			/>
 			<path
 				d="M0 170 C 220 120 420 160 640 150 S 980 110 1200 150 V220 H0Z"
-				fill="var(--ui-color-brand-200)"
-				opacity="0.55"
+				fill="color-mix(in oklch, var(--ui-color-brand-500) 24%, var(--ui-bg))"
 			/>
 			<path d="M0 200 C 300 180 600 210 900 195 S 1120 190 1200 200 V220 H0Z" fill="var(--ui-bg)" />
 		</svg>
