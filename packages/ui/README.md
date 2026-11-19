@@ -446,6 +446,19 @@ Dashboard and workspace components.
   zones; `StoryViewerSync` advances, pauses on hold and closes on a swipe down.
 - `StoryRing` — a picture in a seen or unseen story ring.
 
+### Commerce (`@sdxc/ui/commerce`)
+
+Ordering something to be delivered, such as food from a restaurant.
+
+- `MenuItemCard` — an item on a menu; the whole card opens its options dialog through Invoker Commands.
+- `ItemOptionsDialog` — a native dialog (a bottom sheet on a phone) with the item, its option groups, a
+  quantity and an add button carrying the running price.
+- `OptionGroup` — priced choices: radios for a required pick, checkboxes up to `max` for extras. The
+  `OptionsLive` island (`@sdxc/ui/commerce/option-group`) reprices the form and enforces the limit.
+- `CartLine`, `QuantityStepper` — a cart's line, and a − count + control whose buttons are form posts.
+- `OrderSteps`, `OrderLive` — an order's status timeline, and an island (`@sdxc/ui/commerce/order-tracker`)
+  that follows a `step progress minutes` text stream to move the steps, headline, estimate and any map marker.
+
 ### Component helpers
 
 - `readFormContext(handle): Form.Context | undefined` and
