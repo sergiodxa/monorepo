@@ -20,6 +20,7 @@ import type { NovelSettings } from "./settings.js";
 import type { RunningTransition } from "./transitions.js";
 
 import { AudioMixer } from "./audio.js";
+import { Prefetcher } from "./prefetch.js";
 import { resolveSource } from "./source.js";
 import {
 	decodeImages,
@@ -55,6 +56,8 @@ export interface DirectorHost {
 	text(): string;
 	settings(): NovelSettings;
 	onEnding(ending: Ending): void;
+	/** How many jumps ahead to prefetch on entering a scene, or `false` to prefetch nothing. */
+	prefetch(): number | false;
 }
 
 /** Runs one play at a time and the reader's modes over it. */
@@ -86,6 +89,9 @@ export class Director {
 	#mixer: AudioMixer | undefined;
 	#voice: Promise<void> = Promise.resolve();
 	#speech: Promise<void> = Promise.resolve();
+	#prefetcher: Prefetcher;
+	/** The scene prefetched for last, so a scene's reach is read once per entry. */
+	#prefetched: string | undefined;
 
 	/**
 	 * Creates a director drawing through `host`; nothing plays until {@link Director.begin}.
@@ -94,6 +100,12 @@ export class Director {
 	 */
 	constructor(host: DirectorHost) {
 		this.#host = host;
+		this.#prefetcher = new Prefetcher({ novel: () => host.novel(), mixer: () => this.mixer });
+	}
+
+	/** The prefetcher warming the scenes within reach, for a test to read what it started. */
+	get prefetcher(): Prefetcher {
+		return this.#prefetcher;
 	}
 
 	/** The mixer, created on first use in the browser. */
@@ -321,6 +333,7 @@ export class Director {
 		this.#cancel();
 		this.#sequence++;
 		this.#mixer?.dispose();
+		this.#prefetcher.dispose();
 		if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
 	}
 
@@ -382,6 +395,7 @@ export class Director {
 			sceneryTransition(frame.stage),
 			fast,
 		);
+		this.#prefetch(frame.scene, locale);
 		await this.#running.finished;
 		let stage = this.#host.stage();
 		if (stage !== null) {
@@ -416,6 +430,17 @@ export class Director {
 			return;
 		}
 		if (frame.type === "choice") this.#speak(this.#host.text(), locale);
+	}
+
+	/**
+	 * Prefetches the scenes within reach of a scene the play just entered. Skip mode and a play
+	 * that never leaves the scene prefetch nothing, so racing through scenes queues no work.
+	 */
+	#prefetch(scene: string, locale: string): void {
+		let depth = this.#host.prefetch();
+		if (depth === false || this.skipping || scene === this.#prefetched) return;
+		this.#prefetched = scene;
+		void this.#prefetcher.enter(scene, { depth, locale });
 	}
 
 	/** Advances a shown line on its own when skip or auto mode says so. */

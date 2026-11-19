@@ -960,6 +960,17 @@ Made while building step 3 of Phase 4, without a review, where this ADR left the
   player restores from the frame when the room closes, or one the room makes and disposes. Tracks
   have no declared title, so a track shows its key unless `musicTitles` (or `titles`) maps its id to
   a message key.
+- **Runtime prefetch lives in the director.** Each time a presented frame stands in a scene other
+  than the last one prefetched for, `NovelPlayer` calls `novel.reachable(scene, { depth, locale })`
+  (depth 1 by default, set with the `prefetch` prop, `false` for none), which also imports the
+  reachable modules. The files are warmed as the player uses them: images decoded through
+  `new Image()`, sounds and voices fetched and decoded into the mixer's buffer cache
+  (`AudioMixer.preload`), music and ambience left to the HTTP cache through `<link rel="prefetch">`,
+  since media elements stream them. Each URL is warmed once per player, `data:` and `blob:` URLs are
+  skipped, and the reader's locale picks each localized file.
+- **Prefetch never outruns the play.** At most four files warm at once; entering another scene drops
+  the files still waiting (those in flight finish), and frames shown in skip mode prefetch nothing,
+  so racing through scenes queues no work. A file that fails is left for the play to report.
 - **New labels** (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`,
   `sceneReplay`, `loading`, `locked`, `unknownEnding`, `noMemories`, `play`, `stop`,
   `endReplay`) default to English like the rest.

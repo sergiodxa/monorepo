@@ -18,6 +18,7 @@ import type { SceneDeclaration } from "../declarations.js";
 import type { CustomFrame, Ending, GameState, ReplayScope, Reply } from "../frames.js";
 import type { Novel, StartOptions } from "../novel.js";
 
+import type { AudioMixer } from "./audio.js";
 import type { NovelLabels, NovelSettings, PlayerAction, StoredSettings } from "./settings.js";
 
 import { Backlog } from "./backlog.js";
@@ -57,6 +58,19 @@ export namespace NovelPlayer {
 
 	/** A component that renders a custom frame, written by the app. */
 	export type Interaction = (handle: Handle<InteractionProps>) => () => RemixNode;
+
+	/** Props of the library screens' dialogs. */
+	export interface LibraryProps {
+		novel: Novel;
+		ids: Record<"memories" | "gallery" | "music" | "endings" | "chapters" | "scenes", string>;
+		/** The screen open now and the persistent data it reads. */
+		open: { id: string; persistent: unknown } | undefined;
+		labels: NovelLabels;
+		mixer: AudioMixer;
+		musicTitles: Readonly<Record<string, string>> | undefined;
+		onToggle: (id: string, open: boolean) => void;
+		onReplay: (scene: SceneDeclaration, scope: ReplayScope) => void;
+	}
 
 	/** Props of a library screen's dialog. */
 	export interface ScreenProps {
@@ -110,6 +124,13 @@ export namespace NovelPlayer {
 		 * @default true
 		 */
 		extras?: boolean;
+		/**
+		 * How many jumps ahead to prefetch when the play enters a scene: its modules, images,
+		 * sounds, voices and music. `false` prefetches nothing.
+		 *
+		 * @default 1
+		 */
+		prefetch?: number | false;
 		/** Each music track's title as a message key, by asset id, for the music room. */
 		musicTitles?: Readonly<Record<string, string>>;
 		/** Markup elements for lines, beside `b`, `i`, `shake`, `speed` and `pause`. */
@@ -165,6 +186,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 			root?.querySelector("[data-novel-textbox], [data-novel-choices]")?.textContent?.trim() ?? "",
 		settings: () => settings,
 		onEnding: (ending) => handle.props.onEnding?.(ending),
+		prefetch: () => handle.props.prefetch ?? 1,
 	});
 
 	handle.signal.addEventListener("abort", () => director.dispose());
@@ -367,6 +389,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 			labels: labelOverrides,
 			markup,
 			extras: showExtras = true,
+			prefetch: _prefetch,
 			musicTitles,
 			mix,
 			...rest
@@ -567,91 +590,16 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 					onChange={changeSettings}
 				/>
 				{showExtras ? (
-					<>
-						<Screen
-							id={extras.memories}
-							title={labels.memories}
-							closeLabel={labels.close}
-							open={screen?.id === extras.memories}
-							onToggle={(open) => toggleScreen(extras.memories, open)}
-						>
-							<Memories
-								novel={handle.props.novel}
-								persistent={screen?.persistent}
-								labels={labels}
-								onReplayVoice={(line) => {
-									if (line.voice === null) return;
-									void director.mixer.resume();
-									void director.mixer.playVoice(line.voice);
-								}}
-							/>
-						</Screen>
-						<Screen
-							id={extras.gallery}
-							title={labels.gallery}
-							closeLabel={labels.close}
-							open={screen?.id === extras.gallery}
-							onToggle={(open) => toggleScreen(extras.gallery, open)}
-						>
-							<Gallery novel={handle.props.novel} persistent={screen?.persistent} labels={labels} />
-						</Screen>
-						<Screen
-							id={extras.music}
-							title={labels.musicRoom}
-							closeLabel={labels.close}
-							open={screen?.id === extras.music}
-							onToggle={(open) => toggleScreen(extras.music, open)}
-						>
-							<MusicRoom
-								novel={handle.props.novel}
-								persistent={screen?.persistent}
-								mixer={director.mixer}
-								titles={musicTitles}
-								labels={labels}
-							/>
-						</Screen>
-						<Screen
-							id={extras.endings}
-							title={labels.endings}
-							closeLabel={labels.close}
-							open={screen?.id === extras.endings}
-							onToggle={(open) => toggleScreen(extras.endings, open)}
-						>
-							<EndingsList
-								novel={handle.props.novel}
-								persistent={screen?.persistent}
-								labels={labels}
-							/>
-						</Screen>
-						<Screen
-							id={extras.chapters}
-							title={labels.chapterSelect}
-							closeLabel={labels.close}
-							open={screen?.id === extras.chapters}
-							onToggle={(open) => toggleScreen(extras.chapters, open)}
-						>
-							<ChapterSelect
-								novel={handle.props.novel}
-								persistent={screen?.persistent}
-								labels={labels}
-								onSelect={(scene) => startReplay(scene, "chapter")}
-							/>
-						</Screen>
-						<Screen
-							id={extras.scenes}
-							title={labels.sceneReplay}
-							closeLabel={labels.close}
-							open={screen?.id === extras.scenes}
-							onToggle={(open) => toggleScreen(extras.scenes, open)}
-						>
-							<SceneReplay
-								novel={handle.props.novel}
-								persistent={screen?.persistent}
-								labels={labels}
-								onSelect={(scene) => startReplay(scene, "scene")}
-							/>
-						</Screen>
-					</>
+					<LibraryScreens
+						novel={handle.props.novel}
+						ids={extras}
+						open={screen}
+						labels={labels}
+						mixer={director.mixer}
+						musicTitles={musicTitles}
+						onToggle={toggleScreen}
+						onReplay={startReplay}
+					/>
 				) : null}
 			</div>
 		);
@@ -681,6 +629,99 @@ function Screen(handle: Handle<NovelPlayer.ScreenProps>) {
 				<div mix={css({ maxBlockSize: "65vh", overflowY: "auto" })}>{open ? children : null}</div>
 				<Dialog.Close commandfor={id} aria-label={closeLabel} />
 			</Dialog>
+		);
+	};
+}
+
+/**
+ * The library screens' dialogs. Each reads the persistent data the player took as it opened;
+ * chapter select and scene replay report the scene to replay and how far.
+ */
+function LibraryScreens(handle: Handle<NovelPlayer.LibraryProps>) {
+	return () => {
+		let { novel, ids, open, labels, mixer, musicTitles, onToggle, onReplay } = handle.props;
+		return (
+			<>
+				<Screen
+					id={ids.memories}
+					title={labels.memories}
+					closeLabel={labels.close}
+					open={open?.id === ids.memories}
+					onToggle={(shown) => onToggle(ids.memories, shown)}
+				>
+					<Memories
+						novel={novel}
+						persistent={open?.persistent}
+						labels={labels}
+						onReplayVoice={(line) => {
+							if (line.voice === null) return;
+							void mixer.resume();
+							void mixer.playVoice(line.voice);
+						}}
+					/>
+				</Screen>
+				<Screen
+					id={ids.gallery}
+					title={labels.gallery}
+					closeLabel={labels.close}
+					open={open?.id === ids.gallery}
+					onToggle={(shown) => onToggle(ids.gallery, shown)}
+				>
+					<Gallery novel={novel} persistent={open?.persistent} labels={labels} />
+				</Screen>
+				<Screen
+					id={ids.music}
+					title={labels.musicRoom}
+					closeLabel={labels.close}
+					open={open?.id === ids.music}
+					onToggle={(shown) => onToggle(ids.music, shown)}
+				>
+					<MusicRoom
+						novel={novel}
+						persistent={open?.persistent}
+						mixer={mixer}
+						titles={musicTitles}
+						labels={labels}
+					/>
+				</Screen>
+				<Screen
+					id={ids.endings}
+					title={labels.endings}
+					closeLabel={labels.close}
+					open={open?.id === ids.endings}
+					onToggle={(shown) => onToggle(ids.endings, shown)}
+				>
+					<EndingsList novel={novel} persistent={open?.persistent} labels={labels} />
+				</Screen>
+				<Screen
+					id={ids.chapters}
+					title={labels.chapterSelect}
+					closeLabel={labels.close}
+					open={open?.id === ids.chapters}
+					onToggle={(shown) => onToggle(ids.chapters, shown)}
+				>
+					<ChapterSelect
+						novel={novel}
+						persistent={open?.persistent}
+						labels={labels}
+						onSelect={(scene) => onReplay(scene, "chapter")}
+					/>
+				</Screen>
+				<Screen
+					id={ids.scenes}
+					title={labels.sceneReplay}
+					closeLabel={labels.close}
+					open={open?.id === ids.scenes}
+					onToggle={(shown) => onToggle(ids.scenes, shown)}
+				>
+					<SceneReplay
+						novel={novel}
+						persistent={open?.persistent}
+						labels={labels}
+						onSelect={(scene) => onReplay(scene, "scene")}
+					/>
+				</Screen>
+			</>
 		);
 	};
 }

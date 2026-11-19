@@ -183,6 +183,16 @@ export class AudioMixer {
 		}
 	}
 
+	/**
+	 * Fetches and decodes a sound or voice ahead of its line, so playing it later starts at once.
+	 *
+	 * @param url - The file.
+	 * @returns Once the file is decoded, or failed to load.
+	 */
+	async preload(url: string): Promise<void> {
+		await this.#buffer(url);
+	}
+
 	/** Stops the voice, which advancing past its line does. */
 	stopVoice(): void {
 		let voice = this.#voice;
