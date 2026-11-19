@@ -9,3 +9,5 @@
 
 export * from "./mixins/map-link.js";
 export * from "./map-canvas.js";
+export * from "./map.js";
+export * from "./engine.js";
