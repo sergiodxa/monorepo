@@ -28,6 +28,7 @@ const NAMESPACES = [
 	"commerce",
 	"map",
 	"travel",
+	"finance",
 ];
 
 /** The helper subpaths every kit shares. */

@@ -2533,6 +2533,7 @@
         "@sdxc/highlight": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/iife": "workspace:*",
+        "@sdxc/money": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/uuid": "workspace:*",
       },

@@ -217,6 +217,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 
 - `Alert` — an inline status panel.
 - `Badge`, `TagGroup` — a status pill, and a labeled set of removable pills.
+- `Amount` — money from integer minor units and an ISO code, written by `@sdxc/money` in any locale, in a `<data>` element.
 - `Spinner` — a busy indicator.
 - `LabelChip` — a label pill in any colour whose text stays readable in both schemes.
 
@@ -405,9 +406,6 @@ Dashboard and workspace components.
 - `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
   pointer-positioned menu.
 - `PageHeader` — a screen's title row and tabs; tabs that overflow fold into a More menu.
-- `Amount` — money from integer minor units and an ISO code, formatted by `Intl`; `formatAmount()` gives the text.
-- `Ledger` — money movements grouped by day, each day headed by its total, each row one link.
-- `PaymentCard` — a drawn card face with a masked number, a chip or "Virtual" tag, and a frozen state.
 - `ProfilePicker` — a shared account's "who is using this?" grid; each `.Profile` is a submit button.
 - `CommandPalette` — a ⌘K command list; `CommandPalette.Finder` is a fuzzy file finder page.
 - `FilterMenu` — a filterable popover of links, radios or checkboxes, posted as a form on close.
@@ -513,6 +511,13 @@ Booking a stay or a trip.
 - `PriceBreakdown` — a receipt `<dl>` of `.Line`s (`detail`, `tone="discount"`, a named `<output>`)
   and a bold `.Total`.
 
+
+### Finance (`@sdxc/ui/finance`)
+
+Banking, budgeting and wallets.
+
+- `Ledger` — money movements grouped by day, each day headed by its total, each row one link.
+- `PaymentCard` — a drawn card face with a masked number, a chip or "Virtual" tag, and a frozen state.
 ### Component helpers
 
 - `readFormContext(handle): Form.Context | undefined` and

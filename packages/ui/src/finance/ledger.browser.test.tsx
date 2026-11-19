@@ -13,7 +13,8 @@ import type { RenderResult } from "remix/component/test";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { Amount } from "./amount.js";
+import { Amount } from "../components/amount.js";
+
 import { Ledger } from "./ledger.js";
 
 import "../reset.css";

@@ -1,7 +1,6 @@
 /**
- * Formats amounts in a real browser: each currency's own decimals, the true minus, the
- * ledger sign and its tone, smaller cents and the machine-readable value, so a list of
- * mixed currencies reads right in any locale.
+ * Draws amounts in a real browser: the machine-readable value, tabular unwrapped figures,
+ * the ledger sign's tone, and smaller cents that leave the text whole, yen included.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,7 +12,7 @@ import type { RenderResult } from "remix/component/test";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { Amount, currencyExponent, formatAmount } from "./amount.js";
+import { Amount } from "./amount.js";
 
 import "../reset.css";
 
@@ -32,35 +31,6 @@ function mount(node: JSX.Element): HTMLDataElement {
 	mounted = render(node, { container: host });
 	return host.querySelector<HTMLDataElement>('[data-slot="amount"]')!;
 }
-
-describe("formatAmount", () => {
-	test("reads each currency's own decimals from the platform", () => {
-		expect(currencyExponent("EUR")).toBe(2);
-		expect(currencyExponent("JPY")).toBe(0);
-		expect(currencyExponent("BHD")).toBe(3);
-		expect(formatAmount(128000, "JPY")).toBe("¥128,000");
-		expect(formatAmount(1234, "BHD", { display: "code" })).toBe("BHD 1.234");
-	});
-
-	test("writes a negative amount with a true minus", () => {
-		expect(formatAmount(-129900, "EUR", { locale: "en-IE" })).toBe("−€1,299.00");
-	});
-
-	test("follows the locale's grouping and symbol position", () => {
-		expect(formatAmount(129950, "EUR", { locale: "de-DE" })).toBe("1.299,50 €");
-	});
-
-	test("ledger marks money in and shows money out as a plain figure", () => {
-		expect(formatAmount(4500, "GBP", { sign: "ledger" })).toBe("+£45.00");
-		expect(formatAmount(-4500, "GBP", { sign: "ledger" })).toBe("£45.00");
-		expect(formatAmount(-4500, "GBP", { sign: "always" })).toBe("−£45.00");
-		expect(formatAmount(-4500, "GBP", { sign: "never" })).toBe("£45.00");
-	});
-
-	test("abbreviates a large amount in compact notation", () => {
-		expect(formatAmount(1250000, "USD", { compact: true })).toBe("$12.5K");
-	});
-});
 
 describe("Amount", () => {
 	test("carries the decimal figure as its machine-readable value", () => {

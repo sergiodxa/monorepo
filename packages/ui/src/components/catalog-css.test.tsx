@@ -22,7 +22,7 @@ import { describe, expect, test } from "vitest";
 const MODULES = import.meta.glob<Record<string, unknown>>(
 	[
 		"./*.tsx",
-		"../{landing,docs,chat,color,app,video,map,travel}/*.tsx",
+		"../{landing,docs,chat,color,app,video,map,travel,finance}/*.tsx",
 		"!./*.test.tsx",
 		"!../*/*.test.tsx",
 	],
@@ -95,6 +95,7 @@ const PROBE_PROPS = {
  * different shape, keyed by the component's export name and spread over {@link PROBE_PROPS}.
  */
 const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
+	Amount: { value: 1299, currency: "EUR" },
 	Autocomplete: { id: "a", label: "a", options: [{ value: "a", label: "a", description: "a" }] },
 	Lightbox: { id: "a", label: "a", photos: [{ alt: "a" }], lightbox: "a" },
 	RangeMonths: {

@@ -27,6 +27,8 @@
 		"./map/*": "./src/map/*.tsx",
 		"./travel": "./src/travel/index.ts",
 		"./travel/*": "./src/travel/*.tsx",
+		"./finance": "./src/finance/index.ts",
+		"./finance/*": "./src/finance/*.tsx",
 		"./animations": "./src/animations/index.ts",
 		"./behaviors": "./src/behaviors/index.ts",
 		"./mixins": "./src/mixins/index.ts",
@@ -45,6 +47,7 @@
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/iife": "workspace:*",
+		"@sdxc/money": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/uuid": "workspace:*"
 	},
