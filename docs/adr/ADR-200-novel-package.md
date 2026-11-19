@@ -573,9 +573,9 @@ functions and cannot travel from the server as props. The page renders that entr
 prefetch links for the opening scene:
 
 ```tsx
-router.get(routes.play, (ctx) =>
+router.get(routes.play, async (ctx) =>
 	ctx.render(
-		<Document assets={ctx.assets} links={novel.links(scenes.prologue.opening, { depth: 1 })}>
+		<Document assets={ctx.assets} links={await novel.links(scenes.prologue.opening, { depth: 1 })}>
 			<Game />
 		</Document>,
 	),
@@ -741,8 +741,9 @@ transitions are presentation the player configures.
 - [x] Phase 3: Static checks and exploration
 - [ ] Phase 4: The player UI (steps 1 and 2 done: the player, stage, textbox, menus, audio, auto, skip,
       backlog, rollback, saves, settings and full screen; step 3's screens remain)
-- [ ] Phase 5: Loading and developer tools
-- [ ] Phase 6: Offline
+- [x] Phase 5: Loading and developer tools (the player's runtime prefetch, which reads
+      `novel.reachable()`, is wired with the player)
+- [x] Phase 6: Offline
 
 ## Notes
 
@@ -914,3 +915,71 @@ Made while building step 3 of Phase 4, without a review, where this ADR left the
   the speed the reader chose, and `{#pause ms=…/}` holds for `ms` (400ms without it). A literal option
   arrives as a string and a variable one as its value; anything that is not a positive number falls
   back to the default.
+
+### Phase 5 and 6 decisions
+
+Made while building Phases 5 and 6, without a review, where this ADR left the detail open:
+
+- **`novel.links()` is async.** A lazy scene's directives exist only once its module is imported,
+  so the server awaits the starting scene and every scene within `depth` (1 by default); the module
+  stays cached for every later request. A scene that fails to load or has no module contributes no
+  links, since links are a hint.
+- **What is preloaded.** The starting scene's backgrounds, images and character images are
+  `preload as="image"`, and its sounds `preload as="fetch" crossorigin="anonymous"`, which matches
+  the player's own `fetch()`. Its music and ambience (streamed by media elements, which no preload
+  matches) and its voices (one per line, too many to preload) are `prefetch`, as is every file of a
+  farther scene. Each URL is listed once, at its first use; `data:` and `blob:` URLs are left out.
+  A character entering without an expression lists its first sprite, the one the engine draws.
+- **Localized files.** With `locale`, a map lists the exact locale's URL, then its language's, then
+  the first one, the fallback the player uses; without it, every locale's URL.
+- **`novel.reachable(scene, { depth, locale })`** answers each reached scene with its depth and its
+  files (kind, id and URL). Reaching a scene imports its module, which is how a player prefetches
+  scene modules: no separate list of loaders exists.
+- **Developer tools are a connection plus a panel.** `createDevTools(novel, { restart })` listens to
+  every event, follows the last play an event fired for (or one handed to `attach`), and keeps a
+  log of 200 events. Every edited play reaches the app as `StartOptions` through `restart`, since
+  the player owns its play; the app remounts `NovelPlayer` with them as `start`. The followed play
+  is dropped on a restart until the new play fires its first event.
+- **Hot reload is `devtools.reload(modules)`**, called from the app's
+  `import.meta.hot.accept([...scene paths], …)`, since Vite needs the accepted paths written
+  literally. It reads the followed play's save before swapping (the anchor is read from the old
+  module), replaces each scene through the novel's internals, and restarts from that save only when
+  the play stands in or was called from a replaced scene; a play elsewhere reaches the new module
+  when it next loads the scene. It was tested without a dev server, through `reload()`.
+- **Engine changes.** `novel.links()` and `novel.reachable()` are new public methods; the internals
+  `check()` and `explore()` read gained `voice()` and `replace()`, and `map()` shares its binding
+  with `replace()`. No event was added.
+- **The jump editor validates against the state schema** before restarting, and keeps the
+  followed play's persistent data. Missing messages are found statically (every line, prompt,
+  label, reason and ending, then titles, names and captions) rather than by playing, so the panel
+  answers without `explore()`. The panel's labels are English: it is a developer tool.
+- **The flowchart uses `@sdxc/diagram/ui`**, which draws Mermaid in the browser as well: one box per
+  scene grouped by chapter, a solid arrow per `goto`, a dotted one per `call`, a slanted box for a
+  scene with no module and a rounded node per ending. It is drawn on request, since reading it
+  imports every lazy scene; `@sdxc/diagram` became a dependency of the package.
+- **Offline has two entries.** `@sdxc/novel/offline` is the page side (`registerOffline`,
+  `offlineAssets`) and `@sdxc/novel/offline/worker` the worker side (`serveOffline`,
+  `OfflineCache` and the policy functions), so a worker script imports none of the engine.
+- **The page declares the files.** `registerOffline` posts every declared asset in every locale and
+  every character sprite and layer, plus `extra` URLs (voice files, which only the `voice` function
+  finds), and posts again when a new worker takes control. The worker keeps that list and each
+  entry's size and last use in an index stored in its own cache, so it survives the worker being
+  stopped; a new declaration deletes cached files no longer declared, such as an older build's.
+- **Scene module chunks are named by the app** through `serveOffline({ modules })`, a URL rule such
+  as Vite's `chunkFileNames` under `/assets/scenes/`, since neither the page nor the worker can learn
+  a lazy module's URL. Without it no module is cached.
+- **Hashed means a Vite build's `/assets/<name>-<8 characters>.<ext>`** by default, overridable with
+  `immutable`. A miss on an unhashed file only costs a revalidation, so the rule errs toward it.
+  Unhashed files are fetched with `cache: "no-cache"` and served from the cache only when the
+  network fails.
+- **Only a whole `200` is stored**: no opaque, failed or partial response, and no request with a
+  `Range` header, which media elements send; the file is stored when it is next fetched whole.
+- **Versions.** `version` is required and names the cache (`sdxc-novel:<version>`); a new worker
+  calls `skipWaiting()`, deletes every other `sdxc-novel:` cache on activation and claims the open
+  pages. Caches an app opens itself are never touched.
+- **The budget evicts the least recently used files** after each store, never the file just
+  stored; hits update an entry's last use.
+- **No test registers a real service worker.** The browser project serves MSW's worker at the root
+  scope and nothing under a scope a package worker could claim, so the worker's wiring is covered by
+  its pure parts: the policy as unit tests and `OfflineCache` against Chromium's own Cache Storage,
+  with MSW as the network.
