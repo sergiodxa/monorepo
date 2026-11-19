@@ -110,6 +110,7 @@ describe("Parley screens", () => {
 		let body = await page("c/launch-v3");
 		expect(body).toContain("<pre");
 		expect(body).toContain('href="https://sprout.example.com/whats-new"');
+		expect(body).toContain(">https://sprout.example.com/whats-new<");
 		expect(body).toContain("onboarding-copy-v4.pdf");
 		expect(body).toContain('data-mention="sam"');
 	});
@@ -178,6 +179,10 @@ describe("Parley messages", () => {
 	});
 
 	test("a reaction toggles the visitor in and out", async () => {
+		let chip = (body: string, emoji: string) =>
+			[...body.matchAll(/<button\b[^>]*data-slot="reaction"[^>]*>/g)]
+				.map(([tag]) => tag)
+				.find((tag) => tag.includes(`data-emoji="${emoji}"`) && body.indexOf(tag) > 0) ?? "";
 		let added = cookiesFrom(
 			await post("c/general", {
 				intent: "react",
@@ -187,7 +192,9 @@ describe("Parley messages", () => {
 				return: "c/general",
 			}),
 		);
-		expect(await page("c/general", added)).toContain("Party popper, you reacted");
+		let body = await page("c/general", added);
+		let g5 = body.slice(body.indexOf('id="msg-g5"'));
+		expect(chip(g5, "🎉")).toContain('aria-pressed="true"');
 		let removed = cookiesFrom(
 			await post("c/general", {
 				intent: "react",
@@ -197,8 +204,38 @@ describe("Parley messages", () => {
 				return: "c/general",
 			}),
 		);
-		let body = await page("c/general", removed);
-		expect(body).toContain("Folded hands, 1 reaction");
+		let g1 = (await page("c/general", removed)).split('id="msg-g1"')[1] ?? "";
+		expect(chip(g1, "🙏")).toContain('aria-pressed="false"');
+	});
+
+	test("a custom emoji reacts like any other, and an unknown one is refused", async () => {
+		let response = await post("c/random", {
+			intent: "react",
+			id: "r3",
+			emoji: ":shipit:",
+			on: "1",
+			return: "c/random?react=r3",
+		});
+		expect(locationOf(response)).toBe(`${href("c/random")}#msg-r3`);
+		let body = await page("c/random", cookiesFrom(response));
+		expect(body).toContain('data-emoji=":shipit:"');
+		expect(body).toContain("/demos/parley/emoji/shipit.svg");
+		let refused = await post("c/random", { intent: "react", id: "r3", emoji: "<b>", on: "1" });
+		expect(refused.status).toBe(400);
+	});
+
+	test("the reaction page is a form of submit buttons, one per emoji", async () => {
+		let body = await page("c/launch-v3?react=l7");
+		expect(body).toContain("Add reaction");
+		expect(body).toMatch(/<button[^>]*type="submit"[^>]*name="emoji"[^>]*value=":sprout:"/);
+		expect(body).toMatch(/<button[^>]*type="submit"[^>]*name="emoji"[^>]*value="🎉"/);
+	});
+
+	test("shortcodes expand and Fernhill's custom emoji draw as images", async () => {
+		let body = await page("c/general");
+		expect(body).toContain("Office heating is fixed 🎉");
+		expect(body).not.toContain(":tada:");
+		expect(body).toMatch(/<img[^>]*src="\/demos\/parley\/emoji\/fernhill.svg"/);
 	});
 
 	test("the visitor edits and deletes their own message, and Undo brings it back", async () => {

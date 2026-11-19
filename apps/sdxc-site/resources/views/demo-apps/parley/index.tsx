@@ -45,11 +45,17 @@ import {
 	findConversation,
 	href,
 } from "~/resources/views/demo-apps/parley/data";
+import { isReactionKey } from "~/resources/views/demo-apps/parley/emoji";
 import { HomeScreen, SearchScreen } from "~/resources/views/demo-apps/parley/home";
 import { liveStream } from "~/resources/views/demo-apps/parley/live-stream";
 import { messageAnchor, withoutParam } from "~/resources/views/demo-apps/parley/messages";
 import { findEntry, search, unreadByKey } from "~/resources/views/demo-apps/parley/model";
-import { DetailsPanel, ThreadPanel, detailsTab } from "~/resources/views/demo-apps/parley/panel";
+import {
+	DetailsPanel,
+	ReactPanel,
+	ThreadPanel,
+	detailsTab,
+} from "~/resources/views/demo-apps/parley/panel";
 import { ParleyApp, ParleyPane, SHELL_COOKIE } from "~/resources/views/demo-apps/parley/shell";
 import {
 	MESSAGE_LIMIT,
@@ -136,6 +142,7 @@ const SCREENS = [
 	"c/launch-v3?details=pins",
 	"d/mira?details=about",
 	"c/engineering?edit=e2",
+	"c/launch-v3?react=l7",
 ];
 
 /** The sidebar row a page marks as the one shown. */
@@ -237,6 +244,8 @@ function route(request: DemoAppRequest, draft?: string): DemoAppScreen {
 	let editing = params.get("edit") ?? undefined;
 	let threadId = params.get("thread");
 	let thread = threadId === null ? undefined : findEntry(conversation, threadId, state, now);
+	let reactId = params.get("react");
+	let reacting = reactId === null ? undefined : findEntry(conversation, reactId, state, now);
 	let tab = detailsTab(params.get("details"));
 	let panel: Panel | undefined;
 	let panelContent: RemixNode | undefined;
@@ -251,6 +260,9 @@ function route(request: DemoAppRequest, draft?: string): DemoAppScreen {
 				editing={editing}
 			/>
 		);
+	} else if (reacting !== undefined) {
+		panel = { kind: "react", entry: reacting };
+		panelContent = <ReactPanel conversation={conversation} entry={reacting} place={place} />;
 	} else if (tab !== undefined) {
 		panel = { kind: "details", tab };
 		panelContent = (
@@ -412,11 +424,11 @@ function submitConversation(
 
 	if (intent === "react") {
 		let emoji = field(form, "emoji");
-		if (emoji === "" || emoji.length > 16) return null;
+		if (!isReactionKey(emoji)) return null;
 		let on = field(form, "on") !== "0";
 		let toggles = { ...state.reactions[entry.id], [emoji]: on };
 		return {
-			page: back,
+			page: withoutParam(back, "react"),
 			hash,
 			cookies: [reactionsCookie({ ...state.reactions, [entry.id]: toggles })],
 		};

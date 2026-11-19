@@ -20,7 +20,6 @@ import {
 } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { Button, LinkButton, Menu } from "@sdxc/ui";
-import { EMOJI, EmojiPicker } from "@sdxc/ui/chat/emoji-picker";
 import { Marker } from "@sdxc/ui/chat/marker";
 import { MessageGroup } from "@sdxc/ui/chat/message-group";
 import { ReactionBar } from "@sdxc/ui/chat/reaction-bar";
@@ -28,47 +27,16 @@ import { ReactionBar } from "@sdxc/ui/chat/reaction-bar";
 import type { Day, Entry, ReactionView, Run } from "~/resources/views/demo-apps/parley/model";
 
 import {
-	EMOJI_NAMES,
 	ME_HANDLE,
 	QUICK_REACTIONS,
 	actionHref,
 	href,
 } from "~/resources/views/demo-apps/parley/data";
+import { customEmoji, emojiLabel } from "~/resources/views/demo-apps/parley/emoji";
 import { MESSAGE_LABELS } from "~/resources/views/demo-apps/parley/labels";
 import { timeOf, whenOf } from "~/resources/views/demo-apps/parley/model";
 import { Face, Files, MessageText } from "~/resources/views/demo-apps/parley/parts";
 import { TO_MAIN } from "~/resources/views/demo-apps/parley/shell";
-
-/** The emoji a message's reaction pickers offer: a short, common set, kept small for a long log. */
-const REACTION_CHARS = new Set([
-	"👍",
-	"👎",
-	"🎉",
-	"😂",
-	"😍",
-	"🙏",
-	"👀",
-	"🔥",
-	"❤️",
-	"✅",
-	"🚀",
-	"💯",
-	"🙌",
-	"😅",
-	"🤔",
-	"😮",
-	"😢",
-	"👏",
-	"💡",
-	"📌",
-	"🌱",
-	"🍅",
-	"☕",
-	"🐈",
-]);
-
-/** The picker entries for {@link REACTION_CHARS}, in the picker's own order and groups. */
-const REACTION_EMOJI = EMOJI.filter((entry) => REACTION_CHARS.has(entry.char));
 
 /** The element id a message's line takes, which a `#hash` and the thread panel point at. */
 export function messageAnchor(id: string): string {
@@ -111,22 +79,39 @@ function Hidden(handle: Handle<{ fields: Record<string, string> }>) {
 	);
 }
 
-/** What a reaction chip is called aloud: the emoji's name, its count and whether you're in it. */
-function reactionLabel(reaction: ReactionView): string {
-	let name = EMOJI_NAMES[reaction.emoji] ?? reaction.emoji;
-	let count = reaction.people.length;
-	let others = reaction.mine ? count - 1 : count;
-	if (reaction.mine)
-		return others === 0 ? `${name}, you reacted` : `${name}, you and ${others} more`;
-	return `${name}, ${count} ${count === 1 ? "reaction" : "reactions"}`;
-}
-
 /** Who reacted, for the chip's tooltip. */
 function reactors(reaction: ReactionView): string {
 	let names = reaction.people.map((person) =>
 		person.handle === ME_HANDLE ? "You" : person.name.split(" ")[0],
 	);
 	return `${names.join(", ")} reacted with ${reaction.emoji}`;
+}
+
+/** The address that opens the reaction picker for a message, without script. */
+export function reactHref(place: Place, id: string): string {
+	return href(withParam(withoutParam(withoutParam(place.back, "thread"), "details"), "react", id));
+}
+
+/** The control that opens the emoji picker to react to a message: a link the island upgrades. */
+function AddReaction(handle: Handle<{ id: string; place: Place; size: number }>) {
+	return () => {
+		let { id, place, size } = handle.props;
+		return (
+			<LinkButton
+				href={reactHref(place, id)}
+				{...TO_MAIN}
+				data-emoji-react={id}
+				variant="ghost"
+				color="neutral"
+				size="sm"
+				aria-label={MESSAGE_LABELS.react}
+				title={MESSAGE_LABELS.react}
+				mix={[raw({ inlineSize: "2rem", paddingInline: "0" })]}
+			>
+				<FaceSlightlySmilingPlusIcon size={size} aria-hidden="true" />
+			</LinkButton>
+		);
+	};
 }
 
 namespace Reactions {
@@ -137,13 +122,13 @@ namespace Reactions {
 }
 
 /**
- * A message's reactions: each chip a form that toggles the visitor's reaction, and the picker
- * at the end that adds a new one, also a form, so both post without script.
+ * A message's reactions: each chip a form that toggles the visitor's reaction, the add button,
+ * and the template a reaction picked in place is cloned from. The row hides while empty, and is
+ * always drawn so a first reaction has somewhere to land.
  */
 function Reactions(handle: Handle<Reactions.Props>) {
 	return () => {
 		let { entry, place } = handle.props;
-		if (entry.reactions.length === 0) return null;
 		let fields = { intent: "react", id: entry.id, return: place.back };
 		return (
 			<ReactionBar aria-label={MESSAGE_LABELS.reactions}>
@@ -151,33 +136,25 @@ function Reactions(handle: Handle<Reactions.Props>) {
 					<form method="post" action={actionHref(place.page)}>
 						<Hidden fields={{ ...fields, emoji: reaction.emoji }} />
 						<ReactionBar.Reaction
-							name="on"
-							value={reaction.mine ? "0" : "1"}
 							emoji={reaction.emoji}
+							image={customEmoji(reaction.emoji)?.src}
+							label={emojiLabel(reaction.emoji)}
 							count={reaction.people.length}
 							pressed={reaction.mine}
-							aria-label={reactionLabel(reaction)}
 							title={reactors(reaction)}
 						/>
 					</form>
 				))}
 				<ReactionBar.Add>
-					<form method="post" action={actionHref(place.page)} mix={[raw({ display: "contents" })]}>
-						<Hidden fields={{ ...fields, on: "1" }} />
-						<EmojiPicker
-							id={`react-more-${entry.id}`}
-							name="emoji"
-							emoji={REACTION_EMOJI}
-							labels={{
-								trigger: MESSAGE_LABELS.react,
-								search: MESSAGE_LABELS.reactSearch,
-								empty: "No emoji match",
-							}}
-							trigger={<FaceSlightlySmilingPlusIcon size={14} aria-hidden="true" />}
-							variant="ghost"
-						/>
-					</form>
+					<AddReaction id={entry.id} place={place} size={14} />
 				</ReactionBar.Add>
+				<ReactionBar.Template>
+					<form method="post" action={actionHref(place.page)}>
+						<Hidden fields={fields} />
+						<input type="hidden" name="emoji" value="" data-reaction-emoji="" />
+						<ReactionBar.Reaction emoji="" label="" count={0} />
+					</form>
+				</ReactionBar.Template>
 			</ReactionBar>
 		);
 	};
@@ -207,36 +184,37 @@ function Actions(handle: Handle<Actions.Props>) {
 		return (
 			<>
 				<MessageGroup.Actions aria-label={MESSAGE_LABELS.actions}>
-					<form method="post" action={actionHref(place.page)}>
+					<form method="post" action={actionHref(place.page)} data-quick-react={entry.id}>
 						<Hidden fields={{ ...fields, intent: "react", on: "1" }} />
-						{QUICK_REACTIONS.slice(0, 3).map((emoji) => (
-							<Button
-								type="submit"
-								name="emoji"
-								value={emoji}
-								variant="ghost"
-								color="neutral"
-								size="sm"
-								aria-label={`React with ${EMOJI_NAMES[emoji] ?? emoji}`}
-								title={EMOJI_NAMES[emoji]}
-								mix={[iconButton]}
-							>
-								<span mix={[raw({ fontSize: "1rem" })]}>{emoji}</span>
-							</Button>
-						))}
-						<EmojiPicker
-							id={`react-${entry.id}`}
-							name="emoji"
-							emoji={REACTION_EMOJI}
-							labels={{
-								trigger: MESSAGE_LABELS.react,
-								search: MESSAGE_LABELS.reactSearch,
-								empty: "No emoji match",
-							}}
-							trigger={<FaceSlightlySmilingPlusIcon size={16} aria-hidden="true" />}
-							placement="bottom-end"
-						/>
+						{QUICK_REACTIONS.map((emoji) => {
+							let custom = customEmoji(emoji);
+							return (
+								<Button
+									type="submit"
+									name="emoji"
+									value={emoji}
+									data-label={emojiLabel(emoji)}
+									variant="ghost"
+									color="neutral"
+									size="sm"
+									aria-label={`React with ${emojiLabel(emoji)}`}
+									title={emojiLabel(emoji)}
+									mix={[iconButton]}
+								>
+									{custom === undefined ? (
+										<span mix={[raw({ fontSize: "1rem" })]}>{emoji}</span>
+									) : (
+										<img
+											src={custom.src}
+											alt=""
+											mix={[raw({ inlineSize: "1.125rem", blockSize: "1.125rem" })]}
+										/>
+									)}
+								</Button>
+							);
+						})}
 					</form>
+					<AddReaction id={entry.id} place={place} size={16} />
 					{inThread ? null : (
 						<LinkButton
 							href={href(withParam(withoutParam(place.back, "details"), "thread", entry.id))}

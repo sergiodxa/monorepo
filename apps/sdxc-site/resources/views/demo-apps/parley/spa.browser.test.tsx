@@ -10,7 +10,7 @@
 import { http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 
 import type { MountedApp } from "~/app/test/spa-harness";
 
@@ -118,4 +118,60 @@ describe("Parley live", () => {
 		expect(typing?.hasAttribute("data-empty")).toBe(true);
 		expect(posted).toContain("intent=seen&live=0");
 	}, 20_000);
+});
+
+describe("Parley emoji", () => {
+	test("a quick reaction flips in place and posts in the background", async () => {
+		await page.viewport(1280, 800);
+		mounted = await mountApp(parley, "parley", "c/general");
+		let requests = mounted.requests.length;
+		let message = document.querySelector('[data-message="g5"]')!;
+		let quick = message.querySelector<HTMLButtonElement>('[data-quick-react] button[value="🎉"]');
+		quick?.click();
+		let chip = message.querySelector('[data-slot=reaction][data-emoji="🎉"]');
+		expect(chip?.getAttribute("aria-pressed")).toBe("true");
+		expect(chip?.querySelector("[data-reaction-count]")?.textContent).toBe("1");
+		await vi.waitFor(() => expect(posted.some((body) => body.includes("intent=react"))).toBe(true));
+		expect(mounted.requests).toHaveLength(requests);
+	});
+
+	test("the shared picker adds a reaction, custom emoji included", async () => {
+		await page.viewport(1280, 800);
+		mounted = await mountApp(parley, "parley", "c/launch-v3");
+		document.querySelector<HTMLElement>('[data-message="l5"] [data-emoji-react="l5"]')?.click();
+		let panel = document.getElementById("parley-emoji")!;
+		await vi.waitFor(() =>
+			expect(panel.querySelector('[data-emoji-cell][data-name="shipit"]')).not.toBeNull(),
+		);
+		expect(panel.matches(":popover-open")).toBe(true);
+		panel.querySelector<HTMLButtonElement>('[data-emoji-cell][data-name="shipit"]')!.click();
+		let chip = document.querySelector(
+			'[data-message="l5"] [data-slot=reaction][data-emoji=":shipit:"]',
+		);
+		expect(chip?.getAttribute("aria-pressed")).toBe("true");
+		expect(chip?.querySelector("img")?.getAttribute("src")).toBe("/demos/parley/emoji/shipit.svg");
+		expect(panel.matches(":popover-open")).toBe(false);
+		await vi.waitFor(() =>
+			expect(posted.some((body) => body.includes("emoji=%3Ashipit%3A"))).toBe(true),
+		);
+	});
+
+	test("the composer inserts a picked emoji and completes a typed shortcode", async () => {
+		await page.viewport(1280, 800);
+		mounted = await mountApp(parley, "parley", "c/design");
+		let field = document.querySelector<HTMLTextAreaElement>("#composer-c-design")!;
+		document.querySelector<HTMLElement>('[data-emoji-insert="composer-c-design"]')?.click();
+		let panel = document.getElementById("parley-emoji")!;
+		await vi.waitFor(() =>
+			expect(panel.querySelector('[data-emoji-cell][data-name="tada"]')).not.toBeNull(),
+		);
+		panel.querySelector<HTMLButtonElement>('[data-emoji-cell][data-name="tada"]')!.click();
+		expect(field.value).toBe("🎉");
+
+		await userEvent.type(field, " ship :tad");
+		let suggest = document.getElementById("composer-c-design-emoji-suggest")!;
+		await vi.waitFor(() => expect(suggest.textContent).toContain("tada"));
+		await userEvent.keyboard("{Enter}");
+		await vi.waitFor(() => expect(field.value).toBe("🎉 ship 🎉"));
+	});
 });

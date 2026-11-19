@@ -45,6 +45,7 @@ import {
 	findPerson,
 	href,
 } from "~/resources/views/demo-apps/parley/data";
+import { ParleyEmoji } from "~/resources/views/demo-apps/parley/emoji-panel";
 import {
 	HELP_LABELS,
 	PALETTE_LABELS,
@@ -374,6 +375,7 @@ export function ParleyApp(handle: Handle<ParleyApp.Props>) {
 					pane={pane ?? <MainFrame src={src} />}
 				/>
 				<MainFrameSync root={href()} />
+				<ParleyEmoji />
 				<ParleySwitcher />
 				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</>

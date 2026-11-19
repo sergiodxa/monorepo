@@ -9,16 +9,15 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { InfoIcon, PaperclipIcon, PinIcon, SearchIcon } from "@sdxc/icons";
+import { FaceSlightlySmilingIcon, InfoIcon, PaperclipIcon, PinIcon, SearchIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { media } from "@sdxc/u/responsive";
-import { Keyboard, LinkButton } from "@sdxc/ui";
+import { Button, Keyboard, LinkButton } from "@sdxc/ui";
 import { FileTrigger } from "@sdxc/ui/app/file-trigger";
 import { SplitView } from "@sdxc/ui/app/split-view";
 import { Composer } from "@sdxc/ui/chat/composer";
 import { ComposerFormat } from "@sdxc/ui/chat/composer-format";
 import { ComposerSubmit } from "@sdxc/ui/chat/composer-submit";
-import { EmojiPicker } from "@sdxc/ui/chat/emoji-picker";
 import { MentionMenu } from "@sdxc/ui/chat/mention-menu";
 import { MessageScroller } from "@sdxc/ui/chat/message-scroller";
 
@@ -29,6 +28,7 @@ import type { VisitorState } from "~/resources/views/demo-apps/parley/state";
 
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 import { MAIN_FRAME } from "~/resources/views/demo-apps/main-frame";
+import { ComposerField } from "~/resources/views/demo-apps/parley/composer-field";
 import {
 	ME_HANDLE,
 	PEOPLE,
@@ -53,6 +53,7 @@ export const SPLIT_COOKIE = "parley-split";
 /** The panel a conversation's address can open beside it. */
 export type Panel =
 	| { kind: "thread"; entry: Entry }
+	| { kind: "react"; entry: Entry }
 	| { kind: "details"; tab: "about" | "members" | "pins" };
 
 /** Everyone in the workspace as the mention list offers them, teammates first. */
@@ -123,18 +124,16 @@ export function ChatComposer(handle: Handle<ChatComposer.Props>) {
 					>
 						<ComposerFormat target={id} labels={COMPOSER_LABELS.format} />
 					</Composer.Toolbar>
-					<Composer.Input
+					<ComposerField
 						id={id}
 						name="text"
-						aria-label={placeholder}
+						label={placeholder}
 						placeholder={placeholder}
-						required
 						maxLength={600}
-						data-shortcut={parent === undefined ? "mod+/" : undefined}
-						data-shortcut-label={parent === undefined ? "Focus the message field" : undefined}
+						shortcut={parent === undefined ? "mod+/" : undefined}
+						shortcutLabel={parent === undefined ? "Focus the message field" : undefined}
 						defaultValue={draft}
 					/>
-
 					<MentionMenu
 						target={id}
 						people={mentionPeople(conversation)}
@@ -153,15 +152,24 @@ export function ChatComposer(handle: Handle<ChatComposer.Props>) {
 						>
 							<PaperclipIcon size={17} aria-hidden="true" />
 						</FileTrigger>
-						<EmojiPicker
-							id={`${id}-emoji`}
-							target={id}
-							labels={{
-								trigger: COMPOSER_LABELS.emoji,
-								search: COMPOSER_LABELS.emojiSearch,
-								empty: COMPOSER_LABELS.emojiEmpty,
-							}}
-						/>
+						<Button
+							type="button"
+							variant="ghost"
+							color="neutral"
+							size="sm"
+							data-emoji-insert={id}
+							aria-label={COMPOSER_LABELS.emoji}
+							title={COMPOSER_LABELS.emoji}
+							mix={[
+								raw({
+									inlineSize: "2rem",
+									paddingInline: "0",
+									"@media (scripting: none)": { display: "none" },
+								}),
+							]}
+						>
+							<FaceSlightlySmilingIcon size={17} aria-hidden="true" />
+						</Button>
 						<Composer.Hint>
 							<Keyboard>Enter</Keyboard> to send · <Keyboard>Shift</Keyboard>{" "}
 							<Keyboard>Enter</Keyboard> for a new line
@@ -435,7 +443,7 @@ export function ConversationScreen(handle: Handle<ConversationScreen.Props>) {
 				now={now}
 				place={place}
 				editing={editing}
-				current={panel?.kind === "thread" ? panel.entry.id : undefined}
+				current={panel?.kind === "details" ? undefined : panel?.entry.id}
 				draft={draft}
 			/>
 		);

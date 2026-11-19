@@ -9,6 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
+import { emojis } from "@sdxc/emoji/markdown";
 import {
 	FileCodeIcon,
 	FileIcon,
@@ -39,6 +40,13 @@ import {
 	findPerson,
 	href,
 } from "~/resources/views/demo-apps/parley/data";
+import { CATALOG, CUSTOM_EMOJI, customEmoji } from "~/resources/views/demo-apps/parley/emoji";
+
+/**
+ * Expands shortcodes and emoticons in a text node, except inside a link, where an address's
+ * `:/` stays as typed rather than turning into a face.
+ */
+const EMOJI_VISITOR = emojis(CATALOG);
 
 /** The scheme a mention or channel reference carries until the link renderer reads it. */
 const REFERENCE = "parley:";
@@ -173,24 +181,39 @@ const CHANNEL_NAMES = CHANNELS.map((channel) => channel.name).sort((a, b) => b.l
 
 /** Matches a mention or channel reference at a word's start. */
 const REFERENCE_PATTERN = new RegExp(
-	`(^|[\\s(])(@(?:${HANDLES.join("|")})|#(?:${CHANNEL_NAMES.join("|")}))\\b`,
+	`(^|[\\s(])(@(?:${HANDLES.join("|")})|#(?:${CHANNEL_NAMES.join("|")}))\\b|(:(?:${CUSTOM_EMOJI.map(
+		(entry) => entry.shortcodes.join("|"),
+	).join("|")}):)`,
 	"g",
 );
 
 /**
- * Splits a text node around its mentions and channel references, turning each into a link the
- * renderer draws as a chip. The link's own text drops the `@` or `#`, so the walk, which visits
- * it next, never splits it again; code spans and fences are separate nodes and stay untouched.
+ * Splits a text node around its mentions, channel references and custom emoji: a reference
+ * becomes a link the renderer draws as a chip, its text without the `@` or `#` so the walk never
+ * splits it again, and a custom `:name:` becomes its image. Code keeps its colons.
  */
 function references(node: Markdown.Text): Markdown.Inline[] {
 	let parts: Markdown.Inline[] = [];
 	let cursor = 0;
 	for (let match of node.value.matchAll(REFERENCE_PATTERN)) {
 		let lead = match[1] ?? "";
-		let reference = match[2] ?? "";
+		let custom = match[3] === undefined ? undefined : customEmoji(match[3]);
+		let reference = match[2] ?? match[3] ?? "";
 		let start = (match.index ?? 0) + lead.length;
 		if (start > cursor) {
 			parts.push({ type: "text", value: node.value.slice(cursor, start), position: node.position });
+		}
+		cursor = start + reference.length;
+		if (custom !== undefined) {
+			let label = custom.label ?? reference;
+			parts.push({
+				type: "image",
+				src: custom.src,
+				title: reference,
+				children: [{ type: "text", value: label, position: node.position }],
+				position: node.position,
+			});
+			continue;
 		}
 		parts.push({
 			type: "link",
@@ -198,7 +221,6 @@ function references(node: Markdown.Text): Markdown.Inline[] {
 			children: [{ type: "text", value: reference.slice(1), position: node.position }],
 			position: node.position,
 		});
-		cursor = start + reference.length;
 	}
 	if (cursor === 0) return [node];
 	if (cursor < node.value.length) {
@@ -288,7 +310,12 @@ export function MessageText(handle: Handle<{ text: string; edited?: RemixNode }>
 		let parsed = Markdown.parse(text);
 		let body: RemixNode = text;
 		if (!isFailure(parsed)) {
-			let walked = Markdown.walk(parsed.data.document, { text: (node) => references(node) });
+			let expanded = Markdown.walk(parsed.data.document, {
+				text: (node, parent) => (parent?.type === "link" ? node : EMOJI_VISITOR.text?.(node)),
+			});
+			let walked = isFailure(expanded)
+				? expanded
+				: Markdown.walk(expanded.data, { text: (node) => references(node) });
 			if (!isFailure(walked)) {
 				body = toRemix(walked.data, {
 					components: {
@@ -330,6 +357,13 @@ export function MessageText(handle: Handle<{ text: string; edited?: RemixNode }>
 						},
 						"& pre": { maxInlineSize: "100%", overflowX: "auto", fontSize: "0.8125rem" },
 						"& strong": { fontWeight: "700" },
+						"& img": {
+							display: "inline-block",
+							inlineSize: "1.375em",
+							blockSize: "1.375em",
+							verticalAlign: "-0.3em",
+							objectFit: "contain",
+						},
 					}),
 				]}
 			>

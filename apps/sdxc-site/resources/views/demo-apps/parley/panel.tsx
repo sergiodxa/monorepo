@@ -9,6 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
+import { EmojiPicker } from "@sdxc/emoji/ui";
 import { XIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { LinkButton } from "@sdxc/ui";
@@ -23,11 +24,13 @@ import type { VisitorState } from "~/resources/views/demo-apps/parley/state";
 import { ChatComposer } from "~/resources/views/demo-apps/parley/conversation";
 import {
 	ME_HANDLE,
+	actionHref,
 	conversationPage,
 	conversationTitle,
 	findPerson,
 	href,
 } from "~/resources/views/demo-apps/parley/data";
+import { EmojiGrid } from "~/resources/views/demo-apps/parley/emoji-panel";
 import {
 	Days,
 	RunGroup,
@@ -416,6 +419,48 @@ export function DetailsPanel(handle: Handle<DetailsPanel.Props>) {
 						))}
 					</ul>
 				) : null}
+			</PanelFrame>
+		);
+	};
+}
+
+namespace ReactPanel {
+	export interface Props {
+		conversation: Conversation;
+		entry: Entry;
+		place: Place;
+	}
+}
+
+/**
+ * The reaction picker as a page of its own, for a visitor without script: every emoji is a
+ * submit button in one form that reacts to the message and returns to the conversation.
+ */
+export function ReactPanel(handle: Handle<ReactPanel.Props>) {
+	return () => {
+		let { conversation, entry, place } = handle.props;
+		let back = withoutParam(place.back, "react");
+		return (
+			<PanelFrame title="Add reaction" detail={conversationTitle(conversation)} close={href(back)}>
+				<form
+					method="post"
+					action={actionHref(place.page)}
+					mix={[raw({ display: "grid", gap: "0.75rem", padding: "1rem" })]}
+				>
+					<input type="hidden" name="intent" value="react" />
+					<input type="hidden" name="id" value={entry.id} />
+					<input type="hidden" name="on" value="1" />
+					<input type="hidden" name="return" value={back} />
+					<p
+						mix={[raw({ margin: "0", fontSize: "0.875rem", color: "var(--ui-neutral-fg-muted)" })]}
+					>
+						Reacting to {entry.author.name}: “{entry.text.slice(0, 80)}
+						{entry.text.length > 80 ? "…" : ""}”
+					</p>
+					<EmojiPicker mix={[raw({ inlineSize: "100%", boxSizing: "border-box" })]}>
+						<EmojiGrid submit="emoji" />
+					</EmojiPicker>
+				</form>
 			</PanelFrame>
 		);
 	};

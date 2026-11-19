@@ -239,7 +239,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
 				id: "g1",
 				author: "bea",
 				ago: 2 * DAY + 300,
-				text: "Office heating is fixed 🎉 Thanks for bearing with the blankets. Invoices for November go out **Friday**, so log your hours by Thursday evening.",
+				text: "Office heating is fixed :tada: Thanks for bearing with the blankets. Invoices for November go out **Friday**, so log your hours by Thursday evening.",
 				reactions: { "🎉": ["mira", "theo", "kenji", "lucia"], "🙏": ["sam", "priya"] },
 			},
 			{
@@ -269,15 +269,19 @@ export const CONVERSATIONS: readonly Conversation[] = [
 				author: "lucia",
 				ago: 260,
 				text: "Six interviews done for the planting-calendar study. Short version: people plan by **weekend**, not by date. Full notes → https://notes.fernhill.studio/research/planting-calendar",
-				reactions: { "🔥": ["mira", "priya"], "👀": ["jonah"] },
+				reactions: {
+					"🔥": ["mira", "priya"],
+					"👀": ["jonah"],
+					":sprout:": ["priya", "mira", "sam"],
+				},
 			},
 			{
 				id: "g4",
 				author: "mira",
 				ago: 120,
-				text: "Studio lunch on Friday is at the Portuguese place on the corner. Reply in thread if you have a dietary thing I should pass on 🥗",
+				text: "Studio lunch on Friday is at the Portuguese place on the corner :fernhill: Reply in thread if you have a dietary thing I should pass on :salad:",
 				replies: [
-					{ id: "g4-r1", author: "theo", ago: 110, text: "Vegetarian, as ever 🌱" },
+					{ id: "g4-r1", author: "theo", ago: 110, text: "Vegetarian, as ever :seedling:" },
 					{ id: "g4-r2", author: "oskar", ago: 95, text: "No shellfish for me please" },
 					{ id: "g4-r3", author: "lucia", ago: 40, text: "I'll bring dessert!" },
 				],
@@ -366,7 +370,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
 				author: "jonah",
 				ago: 12,
 				text: "Release notes page is live behind the flag: https://sprout.example.com/whats-new. The animation on the hero is ~40 KB, happy with that.",
-				reactions: { "🚀": ["priya", "mira"] },
+				reactions: { "🚀": ["priya", "mira"], ":shipit:": ["theo", "kenji", "oskar"] },
 			},
 		],
 	},
@@ -413,7 +417,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
 						ago: 290,
 						text: "Medium is lovely. Small feels a bit crowded with the date — drop it?",
 					},
-					{ id: "d4-r2", author: "kenji", ago: 280, text: "Agreed, dropping it." },
+					{ id: "d4-r2", author: "kenji", ago: 280, text: "Agreed, dropping it. :sprout:" },
 				],
 			},
 			{
@@ -438,8 +442,8 @@ export const CONVERSATIONS: readonly Conversation[] = [
 				id: "e1",
 				author: "jonah",
 				ago: DAY + 600,
-				text: "PSA: the garden grid now virtualizes rows. A 400-plant garden scrolls at 60fps on the old Android test phone 📈",
-				reactions: { "🔥": ["sam", "theo", "kenji"] },
+				text: "PSA: the garden grid now virtualizes rows. A 400-plant garden scrolls at 60fps on the old Android test phone :chart_with_upwards_trend:",
+				reactions: { "🔥": ["sam", "theo", "kenji"], ":lgtm:": ["oskar"] },
 			},
 			{
 				id: "e2",
@@ -716,7 +720,7 @@ export const LIVE: Record<string, readonly LiveLine[]> = {
 		},
 		{
 			author: "kenji",
-			text: "Widget passed App Store review ✅",
+			text: "Widget passed App Store review :white_check_mark: :shipit:",
 			typing: 1800,
 			pause: 9000,
 			reactions: { "🎉": ["priya", "mira"] },
@@ -725,7 +729,7 @@ export const LIVE: Record<string, readonly LiveLine[]> = {
 	"c:launch-v3": [
 		{
 			author: "theo",
-			text: "Units fix is merged. RC3 building now — Fernbot will post when it lands.",
+			text: "Units fix is merged :lgtm: RC3 building now — Fernbot will post when it lands.",
 			typing: 2400,
 			pause: 2000,
 		},
@@ -835,27 +839,5 @@ export function answerTo(key: string, text: string): { author: string; text: str
 	return { author, text: "Nice, thanks for the update 👍" };
 }
 
-/** Every emoji Parley's reactions and quick reactions offer first. */
-export const QUICK_REACTIONS = ["👍", "🎉", "👀", "🙏"] as const;
-
-/** Names of the emoji the fixtures use, for reaction labels a screen reader reads. */
-export const EMOJI_NAMES: Record<string, string> = {
-	"👍": "Thumbs up",
-	"🎉": "Party popper",
-	"👀": "Eyes",
-	"🙏": "Folded hands",
-	"🔥": "Fire",
-	"😍": "Heart eyes",
-	"💚": "Green heart",
-	"📌": "Pushpin",
-	"🚀": "Rocket",
-	"🍅": "Tomato",
-	"🐈": "Cat",
-	"😂": "Tears of joy",
-	"💡": "Light bulb",
-	"✅": "Check mark",
-	"❤️": "Red heart",
-	"🙌": "Raised hands",
-	"😅": "Sweat smile",
-	"💯": "Hundred points",
-};
+/** The reactions a message's action bar offers in one press, a custom emoji among them. */
+export const QUICK_REACTIONS = ["👍", "🎉", "👀", ":shipit:"] as const;

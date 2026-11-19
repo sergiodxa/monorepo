@@ -81,6 +81,10 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 		import("~/resources/views/demo-apps/pinhole/double-tap-like"),
 	"file:resources/views/demo-apps/pinhole/reel-title.tsx": () =>
 		import("~/resources/views/demo-apps/pinhole/reel-title"),
+	"file:resources/views/demo-apps/parley/composer-field.tsx": () =>
+		import("~/resources/views/demo-apps/parley/composer-field"),
+	"file:resources/views/demo-apps/parley/emoji-panel.tsx": () =>
+		import("~/resources/views/demo-apps/parley/emoji-panel"),
 	"file:resources/views/demo-apps/parley/live.tsx": () =>
 		import("~/resources/views/demo-apps/parley/live"),
 	"file:resources/views/demo-apps/pulse/services-table.tsx": () =>
