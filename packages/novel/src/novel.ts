@@ -26,6 +26,7 @@ import type { Cursor, Live, NovelRuntime } from "./engine.js";
 import type { Emit, NovelEventName, NovelListener, NovelPlugin } from "./events.js";
 import type { Ending, Frame, GameState, Reply, StopFrame } from "./frames.js";
 import type { Lazy } from "./lazy.js";
+import type { NovelLink, ReachedScene, ReachOptions } from "./links.js";
 import type { Persistent } from "./persistent.js";
 import type { Audio, Fraction, Position, PositionAlias, Stage } from "./stage.js";
 import type { SavedGame } from "./state.js";
@@ -42,6 +43,7 @@ import { drawCharacter, PlayEngine } from "./engine.js";
 import { NovelError } from "./errors.js";
 import { Listeners } from "./events.js";
 import { isLazy } from "./lazy.js";
+import { reach, toLinks } from "./links.js";
 import { readPersistent } from "./persistent.js";
 import { DEFAULT_POSITIONS, emptyStage, silence } from "./stage.js";
 import { SAVED_GAME_SCHEMA, validate } from "./state.js";
@@ -168,6 +170,13 @@ export interface NovelInternals {
 	position(position: Position): Fraction;
 	/** Reports whether the novel lacks an asset or a character a scene uses. */
 	missing(declaration: AssetDeclaration | CharacterDeclaration): boolean;
+	/** The voice file of a spoken line, from the novel's `voice` option. */
+	voice(speaker: string, key: string): AssetSource | null;
+	/**
+	 * Maps an already mapped scene onto a new module, so plays started afterwards play the edited
+	 * scene; a play already running keeps the module it loaded.
+	 */
+	replace(scene: string, module: SceneModule): void;
 	start(options: StartOptions, sink: PlaySink): Result<Play, NovelError>;
 }
 
@@ -242,11 +251,36 @@ export class Novel {
 		module: SceneModule<Declaration> | Lazy<SceneModule<Declaration>>,
 	): void {
 		if (this.#modules.has(scene.name)) throw new Error(`Scene "${scene.name}" is already mapped`);
-		let pending: Promise<Result<SceneIndex, NovelError>> | undefined;
-		this.#modules.set(scene.name, () => {
-			pending ??= this.#import(scene.name, module);
-			return pending;
-		});
+		this.#bind(scene.name, module);
+	}
+
+	/**
+	 * The `<link>` descriptors a page renders into its head for a play starting at `scene`:
+	 * `preload` for the images and sounds the scene shows, `prefetch` for its music and voices
+	 * and for every file of the scenes its jumps reach within `depth`. Lazy modules on the way are
+	 * imported, and `data:` URLs are left out.
+	 *
+	 * @param scene - The scene the page starts in.
+	 * @param options - How many jumps to follow (1 by default) and the reader's locale.
+	 * @returns The descriptors, preloads first, each URL once.
+	 * @example <Document links={await novel.links(scenes.prologue.opening, { depth: 1, locale })} />
+	 */
+	async links(scene: SceneDeclaration, options: ReachOptions = {}): Promise<NovelLink[]> {
+		return toLinks(await reach(this[INTERNALS](), scene, options));
+	}
+
+	/**
+	 * The scenes within `depth` jumps of `scene` and the files each one uses, for a player to
+	 * prefetch while the reader is still in `scene`. Reaching a scene imports its lazy module,
+	 * so the call is also the modules' prefetch.
+	 *
+	 * @param scene - The scene the play stands in.
+	 * @param options - How many jumps to follow (1 by default) and the reader's locale.
+	 * @returns Every reached scene, nearest first, with its files in document order.
+	 * @example for (let next of await novel.reachable(scenes.spring.cafe.meeting, { locale })) for (let asset of next.assets) prefetch(asset.url);
+	 */
+	reachable(scene: SceneDeclaration, options: ReachOptions = {}): Promise<ReachedScene[]> {
+		return reach(this[INTERNALS](), scene, options);
 	}
 
 	/**
@@ -312,8 +346,22 @@ export class Novel {
 			load: (scene) => this.#load(scene),
 			position: (position) => this.#position(position),
 			missing: (declaration) => this.#missing(declaration),
+			voice: (speaker, key) => this.#voice(speaker, key),
+			replace: (scene, module) => {
+				this.#indexes.delete(scene);
+				this.#bind(scene, module);
+			},
 			start: (options, sink) => this.#start(options, sink),
 		};
+	}
+
+	/** Binds a scene to its module, imported once on the first load. */
+	#bind(scene: string, module: SceneModule | Lazy<SceneModule>): void {
+		let pending: Promise<Result<SceneIndex, NovelError>> | undefined;
+		this.#modules.set(scene, () => {
+			pending ??= this.#import(scene, module);
+			return pending;
+		});
 	}
 
 	/** Starts a play whose events reach `sink`, and the app's listeners unless it is quiet. */

@@ -172,3 +172,16 @@ export const Game = clientEntry(import.meta.url, function Game() {
 Lines may use MessageFormat markup: `{#b}`, `{#i}` and `{#shake}` style their text, `{#speed rate=2}…{/speed}` types its text at that multiple of the reader's text speed (half without `rate`), and `{#pause ms=600/}` holds the typewriter (400ms without `ms`). Pass `markup` to add your own names, as elements or as components receiving `Trans.MarkupProps`.
 
 Saves reach the novel's `save` event (and `onSave`), so `novel.on("save", …)` stores them; pass them back through `saves` for the load screen. Space, Enter and a click advance, `a` toggles auto, `k` or a held Control skips, ↑ and the wheel roll back, `l` opens the backlog, `q`/`w` quick save and load, `h` hides the interface, `f` goes full screen and Escape opens the settings.
+
+## Prefetching
+
+`novel.links(scene, { depth, locale })` reads the scene arrays and answers `<link>` descriptors: `preload` for the images and sounds the starting scene shows, `prefetch` for its music and voices and for every file of the scenes within `depth` jumps (1 by default). It imports the lazy modules on the way, so it is async; `data:` URLs are left out. `novel.reachable(scene, { depth, locale })` answers the same scenes with their files, for a player to prefetch while a play runs.
+
+```tsx
+let links = await novel.links(scenes.prologue.opening, { locale: "en" });
+<head>
+	{links.map((link) => (
+		<link rel={link.rel} href={link.href} as={link.as} crossorigin={link.crossorigin} />
+	))}
+</head>;
+```

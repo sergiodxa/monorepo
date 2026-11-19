@@ -96,6 +96,7 @@ export type {
 	StoryPosition,
 } from "./frames.js";
 export type { Lazy } from "./lazy.js";
+export type { NovelLink, ReachedScene, ReachOptions, SceneAsset } from "./links.js";
 export type {
 	MessageCatalog,
 	Migration,
