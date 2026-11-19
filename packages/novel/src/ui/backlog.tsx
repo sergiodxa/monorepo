@@ -1,7 +1,8 @@
 /**
  * The backlog: the recent lines in the order they were read, each with its speakers and a
  * button that plays its voice again. It is a native modal `<dialog>`, opened by the player's
- * key, button or swipe, and scrolled to the newest line when it opens.
+ * key, button or swipe, and scrolled to the newest line when it opens. Its entries come from
+ * the player's `backlog` model.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,52 +14,46 @@ import { Volume2Icon } from "@sdxc/icons";
 import { Button, Dialog } from "@sdxc/ui";
 import { css, on, ref } from "remix/component";
 
-import type { Speaker } from "../frames.js";
-
 import { Message } from "./message.js";
-
-/** A line as the backlog keeps it, with the values it was shown with. */
-export interface BacklogEntry {
-	/** The frame id the line was shown on. */
-	id: string;
-	scene: string;
-	key: string;
-	values: Record<string, unknown> | undefined;
-	speakers: Speaker[];
-	/** The voice file, resolved for the reader's locale, or `null` for an unvoiced line. */
-	voice: string | null;
-}
+import { NovelPlayer } from "./player.js";
+import { dialogSurface } from "./theme.js";
 
 export namespace Backlog {
 	/** Props {@link Backlog} accepts. */
-	export interface Props {
-		/** The dialog's id, which a `commandfor` button opens it by. */
-		id: string;
-		entries: BacklogEntry[];
-		onReplayVoice?: (entry: BacklogEntry) => void;
-		labels: { backlog: string; close: string; replayVoice: string };
-	}
+	export interface Props extends Omit<Dialog.Props, "id" | "children"> {}
 }
 
 /**
- * Lists the recent lines, oldest first.
+ * Lists the player's backlog, oldest first, in a modal dialog the quick menu, the `l` key or a
+ * downward swipe opens; a voiced line offers its voice again through the player's mixer.
  *
- * @example <Backlog id="backlog" entries={entries} labels={labels} onReplayVoice={(entry) => mixer.playVoice(entry.voice)} />
+ * @example <NovelPlayer.Backlog mix={css({ "--novel-dialog-background": "#111" })} />
  */
 export function Backlog(handle: Handle<Backlog.Props>) {
+	let player = handle.context.get(NovelPlayer);
 	let list: HTMLElement | undefined;
 	return () => {
-		let { id, entries, onReplayVoice, labels } = handle.props;
+		let { mix, ...rest } = handle.props;
+		let { labels } = player;
+		let id = player.ids.backlog;
 		return (
 			<Dialog
+				{...rest}
 				id={id}
 				aria-labelledby={`${id}-title`}
 				data-novel-backlog=""
+				style={dialogSurface()}
 				mix={[
-					css({ inlineSize: "min(48rem, 92vw)" }),
+					css({
+						inlineSize: "min(48rem, 92vw)",
+						fontSize: "1rem",
+						cursor: "auto",
+						userSelect: "text",
+					}),
 					on("toggle", () => {
 						if (list !== undefined) list.scrollTop = list.scrollHeight;
 					}),
+					mix,
 				]}
 			>
 				<Dialog.Header>
@@ -80,7 +75,7 @@ export function Backlog(handle: Handle<Backlog.Props>) {
 						}),
 					]}
 				>
-					{entries.map((entry) => (
+					{player.backlog.entries.map((entry) => (
 						<li
 							key={entry.id}
 							data-key={entry.key}
@@ -99,12 +94,16 @@ export function Backlog(handle: Handle<Backlog.Props>) {
 								)}
 								<Message i18nKey={entry.key} values={entry.values} />
 							</div>
-							{entry.voice === null || onReplayVoice === undefined ? null : (
+							{entry.voice === null ? null : (
 								<Button
 									size="sm"
 									variant="ghost"
 									aria-label={labels.replayVoice}
-									mix={on("click", () => onReplayVoice(entry))}
+									mix={on("click", () => {
+										if (entry.voice === null) return;
+										void player.mixer.resume();
+										void player.mixer.playVoice(entry.voice);
+									})}
 								>
 									<Volume2Icon size={16} />
 								</Button>

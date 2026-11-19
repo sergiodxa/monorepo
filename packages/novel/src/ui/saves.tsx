@@ -1,47 +1,35 @@
 /**
  * Save and load slots: one button per slot showing a miniature of the saved stage, drawn by the
  * same stage component as the play, with the scene's title and when it was saved. Storage is
- * the app's; this screen only reports the slot the reader picked.
+ * the app's: the screens read the player's `saves` model, and a save leaves as `novel:save`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { Dialog } from "@sdxc/ui";
 import { css, on } from "remix/component";
 
 import type { GameState } from "../frames.js";
 
+import { QUICK_SLOT, SaveSlots } from "./behaviors/save-slots.js";
 import { stillStage } from "./layout.js";
 import { Message } from "./message.js";
+import { NovelPlayer } from "./player.js";
 import { Stage } from "./stage.js";
-
-/** The slot quick save writes and quick load reads. */
-export const QUICK_SLOT = "quick";
+import { dialogSurface } from "./theme.js";
 
 export namespace SaveScreen {
 	/** Props {@link SaveScreen} accepts. */
-	export interface Props {
-		/** The dialog's id, which a `commandfor` button opens it by. */
-		id: string;
-		/** Saving writes the current play into a slot; loading resumes a filled one. */
-		mode: "save" | "load";
-		/** The slot names, in the order they are shown; {@link QUICK_SLOT} is labeled as the quick save. */
-		slots: string[];
-		/** What each slot holds. */
-		saves: Readonly<Record<string, GameState | undefined>>;
-		locale: string;
-		onSelect: (slot: string) => void;
-		labels: {
-			save: string;
-			load: string;
-			close: string;
-			slot: string;
-			emptySlot: string;
-			quickSave: string;
-		};
+	export interface Props extends Omit<TagProps<"div">, "children"> {
+		/**
+		 * How many numbered slots the screens show, beside the quick slot.
+		 *
+		 * @default 6
+		 */
+		slots?: number;
 	}
 
 	/** Props {@link SlotThumbnail} accepts. */
@@ -51,21 +39,48 @@ export namespace SaveScreen {
 	}
 }
 
+/** Props of one of the two slot dialogs. */
+interface SlotDialogProps {
+	mode: "save" | "load";
+	slots: string[];
+}
+
 /**
- * Lists the slots; in load mode an empty slot is disabled.
+ * The save and load screens: two modal dialogs over the player's `saves` model, opened by the
+ * quick menu or the `s` and `o` keys. Saving writes the current play into the slot picked;
+ * loading resumes a filled one, and an empty slot is disabled there.
  *
- * @example <SaveScreen id="saves" mode="save" slots={["1", "2"]} saves={saves} locale="en" onSelect={save} labels={labels} />
+ * @example <NovelPlayer.Saves slots={3} />
  */
 export function SaveScreen(handle: Handle<SaveScreen.Props>) {
 	return () => {
-		let { id, mode, slots, saves, locale, onSelect, labels } = handle.props;
+		let { slots = 6, mix, ...rest } = handle.props;
+		let names = SaveSlots.names(slots);
+		return (
+			<div {...rest} data-novel-save-screens="" mix={[css({ display: "contents" }), mix]}>
+				<SlotDialog mode="save" slots={names} />
+				<SlotDialog mode="load" slots={names} />
+			</div>
+		);
+	};
+}
+
+/** One of the slot dialogs, listing every slot with its thumbnail, scene and time. */
+function SlotDialog(handle: Handle<SlotDialogProps>) {
+	let player = handle.context.get(NovelPlayer);
+	player.saves.addEventListener("change", () => void handle.update(), { signal: handle.signal });
+	return () => {
+		let { mode, slots } = handle.props;
+		let { labels, locale } = player;
+		let id = mode === "save" ? player.ids.save : player.ids.load;
 		let date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
 		return (
 			<Dialog
 				id={id}
 				aria-labelledby={`${id}-title`}
 				data-novel-saves={mode}
-				mix={css({ inlineSize: "min(56rem, 94vw)" })}
+				style={dialogSurface()}
+				mix={css({ inlineSize: "min(56rem, 94vw)", fontSize: "1rem", cursor: "auto" })}
 			>
 				<Dialog.Header>
 					<Dialog.Title id={`${id}-title`}>
@@ -83,7 +98,7 @@ export function SaveScreen(handle: Handle<SaveScreen.Props>) {
 					})}
 				>
 					{slots.map((slot) => {
-						let saved = saves[slot];
+						let saved = player.saves.get(slot);
 						return (
 							<li key={slot}>
 								<button
@@ -107,7 +122,10 @@ export function SaveScreen(handle: Handle<SaveScreen.Props>) {
 											cursor: "pointer",
 											"&:disabled": { opacity: 0.5, cursor: "not-allowed" },
 										}),
-										on("click", () => onSelect(slot)),
+										on("click", () => {
+											if (mode === "save") player.save(slot);
+											else void player.load(slot);
+										}),
 									]}
 								>
 									<span

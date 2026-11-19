@@ -35,7 +35,6 @@ import {
 
 import { AudioMixer } from "./audio.js";
 import { ChapterSelect, SceneReplay } from "./chapters.js";
-import { keyboardControls } from "./controls.js";
 import { EndingsList } from "./endings.js";
 import { Gallery } from "./gallery.js";
 import { Memories } from "./memories.js";
@@ -270,11 +269,11 @@ function player(props: Partial<NovelPlayer.Props> = {}) {
 	let saved = vi.fn();
 	let ended = vi.fn();
 	let result = mount(
-		<NovelPlayer
+		<NovelPlayer.Default
 			novel={fixture()}
 			start={{ seed: "extras" }}
 			settings={{ textSpeed: 0 }}
-			mix={[keyboardControls(), on("novel:save", saved), on("novel:ending", ended)]}
+			mix={[on("novel:save", saved), on("novel:ending", ended)]}
 			{...props}
 		/>,
 	);

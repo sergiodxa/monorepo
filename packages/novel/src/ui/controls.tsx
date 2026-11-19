@@ -12,9 +12,9 @@ import { createMixin, css, on } from "remix/component";
 
 import type { PlayerAction } from "./settings.js";
 
+import { QUICK_SLOT } from "./behaviors/save-slots.js";
 import { gamepadActions } from "./input.js";
 import { NovelPlayer } from "./player.js";
-import { QUICK_SLOT } from "./saves.js";
 import { KEYMAP } from "./settings.js";
 
 /** Milliseconds between two wheel actions, so one flick of a trackpad rolls back one stop. */

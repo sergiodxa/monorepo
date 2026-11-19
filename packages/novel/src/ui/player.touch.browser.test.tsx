@@ -57,7 +57,12 @@ function mount() {
 	let intl = createI18n({ locale: "en", fallbackLanguage: "en", resources: { en: MESSAGES } });
 	mounted = render(
 		<IntlProvider intl={intl}>
-			<NovelPlayer novel={novel} settings={{ textSpeed: 0 }} mix={touchControls()} />
+			<NovelPlayer novel={novel} settings={{ textSpeed: 0 }} mix={[touchControls()]}>
+				<NovelPlayer.Stage>
+					<NovelPlayer.Textbox />
+				</NovelPlayer.Stage>
+				<NovelPlayer.Backlog />
+			</NovelPlayer>
 		</IntlProvider>,
 		{ container },
 	);

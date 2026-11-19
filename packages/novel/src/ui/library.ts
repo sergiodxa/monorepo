@@ -289,3 +289,26 @@ export function libraryReader(
 		return library;
 	};
 }
+
+/** What a library screen reads: the novel and the persistent value to build its library from. */
+export interface LibrarySource {
+	novel: Novel;
+	persistent: unknown;
+}
+
+/**
+ * Resolves a library screen's novel and persistent data: its own props first, else the player
+ * it sits in, so a title screen passes both and a screen inside a player passes neither.
+ *
+ * @param player - The enclosing player's context, or `undefined` outside one.
+ * @param props - The screen's own `novel` and `persistent`.
+ * @returns What to read, or `undefined` when no novel is known.
+ */
+export function librarySource(
+	player: { novel: Novel; persistent: unknown } | undefined,
+	props: { novel?: Novel; persistent?: unknown },
+): LibrarySource | undefined {
+	let novel = props.novel ?? player?.novel;
+	if (novel === undefined) return undefined;
+	return { novel, persistent: props.persistent ?? player?.persistent };
+}

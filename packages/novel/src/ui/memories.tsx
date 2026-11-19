@@ -19,17 +19,25 @@ import type { Novel } from "../novel.js";
 import type { MemoryLine } from "./library.js";
 import type { NovelLabels } from "./settings.js";
 
-import { libraryReader } from "./library.js";
+import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
+import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS } from "./settings.js";
 
 export namespace Memories {
 	/** Props {@link Memories} accepts. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
-		novel: Novel;
-		/** The stored `Persistent` value, or a play's `persistent`; keep one value while it shows. */
-		persistent: unknown;
-		/** Plays a line's voice again; without it no line offers its voice. */
+		/** The novel; inside a player it defaults to the player's. */
+		novel?: Novel;
+		/**
+		 * The stored `Persistent` value; inside a player it defaults to the play's. Keep one value
+		 * while the screen shows, since a new value reads the library again.
+		 */
+		persistent?: unknown;
+		/**
+		 * Plays a line's voice again; inside a player it plays through the player's mixer, and
+		 * elsewhere without it no line offers its voice.
+		 */
 		onReplayVoice?: (line: MemoryLine) => void;
 		labels?: Partial<Pick<NovelLabels, "loading" | "noMemories" | "replayVoice">>;
 	}
@@ -39,14 +47,32 @@ export namespace Memories {
  * Lists what the reader has read, scene by scene. Lazily mapped scenes load as the screen
  * opens, and it says so until they have.
  *
- * @example <Memories novel={novel} persistent={stored} onReplayVoice={(line) => mixer.playVoice(line.voice!)} />
+ * @example <Memories novel={novel} persistent={stored} onReplayVoice={(line) => play(line.voice)} />
  */
 export function Memories(handle: Handle<Memories.Props>) {
 	let read = libraryReader(handle);
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
+
+	/** Plays a line's voice through the player's mixer. */
+	function playVoice(line: MemoryLine): void {
+		if (line.voice === null || player === undefined) return;
+		void player.mixer.resume();
+		void player.mixer.playVoice(line.voice);
+	}
+
 	return () => {
-		let { novel, persistent, onReplayVoice, labels: overrides, mix, ...rest } = handle.props;
-		let labels = { ...DEFAULT_LABELS, ...overrides };
-		let library = read(novel, persistent, intl(handle).locale);
+		let {
+			novel: _novel,
+			persistent: _persistent,
+			onReplayVoice = player === undefined ? undefined : playVoice,
+			labels: overrides,
+			mix,
+			...rest
+		} = handle.props;
+		let source = librarySource(player, handle.props);
+		if (source === undefined) return null;
+		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
+		let library = read(source.novel, source.persistent, intl(handle).locale);
 		let chapters = (library?.chapters ?? [])
 			.map((group) => ({
 				...group,

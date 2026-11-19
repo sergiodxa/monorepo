@@ -18,16 +18,21 @@ import type { Novel } from "../novel.js";
 import type { LibraryAsset } from "./library.js";
 import type { NovelLabels } from "./settings.js";
 
-import { libraryReader } from "./library.js";
+import { libraryReader, librarySource } from "./library.js";
+import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS } from "./settings.js";
 import { resolveSource } from "./source.js";
 
 export namespace Gallery {
 	/** Props {@link Gallery} accepts. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
-		novel: Novel;
-		/** The stored `Persistent` value, or a play's `persistent`; keep one value while it shows. */
-		persistent: unknown;
+		/** The novel; inside a player it defaults to the player's. */
+		novel?: Novel;
+		/**
+		 * The stored `Persistent` value; inside a player it defaults to the play's. Keep one value
+		 * while the screen shows, since a new value reads the library again.
+		 */
+		persistent?: unknown;
 		labels?: Partial<Pick<NovelLabels, "loading" | "locked" | "close" | "gallery">>;
 	}
 }
@@ -41,11 +46,14 @@ export function Gallery(handle: Handle<Gallery.Props>) {
 	let read = libraryReader(handle);
 	let lightbox = `${handle.id}-lightbox`.replace(/[^\w-]/g, "-");
 	let open: LibraryAsset | undefined;
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 	return () => {
-		let { novel, persistent, labels: overrides, mix, ...rest } = handle.props;
-		let labels = { ...DEFAULT_LABELS, ...overrides };
+		let { novel: _novel, persistent: _persistent, labels: overrides, mix, ...rest } = handle.props;
+		let source = librarySource(player, handle.props);
+		if (source === undefined) return null;
+		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
 		let locale = intl(handle).locale;
-		let library = read(novel, persistent, locale);
+		let library = read(source.novel, source.persistent, locale);
 		return (
 			<div
 				{...rest}

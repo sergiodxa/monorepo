@@ -66,7 +66,7 @@ developer tools and offline play.
 | Entry                                               | Contains                                                                                                                                                                                |
 | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@sdxc/novel`                                       | `scenes`, `scene`, `chapter`, `cast`, `character`, `assets`, `interactions`, `interaction`, `createScene`, `createNovel`, `lazy`, the frame, reply, state and event types, `NovelTypes` |
-| `@sdxc/novel/ui`                                    | `NovelPlayer` and its parts (stage, textbox, choice menu, backlog, save and settings screens, memories and gallery) as `remix/component` components                                     |
+| `@sdxc/novel/ui`                                    | `NovelPlayer`, the provider, with its parts, input mixins and headless behaviors as `remix/component` components and classes                                                            |
 | `@sdxc/novel/test`                                  | `createTestPlay`, `check` and `explore`                                                                                                                                                 |
 | `@sdxc/novel/dev`                                   | Developer tools: scene jumping, state inspection, flowchart, event log, hot reload                                                                                                      |
 | `@sdxc/novel/offline`, `@sdxc/novel/offline/worker` | An opt-in service worker that caches declared assets: registration for the page, and the worker itself                                                                                  |
@@ -272,7 +272,7 @@ ctx.choose({
   slightly, brings it to the front and darkens the others, so the player sees who talks. When
   nobody on stage speaks (narration, the player, an off-stage voice), nobody is darkened.
   `say([cast.mika, cast.ren], key)` marks both as speaking for a line said together. Whether and
-  how to show it is the UI's: `NovelPlayer` turns it off with `focus={false}`, and the look is
+  how to show it is the UI's: `NovelPlayer.Stage` turns it off with `focus={false}`, and the look is
   CSS the app can restyle.
 - **Transitions** are named in the directive and implemented in CSS by the UI. Built in for
   backgrounds and images: `fade`, `dissolve`, `slide` in four directions, `wipe`, `zoom`, `flash`,
@@ -427,14 +427,27 @@ The engine decides what happens next; the UI decides how and when it is shown.
 | Rollback depth, option availability, `once`, `repeat` | Engine                                                           |
 
 `createNovel` takes story options only; `NovelPlayer` takes presentation settings through its
-`settings` prop and reports changes through `onSettingsChange`, for the app to store.
+`settings` prop and reports changes as a `novel:settings` DOM event, for the app to store.
 
 ### `@sdxc/novel/ui`
 
-- **`NovelPlayer`** is the component that owns a play, rendered inside the app's own client
-  entry, keeps the current frame as state, and renders
-  it; every other part is a presentational component over frame types, so a game can replace any
-  of them.
+- **`NovelPlayer` is the provider every novel renders**, inside the app's own client entry. It owns
+  the play, the reader's behaviors (reveal, auto, skip, backlog, saves, settings, the menu
+  countdown), the mixer and prefetch, and publishes them with the actions that drive the play as
+  one context object. It renders a root element and its children, nothing else.
+- **The interface is parts composed inside it**: `NovelPlayer.Stage`, `.Textbox` (`.NamePlate`,
+  `.Line`, `.NextIndicator`), `.Captions`, `.Choices`, `.Interaction`, `.QuickMenu`, `.Backlog`,
+  `.Saves`, `.Settings` and `.Extras`. Each reads the context, takes `mix`, and keeps stable
+  `data-novel-*` attributes on its pieces; a game leaves a part out, or writes its own on the same
+  context, and `NovelPlayer.Default` composes the classic layout.
+- **Behaviors are headless classes** (`RevealModel`, `AutoModel`, `SkipModel`, `BacklogModel`,
+  `SaveSlots`, `SettingsModel`, `CountdownModel`) extending `TypedEventTarget` and dispatching
+  `change`, so a custom part reuses the logic without the built-in part.
+- **Input is mixins** (`keyboardControls`, `touchControls`, `gamepadControls`) applied to the
+  player, and what the app stores leaves as bubbling DOM events (`novel:save`, `novel:settings`,
+  `novel:ending`).
+- **Theming is CSS custom properties**: every visual decision of the parts reads a `--novel-*`
+  variable with a default, listed in `NOVEL_THEME_VARIABLES`.
 - **One frame renders in order**: apply the stage and await its transitions; start the voice and
   the typewriter; wait for a click, auto mode or skip; reply. A click during a transition
   finishes it.
@@ -571,8 +584,39 @@ The app renders the `custom` frame with its own component and replies with
 ### Rendering a page with the player
 
 The app's own client entry imports the novel and renders `NovelPlayer`, since a novel holds
-functions and cannot travel from the server as props. The page renders that entry and the
-prefetch links for the opening scene:
+functions and cannot travel from the server as props. It composes the parts it wants, applies
+the controls, and stores what the player's events carry:
+
+```tsx
+export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
+	return () => (
+		<NovelPlayer
+			novel={novel}
+			settings={read("settings")}
+			saves={read("saves")}
+			mix={[
+				keyboardControls(),
+				touchControls(),
+				css({ "--novel-textbox-background": "url(/ui/textbox.png) center / 100% 100%" }),
+				on("novel:settings", (event) => write("settings", event.settings)),
+				on("novel:save", (event) => write(`saves.${event.slot}`, event.state)),
+			]}
+		>
+			<NovelPlayer.Stage>
+				<NovelPlayer.Textbox />
+				<NovelPlayer.Choices />
+				<NovelPlayer.Interaction name="fishing" component={Fishing} />
+				<NovelPlayer.QuickMenu />
+			</NovelPlayer.Stage>
+			<NovelPlayer.Backlog />
+			<NovelPlayer.Saves slots={3} />
+			<NovelPlayer.Settings />
+		</NovelPlayer>
+	);
+});
+```
+
+The page renders that entry and the prefetch links for the opening scene:
 
 ```tsx
 router.get(routes.play, async (ctx) =>
@@ -891,8 +935,8 @@ Made while building steps 1 and 2 of Phase 4, without a review, where this ADR l
   rolls back. Gamepad (standard mapping): A presses the focused control or advances, B closes a
   dialog or hides the interface, LB rolls back, RB skips, Start opens settings, the D-pad moves
   focus.
-- **Saves go through `play.save(slot)`**, so they reach the novel's `save` event, and also through
-  an `onSave` prop; the app passes stored saves back through `saves`. Slots are `quick` plus `slots`
+- **Saves go through `play.save(slot)`**, so they reach the novel's `save` event, and also leave
+  the player as a `novel:save` DOM event; the app passes stored saves back through `saves`. Slots are `quick` plus `slots`
   numbered ones (default 6), and loading carries the current play's persistent data over.
 - **Settings are one JSON object** (`textSpeed` in characters per second with `0` for instant,
   `autoDelay`, `skip`, five volumes, `fontSize`, `dyslexiaFont`, `selfVoicing`), completed with
@@ -938,7 +982,7 @@ Made while building step 3 of Phase 4, without a review, where this ADR left the
   hides save and quick save (their keys do nothing) and adds an "End replay" button; when it ends, on
   its own or from the button, the player resumes the play it interrupted at the same stop, with its
   backlog and the persistent data the replay recorded. A replay started with no play to resume (a
-  title screen passing `start={{ scene, replay }}`) ends like a play and calls `onEnding`. Loading a
+  title screen passing `start={{ scene, replay }}`) ends like a play and dispatches `novel:ending`. Loading a
   save during a replay leaves it. Rollback history before the replay is not kept.
 - **Reached is read from `Persistent`.** A scene is reached once a line in it was read or an option in
   it taken; a chapter once it is in `chapters` or one of its scenes is reached. Chapter select lists
@@ -953,14 +997,14 @@ Made while building step 3 of Phase 4, without a review, where this ADR left the
 - **Screens are panels, the player puts them in dialogs.** `Memories`, `Gallery`, `MusicRoom`,
   `EndingsList`, `ChapterSelect` and `SceneReplay` each take `novel` and a persistent value and load
   their library themselves (showing `labels.loading` meanwhile), so a title screen lays them out as
-  it likes. `NovelPlayer` lists them in an "Extras" menu (the `@sdxc/ui` `Menu` popover, turned off
-  with `extras={false}`) and renders each inside a modal dialog only while it is open, reading the
-  play's persistent data as it opens.
+  it likes. `NovelPlayer.Extras` lists the screens given as its children in an "Extras" menu (the
+  `@sdxc/ui` `Menu` popover) and renders each inside a modal dialog only while it is open; inside a
+  player a screen reads the novel and the play's persistent data from the context.
 - **The gallery's lightbox is its own native `<dialog>`**, one per gallery showing the picked CG;
   a locked CG is a placeholder labeled `labels.locked`.
 - **The music room plays through an `AudioMixer`**: the player's own, whose music and ambience the
   player restores from the frame when the room closes, or one the room makes and disposes. Tracks
-  have no declared title, so a track shows its key unless `musicTitles` (or `titles`) maps its id to
+  have no declared title, so a track shows its key unless the music room's `titles` maps its id to
   a message key.
 - **Runtime prefetch lives in the director.** Each time a presented frame stands in a scene other
   than the last one prefetched for, `NovelPlayer` calls `novel.reachable(scene, { depth, locale })`
@@ -976,6 +1020,93 @@ Made while building step 3 of Phase 4, without a review, where this ADR left the
 - **New labels** (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`,
   `sceneReplay`, `loading`, `locked`, `unknownEnding`, `noMemories`, `play`, `stop`,
   `endReplay`) default to English like the rest.
+
+### Composable player decisions
+
+Made while splitting `NovelPlayer` into a provider and parts, without a review, where the brief
+left the detail open:
+
+- **The context is one stable object** with getters over live state, set once in setup. Every
+  part re-renders when the provider updates, so a part reads it during render, and a mixin reads
+  it once in setup. `persistent` is cloned at most once per provider render, so a library screen
+  can key its library on it; a screen open during auto mode reads the new value as frames pass.
+- **Context API.** State: `novel`, `element`, `dialog`, `frame`, `phase`, `ending`, `error`,
+  `stalled`, `instant`, `hidden`, `replaying`, `persistent`, `labels`, `locale`, `markup`, `ids`.
+  Behaviors: `typewriter`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `mixer`,
+  `prefetcher`. Actions: `answer`, `advance`, `rollback`, `save`, `load`, `setSettings`,
+  `toggleAuto`, `toggleSkip`, `holdSkip`, `hide`, `toggleFullscreen`, `replay`, `endReplay`, `open`,
+  `retry`. `holdSkip`, `toggleFullscreen`, `retry`, `element`, `dialog`, `ids`, `instant`,
+  `stalled`, `error` and `markup` were added because a built-in part or mixin needed them.
+- **Behaviors.** `RevealModel` (the line's reveal status, `complete`, the speed), `AutoModel` (on or
+  off, one wait after the voice and self-voicing, `delayFor()`), `SkipModel` (toggled and held,
+  `passes()`), `BacklogModel` (bounded entries, `record`, `leave` on rollback), `SaveSlots`,
+  `SettingsModel` (`replace` adopts stored settings silently) and `CountdownModel` (`expire` with
+  the option a timed menu takes). The director remains the coordinator: it sequences phases,
+  transitions, voice and self-voicing and reacts to the models' `change`. Rollback history stays
+  the engine's (`play.rollback()`), so no model holds it. `AudioMixer` and `Prefetcher` are exposed
+  as they were, since they need Web Audio and the DOM.
+- **The DOM typewriter stays in `@sdxc/ui`.** `NovelPlayer.Line` paints through it, since `speed` and
+  `pause` markup are elements it reads, and reports the line revealed to `RevealModel`; a custom
+  textbox drives the same model without it.
+- **A part renders only when it has something to show.** `Textbox`, `Captions` and `QuickMenu`
+  render nothing while the interface is hidden or the play has ended, `Choices` and `Interaction`
+  wait for the stage to settle, and a library screen renders nothing without a novel.
+- **Stage is one component with two modes.** Without `stage` it draws the player's frame, advances on
+  a click or tap, and shows the ending and any error; with `stage` it draws that stage still, which
+  is how `SlotThumbnail` and a title screen use it. The extras screens follow the same rule:
+  their own `novel` and `persistent` props first, the player's otherwise; chapter select and scene
+  replay start replays, and Memories plays voices through the player's mixer, by default.
+- **`.Extras` sits inside `.QuickMenu`** in the default layout, since its button belongs in that row;
+  `QuickMenu` draws its children after its buttons. The extras dialogs therefore live in the stage's
+  subtree, so they set their own font size and cursor, and swipes stand down while a dialog is
+  open. Children other than the six screens are left out.
+- **Removed props.** `extras` (leave `.Extras` out), `slots` (on `.Saves`), `focus` (on `.Stage`),
+  `musicTitles` (`titles` on `MusicRoom`), `renderInteraction` (`.Interaction`), `onSave`,
+  `onSettingsChange` and `onEnding` (DOM events). `NovelPlayer.Default` takes the provider's props
+  and draws its children on the stage, for interactions; a game that needs other slots, focus or
+  titles composes its own layout.
+- **Input mixins.** `keyboardControls({ keymap })` scopes keys to the host's focus, `touchControls()`
+  owns swipes and the wheel and sets `touch-action: none` on its host, and `gamepadControls()`
+  polls while a pad is connected. A click or tap on the stage advances without any mixin. All
+  three run every action through one function, so a hidden interface comes back on any input and
+  a replay refuses to save.
+- **Events** are `NovelSaveEvent`, `NovelSettingsEvent` and `NovelEndingEvent`, bubbling from the
+  player's root and declared on `HTMLElementEventMap`.
+- **Theme variables.** Every value below is a `--novel-*` property; `NOVEL_THEME_VARIABLES` exports
+  them with their defaults. Backgrounds take any `<image>`; `*-border-image-*` frame a part with an
+  image (`border-image-width` needs a length, since the parts have no border width):
+  - player and stage: `letterbox`, `color`, `accent`, `stage-background`, `transition-duration`,
+    `transition-easing`, `character-height`, `character-duration`, `character-easing`;
+  - speaker focus: `focus-duration`, `focus-scale`, `focus-lift`, `focus-filter`, `dim-brightness`,
+    `dim-filter`;
+  - text: `text-font`, `text-size`, `text-leading`, `text-tracking`, `text-word-spacing`,
+    `text-color`, `text-shadow`;
+  - textbox: `textbox-background`, `textbox-color`, `textbox-border`,
+    `textbox-border-image-source`, `-slice`, `-width`, `-outset`, `-repeat`, `textbox-padding`,
+    `textbox-radius`, `textbox-shadow`, `textbox-backdrop-filter`, `textbox-position`,
+    `textbox-inset`, `textbox-max-inline-size`, `textbox-min-block-size`;
+  - name plate: `nameplate-background`, `nameplate-border-image-source`, `-slice`, `-width`,
+    `nameplate-padding`, `nameplate-radius`, `nameplate-font-family`, `nameplate-font-size`,
+    `nameplate-font-weight`, `nameplate-color`, `nameplate-offset`, `nameplate-margin`;
+  - next-line indicator: `next-content`, `next-image`, `next-size`, `next-color`, `next-animation`;
+  - choices: `choices-gap`, `prompt-background`, `prompt-color`, `option-background`,
+    `option-color`, `option-border`, `option-border-image-source`, `-slice`, `-width`,
+    `option-radius`, `option-padding`, `option-min-inline-size`, `option-hover`,
+    `option-hover-color`, `option-hover-border-color`, `option-focus-outline`,
+    `option-disabled-opacity`, `chosen-color`, `countdown-track`, `countdown-fill`,
+    `countdown-height`;
+  - quick menu: `menu-background`, `menu-padding`, `menu-radius`, `menu-inset`, `menu-font-size`,
+    `menu-color`, `menu-active-color`;
+  - dialogs: `dialog-background`, `dialog-color`, `dialog-border-image-source`, `-slice`, `-width`
+    (defaulting to `@sdxc/ui`'s `--ui-neutral-bg-tint` and `--ui-neutral-fg-emphasis`);
+  - captions, ending and errors: `caption-background`, `caption-color`, `ending-background`,
+    `ending-size`, `error-background`.
+
+  `--novel-text-font` defaults to `@sdxc/ui`'s `--ui-font-sans`. Dialog surfaces are set inline,
+  since the `Dialog` component already styles the same properties.
+
+- **Tests of the textbox and the menu run inside a player over a stub novel** that yields
+  hand-built frames, since those parts read the player now.
 
 ### Phase 5 and 6 decisions
 

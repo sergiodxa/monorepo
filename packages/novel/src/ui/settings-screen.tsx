@@ -1,7 +1,7 @@
 /**
  * The settings screen: text speed, auto delay, skip mode, a volume per channel, text size, a
- * dyslexia-friendly font and self-voicing. Every change reports the whole new settings object,
- * so the app stores one JSON value and passes it back.
+ * dyslexia-friendly font and self-voicing. Every change goes through the player's settings
+ * model and leaves as one `novel:settings` event, so the app stores one JSON value.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,17 +12,14 @@ import type { Handle } from "remix/component";
 import { Dialog, Select, Slider, Switch } from "@sdxc/ui";
 import { css, on } from "remix/component";
 
-import type { NovelLabels, NovelSettings, SkipMode } from "./settings.js";
+import type { NovelSettings, SkipMode } from "./settings.js";
+
+import { NovelPlayer } from "./player.js";
+import { dialogSurface } from "./theme.js";
 
 export namespace SettingsScreen {
 	/** Props {@link SettingsScreen} accepts. */
-	export interface Props {
-		/** The dialog's id, which a `commandfor` button opens it by. */
-		id: string;
-		settings: NovelSettings;
-		onChange: (settings: NovelSettings) => void;
-		labels: NovelLabels;
-	}
+	export interface Props extends Omit<Dialog.Props, "id" | "children"> {}
 
 	/** Props {@link RangeSetting} accepts. */
 	export interface RangeProps {
@@ -37,24 +34,29 @@ export namespace SettingsScreen {
 }
 
 /**
- * Lets the reader change every presentation setting.
+ * Lets the reader change every presentation setting through the player's `settings` model, in
+ * a modal dialog the quick menu or Escape opens; each change leaves as `novel:settings`.
  *
- * @example <SettingsScreen id="settings" settings={settings} onChange={store} labels={DEFAULT_LABELS} />
+ * @example <NovelPlayer.Settings />
  */
 export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
-	/** Reports the settings with `patch` applied. */
+	let player = handle.context.get(NovelPlayer);
+
+	/** Applies `patch` to the settings. */
 	function change(patch: Partial<NovelSettings>): void {
-		handle.props.onChange({ ...handle.props.settings, ...patch });
+		player.settings.update(patch);
 	}
 
-	/** Reports the settings with one channel's volume changed. */
+	/** Changes one channel's volume. */
 	function volume(channel: keyof NovelSettings["volume"], value: number): void {
-		let { settings } = handle.props;
-		handle.props.onChange({ ...settings, volume: { ...settings.volume, [channel]: value } });
+		player.settings.setVolume(channel, value);
 	}
 
 	return () => {
-		let { id, settings, labels } = handle.props;
+		let { mix, ...rest } = handle.props;
+		let { labels } = player;
+		let settings = player.settings.value;
+		let id = player.ids.settings;
 		let volumes = [
 			["master", labels.volumeMaster],
 			["music", labels.volumeMusic],
@@ -64,10 +66,12 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 		] as const;
 		return (
 			<Dialog
+				{...rest}
 				id={id}
 				aria-labelledby={`${id}-title`}
 				data-novel-settings=""
-				mix={css({ inlineSize: "min(36rem, 94vw)" })}
+				style={dialogSurface()}
+				mix={[css({ inlineSize: "min(36rem, 94vw)", fontSize: "1rem", cursor: "auto" }), mix]}
 			>
 				<Dialog.Header>
 					<Dialog.Title id={`${id}-title`}>{labels.settings}</Dialog.Title>

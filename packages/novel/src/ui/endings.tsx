@@ -16,16 +16,21 @@ import type { Novel } from "../novel.js";
 
 import type { NovelLabels } from "./settings.js";
 
-import { libraryReader } from "./library.js";
+import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
+import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS } from "./settings.js";
 
 export namespace EndingsList {
 	/** Props {@link EndingsList} accepts. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
-		novel: Novel;
-		/** The stored `Persistent` value, or a play's `persistent`; keep one value while it shows. */
-		persistent: unknown;
+		/** The novel; inside a player it defaults to the player's. */
+		novel?: Novel;
+		/**
+		 * The stored `Persistent` value; inside a player it defaults to the play's. Keep one value
+		 * while the screen shows, since a new value reads the library again.
+		 */
+		persistent?: unknown;
 		labels?: Partial<Pick<NovelLabels, "loading" | "unknownEnding">>;
 	}
 }
@@ -37,10 +42,13 @@ export namespace EndingsList {
  */
 export function EndingsList(handle: Handle<EndingsList.Props>) {
 	let read = libraryReader(handle);
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 	return () => {
-		let { novel, persistent, labels: overrides, mix, ...rest } = handle.props;
-		let labels = { ...DEFAULT_LABELS, ...overrides };
-		let library = read(novel, persistent, intl(handle).locale);
+		let { novel: _novel, persistent: _persistent, labels: overrides, mix, ...rest } = handle.props;
+		let source = librarySource(player, handle.props);
+		if (source === undefined) return null;
+		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
+		let library = read(source.novel, source.persistent, intl(handle).locale);
 		let endings = library?.endings ?? [];
 		let reached = endings.filter((ending) => ending.reached).length;
 		return (

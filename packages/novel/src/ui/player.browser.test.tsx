@@ -8,7 +8,7 @@
  */
 
 import type {} from "@vitest/browser-playwright";
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
 import { createI18n } from "@sdxc/i18n";
@@ -34,8 +34,11 @@ import {
 	scenes,
 } from "../index.js";
 
-import { gamepadControls, keyboardControls, touchControls } from "./controls.js";
+import type { Interaction } from "./interaction.js";
+
+import { keyboardControls } from "./controls.js";
 import { NovelSaveEvent } from "./events.js";
+import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 
 /** An SVG image as a data URL, so images decode without a server. */
@@ -169,7 +172,7 @@ function fixture() {
 }
 
 /** Catches a fish of the size its input asks for. */
-function Fishing(handle: Handle<NovelPlayer.InteractionProps>) {
+function Fishing(handle: Handle<Interaction.ComponentProps<"fishing">>) {
 	return () => (
 		<button
 			type="button"
@@ -187,6 +190,59 @@ function Fishing(handle: Handle<NovelPlayer.InteractionProps>) {
 	);
 }
 
+/** A choices part built only on the player's context: one plain button per option. */
+function PlainChoices(handle: Handle) {
+	let player = handle.context.get(NovelPlayer);
+	return () => {
+		let frame = player.frame;
+		if (frame?.type !== "choice" || player.phase === "staging") return null;
+		return (
+			<ul data-plain-choices="">
+				{frame.options.map((option) => (
+					<li key={option.id}>
+						<button
+							type="button"
+							data-plain={option.id}
+							mix={on("click", () => player.answer(frame.choose(option.id)))}
+						>
+							{option.id}
+						</button>
+					</li>
+				))}
+			</ul>
+		);
+	};
+}
+
+/**
+ * A textbox built only on the player's `typewriter` model: it shows each line whole and reports
+ * it revealed 50ms after typing starts, or at once when the reader asks for the rest.
+ */
+function InstantText(handle: Handle) {
+	let player = handle.context.get(NovelPlayer);
+	let reveal = player.typewriter;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	reveal.addEventListener(
+		"change",
+		() => {
+			clearTimeout(timer);
+			if (reveal.status === "typing" && reveal.complete) reveal.reveal();
+			else if (reveal.status === "typing") timer = setTimeout(() => reveal.reveal(), 50);
+			void handle.update();
+		},
+		{ signal: handle.signal },
+	);
+	return () => {
+		let frame = player.frame;
+		if (frame?.type !== "line") return null;
+		return (
+			<p data-custom-line="" data-status={reveal.status}>
+				<Message i18nKey={frame.key} values={frame.values} />
+			</p>
+		);
+	};
+}
+
 let mounted: RenderResult | undefined;
 
 afterEach(async () => {
@@ -197,10 +253,10 @@ afterEach(async () => {
 });
 
 /**
- * Mounts a player with every control in a 960×540 box with instant text unless the props say
- * otherwise, catching its events on an ancestor.
+ * Mounts `NovelPlayer.Default` in a 960×540 box with instant text unless the props say
+ * otherwise, catching its events on an ancestor; `parts` composes the player instead.
  */
-function mount(props: Partial<NovelPlayer.Props> = {}) {
+function mount(props: Partial<NovelPlayer.Props> = {}, parts?: RemixNode) {
 	let events = { save: vi.fn(), settings: vi.fn(), ending: vi.fn() };
 	let container = document.createElement("div");
 	container.style.width = "960px";
@@ -217,14 +273,25 @@ function mount(props: Partial<NovelPlayer.Props> = {}) {
 					on("novel:ending", (event) => events.ending(event.ending)),
 				]}
 			>
-				<NovelPlayer
-					novel={fixture()}
-					start={{ seed: "player" }}
-					settings={{ textSpeed: 0 }}
-					renderInteraction={Fishing}
-					mix={[keyboardControls(), touchControls(), gamepadControls()]}
-					{...props}
-				/>
+				{parts === undefined ? (
+					<NovelPlayer.Default
+						novel={fixture()}
+						start={{ seed: "player" }}
+						settings={{ textSpeed: 0 }}
+						{...props}
+					>
+						<NovelPlayer.Interaction name="fishing" component={Fishing} />
+					</NovelPlayer.Default>
+				) : (
+					<NovelPlayer
+						novel={fixture()}
+						start={{ seed: "player" }}
+						settings={{ textSpeed: 0 }}
+						{...props}
+					>
+						{parts}
+					</NovelPlayer>
+				)}
 			</div>
 		</IntlProvider>,
 		{ container },
@@ -331,7 +398,7 @@ describe("NovelPlayer", () => {
 		expect(player.result.$("[data-novel-captions] li")!.textContent).toBe("A door creaks.");
 	});
 
-	test("renders a custom frame through renderInteraction and dispatches novel:ending", async () => {
+	test("renders a custom frame through NovelPlayer.Interaction and dispatches novel:ending", async () => {
 		let player = mount();
 		let ended = player.events.ending;
 		await toMenu(player);
@@ -440,7 +507,12 @@ describe("NovelPlayer", () => {
 	});
 
 	test("saves into a slot from the save screen and draws its thumbnail on the load screen", async () => {
-		let player = mount({ slots: 2 });
+		let player = mount({ mix: [keyboardControls()] }, [
+			<NovelPlayer.Stage key="stage">
+				<NovelPlayer.Textbox />
+			</NovelPlayer.Stage>,
+			<NovelPlayer.Saves key="saves" slots={2} />,
+		]);
 		let onSave = player.events.save;
 		await shows(player, "Welcome to the café.");
 		await userEvent.keyboard("s");
@@ -535,7 +607,12 @@ describe("NovelPlayer", () => {
 	});
 
 	test("takes no keys, wheel or gamepad input when its control mixins are left out", async () => {
-		let player = mount({ mix: [] });
+		let player = mount({}, [
+			<NovelPlayer.Stage key="stage">
+				<NovelPlayer.Textbox />
+			</NovelPlayer.Stage>,
+			<NovelPlayer.Backlog key="backlog" />,
+		]);
 		await shows(player, "Welcome to the café.");
 		await userEvent.keyboard(" ");
 		await userEvent.keyboard("l");
@@ -546,6 +623,77 @@ describe("NovelPlayer", () => {
 		expect(getComputedStyle(player.root()).touchAction).toBe("auto");
 		clickStage(player);
 		await shows(player, "Hello, Ada!");
+	});
+
+	test("answers a menu from a custom part built only on the player's context", async () => {
+		let player = mount({}, [
+			<NovelPlayer.Stage key="stage">
+				<NovelPlayer.Textbox />
+				<PlainChoices />
+				<NovelPlayer.Interaction name="fishing" component={Fishing} />
+			</NovelPlayer.Stage>,
+		]);
+		await shows(player, "Welcome to the café.");
+		for (let next of ["Hello, Ada!", "Together!", "I should say something."]) {
+			clickStage(player);
+			await shows(player, next);
+		}
+		clickStage(player);
+		await vi.waitFor(() => expect(player.result.$("[data-plain-choices]")).not.toBeNull(), {
+			timeout: 5000,
+		});
+		expect(player.result.$("[data-novel-choices]")).toBeNull();
+		(player.result.$('[data-plain="cafe.stay"]') as HTMLButtonElement).click();
+		await vi.waitFor(() => expect(player.result.$("[data-fish]")).not.toBeNull(), {
+			timeout: 5000,
+		});
+	});
+
+	test("drives the reveal of a custom textbox through the typewriter model alone", async () => {
+		let player = mount({}, [
+			<NovelPlayer.Stage key="stage">
+				<InstantText />
+			</NovelPlayer.Stage>,
+		]);
+		let line = () => player.result.$("[data-custom-line]");
+		await vi.waitFor(() => expect(line()?.dataset["status"]).toBe("typing"), { timeout: 5000 });
+		expect(player.phase()).toBe("typing");
+		await vi.waitFor(() => expect(player.phase()).toBe("waiting"));
+		expect(line()!.dataset["status"]).toBe("revealed");
+		expect(line()!.textContent).toBe("Welcome to the café.");
+		clickStage(player);
+		await vi.waitFor(() => expect(line()?.textContent).toBe("Hello, Ada!"), { timeout: 5000 });
+		expect(player.result.$("[data-novel-line]")).toBeNull();
+	});
+
+	test("restyles its parts through theme variables set on the player", async () => {
+		let player = mount({
+			mix: [
+				css({
+					"--novel-letterbox": "rgb(9, 9, 9)",
+					"--novel-textbox-background": "rgb(1, 2, 3)",
+					"--novel-textbox-border-image-source": "linear-gradient(red, blue)",
+					"--novel-textbox-border-image-slice": "30",
+					"--novel-textbox-border-image-width": "12px",
+					"--novel-nameplate-font-weight": "300",
+					"--novel-text-shadow": "rgb(0, 0, 0) 1px 1px 0px",
+				}),
+			],
+		});
+		await shows(player, "Welcome to the café.");
+		let textbox = player.result.$("[data-novel-textbox]")!;
+		let style = getComputedStyle(textbox);
+		expect(style.backgroundColor).toBe("rgb(1, 2, 3)");
+		expect(style.borderImageSource).toContain("linear-gradient");
+		expect(style.borderImageSlice).toBe("30");
+		expect(style.borderImageWidth).toBe("12px");
+		expect(getComputedStyle(player.root()).backgroundColor).toBe("rgb(9, 9, 9)");
+		expect(getComputedStyle(player.result.$("[data-novel-line]")!).textShadow).toBe(
+			"rgb(0, 0, 0) 1px 1px 0px",
+		);
+		clickStage(player);
+		await shows(player, "Hello, Ada!");
+		expect(getComputedStyle(player.result.$("[data-novel-speaker]")!).fontWeight).toBe("300");
 	});
 
 	test("hides the interface and brings it back on the next click without advancing", async () => {

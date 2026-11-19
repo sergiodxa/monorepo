@@ -9,14 +9,22 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { intl } from "@sdxc/i18n/ui";
 import { Letterbox } from "@sdxc/ui";
-import { createMixin, css } from "remix/component";
+import { createMixin, css, on } from "remix/component";
 
 import type { FrameCharacter, FrameStage, StageScenery } from "../stage.js";
 
+import { INTERACTIVE } from "./controls.js";
 import { columnOf } from "./layout.js";
+import { Message } from "./message.js";
+import { NovelPlayer } from "./player.js";
 import { resolveSource } from "./source.js";
+import { themeVar } from "./theme.js";
 import { BUILT_IN_TRANSITIONS, prefersReducedMotion } from "./transitions.js";
+
+/** The stage before the play's first frame: no scenery and nobody on it. */
+const EMPTY_STAGE: FrameStage = { background: null, image: null, characters: [] };
 
 /** How long a replaced sprite takes to fade out while its character crossfades expressions. */
 const SPRITE_OUT_MS = 250;
@@ -54,9 +62,13 @@ const fadeOnRemove = createMixin<HTMLElement>(
 export namespace Stage {
 	/** Props {@link Stage} accepts. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
-		stage: FrameStage;
-		/** The reader's locale, which picks a localized image's file. */
-		locale: string;
+		/**
+		 * A stage to draw still, such as a save's thumbnail or a title screen's backdrop. Without
+		 * it the stage draws the player's frame, and a click or tap on it advances the play.
+		 */
+		stage?: FrameStage;
+		/** The locale that picks a localized image's file; the reader's locale by default. */
+		locale?: string;
 		/**
 		 * Enlarges and raises the speaker and dims everyone else while two or more characters stand
 		 * on stage and one of them speaks.
@@ -71,7 +83,7 @@ export namespace Stage {
 		 * @default true
 		 */
 		transitions?: boolean;
-		/** Ends every transition at once, for skip mode. */
+		/** Ends every transition at once; inside a player it follows skip mode and rollback. */
 		instant?: boolean;
 		/** Drawn on the surface above the characters: the textbox, a menu, an interaction. */
 		children?: RemixNode;
@@ -103,23 +115,28 @@ export namespace Stage {
 /**
  * Draws a stage on a 16:9 `Letterbox` surface that keeps its ratio inside any box, so the same
  * component draws a full-screen play and a save slot's thumbnail, and text on it can size in
- * `cqh` to scale with the stage.
+ * `cqh` to scale with the stage. Drawing the play, it also shows the ending and any error.
  *
- * @example <Stage stage={frame.stage} locale={locale}><Textbox frame={frame} … /></Stage>
+ * @example <NovelPlayer.Stage><NovelPlayer.Textbox /></NovelPlayer.Stage>
+ * @example <Stage stage={stillStage(save.stage)} transitions={false} />
  */
 export function Stage(handle: Handle<Stage.Props>) {
 	let prefix = `novel-${handle.id.replace(/[^\w-]/g, "-")}`;
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 	return () => {
 		let {
-			stage,
-			locale,
+			stage: still,
+			locale = intl(handle).locale,
 			focus = true,
 			transitions = true,
-			instant = false,
+			instant: instantProp,
 			children,
 			mix,
 			...rest
 		} = handle.props;
+		let playing = still === undefined ? player : undefined;
+		let stage = still ?? playing?.frame?.stage ?? EMPTY_STAGE;
+		let instant = instantProp ?? playing?.instant ?? false;
 		let focused =
 			focus &&
 			stage.characters.length >= 2 &&
@@ -132,8 +149,7 @@ export function Stage(handle: Handle<Stage.Props>) {
 				data-instant={String(instant)}
 				mix={[
 					css({
-						"--ui-letterbox-bars": "var(--novel-letterbox, #000)",
-						"--novel-transition-duration": "600ms",
+						"--ui-letterbox-bars": themeVar("--novel-letterbox"),
 						"@keyframes novel-in": { from: { opacity: 0 }, to: { opacity: 1 } },
 						"@keyframes novel-out": { from: { opacity: 1 }, to: { opacity: 0 } },
 						"@keyframes novel-in-late": { "0%, 50%": { opacity: 0 }, "100%": { opacity: 1 } },
@@ -182,8 +198,8 @@ export function Stage(handle: Handle<Stage.Props>) {
 						":root:has(&)::view-transition-image-pair(*.novel-scenery)": { overflow: "clip" },
 						":root:has(&)::view-transition-old(*.novel-scenery), :root:has(&)::view-transition-new(*.novel-scenery)":
 							{
-								animationDuration: "var(--novel-transition-duration, 600ms)",
-								animationTimingFunction: "ease",
+								animationDuration: themeVar("--novel-transition-duration"),
+								animationTimingFunction: themeVar("--novel-transition-easing"),
 								animationFillMode: "both",
 								mixBlendMode: "normal",
 							},
@@ -228,6 +244,7 @@ export function Stage(handle: Handle<Stage.Props>) {
 						":root:has(&):active-view-transition-type(novel-shake)::view-transition-new(*.novel-scenery)":
 							{ animationName: "novel-shake" },
 					}),
+					playing === undefined ? undefined : playerStage(playing),
 					mix,
 				]}
 			>
@@ -236,7 +253,7 @@ export function Stage(handle: Handle<Stage.Props>) {
 					data-focus={focused ? "on" : "off"}
 					mix={css({
 						containerName: "novel-stage",
-						background: "var(--novel-stage-background, #000)",
+						background: themeVar("--novel-stage-background"),
 					})}
 				>
 					<Scenery
@@ -263,8 +280,86 @@ export function Stage(handle: Handle<Stage.Props>) {
 						name={transitions ? `${prefix}-image` : undefined}
 					/>
 					{children}
+					{playing === undefined ? null : <Outcome player={playing} />}
 				</Letterbox.Surface>
 			</Letterbox>
+		);
+	};
+}
+
+/**
+ * What the stage adds while it draws a play: a click or tap advances, or brings a hidden
+ * interface back, except on the interface's own controls.
+ */
+function playerStage(player: NovelPlayer.Context) {
+	return [
+		css({ cursor: "pointer", userSelect: "none" }),
+		on<HTMLElement, "click">("click", (event) => {
+			if ((event.target as Element).closest(INTERACTIVE) !== null) return;
+			if (player.hidden) player.hide(false);
+			else player.advance();
+		}),
+	];
+}
+
+/** Props {@link Outcome} accepts. */
+interface OutcomeProps {
+	player: NovelPlayer.Context;
+}
+
+/**
+ * The ending's name over a dimmed stage once the play reaches a named ending, and an alert
+ * with the play's error, offering a retry when the error stopped the play before its first stop.
+ */
+function Outcome(handle: Handle<OutcomeProps>) {
+	return () => {
+		let { player } = handle.props;
+		let ending = player.ending;
+		let error = player.error;
+		return (
+			<>
+				{ending?.key === null || ending === undefined ? null : (
+					<p
+						data-novel-ending=""
+						mix={css({
+							position: "absolute",
+							inset: 0,
+							margin: 0,
+							display: "grid",
+							placeItems: "center",
+							fontSize: themeVar("--novel-ending-size"),
+							background: themeVar("--novel-ending-background"),
+							zIndex: 6,
+						})}
+					>
+						<Message i18nKey={ending.key} />
+					</p>
+				)}
+				{error === undefined ? null : (
+					<div
+						role="alert"
+						data-novel-ui=""
+						data-novel-error={error.code}
+						mix={css({
+							position: "absolute",
+							insetBlockStart: "3cqh",
+							insetInline: "20cqw",
+							padding: "1.5cqh 2cqw",
+							borderRadius: "1cqh",
+							background: themeVar("--novel-error-background"),
+							fontSize: "2.4cqh",
+							zIndex: 7,
+						})}
+					>
+						<p mix={css({ margin: 0 })}>{error.message}</p>
+						{player.stalled ? (
+							<button type="button" mix={on("click", () => player.retry())}>
+								{player.labels.retry}
+							</button>
+						) : null}
+					</div>
+				)}
+			</>
 		);
 	};
 }
@@ -349,29 +444,37 @@ export function CharacterSprite(handle: Handle<Stage.CharacterProps>) {
 					css({
 						position: "absolute",
 						bottom: 0,
-						blockSize: "var(--novel-character-height, 95%)",
+						blockSize: themeVar("--novel-character-height"),
 						zIndex: 1,
 						transformOrigin: "50% 100%",
 						pointerEvents: "none",
-						transition: "transform 200ms ease, filter 200ms ease",
-						'[data-focus="on"] &[data-speaking="true"]': { transform: "scale(1.05)", zIndex: 2 },
-						'[data-focus="on"] &[data-speaking="false"]': { filter: "brightness(0.6)" },
+						"--novel-focus-transition": `transform ${themeVar("--novel-focus-duration")} ease, filter ${themeVar("--novel-focus-duration")} ease`,
+						"--novel-move": `${themeVar("--novel-character-duration")} ${themeVar("--novel-character-easing")}`,
+						transition: "var(--novel-focus-transition)",
+						'[data-focus="on"] &[data-speaking="true"]': {
+							transform: `translateY(calc(-1 * ${themeVar("--novel-focus-lift")})) scale(${themeVar("--novel-focus-scale")})`,
+							filter: themeVar("--novel-focus-filter"),
+							zIndex: 2,
+						},
+						'[data-focus="on"] &[data-speaking="false"]': {
+							filter: themeVar("--novel-dim-filter"),
+						},
 						'&[data-transition="fade"]': {
-							transition: "transform 200ms ease, filter 200ms ease, opacity 400ms ease",
+							transition: "var(--novel-focus-transition), opacity var(--novel-move)",
 							"@starting-style": { opacity: 0 },
 						},
 						'&[data-transition="slide"]': {
 							transition:
-								"transform 200ms ease, filter 200ms ease, left 400ms ease, translate 400ms ease, opacity 400ms ease",
+								"var(--novel-focus-transition), left var(--novel-move), translate var(--novel-move), opacity var(--novel-move)",
 							"@starting-style": { opacity: 0, translate: "var(--novel-slide-from) 0" },
 						},
 						'&[data-exiting="true"]': { zIndex: 0 },
 						'&[data-exiting="true"]:not([data-transition])': { visibility: "hidden" },
 						'&[data-exiting="true"][data-transition="fade"]': {
-							animation: "novel-character-out 400ms ease forwards",
+							animation: "novel-character-out var(--novel-move) forwards",
 						},
 						'&[data-exiting="true"][data-transition="slide"]': {
-							animation: "novel-character-slide-out 400ms ease forwards",
+							animation: "novel-character-slide-out var(--novel-move) forwards",
 						},
 						'[data-instant="true"] &': { transition: "none" },
 						'[data-instant="true"] &[data-exiting="true"]': {

@@ -1,7 +1,7 @@
 /**
  * Sequences a play for the player: each frame applies its stage and awaits the transitions,
- * then starts the voice and the typewriter, then waits for a click, auto mode or skip, and
- * replies. It holds the state the player renders and leaves drawing to the component.
+ * then starts the voice and the reveal, then waits for a click, auto mode or skip, and replies.
+ * The reader's modes live in the behavior models it coordinates; drawing is the parts'.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,11 +15,15 @@ import type { Ending, GameState, ReplayScope, Reply, StopFrame } from "../frames
 import type { Novel, Play, StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 
-import type { BacklogEntry } from "./backlog.js";
+import type { AutoModel } from "./behaviors/auto.js";
+import type { BacklogEntry, BacklogModel } from "./behaviors/backlog.js";
+import type { RevealModel } from "./behaviors/reveal.js";
+import type { SkipModel } from "./behaviors/skip.js";
 import type { NovelSettings } from "./settings.js";
 import type { RunningTransition } from "./transitions.js";
 
 import { AudioMixer } from "./audio.js";
+import { SKIP_STEP_MS } from "./behaviors/skip.js";
 import { Prefetcher } from "./prefetch.js";
 import { resolveSource } from "./source.js";
 import {
@@ -34,15 +38,6 @@ import {
 
 /** Where a frame is in its sequence. */
 export type Phase = "idle" | "staging" | "typing" | "waiting" | "replying";
-
-/** Milliseconds skip mode shows each line for. */
-const SKIP_STEP_MS = 40;
-
-/** Milliseconds auto mode adds per character of an unvoiced line. */
-const AUTO_PER_CHARACTER_MS = 25;
-
-/** Lines the backlog keeps. */
-const BACKLOG_SIZE = 200;
 
 /** What the director needs from the component that draws it. */
 export interface DirectorHost {
@@ -60,27 +55,35 @@ export interface DirectorHost {
 	prefetch(): number | false;
 }
 
-/** Runs one play at a time and the reader's modes over it. */
+/** The behaviors a director sequences a play through, each usable on its own. */
+export interface DirectorBehaviors {
+	reveal: RevealModel;
+	auto: AutoModel;
+	skip: SkipModel;
+	backlog: BacklogModel;
+}
+
+/**
+ * Runs one play at a time over the reader's behaviors: it moves each frame through its phases
+ * and lets the reveal, auto, skip and backlog models hold the rest, reacting to their changes.
+ */
 export class Director {
 	frame: StopFrame | undefined;
 	error: NovelError | undefined;
 	ending: Ending | undefined;
 	phase: Phase = "idle";
-	/** Shows the rest of the line at once. */
-	complete = false;
 	/** Ends this frame's transitions at once. */
 	instant = false;
-	auto = false;
-	/** Skip switched on from the menu or its key, as opposed to held with Control. */
-	skipToggled = false;
-	skipHeld = false;
-	backlog: BacklogEntry[] = [];
 	/** True when an error stopped the play before its first stop, which {@link Director.retry} retries. */
 	stalled = false;
 	/** True while the play is a replay, which never saves. */
 	replaying = false;
+	readonly reveal: RevealModel;
+	readonly auto: AutoModel;
+	readonly skip: SkipModel;
+	readonly backlog: BacklogModel;
 	/** The play a replay interrupted, resumed with its backlog when the replay ends. */
-	#resume: { state: GameState; backlog: BacklogEntry[] } | undefined;
+	#resume: { state: GameState; backlog: readonly BacklogEntry[] } | undefined;
 	#host: DirectorHost;
 	#play: Play | undefined;
 	#sequence = 0;
@@ -92,15 +95,25 @@ export class Director {
 	#prefetcher: Prefetcher;
 	/** The scene prefetched for last, so a scene's reach is read once per entry. */
 	#prefetched: string | undefined;
+	#listening = new AbortController();
 
 	/**
 	 * Creates a director drawing through `host`; nothing plays until {@link Director.begin}.
 	 *
 	 * @param host - The component's callbacks.
+	 * @param behaviors - The models it drives; each one's own changes reach the play.
 	 */
-	constructor(host: DirectorHost) {
+	constructor(host: DirectorHost, behaviors: DirectorBehaviors) {
 		this.#host = host;
+		this.reveal = behaviors.reveal;
+		this.auto = behaviors.auto;
+		this.skip = behaviors.skip;
+		this.backlog = behaviors.backlog;
 		this.#prefetcher = new Prefetcher({ novel: () => host.novel(), mixer: () => this.mixer });
+		let signal = this.#listening.signal;
+		this.reveal.addEventListener("change", () => this.#revealChanged(), { signal });
+		this.auto.addEventListener("change", () => this.#autoChanged(), { signal });
+		this.skip.addEventListener("change", () => this.#skipChanged(), { signal });
 	}
 
 	/** The prefetcher warming the scenes within reach, for a test to read what it started. */
@@ -114,9 +127,9 @@ export class Director {
 		return this.#mixer;
 	}
 
-	/** True while skip is toggled on or Control is held. */
+	/** True while skip is toggled on or held. */
 	get skipping(): boolean {
-		return this.skipToggled || this.skipHeld;
+		return this.skip.active;
 	}
 
 	/** The play as JSON at the current stop, or `undefined` before it starts. */
@@ -155,7 +168,7 @@ export class Director {
 			this.ending === undefined &&
 			this.frame !== undefined
 		) {
-			this.#resume = { state: play.state, backlog: this.backlog };
+			this.#resume = { state: play.state, backlog: this.backlog.entries };
 		}
 		let persistent = play?.persistent;
 		await this.begin(
@@ -176,6 +189,7 @@ export class Director {
 			this.replaying = false;
 			this.ending = { key: null, scene: this.frame?.scene ?? "" };
 			this.phase = "idle";
+			this.reveal.clear();
 			await this.#host.render();
 			this.#host.onEnding(this.ending);
 			return;
@@ -205,7 +219,7 @@ export class Director {
 	 * @param options - Where the play starts.
 	 * @param backlog - The lines the backlog starts with.
 	 */
-	async begin(options: StartOptions = {}, backlog: BacklogEntry[] = []): Promise<void> {
+	async begin(options: StartOptions = {}, backlog: readonly BacklogEntry[] = []): Promise<void> {
 		if (options.replay === undefined) this.#resume = undefined;
 		this.#cancel();
 		this.#mixer?.stopVoice();
@@ -217,7 +231,7 @@ export class Director {
 		}
 		this.#play = started.data;
 		this.replaying = options.replay !== undefined;
-		this.backlog = backlog;
+		this.backlog.replace(backlog);
 		this.ending = undefined;
 		this.error = undefined;
 		await this.#step(undefined);
@@ -248,45 +262,12 @@ export class Director {
 			return;
 		}
 		if (this.phase === "typing") {
-			this.complete = true;
+			this.reveal.finish();
 			void this.#host.render();
 			return;
 		}
 		if (this.phase !== "waiting") return;
 		if (frame.type === "line" || frame.type === "pause") this.reply(frame.advance());
-	}
-
-	/** Called by the textbox once the line is fully visible. */
-	revealed(): void {
-		if (this.frame?.type !== "line" || this.phase !== "typing") return;
-		this.phase = "waiting";
-		void this.#host.render();
-		this.#schedule();
-	}
-
-	/** Turns auto mode on or off. */
-	toggleAuto(): void {
-		this.auto = !this.auto;
-		void this.#host.render();
-		if (this.auto) this.#schedule();
-		else this.#cancel();
-	}
-
-	/** Turns skip on or off. */
-	toggleSkip(): void {
-		this.skipToggled = !this.skipToggled;
-		this.#skipChanged();
-	}
-
-	/**
-	 * Skips while Control is held.
-	 *
-	 * @param held - Whether Control is down.
-	 */
-	holdSkip(held: boolean): void {
-		if (this.skipHeld === held) return;
-		this.skipHeld = held;
-		this.#skipChanged();
 	}
 
 	/**
@@ -307,34 +288,37 @@ export class Director {
 			await this.#host.render();
 			return;
 		}
-		let current = this.frame;
-		let last = this.backlog.at(-1);
-		if (current?.type === "line" && last?.scene === current.scene && last.key === current.key) {
-			this.backlog = this.backlog.slice(0, -1);
-		}
+		if (this.frame?.type === "line") this.backlog.leave(this.frame);
 		this.error = undefined;
 		this.ending = undefined;
 		await this.#present(previous, true);
-	}
-
-	/**
-	 * Plays a backlog line's voice again.
-	 *
-	 * @param entry - The line.
-	 */
-	replayVoice(entry: BacklogEntry): void {
-		if (entry.voice === null) return;
-		void this.mixer.resume();
-		void this.mixer.playVoice(entry.voice);
 	}
 
 	/** Stops every timer, voice and sound when the player leaves the page. */
 	dispose(): void {
 		this.#cancel();
 		this.#sequence++;
+		this.#listening.abort();
 		this.#mixer?.dispose();
 		this.#prefetcher.dispose();
 		if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+	}
+
+	/** Moves a typing line to waiting once the reveal reports the whole line visible. */
+	#revealChanged(): void {
+		if (this.reveal.status !== "revealed") return;
+		if (this.frame?.type !== "line" || this.phase !== "typing") return;
+		if (this.reveal.line !== this.frame.id) return;
+		this.phase = "waiting";
+		void this.#host.render();
+		this.#schedule();
+	}
+
+	/** Starts or drops the pending auto wait as auto mode turns on or off. */
+	#autoChanged(): void {
+		void this.#host.render();
+		if (this.auto.enabled) this.#schedule();
+		else this.#cancel();
 	}
 
 	/** Sends a reply (none to start) and presents the frame it leads to. */
@@ -354,6 +338,7 @@ export class Director {
 			this.replaying = false;
 			this.ending = result.value;
 			this.phase = "idle";
+			this.reveal.clear();
 			await this.#host.render();
 			this.#host.onEnding(result.value);
 			return;
@@ -381,7 +366,6 @@ export class Director {
 		let locale = this.#host.locale();
 		let fast = instant || this.skipping || prefersReducedMotion();
 		this.phase = "staging";
-		this.complete = instant || this.skipping;
 		this.instant = fast;
 		if (!fast) await decodeImages(stageImages(frame.stage, locale));
 		if (sequence !== this.#sequence) return;
@@ -389,7 +373,10 @@ export class Director {
 		this.#running = transitionStage(
 			async () => {
 				this.frame = frame;
-				this.#record(frame, locale);
+				if (frame.type === "line") {
+					this.reveal.begin(frame.id, instant || this.skipping);
+					this.backlog.record(frame, locale);
+				} else this.reveal.clear();
 				await this.#host.render();
 			},
 			sceneryTransition(frame.stage),
@@ -411,6 +398,8 @@ export class Director {
 	async #start(frame: StopFrame, locale: string): Promise<void> {
 		if (frame.type === "line") {
 			this.phase = "typing";
+			this.reveal.speed = this.#host.settings().textSpeed;
+			this.reveal.start();
 			this.#voice =
 				frame.voice === null || this.skipping
 					? Promise.resolve()
@@ -420,7 +409,7 @@ export class Director {
 			return;
 		}
 		this.phase = "waiting";
-		if (frame.type !== "pause") this.skipToggled = false;
+		if (frame.type !== "pause") this.skip.stop();
 		await this.#host.render();
 		if (frame.type === "pause") {
 			let duration = this.skipping ? 0 : frame.duration;
@@ -448,41 +437,35 @@ export class Director {
 		let frame = this.frame;
 		if (frame?.type !== "line" || this.phase !== "waiting") return;
 		clearTimeout(this.#timer);
-		if (this.skipping) {
-			if (this.#host.settings().skip === "all" || frame.seen) {
+		if (this.skip.active) {
+			if (this.skip.passes(frame, this.#host.settings().skip)) {
 				this.#timer = setTimeout(() => {
 					if (this.frame === frame && this.phase === "waiting") this.reply(frame.advance());
 				}, SKIP_STEP_MS);
 				return;
 			}
-			this.skipToggled = false;
-			void this.#host.render();
+			this.skip.stop();
 		}
-		if (!this.auto) return;
-		let sequence = this.#sequence;
-		let voiced = frame.voice !== null;
-		void Promise.all([this.#voice, this.#speech]).then(() => {
-			if (sequence !== this.#sequence || !this.auto) return;
-			let delay =
-				this.#host.settings().autoDelay +
-				(voiced ? 0 : this.#host.text().length * AUTO_PER_CHARACTER_MS);
-			this.#timer = setTimeout(() => {
-				if (this.frame === frame && this.phase === "waiting" && this.auto) {
-					this.reply(frame.advance());
-				}
-			}, delay);
-		});
+		this.auto.wait(
+			{
+				length: this.#host.text().length,
+				voiced: frame.voice !== null,
+				delay: this.#host.settings().autoDelay,
+				after: [this.#voice, this.#speech],
+			},
+			() => {
+				if (this.frame === frame && this.phase === "waiting") this.reply(frame.advance());
+			},
+		);
 	}
 
 	/** Reacts to skip starting or stopping mid-frame. */
 	#skipChanged(): void {
 		void this.#host.render();
-		if (!this.skipping) return;
+		if (!this.skip.active) return;
 		if (this.phase === "staging") this.#finishTransition();
-		else if (this.phase === "typing") {
-			this.complete = true;
-			void this.#host.render();
-		} else this.#schedule();
+		else if (this.phase === "typing") this.reveal.finish();
+		else this.#schedule();
 	}
 
 	/** Jumps the running transition and every stage animation to their end. */
@@ -490,25 +473,6 @@ export class Director {
 		this.#running?.finish();
 		let stage = this.#host.stage();
 		if (stage !== null) finishAnimations(stage);
-	}
-
-	/** Adds a shown line to the backlog, replacing the entry of the same line after a rollback. */
-	#record(frame: StopFrame, locale: string): void {
-		if (frame.type !== "line") return;
-		let entry: BacklogEntry = {
-			id: frame.id,
-			scene: frame.scene,
-			key: frame.key,
-			values: frame.values,
-			speakers: frame.speakers,
-			voice: frame.voice === null ? null : resolveSource(frame.voice, locale),
-		};
-		let last = this.backlog.at(-1);
-		let kept =
-			last?.scene === frame.scene && last.key === frame.key
-				? this.backlog.slice(0, -1)
-				: this.backlog;
-		this.backlog = [...kept, entry].slice(-BACKLOG_SIZE);
 	}
 
 	/** Reads text aloud when self-voicing is on, settling once it has been spoken. */
@@ -531,5 +495,6 @@ export class Director {
 	#cancel(): void {
 		clearTimeout(this.#timer);
 		this.#timer = undefined;
+		this.auto.cancel();
 	}
 }

@@ -13,22 +13,31 @@ import { intl } from "@sdxc/i18n/ui";
 import { css, on } from "remix/component";
 
 import type { SceneDeclaration } from "../declarations.js";
+import type { ReplayScope } from "../frames.js";
 import type { Novel } from "../novel.js";
 
 import type { NovelLabels } from "./settings.js";
 
-import { libraryReader } from "./library.js";
+import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
+import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS } from "./settings.js";
 
 export namespace ChapterSelect {
 	/** Props {@link ChapterSelect} and {@link SceneReplay} accept. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
-		novel: Novel;
-		/** The stored `Persistent` value, or a play's `persistent`; keep one value while it shows. */
-		persistent: unknown;
-		/** Called with the scene to start: a chapter's first mapped scene, or the scene picked. */
-		onSelect: (scene: SceneDeclaration) => void;
+		/** The novel; inside a player it defaults to the player's. */
+		novel?: Novel;
+		/**
+		 * The stored `Persistent` value; inside a player it defaults to the play's. Keep one value
+		 * while the screen shows, since a new value reads the library again.
+		 */
+		persistent?: unknown;
+		/**
+		 * Called with the scene to start: a chapter's first mapped scene, or the scene picked.
+		 * Inside a player it defaults to starting that scene as a replay.
+		 */
+		onSelect?: (scene: SceneDeclaration) => void;
 		labels?: Partial<Pick<NovelLabels, "loading" | "locked">>;
 	}
 }
@@ -36,6 +45,14 @@ export namespace ChapterSelect {
 export namespace SceneReplay {
 	/** Props {@link SceneReplay} accepts. */
 	export type Props = ChapterSelect.Props;
+}
+
+/** Starts a picked scene as a replay of `scope` in the player, or does nothing outside one. */
+function replayIn(
+	player: NovelPlayer.Context | undefined,
+	scope: ReplayScope,
+): (scene: SceneDeclaration) => void {
+	return (scene) => void player?.replay(scene, scope);
 }
 
 /** One row of a chapter or scene list: its title, and a button while it is reached. */
@@ -86,10 +103,20 @@ function Entry(
  */
 export function ChapterSelect(handle: Handle<ChapterSelect.Props>) {
 	let read = libraryReader(handle);
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 	return () => {
-		let { novel, persistent, onSelect, labels: overrides, mix, ...rest } = handle.props;
-		let labels = { ...DEFAULT_LABELS, ...overrides };
-		let library = read(novel, persistent, intl(handle).locale);
+		let {
+			novel: _novel,
+			persistent: _persistent,
+			onSelect = replayIn(player, "chapter"),
+			labels: overrides,
+			mix,
+			...rest
+		} = handle.props;
+		let source = librarySource(player, handle.props);
+		if (source === undefined) return null;
+		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
+		let library = read(source.novel, source.persistent, intl(handle).locale);
 		let chapters = (library?.chapters ?? []).flatMap((group) => {
 			let first = group.scenes[0];
 			let title = group.chapter?.title;
@@ -129,10 +156,20 @@ export function ChapterSelect(handle: Handle<ChapterSelect.Props>) {
  */
 export function SceneReplay(handle: Handle<SceneReplay.Props>) {
 	let read = libraryReader(handle);
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 	return () => {
-		let { novel, persistent, onSelect, labels: overrides, mix, ...rest } = handle.props;
-		let labels = { ...DEFAULT_LABELS, ...overrides };
-		let library = read(novel, persistent, intl(handle).locale);
+		let {
+			novel: _novel,
+			persistent: _persistent,
+			onSelect = replayIn(player, "scene"),
+			labels: overrides,
+			mix,
+			...rest
+		} = handle.props;
+		let source = librarySource(player, handle.props);
+		if (source === undefined) return null;
+		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
+		let library = read(source.novel, source.persistent, intl(handle).locale);
 		let groups = (library?.chapters ?? [])
 			.map((group) => ({
 				chapter: group.chapter,

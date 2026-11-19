@@ -171,7 +171,7 @@ function mount(props: Partial<NovelPlayer.Props> = {}) {
 	});
 	mounted = render(
 		<IntlProvider intl={intl}>
-			<NovelPlayer
+			<NovelPlayer.Default
 				novel={fixture()}
 				start={{ seed: "prefetch" }}
 				settings={{ textSpeed: 0 }}

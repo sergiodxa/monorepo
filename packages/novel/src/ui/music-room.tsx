@@ -19,19 +19,25 @@ import type { LibraryAsset } from "./library.js";
 import type { NovelLabels } from "./settings.js";
 
 import { AudioMixer } from "./audio.js";
-import { libraryReader } from "./library.js";
+import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
+import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS, DEFAULT_SETTINGS } from "./settings.js";
 
 export namespace MusicRoom {
 	/** Props {@link MusicRoom} accepts. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
-		novel: Novel;
-		/** The stored `Persistent` value, or a play's `persistent`; keep one value while it shows. */
-		persistent: unknown;
+		/** The novel; inside a player it defaults to the player's. */
+		novel?: Novel;
 		/**
-		 * The mixer to play through. A mixer passed in keeps playing after the room closes, for its
-		 * owner to restore; without one the room makes its own and stops it when it unmounts.
+		 * The stored `Persistent` value; inside a player it defaults to the play's. Keep one value
+		 * while the screen shows, since a new value reads the library again.
+		 */
+		persistent?: unknown;
+		/**
+		 * The mixer to play through; inside a player, the player's. A mixer passed in keeps playing
+		 * after the room closes, for its owner to restore; without one the room makes its own and
+		 * stops it when it unmounts.
 		 */
 		mixer?: AudioMixer;
 		/** Each track's title as a message key, by asset id; a track without one shows its key. */
@@ -47,6 +53,7 @@ export namespace MusicRoom {
  */
 export function MusicRoom(handle: Handle<MusicRoom.Props>) {
 	let read = libraryReader(handle);
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 	let own: AudioMixer | undefined;
 	let playing: string | null = null;
 	handle.signal.addEventListener("abort", () => own?.dispose());
@@ -54,6 +61,7 @@ export function MusicRoom(handle: Handle<MusicRoom.Props>) {
 	/** The mixer to play through, making the room's own on first use. */
 	function mixer(): AudioMixer {
 		if (handle.props.mixer !== undefined) return handle.props.mixer;
+		if (player !== undefined) return player.mixer;
 		own ??= new AudioMixer(DEFAULT_SETTINGS.volume);
 		return own;
 	}
@@ -77,16 +85,18 @@ export function MusicRoom(handle: Handle<MusicRoom.Props>) {
 
 	return () => {
 		let {
-			novel,
-			persistent,
+			novel: _novel,
+			persistent: _persistent,
 			mixer: _mixer,
 			titles = {},
 			labels: overrides,
 			mix,
 			...rest
 		} = handle.props;
-		let labels = { ...DEFAULT_LABELS, ...overrides };
-		let library = read(novel, persistent, intl(handle).locale);
+		let source = librarySource(player, handle.props);
+		if (source === undefined) return null;
+		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
+		let library = read(source.novel, source.persistent, intl(handle).locale);
 		return (
 			<div
 				{...rest}

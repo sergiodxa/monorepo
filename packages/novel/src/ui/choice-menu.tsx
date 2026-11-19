@@ -1,7 +1,7 @@
 /**
  * The choice menu: the prompt and one button per option, a locked option shown disabled with
  * its reason, an option taken before marked `data-chosen`, and a timed menu counting down
- * before it takes the menu's default.
+ * through the player's countdown before it takes the menu's default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,58 +11,32 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { css, on } from "remix/component";
 
-import type { ChoiceFrame } from "../frames.js";
-
 import { Message } from "./message.js";
+import { NovelPlayer } from "./player.js";
+import { themeVar } from "./theme.js";
 
 export namespace ChoiceMenu {
 	/** Props {@link ChoiceMenu} accepts. */
-	export interface Props extends Omit<TagProps<"div">, "children"> {
-		frame: ChoiceFrame;
-		/** Called with the option's id when the reader picks one, or when a timed menu runs out. */
-		onChoose: (option: string) => void;
-		/** The countdown's accessible name. */
-		timeLeftLabel?: string;
-	}
+	export interface Props extends Omit<TagProps<"div">, "children"> {}
 }
 
 /**
- * The option a timed menu takes when it runs out: its `default`, else its first available option.
+ * The current menu: its prompt and one button per option, answering the player with the option
+ * picked. It shows once the stage settles, and a timed menu runs the player's `countdown`.
  *
- * @param frame - The menu.
- * @returns The option's id, or `undefined` when nothing is available.
- */
-export function timeoutOption(frame: ChoiceFrame): string | undefined {
-	return frame.default ?? frame.options.find((option) => !option.disabled)?.id;
-}
-
-/**
- * Draws a menu and reports the option taken. A timed menu starts its countdown when it mounts,
- * and a new frame restarts it.
- *
- * @example <ChoiceMenu frame={frame} onChoose={(id) => reply(frame.choose(id))} />
+ * @example <NovelPlayer.Choices mix={css({ "--novel-option-background": "url(/option.png)" })} />
  */
 export function ChoiceMenu(handle: Handle<ChoiceMenu.Props>) {
-	let timedFrame: string | undefined;
-	let timer: ReturnType<typeof setTimeout> | undefined;
-
-	handle.signal.addEventListener("abort", () => clearTimeout(timer));
-
-	/** Starts the countdown for a timed frame it has not started one for. */
-	function countdown(): void {
-		let { frame } = handle.props;
-		if (frame.timeout === undefined || timedFrame === frame.id) return;
-		clearTimeout(timer);
-		timedFrame = frame.id;
-		timer = setTimeout(() => {
-			let option = timeoutOption(handle.props.frame);
-			if (option !== undefined && handle.props.frame.id === frame.id) handle.props.onChoose(option);
-		}, frame.timeout);
-	}
+	let player = handle.context.get(NovelPlayer);
 
 	return () => {
-		let { frame, onChoose, timeLeftLabel, mix, ...rest } = handle.props;
-		handle.queueTask(countdown);
+		let { mix, ...rest } = handle.props;
+		let frame = player.frame;
+		if (player.hidden || player.ending !== undefined || frame?.type !== "choice") return null;
+		if (player.phase === "staging") return null;
+		handle.queueTask(() => {
+			if (player.frame === frame) player.countdown.start(frame);
+		});
 		return (
 			<div
 				{...rest}
@@ -76,11 +50,11 @@ export function ChoiceMenu(handle: Handle<ChoiceMenu.Props>) {
 						display: "grid",
 						alignContent: "center",
 						justifyItems: "center",
-						gap: "2cqh",
+						gap: themeVar("--novel-choices-gap"),
 						paddingBlockEnd: "12cqh",
 						zIndex: 4,
 						fontSize: "calc(3.2cqh * var(--novel-font-scale, 1))",
-						fontFamily: "var(--novel-text-font, inherit)",
+						fontFamily: themeVar("--novel-text-font"),
 					}),
 					mix,
 				]}
@@ -93,8 +67,8 @@ export function ChoiceMenu(handle: Handle<ChoiceMenu.Props>) {
 							paddingBlock: "1cqh",
 							paddingInline: "2cqw",
 							borderRadius: "1cqh",
-							background: "rgb(0 0 0 / 0.6)",
-							color: "#fff",
+							background: themeVar("--novel-prompt-background"),
+							color: themeVar("--novel-prompt-color"),
 						})}
 					>
 						<Message i18nKey={frame.prompt} />
@@ -105,18 +79,18 @@ export function ChoiceMenu(handle: Handle<ChoiceMenu.Props>) {
 						key={`${frame.id}-timer`}
 						data-novel-timer=""
 						role="timer"
-						aria-label={timeLeftLabel}
+						aria-label={player.labels.timeLeft}
 						mix={css({
-							inlineSize: "46cqw",
-							blockSize: "0.8cqh",
+							inlineSize: themeVar("--novel-option-min-inline-size"),
+							blockSize: themeVar("--novel-countdown-height"),
 							borderRadius: "0.4cqh",
-							background: "rgb(255 255 255 / 0.25)",
+							background: themeVar("--novel-countdown-track"),
 							overflow: "hidden",
 							"&::after": {
 								content: '""',
 								display: "block",
 								blockSize: "100%",
-								background: "var(--novel-accent, #f4c95d)",
+								background: themeVar("--novel-countdown-fill"),
 								transformOrigin: "0 50%",
 								animation: "novel-countdown var(--novel-timeout) linear forwards",
 							},
@@ -143,25 +117,31 @@ export function ChoiceMenu(handle: Handle<ChoiceMenu.Props>) {
 							}
 							mix={[
 								css({
-									minInlineSize: "46cqw",
-									paddingBlock: "1.4cqh",
-									paddingInline: "3cqw",
-									border: "0.2cqh solid rgb(255 255 255 / 0.35)",
-									borderRadius: "1.2cqh",
-									background: "var(--novel-option-background, rgb(20 20 40 / 0.85))",
-									color: "#fff",
+									minInlineSize: themeVar("--novel-option-min-inline-size"),
+									padding: themeVar("--novel-option-padding"),
+									border: themeVar("--novel-option-border"),
+									borderImageSource: themeVar("--novel-option-border-image-source"),
+									borderImageSlice: themeVar("--novel-option-border-image-slice"),
+									borderImageWidth: themeVar("--novel-option-border-image-width"),
+									borderRadius: themeVar("--novel-option-radius"),
+									background: themeVar("--novel-option-background"),
+									color: themeVar("--novel-option-color"),
 									font: "inherit",
 									cursor: "pointer",
 									transition: "background 150ms ease, border-color 150ms ease",
 									"&:hover:not(:disabled), &:focus-visible": {
-										background: "var(--novel-option-hover, rgb(60 60 110 / 0.95))",
-										borderColor: "var(--novel-accent, #f4c95d)",
-										outline: "none",
+										background: themeVar("--novel-option-hover"),
+										color: themeVar("--novel-option-hover-color"),
+										borderColor: themeVar("--novel-option-hover-border-color"),
+										outline: themeVar("--novel-option-focus-outline"),
 									},
-									'&[data-chosen="true"]': { color: "var(--novel-chosen-color, #b8b8d0)" },
-									"&:disabled": { opacity: 0.5, cursor: "not-allowed" },
+									'&[data-chosen="true"]': { color: themeVar("--novel-chosen-color") },
+									"&:disabled": {
+										opacity: themeVar("--novel-option-disabled-opacity"),
+										cursor: "not-allowed",
+									},
 								}),
-								on("click", () => onChoose(option.id)),
+								on("click", () => player.answer(frame.choose(option.id))),
 							]}
 						>
 							<Message i18nKey={option.label} />
