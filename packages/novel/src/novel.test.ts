@@ -10,13 +10,24 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { createRandom } from "@sdxc/random";
-import { isFailure, isSuccess, unwrap } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { createTestPlay } from "./test.js";
 
-import type { ChoiceFrame, Frame, GameState, LineFrame, Play, Reply } from "./index.js";
+import type {
+	ChoiceFrame,
+	Frame,
+	GameState,
+	LineFrame,
+	NovelEventName,
+	NovelEvents,
+	NovelOptions,
+	Persistent,
+	Play,
+	Reply,
+} from "./index.js";
 
 import {
 	assets,
@@ -193,7 +204,7 @@ const JUMP = createScene(SCENES.prologue.jump, (ctx) => [
 ]);
 
 /** A novel over the fixture, with the flashback loaded lazily the way an app maps its scenes. */
-function fixture(options: { rollback?: number } = {}) {
+function fixture(options: Partial<NovelOptions> = {}) {
 	let novel = createNovel({
 		scenes: SCENES,
 		cast: CAST,
@@ -664,5 +675,405 @@ describe("createTestPlay", () => {
 			code: "unavailable-option",
 		});
 		await expect(play.advance()).rejects.toThrow(/choice/);
+	});
+});
+
+/** Every event a novel emitted, in order, with the play each one fired for. */
+function record(novel: ReturnType<typeof fixture>) {
+	let log: { name: NovelEventName; payload: unknown; play: Play }[] = [];
+	let names: NovelEventName[] = [
+		"scene",
+		"line",
+		"choice",
+		"ending",
+		"unlock",
+		"chapter",
+		"save",
+		"persist",
+		"error",
+	];
+	for (let name of names) {
+		novel.on(name, (payload, play) => {
+			log.push({ name, payload, play });
+		});
+	}
+	return log;
+}
+
+/** Plays the fixture to its good ending through `createTestPlay`. */
+async function playToTheEnd(novel = fixture(), persistent?: unknown) {
+	let play = createTestPlay(novel, { seed: "mika", persistent });
+	await play.advanceUntil("choice");
+	await play.choose("opening.askName");
+	await play.advanceUntil("choice");
+	await play.choose("opening.done");
+	await play.complete({ caught: 4 });
+	await play.advanceUntil("choice");
+	await play.choose("cafe.stay");
+	return play;
+}
+
+/** A one-scene novel over the fixture's declarations, starting at `prologue.unwritten`. */
+function oneScene(
+	directives: Parameters<typeof createScene>[1],
+	options: Partial<NovelOptions> = {},
+) {
+	let novel = createNovel({
+		scenes: SCENES,
+		cast: CAST,
+		assets: ASSETS,
+		interactions: INTERACTIONS,
+		state: STATE,
+		initial: SCENES.prologue.unwritten,
+		...options,
+	});
+	novel.map(SCENES.prologue.unwritten, createScene(SCENES.prologue.unwritten, directives));
+	return novel;
+}
+
+describe("versions and migrations", () => {
+	test("stamps a save with the novel's version", async () => {
+		let play = start();
+		await play.next();
+		expect(play.state.version).toBe(1);
+		let versioned = unwrap(fixture({ version: 4 }).start({ seed: "fixture" }));
+		await versioned.next();
+		expect(versioned.state.version).toBe(4);
+	});
+
+	test("reads a save without a version as version 1 and upgrades it step by step", async () => {
+		let play = start();
+		let welcome = line(frameOf(await play.next()));
+		await advance(play, welcome);
+		let { version: _version, ...saved } = JSON.parse(JSON.stringify(play.state)) as GameState;
+		let old = { ...saved, state: { coins: 7, affection: { mika: 3 } } };
+
+		let novel = fixture({
+			version: 3,
+			migrate: {
+				1: (game) => {
+					let { coins, ...rest } = game.state as { coins: number };
+					return success({ ...game, state: { ...rest, gold: coins } });
+				},
+				2: (game) => success({ ...game, state: { ...(game.state as object), charm: 50 } }),
+			},
+		});
+		let resumed = unwrap(novel.start({ from: old }));
+		expect(line(frameOf(await resumed.next())).key).toBe("opening.hello");
+		expect(resumed.state.version).toBe(3);
+		expect(resumed.state.state).toEqual({ gold: 7, charm: 50, affection: { mika: 3 } });
+	});
+
+	test("refuses a save no migration upgrades", async () => {
+		let play = start();
+		await play.next();
+		let saved = JSON.parse(JSON.stringify(play.state)) as GameState;
+
+		let missing = fixture({ version: 2 }).start({ from: saved });
+		expect(isFailure(missing) && missing.error.code).toBe("migration-failed");
+
+		let failing = fixture({
+			version: 2,
+			migrate: { 1: () => failure(new Error("no coins")) },
+		}).start({ from: saved });
+		expect(isFailure(failing) && failing.error.message).toMatch(/no coins/);
+
+		let newer = fixture().start({ from: { ...saved, version: 2 } });
+		expect(isFailure(newer) && newer.error.code).toBe("migration-failed");
+
+		let garbage = fixture().start({ from: "save" });
+		expect(isFailure(garbage) && garbage.error.code).toBe("invalid-state");
+	});
+
+	test("fills state fields a save predates with their schema defaults", async () => {
+		let play = start();
+		await play.next();
+		let saved = { ...play.state, state: { gold: 3 } };
+		let resumed = unwrap(fixture().start({ from: saved }));
+		expect(resumed.state.state).toEqual({ gold: 3, charm: 0, affection: { mika: 0 } });
+	});
+
+	test("resumes at the anchored line when a counted anchor no longer exists", async () => {
+		let play = start();
+		let pause = await until(play, frameOf(await play.next()), "pause");
+		expect(pause.type).toBe("pause");
+		expect(play.state.position).toEqual({ scene: "prologue.opening", line: "opening.back+1" });
+
+		let saved = { ...play.state, position: { scene: "prologue.opening", line: "opening.back+7" } };
+		let resumed = unwrap(fixture().start({ from: saved }));
+		expect(line(frameOf(await resumed.next())).key).toBe("opening.back");
+	});
+});
+
+describe("persistent data", () => {
+	test("records lines with their values, options, endings, chapters and unlocks", async () => {
+		let play = await playToTheEnd();
+		let persistent = play.persistent;
+
+		expect(persistent.seen["prologue.opening:opening.welcome"]).toEqual({});
+		expect(persistent.seen["prologue.opening:opening.hello"]).toEqual({ name: "Ada" });
+		expect(persistent.seen["prologue.cafe:cafe.impressed"]).toEqual({ caught: 4 });
+		expect(persistent.chosen).toEqual([
+			"prologue.opening:opening.askName",
+			"prologue.opening:opening.done",
+			"prologue.cafe:cafe.stay",
+		]);
+		expect(persistent.endings).toEqual(["endings.good"]);
+		expect(persistent.chapters).toEqual(["prologue"]);
+		expect(persistent.unlocked).toEqual({ images: ["images.letter"], music: ["music.chill"] });
+	});
+
+	test("marks lines read and options taken in an earlier playthrough", async () => {
+		let first = await playToTheEnd();
+		let fresh = createTestPlay(fixture(), { seed: "mika" });
+		expect(await fresh.advance()).toMatchObject({ key: "opening.welcome", seen: false });
+
+		let again = createTestPlay(fixture(), { seed: "mika", persistent: first.persistent });
+		expect(await again.advance()).toMatchObject({ key: "opening.welcome", seen: true });
+		let menu = await again.advanceUntil("choice");
+		expect(menu.options.map((option) => [option.id, option.chosen])).toEqual([
+			["opening.askName", true],
+			["opening.askJob", false],
+			["opening.flirt", false],
+			["opening.done", true],
+		]);
+	});
+
+	test("starts from empty data when the stored value is invalid", () => {
+		let play = createTestPlay(fixture(), { persistent: { seen: 3, endings: "all" } });
+		expect(play.persistent).toEqual({
+			seen: {},
+			chosen: [],
+			endings: [],
+			chapters: [],
+			unlocked: { images: [], music: [] },
+		});
+	});
+
+	test("emits the whole record on persist and keeps it through rollback", async () => {
+		let novel = fixture();
+		let stored: Persistent[] = [];
+		novel.on("persist", (persistent) => {
+			stored.push(persistent);
+		});
+		let play = unwrap(novel.start({ seed: "fixture" }));
+		let welcome = line(frameOf(await play.next()));
+		await advance(play, welcome);
+		expect(stored).toHaveLength(2);
+		expect(stored.at(-1)).toEqual(play.persistent);
+
+		await play.rollback();
+		expect(play.persistent.seen["prologue.opening:opening.hello"]).toEqual({ name: "Ada" });
+		expect(stored).toHaveLength(2);
+	});
+
+	test("hands persistent data to callbacks", async () => {
+		let novel = oneScene((ctx) => [
+			ctx.when(
+				(_state, { persistent }) => persistent.endings.includes("endings.good"),
+				[ctx.narrate("opening.lucky")],
+				[ctx.narrate("opening.unlucky")],
+			),
+		]);
+		let fresh = createTestPlay(novel);
+		expect(await fresh.advance()).toMatchObject({ key: "opening.unlucky" });
+		let after = createTestPlay(novel, { persistent: { endings: ["endings.good"] } });
+		expect(await after.advance()).toMatchObject({ key: "opening.lucky" });
+	});
+});
+
+describe("events", () => {
+	test("emits what a play does, in order, with the play it fired for", async () => {
+		let novel = fixture();
+		let log = record(novel);
+		let play = unwrap(novel.start({ seed: "fixture" }));
+		let welcome = line(frameOf(await play.next()));
+
+		expect(log.map((entry) => entry.name)).toEqual([
+			"scene",
+			"chapter",
+			"unlock",
+			"line",
+			"persist",
+		]);
+		expect(log.every((entry) => entry.play === play)).toBe(true);
+		expect(log.slice(0, 4).map((entry) => entry.payload)).toEqual([
+			{ scene: "prologue.opening" },
+			{ chapter: { name: "prologue", title: "chapters.prologue" }, scene: "prologue.opening" },
+			{ kind: "music", id: "music.chill" },
+			{ scene: "prologue.opening", key: "opening.welcome", speakers: [], values: undefined },
+		]);
+
+		log.length = 0;
+		let frame: Frame = welcome;
+		while (frame.type !== "line" || frame.key !== "flashback.memory") {
+			frame = await advance(play, frame);
+		}
+		expect(log.filter((entry) => entry.name === "scene").map((entry) => entry.payload)).toEqual([
+			{ scene: "prologue.flashback" },
+		]);
+		expect(log.some((entry) => entry.name === "chapter")).toBe(false);
+		expect(log.find((entry) => entry.name === "unlock")?.payload).toEqual({
+			kind: "image",
+			id: "images.letter",
+		});
+	});
+
+	test("emits accepted choices and the ending", async () => {
+		let novel = fixture();
+		let log = record(novel);
+		await playToTheEnd(novel);
+		let choices = log.filter((entry) => entry.name === "choice").map((entry) => entry.payload);
+		expect(choices).toEqual([
+			{ scene: "prologue.opening", option: "opening.askName" },
+			{ scene: "prologue.opening", option: "opening.done" },
+			{ scene: "prologue.cafe", option: "cafe.stay" },
+		]);
+		expect(log.filter((entry) => entry.name === "ending").map((entry) => entry.payload)).toEqual([
+			{ key: "endings.good", scene: "prologue.cafe" },
+		]);
+	});
+
+	test("removes a listener with off() or the function on() returns", async () => {
+		let novel = fixture();
+		let lines: string[] = [];
+		let listener = (payload: NovelEvents["line"]) => {
+			lines.push(payload.key);
+		};
+		novel.on("line", listener);
+		let stop = novel.on("line", (payload) => {
+			lines.push(`second:${payload.key}`);
+		});
+		let play = unwrap(novel.start({ seed: "fixture" }));
+		let welcome = line(frameOf(await play.next()));
+		novel.off("line", listener);
+		stop();
+		await advance(play, welcome);
+		expect(lines).toEqual(["opening.welcome", "second:opening.welcome"]);
+	});
+
+	test("installs plugins that register listeners", async () => {
+		let unlocked: string[] = [];
+		let novel = fixture().use((target) => {
+			target.on("ending", (ending) => {
+				if (ending.key !== null) unlocked.push(`ACH:${ending.key}`);
+			});
+		});
+		await playToTheEnd(novel);
+		expect(unlocked).toEqual(["ACH:endings.good"]);
+	});
+
+	test("reports a failing listener on error and keeps playing", async () => {
+		let novel = fixture();
+		let errors: NovelEvents["error"][] = [];
+		novel.on("line", () => {
+			throw new Error("analytics down");
+		});
+		novel.on("scene", async () => {
+			throw new Error("rejected");
+		});
+		novel.on("error", (error) => {
+			errors.push(error);
+		});
+		let play = unwrap(novel.start({ seed: "fixture" }));
+		let welcome = line(frameOf(await play.next()));
+		expect(line(await advance(play, welcome)).key).toBe("opening.hello");
+		await Promise.resolve();
+		expect(errors.map((error) => `${error.code}:${error.subject}`).sort()).toEqual([
+			"listener-failed:line",
+			"listener-failed:line",
+			"listener-failed:scene",
+		]);
+		expect(errors.map((error) => (error.cause as Error).message)).toContain("analytics down");
+	});
+
+	test("emits a save with the play as JSON", async () => {
+		let novel = fixture();
+		let saves: NovelEvents["save"][] = [];
+		novel.on("save", (save) => {
+			saves.push(save);
+		});
+		let play = unwrap(novel.start({ seed: "fixture" }));
+		await play.next();
+		let state = play.save("slot-1");
+		expect(saves).toEqual([{ slot: "slot-1", state }]);
+		expect(state.position).toEqual({ scene: "prologue.opening", line: "opening.welcome" });
+		expect(JSON.parse(JSON.stringify(state))).toEqual(state);
+	});
+
+	test("reports a menu with no option and continues past it", async () => {
+		let novel = oneScene((ctx) => [
+			ctx.choose({ "opening.flirt": { when: () => false, do: [] } }),
+			ctx.narrate("opening.done"),
+		]);
+		let log = record(novel);
+		let play = createTestPlay(novel);
+		expect(await play.advance()).toMatchObject({ key: "opening.done" });
+		let errors = log.filter((entry) => entry.name === "error").map((entry) => entry.payload);
+		expect(errors).toMatchObject([
+			{ code: "dead-end-menu", subject: "prologue.unwritten:opening.flirt" },
+		]);
+	});
+
+	test("reports an undeclared asset or character and still draws it", async () => {
+		let other = assets({ backgrounds: { street: "/bg/street.webp" } });
+		let stranger = cast({ kai: character({ name: "cast.ren", sprites: { calm: "/kai.webp" } }) });
+		let novel = oneScene((ctx) => [
+			ctx.show(other.backgrounds.street),
+			ctx.enter(stranger.kai, { at: "left" }),
+			ctx.narrate("opening.welcome"),
+			ctx.narrate("opening.done"),
+		]);
+		let log = record(novel);
+		let play = createTestPlay(novel);
+		let frame = await play.advance();
+		expect(frame?.stage.background).toEqual({ id: "backgrounds.street", src: "/bg/street.webp" });
+		await play.advance();
+		let errors = log.filter((entry) => entry.name === "error").map((entry) => entry.payload);
+		expect(errors).toMatchObject([
+			{ code: "missing-asset", subject: "backgrounds.street" },
+			{ code: "missing-asset", subject: "cast.kai" },
+		]);
+	});
+
+	test("reports a message a catalog lacks once per play", async () => {
+		let novel = fixture({ messages: { en: EN, ja: { cast: { mika: "ミカ" } } } });
+		let log = record(novel);
+		let play = unwrap(novel.start({ seed: "fixture" }));
+		let welcome = line(frameOf(await play.next()));
+		await advance(play, welcome);
+		await play.rollback();
+		let errors = log
+			.filter((entry) => entry.name === "error")
+			.map((entry) => entry.payload as NovelEvents["error"])
+			.map((error) => [error.code, error.locale, error.subject]);
+		expect(errors).toEqual([
+			["missing-message", "ja", "opening.welcome"],
+			["missing-message", "ja", "opening.hello"],
+		]);
+	});
+
+	test("reports a jump to an unmapped scene", async () => {
+		let novel = fixture();
+		let log = record(novel);
+		let play = unwrap(novel.start({ scene: SCENES.prologue.jump }));
+		let jump = line(frameOf(await play.next()));
+		await play.next(jump.advance());
+		expect(
+			log.filter((entry) => entry.name === "error").map((entry) => entry.payload),
+		).toMatchObject([{ code: "unmapped-scene", subject: "prologue.unwritten" }]);
+	});
+
+	test("asks for a voice per locale when the novel has locales", async () => {
+		let novel = fixture({
+			locales: ["en", "ja"],
+			voice: ({ speaker, key, locale }) => `/voice/${locale}/${speaker}/${key}.ogg`,
+		});
+		let play = unwrap(novel.start({ seed: "fixture" }));
+		let hello = line(await advance(play, frameOf(await play.next())));
+		expect(hello.voice).toEqual({
+			en: "/voice/en/mika/opening.hello.ogg",
+			ja: "/voice/ja/mika/opening.hello.ogg",
+		});
 	});
 });

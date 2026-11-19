@@ -91,11 +91,42 @@ ctx.choose({
 });
 ```
 
-`play.state` is the play as JSON for a save, `novel.start({ from })` validates a save and resumes it, and `play.rollback()` returns to the previous stop.
+## Saves, persistent data and events
+
+The novel stores nothing: it emits JSON on events and the app keeps it. `play.save(slot)` emits `save`, `novel.start({ from })` migrates and validates a save before resuming it, and `novel.start({ persistent })` takes the lines read, options taken, endings, chapters and unlocks of earlier playthroughs, which the play updates and emits on `persist`.
+
+```typescript
+novel.on("save", ({ slot, state }) => localStorage.setItem(`save:${slot}`, JSON.stringify(state)));
+novel.on("persist", (persistent) => localStorage.setItem("persistent", JSON.stringify(persistent)));
+novel.on("error", (error) => reportError(error));
+
+let play = novel.start({
+	from: JSON.parse(localStorage.getItem("save:1") ?? "null") ?? undefined,
+	persistent: JSON.parse(localStorage.getItem("persistent") ?? "null"),
+});
+```
+
+`play.state` is the play as JSON at the current stop, and `play.rollback()` returns to the previous stop. `scene`, `line`, `choice`, `ending`, `unlock` and `chapter` report what a play does, each listener receiving the payload and the play; `novel.use(plugin)` installs a function that registers listeners. A save carries the novel's `version`; `createNovel({ version: 2, migrate: { 1: (game) => success({ ...game, state: upgrade(game.state) }) } })` upgrades older saves step by step.
+
+Voices come from `createNovel({ voice })`, asked once per locale when the novel has `locales` (or `messages`), which fits a folder per locale loaded with a Vite glob:
+
+```typescript
+const VOICES = import.meta.glob<string>("./voice/*/*/*.ogg", {
+	query: "?url",
+	import: "default",
+	eager: true,
+});
+
+createNovel({
+	// ...
+	locales: ["en", "ja"],
+	voice: ({ speaker, key, locale }) => VOICES[`./voice/${locale}/${speaker}/${key}.ogg`],
+});
+```
 
 ## Entry points
 
-- `@sdxc/novel`: declarations, `createScene`, `createNovel`, `lazy`, and the frame, reply and state types.
+- `@sdxc/novel`: declarations, `createScene`, `createNovel`, `lazy`, and the frame, reply, state and event types.
 - `@sdxc/novel/test`: `createTestPlay`, which drives a play by naming each reply.
 
 ```typescript

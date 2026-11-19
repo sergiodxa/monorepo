@@ -12,15 +12,24 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { isFailure } from "@sdxc/result";
 
 import type { SceneDeclaration } from "./declarations.js";
+import type { NovelEventName, NovelEvents } from "./events.js";
 import type { Ending, Frame, GameState, InteractionFrame, StopFrame } from "./frames.js";
 import type { Novel, Play, StartOptions } from "./novel.js";
+import type { Persistent } from "./persistent.js";
 import type { NovelState, SchemaInput } from "./types.js";
+
+import { INTERNALS } from "./novel.js";
 
 /** One thing the player saw or did, in the order it happened. */
 export type TranscriptEntry =
 	| { type: "line"; speakers: string[]; key: string; values: Record<string, unknown> | undefined }
 	| { type: "choice"; option: string }
 	| { type: "custom"; interaction: string; output: unknown };
+
+/** An event the play emitted, as the test play logs it. */
+export type TestEvent = {
+	[Name in NovelEventName]: { type: Name; payload: NovelEvents[Name] };
+}[NovelEventName];
 
 /** The output a custom frame's `complete()` accepts, across every declared interaction. */
 type CompleteOutput = StopFrame extends infer Each
@@ -45,6 +54,12 @@ export interface TestPlay {
 	readonly scene: SceneDeclaration;
 	/** Every line shown, option taken and interaction completed so far. */
 	readonly transcript: readonly TranscriptEntry[];
+	/** Every event the play emitted, in order; the novel's own listeners receive them too. */
+	readonly events: readonly TestEvent[];
+	/** Persistent data as the play has updated it. */
+	readonly persistent: Persistent;
+	/** Emits `save` for `slot` and answers the saved state. */
+	save(slot: string): GameState;
 	/** Starts the play, or answers the current line or pause; resolves to the next frame. */
 	advance(): Promise<StopFrame | undefined>;
 	/** Advances through lines and pauses until a frame of `type`, which it resolves to. */
@@ -68,7 +83,12 @@ export interface TestPlay {
  * @example let play = createTestPlay(novel, { seed: "mika", scene: scenes.spring.cafe.meeting });
  */
 export function createTestPlay(novel: Novel, options: StartOptions = {}): TestPlay {
-	let started = novel.start(options);
+	let events: TestEvent[] = [];
+	let started = novel[INTERNALS]().start(options, {
+		emit(name, payload) {
+			events.push({ type: name, payload } as TestEvent);
+		},
+	});
 	if (isFailure(started)) throw started.error;
 	let play = started.data;
 	let frame: StopFrame | undefined;
@@ -129,6 +149,15 @@ export function createTestPlay(novel: Novel, options: StartOptions = {}): TestPl
 		},
 		get transcript() {
 			return transcript;
+		},
+		get events() {
+			return events;
+		},
+		get persistent() {
+			return play.persistent;
+		},
+		save(slot) {
+			return play.save(slot);
 		},
 		async advance() {
 			if (!begun) return send(undefined);

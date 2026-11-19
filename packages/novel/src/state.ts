@@ -103,6 +103,7 @@ const TRACK = s.object({
 
 /** A saved game as untrusted JSON is checked before a play resumes from it. */
 export interface SavedGame {
+	version: number;
 	position: { scene: string; line: string };
 	stack: { scene: string; line: string }[];
 	stage: {
@@ -132,6 +133,7 @@ export interface SavedGame {
  * id, and the story state is parsed by the novel's own schema afterwards.
  */
 export const SAVED_GAME_SCHEMA: Schema<unknown, SavedGame> = s.object({
+	version: s.defaulted(s.number(), 1),
 	position: POSITION,
 	stack: s.array(POSITION),
 	stage: s.object({

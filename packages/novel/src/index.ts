@@ -1,7 +1,7 @@
 /**
  * The package entrypoint: declarations for scenes, the cast, assets and interactions, scene
- * modules built from directives, and the novel that maps scenes and plays them as an async
- * generator of frames. Test helpers live in `@sdxc/novel/test`.
+ * modules built from directives, and the novel that maps scenes, plays them as an async generator
+ * of frames and emits typed events. Test helpers and checks live in `@sdxc/novel/test`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,7 +65,19 @@ export type {
 	WaitDirective,
 	WhenDirective,
 } from "./directives.js";
-export type { NovelErrorCode } from "./errors.js";
+export type { NovelErrorCode, NovelErrorOptions } from "./errors.js";
+export type {
+	ChapterEvent,
+	ChoiceEvent,
+	LineEvent,
+	NovelEventName,
+	NovelEvents,
+	NovelListener,
+	NovelPlugin,
+	SaveEvent,
+	SceneEvent,
+	UnlockEvent,
+} from "./events.js";
 export type {
 	ChoiceFrame,
 	CustomFrame,
@@ -84,7 +96,16 @@ export type {
 	StoryPosition,
 } from "./frames.js";
 export type { Lazy } from "./lazy.js";
-export type { NovelOptions, Play, StartOptions, VoiceLine } from "./novel.js";
+export type {
+	MessageCatalog,
+	Migration,
+	NovelOptions,
+	Play,
+	SavedObject,
+	StartOptions,
+	VoiceLine,
+} from "./novel.js";
+export type { Persistent } from "./persistent.js";
 export type {
 	Audio,
 	AudioSound,

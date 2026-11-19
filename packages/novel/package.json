@@ -15,6 +15,7 @@
 		"@sdxc/i18n": "workspace:*",
 		"@sdxc/random": "workspace:*",
 		"@sdxc/result": "workspace:*",
+		"@sdxc/types": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"
 	},

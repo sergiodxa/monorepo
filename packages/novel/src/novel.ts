@@ -23,8 +23,10 @@ import type {
 } from "./declarations.js";
 import type { SceneModule } from "./directives.js";
 import type { Cursor, Live, NovelRuntime } from "./engine.js";
+import type { Emit, NovelEventName, NovelListener, NovelPlugin } from "./events.js";
 import type { Ending, Frame, GameState, Reply, StopFrame } from "./frames.js";
 import type { Lazy } from "./lazy.js";
+import type { Persistent } from "./persistent.js";
 import type { Audio, Fraction, Position, PositionAlias, Stage } from "./stage.js";
 import type { SavedGame } from "./state.js";
 import type { DeepPartial, NovelState, StateRecord } from "./types.js";
@@ -38,7 +40,9 @@ import {
 } from "./declarations.js";
 import { drawCharacter, PlayEngine } from "./engine.js";
 import { NovelError } from "./errors.js";
+import { Listeners } from "./events.js";
 import { isLazy } from "./lazy.js";
+import { readPersistent } from "./persistent.js";
 import { DEFAULT_POSITIONS, emptyStage, silence } from "./stage.js";
 import { SAVED_GAME_SCHEMA, validate } from "./state.js";
 
@@ -48,11 +52,38 @@ const DEFAULT_ROLLBACK = 100;
 /** Matches a position written as a column, `n/d`. */
 const FRACTION = /^\d+\/\d+$/;
 
-/** A line's speaker and key, which a novel's `voice` option finds the voice file by. */
+/**
+ * Reaches what `check()` and `explore()` read from a novel: its declarations, its scene
+ * modules, and plays whose events go to the tool instead of the app's listeners.
+ */
+export const INTERNALS = Symbol.for("@sdxc/novel.internals");
+
+/**
+ * A line's speaker, key and locale, which a novel's `voice` option finds the voice file by.
+ * With `locales`, the novel asks once per locale and the frame carries a map of locale to URL.
+ */
 export interface VoiceLine {
 	/** The id of the line's first speaker. */
 	speaker: string;
 	key: string;
+	/** The locale asked for; absent when the novel declares no locales. */
+	locale?: string;
+}
+
+/** A JSON object, as a save is handed to a migration. */
+export interface SavedObject {
+	[key: string]: unknown;
+}
+
+/**
+ * Upgrades a save from the version it is keyed by to the next one. It receives a copy of the
+ * save, and the novel sets the new `version` on what it answers.
+ */
+export type Migration = (game: SavedObject) => Result<SavedObject, Error>;
+
+/** A message catalog: keys nested by dot, each ending in a MessageFormat string. */
+export interface MessageCatalog {
+	readonly [key: string]: string | MessageCatalog;
 }
 
 /** The story options a novel is built from; presentation settings belong to the player. */
@@ -79,6 +110,26 @@ export interface NovelOptions {
 	positions?: Partial<Record<PositionAlias, Fraction>>;
 	/** Finds the voice file for a spoken line, or answers `undefined` when it has none. */
 	voice?: (line: VoiceLine) => AssetSource | undefined;
+	/**
+	 * The version a save is stamped with. Raise it with a `migrate` step when saved state
+	 * changes shape in a way schema defaults cannot fill.
+	 *
+	 * @default 1
+	 */
+	version?: number;
+	/** Upgrades a save step by step, keyed by the version each step upgrades from. */
+	migrate?: Readonly<Record<number, Migration>>;
+	/**
+	 * The app's catalogs by locale. A shown key a catalog lacks is reported on `error`, and the
+	 * frame still carries the key for the UI to show in its place.
+	 */
+	messages?: Readonly<Record<string, MessageCatalog>>;
+	/**
+	 * The locales `voice` is asked for, one call each.
+	 *
+	 * @default the locales of `messages`
+	 */
+	locales?: readonly string[];
 }
 
 /** How a play starts: new, from a scene, or from a save. */
@@ -91,6 +142,33 @@ export interface StartOptions {
 	state?: DeepPartial<NovelState>;
 	/** The seed of a new play's random stream, so a test replays the same draws. */
 	seed?: Seed;
+	/**
+	 * `Persistent` data read back from storage. It is validated, and a value the schema refuses,
+	 * or none, starts the play from empty data.
+	 */
+	persistent?: unknown;
+}
+
+/** Where a tool sends a play's events, and whether the app's listeners still receive them. */
+export interface PlaySink {
+	emit: Emit;
+	/** Keeps the play's events from the novel's own listeners. */
+	quiet?: boolean;
+}
+
+/** What `check()` and `explore()` read from a novel. */
+export interface NovelInternals {
+	readonly options: NovelOptions;
+	readonly scenes: ReadonlyMap<string, SceneDeclaration>;
+	readonly assets: ReadonlyMap<string, AssetDeclaration>;
+	readonly characters: ReadonlyMap<string, CharacterDeclaration>;
+	/** The names of the mapped scenes. */
+	readonly mapped: readonly string[];
+	load(scene: string): Promise<Result<SceneIndex, NovelError>>;
+	position(position: Position): Fraction;
+	/** Reports whether the novel lacks an asset or a character a scene uses. */
+	missing(declaration: AssetDeclaration | CharacterDeclaration): boolean;
+	start(options: StartOptions, sink: PlaySink): Result<Play, NovelError>;
 }
 
 /**
@@ -100,6 +178,14 @@ export interface StartOptions {
 export interface Play extends AsyncGenerator<Frame, Ending, Reply | undefined> {
 	/** The play as JSON at the current stop, ready to save. */
 	readonly state: GameState;
+	/** Persistent data as this play has updated it, the same value the last `persist` carried. */
+	readonly persistent: Persistent;
+	/**
+	 * Emits `save` with the play as it stands, for the app's listener to store under `slot`.
+	 *
+	 * @returns The state that was emitted.
+	 */
+	save(slot: string): GameState;
 	/**
 	 * Returns to the stop before the current one, restoring its state, stage and random draws;
 	 * the next reply answers the frame it returns.
@@ -120,6 +206,7 @@ export class Novel {
 	#scenes: Map<string, SceneDeclaration>;
 	#characters: Map<string, CharacterDeclaration>;
 	#assets: Map<string, AssetDeclaration>;
+	#listeners = new Listeners();
 
 	/**
 	 * Creates the novel; {@link createNovel} is the usual way to call it.
@@ -163,23 +250,96 @@ export class Novel {
 	}
 
 	/**
+	 * Listens to an event of every play this novel starts. Listeners run side effects only; one
+	 * that throws or rejects is reported on `error`.
+	 *
+	 * @param name - The event; see `NovelEvents`.
+	 * @param listener - Called with the payload and the play it fired for.
+	 * @returns A function that removes the listener.
+	 * @example novel.on("persist", (persistent) => localStorage.setItem("persistent", JSON.stringify(persistent)));
+	 */
+	on<Name extends NovelEventName>(name: Name, listener: NovelListener<Name>): () => void {
+		return this.#listeners.on(name, listener);
+	}
+
+	/**
+	 * Removes a listener added with {@link Novel.on}.
+	 *
+	 * @param name - The event.
+	 * @param listener - The same function that was added.
+	 */
+	off<Name extends NovelEventName>(name: Name, listener: NovelListener<Name>): void {
+		this.#listeners.off(name, listener);
+	}
+
+	/**
+	 * Installs a plugin, which registers its listeners on this novel.
+	 *
+	 * @param plugin - A function of the novel.
+	 * @returns The novel, so plugins chain.
+	 * @example novel.use(achievements({ "endings.good": "ACH_GOOD_END" }));
+	 */
+	use(plugin: NovelPlugin): this {
+		plugin(this);
+		return this;
+	}
+
+	/**
 	 * Starts a play: a new one, from a given scene and state, or from a save.
 	 *
 	 * @param options - Where the play starts; see {@link StartOptions}.
-	 * @returns The play, or an `invalid-state` error for a save or state the schemas refuse and an
-	 * `unmapped-scene` error for a scene with no module.
+	 * @returns The play, or an `invalid-state` error for a save or state the schemas refuse, a
+	 * `migration-failed` error for a save no migration upgrades, and an `unmapped-scene` error for
+	 * a scene with no module.
 	 * @example let play = novel.start({ from: JSON.parse(localStorage.getItem("save:1") ?? "null") });
 	 */
 	start(options: StartOptions = {}): Result<Play, NovelError> {
+		return this.#start(options, undefined);
+	}
+
+	/**
+	 * What `check()` and `explore()` read from the novel.
+	 *
+	 * @returns The declarations, the scene loader and a start that routes events to a sink.
+	 */
+	[INTERNALS](): NovelInternals {
+		return {
+			options: this.#options,
+			scenes: this.#scenes,
+			assets: this.#assets,
+			characters: this.#characters,
+			mapped: [...this.#modules.keys()],
+			load: (scene) => this.#load(scene),
+			position: (position) => this.#position(position),
+			missing: (declaration) => this.#missing(declaration),
+			start: (options, sink) => this.#start(options, sink),
+		};
+	}
+
+	/** Starts a play whose events reach `sink`, and the app's listeners unless it is quiet. */
+	#start(options: StartOptions, sink: PlaySink | undefined): Result<Play, NovelError> {
 		let live = options.from === undefined ? this.#fresh(options) : this.#restore(options.from);
 		if (isFailure(live)) return live;
 		if (!this.#modules.has(live.data.live.cursor.scene)) {
 			return failure(
-				new NovelError("unmapped-scene", `Scene "${live.data.live.cursor.scene}" has no module.`),
+				new NovelError("unmapped-scene", `Scene "${live.data.live.cursor.scene}" has no module.`, {
+					subject: live.data.live.cursor.scene,
+				}),
 			);
 		}
-		let engine = new PlayEngine(this.#runtime(), live.data.live, live.data.playTime);
-		return success(createPlay(engine));
+		let play: Play | undefined;
+		let emit: Emit = (name, payload) => {
+			sink?.emit(name, payload);
+			if (sink?.quiet !== true) this.#listeners.emit(name, payload, play as Play);
+		};
+		let engine = new PlayEngine(
+			this.#runtime(emit),
+			live.data.live,
+			live.data.playTime,
+			readPersistent(options.persistent),
+		);
+		play = createPlay(engine);
+		return success(play);
 	}
 
 	/** A new play's starting point. */
@@ -203,9 +363,11 @@ export class Novel {
 		return success({ live, playTime: 0 });
 	}
 
-	/** A saved play's starting point, after checking it against the schemas and declarations. */
+	/** A saved play's starting point, after migrating it and checking it against the schemas. */
 	#restore(from: unknown): Result<{ live: Live; playTime: number }, NovelError> {
-		let saved = validate(SAVED_GAME_SCHEMA, from);
+		let migrated = this.#migrate(from);
+		if (isFailure(migrated)) return migrated;
+		let saved = validate(SAVED_GAME_SCHEMA, migrated.data);
 		if (isFailure(saved)) {
 			return failure(
 				new NovelError("invalid-state", `The save is invalid: ${saved.error.message}`),
@@ -234,6 +396,80 @@ export class Novel {
 			taken: game.taken,
 		};
 		return success({ live, playTime: game.meta.playTime });
+	}
+
+	/**
+	 * Upgrades a save to this novel's version one `migrate` step at a time. A save without a
+	 * version is version 1; one newer than the novel, or one no step upgrades, is refused.
+	 */
+	#migrate(from: unknown): Result<unknown, NovelError> {
+		if (typeof from !== "object" || from === null || Array.isArray(from)) {
+			return failure(new NovelError("invalid-state", "The save is not a JSON object."));
+		}
+		let game = from as SavedObject;
+		let version = game.version ?? 1;
+		let target = this.#options.version ?? 1;
+		if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
+			return failure(new NovelError("invalid-state", "The save's version is not a whole number."));
+		}
+		if (version > target) {
+			return failure(
+				new NovelError(
+					"migration-failed",
+					`The save is from version ${version}, newer than this novel's ${target}.`,
+				),
+			);
+		}
+		while (version < target) {
+			let upgraded = runMigration(this.#options.migrate?.[version], game, version);
+			if (isFailure(upgraded)) return upgraded;
+			version += 1;
+			game = { ...upgraded.data, version };
+		}
+		return success(game);
+	}
+
+	/** Loads a mapped scene once, indexing its anchors. */
+	#load(scene: string): Promise<Result<SceneIndex, NovelError>> {
+		let load = this.#modules.get(scene);
+		if (load === undefined) {
+			return Promise.resolve(
+				failure(
+					new NovelError("unmapped-scene", `Scene "${scene}" has no module.`, { subject: scene }),
+				),
+			);
+		}
+		return load();
+	}
+
+	/** The locales `voice` is asked for. */
+	#locales(): readonly string[] {
+		return this.#options.locales ?? Object.keys(this.#options.messages ?? {});
+	}
+
+	/** The voice of a line: one file, or a map of locale to file when the novel has locales. */
+	#voice(speaker: string, key: string): AssetSource | null {
+		let voice = this.#options.voice;
+		if (voice === undefined) return null;
+		let locales = this.#locales();
+		if (locales.length === 0) return voice({ speaker, key }) ?? null;
+		let files: Record<string, string> = {};
+		for (let locale of locales) {
+			let found = voice({ speaker, key, locale });
+			let file = typeof found === "string" ? found : found?.[locale];
+			if (file !== undefined) files[locale] = file;
+		}
+		return Object.keys(files).length === 0 ? null : files;
+	}
+
+	/** Reports whether the novel lacks a declaration a scene uses, when it declares that kind. */
+	#missing(declaration: AssetDeclaration | CharacterDeclaration): boolean {
+		if ("kind" in declaration) {
+			if (this.#options.assets === undefined) return false;
+			let declared = this.#assets.get(declaration.id);
+			return declared === undefined || isEmptySource(declared.src);
+		}
+		return this.#options.cast !== undefined && !this.#characters.has(declaration.id);
 	}
 
 	/** Redraws a saved stage from the current declarations, dropping what no longer exists. */
@@ -307,23 +543,74 @@ export class Novel {
 		return success(index);
 	}
 
-	/** What a play's engine reads from this novel. */
-	#runtime(): NovelRuntime {
+	/** What a play's engine reads from this novel, with its events sent through `emit`. */
+	#runtime(emit: Emit): NovelRuntime {
+		let catalogs = Object.entries(this.#options.messages ?? {});
 		return {
 			rollback: this.#options.rollback ?? DEFAULT_ROLLBACK,
-			load: async (scene) => {
-				let load = this.#modules.get(scene);
-				if (load === undefined) {
-					return failure(new NovelError("unmapped-scene", `Scene "${scene}" has no module.`));
-				}
-				return load();
-			},
+			version: this.#options.version ?? 1,
+			load: (scene) => this.#load(scene),
 			loaded: (scene) => this.#indexes.get(scene),
 			scene: (name) => this.#scenes.get(name),
 			position: (position) => this.#position(position),
-			voice: (speaker, key) => this.#options.voice?.({ speaker, key }) ?? null,
+			voice: (speaker, key) => this.#voice(speaker, key),
+			missing: (declaration) => this.#missing(declaration),
+			untranslated: (key) =>
+				catalogs.filter(([, catalog]) => !hasMessage(catalog, key)).map(([locale]) => locale),
+			emit,
 		};
 	}
+}
+
+/**
+ * Reports whether a catalog has a message at a dotted key, nested or written flat.
+ *
+ * @param catalog - One locale's messages.
+ * @param key - A message key such as `opening.hello`.
+ * @returns `true` when the key names a string.
+ */
+export function hasMessage(catalog: MessageCatalog, key: string): boolean {
+	if (typeof catalog[key] === "string") return true;
+	let value: string | MessageCatalog | undefined = catalog;
+	for (let part of key.split(".")) {
+		if (typeof value !== "object") return false;
+		value = value[part];
+	}
+	return typeof value === "string";
+}
+
+/** Reports whether a declared file has no URL to load: an empty one, or an empty locale map. */
+function isEmptySource(source: AssetSource): boolean {
+	return typeof source === "string" ? source === "" : Object.keys(source).length === 0;
+}
+
+/** Runs one migration step, turning a missing step, a throw or a failure into a refusal. */
+function runMigration(
+	step: Migration | undefined,
+	game: SavedObject,
+	version: number,
+): Result<SavedObject, NovelError> {
+	if (step === undefined) {
+		return failure(
+			new NovelError("migration-failed", `No migration upgrades a version ${version} save.`),
+		);
+	}
+	let upgraded: Result<SavedObject, Error>;
+	try {
+		upgraded = step(structuredClone(game));
+	} catch (error) {
+		upgraded = failure(error instanceof Error ? error : new Error(String(error)));
+	}
+	if (isFailure(upgraded)) {
+		return failure(
+			new NovelError(
+				"migration-failed",
+				`The migration from version ${version} failed: ${upgraded.error.message}`,
+				{ cause: upgraded.error },
+			),
+		);
+	}
+	return success(upgraded.data);
 }
 
 /** A cursor that resolves a saved position once its scene loads. */
@@ -355,7 +642,9 @@ function createPlay(engine: PlayEngine): Play {
 	let play = run();
 	return Object.defineProperties(play, {
 		state: { get: () => engine.state },
+		persistent: { get: () => engine.persistent },
 		rollback: { value: () => engine.rollback() },
+		save: { value: (slot: string) => engine.save(slot) },
 	}) as Play;
 }
 

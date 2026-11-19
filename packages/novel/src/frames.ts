@@ -168,6 +168,11 @@ export interface StoryPosition {
  * stage, audio, state and random stream.
  */
 export interface GameState {
+	/**
+	 * The novel's `version` when the play was saved; a save without one reads as version 1, and
+	 * `createNovel({ migrate })` upgrades an older one step by step.
+	 */
+	version: number;
 	position: StoryPosition;
 	/** The calls to return from, innermost last; each anchored on its `call`. */
 	stack: StoryPosition[];

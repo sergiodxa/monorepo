@@ -17,11 +17,13 @@ import type { Path, SceneIndex } from "./anchors.js";
 import type {
 	AssetDeclaration,
 	AssetSource,
+	ChapterInfo,
 	CharacterDeclaration,
 	InteractionDeclaration,
 	SceneDeclaration,
 } from "./declarations.js";
 import type { ChooseDirective, Directive, StoredCallback } from "./directives.js";
+import type { ChoiceEvent, Emit, LineEvent } from "./events.js";
 import type {
 	Ending,
 	Frame,
@@ -31,16 +33,24 @@ import type {
 	StopFrame,
 	StoryPosition,
 } from "./frames.js";
+import type { Persistent } from "./persistent.js";
 import type { Audio, Fraction, Position, Stage, StageCharacter, StageScenery } from "./stage.js";
 import type { NovelState, PlayTools, StateRecord } from "./types.js";
 
-import { directiveAt, enterOption, nextPath, optionOf } from "./anchors.js";
+import { directiveAt, enterOption, menuAnchor, nextPath, optionOf } from "./anchors.js";
 import { NovelError } from "./errors.js";
 import { REPLY } from "./frames.js";
+import { recordKey } from "./persistent.js";
 import { getPath, setPath, validate } from "./state.js";
 
 /** Directives a play may run between two stops before it is reported as an endless loop. */
 const MAX_STEPS = 10_000;
+
+/** Refusals that are story problems rather than a caller's mistake, which `error` reports. */
+const STORY_ERRORS = new Set(["unmapped-scene", "load-failed", "endless-loop"]);
+
+/** Matches an anchor counted from the key before it, `<key>+<n>`. */
+const COUNTED_ANCHOR = /^(.*)\+\d+$/;
 
 /** What the engine reads from its novel: declarations by name and loaded scenes. */
 export interface NovelRuntime {
@@ -51,8 +61,16 @@ export interface NovelRuntime {
 	scene(name: string): SceneDeclaration | undefined;
 	position(position: Position): Fraction;
 	voice(speaker: string, key: string): AssetSource | null;
+	/** Reports whether the novel lacks an asset or a character a scene uses. */
+	missing(declaration: AssetDeclaration | CharacterDeclaration): boolean;
+	/** The locales whose catalog lacks a message key. */
+	untranslated(key: string): string[];
+	/** Sends an event to the novel's listeners, bound to this play. */
+	emit: Emit;
 	/** How many earlier stops `rollback()` can return to. */
 	readonly rollback: number;
+	/** The novel's version, which `GameState` carries. */
+	readonly version: number;
 }
 
 /** Where a play continues: a scene, and a path in it or an anchor to resolve once it loads. */
@@ -85,6 +103,19 @@ interface Stop {
 /** What one transition answered: a frame to yield, or the end of the play. */
 export type Outcome = { kind: "frame"; frame: Frame } | { kind: "end"; ending: Ending };
 
+/**
+ * Something a run did that outlives it: recorded while the run works on its copy, and applied to
+ * persistent data and emitted only once the run reaches its stop, so a refused run leaves none.
+ */
+type Effect =
+	| { type: "scene"; scene: string }
+	| { type: "chapter"; chapter: ChapterInfo; scene: string }
+	| { type: "unlock"; kind: "image" | "music"; id: string }
+	| { type: "line"; line: LineEvent }
+	| { type: "choice"; choice: ChoiceEvent }
+	| { type: "ending"; ending: Ending }
+	| { type: "error"; error: NovelError };
+
 /** What running directives reached: a stop, or the end of the play. */
 type Reached =
 	| { kind: "stop"; stop: Stop; work: Live }
@@ -103,10 +134,13 @@ export class PlayEngine {
 	#id = generateUUID();
 	#frames = 0;
 	#sounds = 0;
-	/** Lines read in this play, as `<scene>:<key>`. */
-	#seen = new Set<string>();
-	/** Options taken in this play, as `<scene>:<option>`. */
-	#chosen = new Set<string>();
+	#persistent: Persistent;
+	/** The effects of the run in progress, applied when it reaches a stop. */
+	#pending: Effect[] = [];
+	/** The scene the last settled run ended in, which a chapter change is measured from. */
+	#scene: string | null = null;
+	/** Errors already reported, so a problem met on every pass is reported once per play. */
+	#reported = new Set<string>();
 	#playTime: number;
 	#startedAt = Date.now();
 
@@ -114,11 +148,30 @@ export class PlayEngine {
 	 * @param runtime - The novel's declarations and scenes.
 	 * @param live - Where the play starts.
 	 * @param playTime - Milliseconds already played, carried over from a save.
+	 * @param persistent - What earlier playthroughs left; the engine updates it in place.
 	 */
-	constructor(runtime: NovelRuntime, live: Live, playTime: number) {
+	constructor(runtime: NovelRuntime, live: Live, playTime: number, persistent: Persistent) {
 		this.#runtime = runtime;
 		this.#live = live;
 		this.#playTime = playTime;
+		this.#persistent = persistent;
+	}
+
+	/** Persistent data as this play has updated it. */
+	get persistent(): Persistent {
+		return structuredClone(this.#persistent);
+	}
+
+	/**
+	 * Emits `save` with the play as it stands, for the app to store under `slot`.
+	 *
+	 * @param slot - The save slot's name.
+	 * @returns The saved state.
+	 */
+	save(slot: string): GameState {
+		let state = this.state;
+		this.#runtime.emit("save", { slot, state: structuredClone(state) });
+		return state;
 	}
 
 	/** The play as JSON, at the current stop as it stood before the stop was shown. */
@@ -126,6 +179,7 @@ export class PlayEngine {
 		let live = this.#current?.snapshot ?? this.#live;
 		let scene = this.#runtime.scene(live.cursor.scene);
 		return structuredClone({
+			version: this.#runtime.version,
 			position: this.#anchor(live.cursor),
 			stack: live.stack.map((entry) => this.#anchor(entry)),
 			stage: live.stage,
@@ -148,15 +202,15 @@ export class PlayEngine {
 	 * @returns The next frame, an error frame for a refused reply, or the ending.
 	 */
 	async step(reply: Reply | undefined): Promise<Outcome> {
-		if (this.#current === null) return this.#reach(structuredClone(this.#live));
+		if (this.#current === null) return this.#reach(structuredClone(this.#live), []);
 		let work = this.#answer(this.#current, reply);
 		if (isFailure(work)) return this.#refuse(work.error);
-		let outcome = await this.#reach(work.data);
-		let taken = work.data.taken.at(-1);
-		if (outcome.kind !== "frame" || outcome.frame.type !== "error") {
-			if (reply?.[REPLY].kind === "choose" && taken !== undefined) this.#chosen.add(taken);
-		}
-		return outcome;
+		let body = reply?.[REPLY];
+		let effects: Effect[] =
+			body?.kind === "choose"
+				? [{ type: "choice", choice: { scene: this.#current.frame.scene, option: body.option } }]
+				: [];
+		return this.#reach(work.data, effects);
 	}
 
 	/**
@@ -168,18 +222,29 @@ export class PlayEngine {
 		if (this.#ended || this.#history.length < 2) return null;
 		this.#history.pop();
 		let previous = this.#history.pop() as Stop;
-		let outcome = await this.#reach(structuredClone(previous.snapshot));
+		let outcome = await this.#reach(structuredClone(previous.snapshot), []);
 		return outcome.kind === "frame" && outcome.frame.type !== "error" ? outcome.frame : null;
 	}
 
-	/** Runs `work` to its next stop and makes that stop current, or reports why it could not. */
-	async #reach(work: Live): Promise<Outcome> {
+	/**
+	 * Runs `work` to its next stop and makes that stop current, or reports why it could not.
+	 * The run's effects, after `effects`, are applied and emitted once the stop is current.
+	 */
+	async #reach(work: Live, effects: Effect[]): Promise<Outcome> {
+		this.#pending = effects;
 		let reached = await this.#run(work);
-		if (isFailure(reached)) return this.#refuse(reached.error);
+		if (isFailure(reached)) {
+			this.#pending = [];
+			if (STORY_ERRORS.has(reached.error.code)) this.#runtime.emit("error", reached.error);
+			return this.#refuse(reached.error);
+		}
+		this.#scene = reached.data.work.cursor.scene;
 		if (reached.data.kind === "end") {
 			this.#ended = true;
 			this.#live = reached.data.work;
 			this.#current = null;
+			this.#pending.push({ type: "ending", ending: reached.data.ending });
+			this.#settle();
 			return { kind: "end", ending: reached.data.ending };
 		}
 		let { stop, work: after } = reached.data;
@@ -187,12 +252,107 @@ export class PlayEngine {
 		this.#current = stop;
 		this.#history.push(stop);
 		if (this.#history.length > this.#runtime.rollback + 1) this.#history.shift();
+		this.#settle();
 		return { kind: "frame", frame: stop.frame };
 	}
 
 	/** An error frame carrying the current stop to retry. */
 	#refuse(error: NovelError): Outcome {
 		return { kind: "frame", frame: { type: "error", error, frame: this.#current?.frame ?? null } };
+	}
+
+	/**
+	 * Applies the settled run's effects to persistent data and emits them in the order they
+	 * happened, then emits `persist` once when anything was recorded for the first time.
+	 */
+	#settle(): void {
+		let effects = this.#pending;
+		this.#pending = [];
+		let changed = false;
+		for (let effect of effects) {
+			if (effect.type === "error") this.#report(effect.error);
+			else changed = this.#record(effect) || changed;
+		}
+		if (changed) this.#runtime.emit("persist", structuredClone(this.#persistent));
+	}
+
+	/** Records one effect in persistent data and emits its event; answers whether data changed. */
+	#record(effect: Exclude<Effect, { type: "error" }>): boolean {
+		let persistent = this.#persistent;
+		switch (effect.type) {
+			case "scene":
+				this.#runtime.emit("scene", { scene: effect.scene });
+				return false;
+			case "chapter": {
+				let added = addOnce(persistent.chapters, effect.chapter.name);
+				this.#runtime.emit("chapter", { chapter: effect.chapter, scene: effect.scene });
+				return added;
+			}
+			case "unlock": {
+				let list = effect.kind === "image" ? persistent.unlocked.images : persistent.unlocked.music;
+				let added = addOnce(list, effect.id);
+				if (added) this.#runtime.emit("unlock", { kind: effect.kind, id: effect.id });
+				return added;
+			}
+			case "line": {
+				let id = recordKey(effect.line.scene, effect.line.key);
+				let values = structuredClone(effect.line.values ?? {}) as Persistent["seen"][string];
+				let before = persistent.seen[id];
+				persistent.seen[id] = values;
+				this.#runtime.emit("line", effect.line);
+				return before === undefined || JSON.stringify(before) !== JSON.stringify(values);
+			}
+			case "choice": {
+				let added = addOnce(
+					persistent.chosen,
+					recordKey(effect.choice.scene, effect.choice.option),
+				);
+				this.#runtime.emit("choice", effect.choice);
+				return added;
+			}
+			case "ending": {
+				let added = effect.ending.key !== null && addOnce(persistent.endings, effect.ending.key);
+				this.#runtime.emit("ending", { ...effect.ending });
+				return added;
+			}
+		}
+	}
+
+	/** Emits a story problem once per play, however often the play passes it. */
+	#report(error: NovelError): void {
+		let id = `${error.code}:${error.subject ?? ""}:${error.locale ?? ""}`;
+		if (this.#reported.has(id)) return;
+		this.#reported.add(id);
+		this.#runtime.emit("error", error);
+	}
+
+	/** Queues a story problem the play continues past. */
+	#problem(error: NovelError): void {
+		this.#pending.push({ type: "error", error });
+	}
+
+	/** Queues a `missing-asset` problem when the novel does not declare what a directive uses. */
+	#declared(declaration: AssetDeclaration | CharacterDeclaration): void {
+		if (!this.#runtime.missing(declaration)) return;
+		let subject = "kind" in declaration ? declaration.id : `cast.${declaration.id}`;
+		this.#problem(
+			new NovelError("missing-asset", `"${subject}" is not declared by the novel.`, { subject }),
+		);
+	}
+
+	/** Queues a `missing-message` problem for every locale whose catalog lacks a key. */
+	#translated(keys: Iterable<string | undefined>): void {
+		for (let key of keys) {
+			if (key === undefined) continue;
+			for (let locale of this.#runtime.untranslated(key)) {
+				this.#problem(
+					new NovelError("missing-message", `The "${locale}" catalog has no "${key}" message.`, {
+						subject: key,
+						locale,
+					}),
+				);
+			}
+		}
 	}
 
 	/** Applies a reply to a copy of the play, after checking it answers the current stop. */
@@ -256,10 +416,12 @@ export class PlayEngine {
 	/** Runs directives from the cursor until one stops for the player or the play ends. */
 	async #run(work: Live): Promise<Result<Reached, NovelError>> {
 		let random = restoreRandom(work.random);
-		let tools: PlayTools = { random };
+		let tools: PlayTools = { random, persistent: this.#persistent };
+		let from = this.#scene;
 		for (let steps = 0; steps < MAX_STEPS; steps++) {
-			let index = await this.#resolve(work.cursor);
+			let index = await this.#resolve(work.cursor, from);
 			if (isFailure(index)) return index;
+			from = work.cursor.scene;
 			let path = work.cursor.path as Path;
 			let directive = directiveAt(index.data.module.directives, path);
 			if (directive === undefined) {
@@ -294,14 +456,38 @@ export class PlayEngine {
 		);
 	}
 
-	/** Loads the cursor's scene and resolves its anchor to a path. */
-	async #resolve(cursor: Cursor): Promise<Result<SceneIndex, NovelError>> {
+	/**
+	 * Loads the cursor's scene and resolves its anchor to a path. A counted anchor
+	 * (`<key>+<n>`) that no longer exists resumes at `<key>` itself, and any other missing anchor
+	 * at the scene's start. A scene entered from its top queues `scene`, and `chapter` when it
+	 * belongs to another chapter than `from`.
+	 */
+	async #resolve(cursor: Cursor, from: string | null): Promise<Result<SceneIndex, NovelError>> {
 		let index = await this.#runtime.load(cursor.scene);
 		if (isFailure(index) || cursor.path !== null) return index;
-		let anchored = cursor.anchor === null ? undefined : index.data.paths.get(cursor.anchor);
-		if (anchored === undefined) cursor.path = [0];
-		else cursor.path = cursor.after ? nextPath(anchored) : anchored;
+		if (cursor.anchor === null) {
+			cursor.path = [0];
+			this.#entered(cursor.scene, from);
+			return index;
+		}
+		let anchored = index.data.paths.get(cursor.anchor);
+		if (anchored !== undefined) {
+			cursor.path = cursor.after ? nextPath(anchored) : anchored;
+			return index;
+		}
+		let base = COUNTED_ANCHOR.exec(cursor.anchor)?.[1];
+		cursor.path = (base === undefined ? undefined : index.data.paths.get(base)) ?? [0];
 		return index;
+	}
+
+	/** Queues the events of a scene started from its top. */
+	#entered(scene: string, from: string | null): void {
+		this.#pending.push({ type: "scene", scene });
+		let chapter = this.#runtime.scene(scene)?.chapter;
+		let previous = from === null ? undefined : this.#runtime.scene(from)?.chapter;
+		if (chapter !== undefined && chapter.name !== previous?.name) {
+			this.#pending.push({ type: "chapter", chapter, scene });
+		}
 	}
 
 	/** Moves the cursor out of a list that ran out, answering the ending when the story did. */
@@ -367,6 +553,7 @@ export class PlayEngine {
 			case "ending":
 				return { key: directive.key, scene: work.cursor.scene };
 			case "play":
+				this.#declared(directive.asset);
 				this.#play(directive.asset, { volume: directive.volume, fade: directive.fade }, work.audio);
 				return null;
 			case "stop":
@@ -386,8 +573,10 @@ export class PlayEngine {
 	/** Starts a track or a sound on its channel. */
 	#play(asset: AssetDeclaration, options: { volume?: number; fade?: number }, audio: Audio): void {
 		let track = withDefined({ id: asset.id, src: asset.src }, options);
-		if (asset.kind === "music") audio.music = track;
-		else if (asset.kind === "ambience") {
+		if (asset.kind === "music") {
+			audio.music = track;
+			this.#pending.push({ type: "unlock", kind: "music", id: asset.id });
+		} else if (asset.kind === "ambience") {
 			audio.ambience = [...audio.ambience.filter((entry) => entry.id !== asset.id), track];
 		} else {
 			this.#sounds += 1;
@@ -401,6 +590,8 @@ export class PlayEngine {
 
 	/** Applies a staging directive to the stage. */
 	#stage(directive: Directive, stage: Stage): void {
+		if ("asset" in directive && directive.asset !== undefined) this.#declared(directive.asset);
+		if ("character" in directive) this.#declared(directive.character);
 		switch (directive.type) {
 			case "show": {
 				let scenery = withDefined<StageScenery>(
@@ -408,7 +599,10 @@ export class PlayEngine {
 					{ transition: directive.transition },
 				);
 				if (directive.asset.kind === "background") stage.background = scenery;
-				else stage.image = scenery;
+				else {
+					stage.image = scenery;
+					this.#pending.push({ type: "unlock", kind: "image", id: directive.asset.id });
+				}
 				return;
 			}
 			case "hide":
@@ -478,9 +672,25 @@ export class PlayEngine {
 						: directive.values;
 				let voice =
 					speakers[0] === undefined ? null : this.#runtime.voice(speakers[0].id, directive.key);
-				let seen = this.#seen.has(`${scene}:${directive.key}`);
-				this.#seen.add(`${scene}:${directive.key}`);
+				let seen = this.#persistent.seen[recordKey(scene, directive.key)] !== undefined;
 				let ids = new Set(speakers.map((speaker) => speaker.id));
+				let shown =
+					values === undefined ? undefined : (structuredClone(values) as Record<string, unknown>);
+				for (let speaker of speakers) this.#declared(speaker);
+				this.#translated([
+					directive.key,
+					...speakers.map((speaker) => speaker.name),
+					...work.audio.sounds.map((sound) => sound.caption),
+				]);
+				this.#pending.push({
+					type: "line",
+					line: {
+						scene,
+						key: directive.key,
+						speakers: speakers.map((speaker) => speaker.id),
+						values: structuredClone(shown),
+					},
+				});
 				return {
 					...base,
 					type: "line",
@@ -490,8 +700,7 @@ export class PlayEngine {
 						withDefined({ id: speaker.id, name: speaker.name }, { color: speaker.color }),
 					),
 					key: directive.key,
-					values:
-						values === undefined ? undefined : (structuredClone(values) as Record<string, unknown>),
+					values: shown,
 					voice,
 					seen,
 					advance: () => reply({ frame: id, kind: "advance" }),
@@ -499,7 +708,20 @@ export class PlayEngine {
 			}
 			case "choose": {
 				let options = this.#options(directive, work, tools);
-				if (!options.some((option) => !option.disabled)) return null;
+				if (!options.some((option) => !option.disabled)) {
+					let subject = recordKey(scene, menuAnchor(directive) ?? "");
+					this.#problem(
+						new NovelError("dead-end-menu", `The menu "${subject}" has no option to take.`, {
+							subject,
+						}),
+					);
+					return null;
+				}
+				this.#translated([
+					directive.prompt,
+					...options.flatMap((option) => [option.label, option.reason]),
+					...work.audio.sounds.map((sound) => sound.caption),
+				]);
 				return withDefined(
 					{
 						...base,
@@ -544,7 +766,12 @@ export class PlayEngine {
 			if (!holds && option.visibility === "hidden") continue;
 			offered.push(
 				withDefined(
-					{ id: option.key, label: option.key, disabled: !holds, chosen: this.#chosen.has(id) },
+					{
+						id: option.key,
+						label: option.key,
+						disabled: !holds,
+						chosen: this.#persistent.chosen.includes(id),
+					},
 					{ reason: holds ? undefined : option.reason },
 				),
 			);
@@ -559,6 +786,17 @@ export class PlayEngine {
 		let line = index?.anchors.get(JSON.stringify(cursor.path)) ?? "";
 		return { scene: cursor.scene, line };
 	}
+}
+
+/**
+ * Adds a value to a list that holds each value once.
+ *
+ * @returns `true` when the value was new.
+ */
+function addOnce(list: string[], value: string): boolean {
+	if (list.includes(value)) return false;
+	list.push(value);
+	return true;
 }
 
 /** Reports whether a directive stops the play for the player. */

@@ -11,6 +11,8 @@ import type { MessageKey, MessageValues, Messages } from "@sdxc/i18n";
 import type { Random } from "@sdxc/random";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import type { Persistent } from "./persistent.js";
+
 /**
  * Augmented by an app to type every scene from its state, its message bundle and its
  * interactions. Without it, state is any record, any key reads as a line, and an interaction
@@ -35,10 +37,12 @@ export type NovelMessages = NovelTypes extends { messages: infer Bundle } ? Bund
 /** Every message key of the app's bundle: lines, names, labels, titles and captions. */
 export type LineKey = MessageKey<NovelMessages>;
 
-/** What a callback receives beside the state: draws from the play's seeded stream. */
+/** What a callback receives beside the state: draws and what earlier playthroughs left. */
 export interface PlayTools {
 	/** The play's seeded stream; its position is saved with the play, so a reload draws the same. */
 	random: Random;
+	/** Lines, options, endings and unlocks from every playthrough; rollback leaves it as it is. */
+	persistent: Readonly<Persistent>;
 }
 
 /**
