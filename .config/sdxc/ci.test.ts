@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { LOCAL_TEST_WORKERS, missingDevVars, testStep } from "./ci.js";
+import { appDoctorCommand, LOCAL_TEST_WORKERS, missingDevVars, testStep } from "./ci.js";
 
 describe("testStep", () => {
 	test("caps a local entry's workers and holds as many slots", () => {
@@ -44,5 +44,11 @@ describe("missingDevVars", () => {
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
+	});
+});
+
+describe("appDoctorCommand", () => {
+	test("addresses the kit binary from the checkout root, which a run inside an app can reach", () => {
+		expect(appDoctorCommand("/repo")).toEqual(["bun", "/repo/packages/kit/src/bin.ts", "doctor"]);
 	});
 });

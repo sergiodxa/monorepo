@@ -126,6 +126,14 @@ export async function missingDevVars(
 /** The kit binary this checkout runs doctor through, so a scoped app doctor needs no global `sdxc`. */
 const KIT_BIN = "packages/kit/src/bin.ts";
 
+/**
+ * The command that runs doctor inside one app. The kit binary is addressed from the checkout's
+ * `root`, since the command runs with the app's directory as its working directory.
+ */
+export function appDoctorCommand(root: string): string[] {
+	return ["bun", join(root, KIT_BIN), "doctor"];
+}
+
 export default defineCI(async (ci) => {
 	let missing = await missingDevVars(ci.root, await ci.files("apps/*/.env.example"));
 	await ci.step(
@@ -176,7 +184,7 @@ export default defineCI(async (ci) => {
 				"Doctor",
 				async (step) => {
 					for (let app of scopedApps) {
-						let ran = await step.run(["bun", KIT_BIN, "doctor"], { cwd: app.path });
+						let ran = await step.run(appDoctorCommand(ci.root), { cwd: app.path });
 						if (isFailure(ran)) return ran;
 					}
 				},
