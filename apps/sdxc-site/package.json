@@ -44,6 +44,7 @@
 		"@sdxc/mcp": "workspace:*",
 		"@sdxc/microformats": "workspace:*",
 		"@sdxc/money": "workspace:*",
+		"@sdxc/natural-dates": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/png": "workspace:*",
 		"@sdxc/random": "workspace:*",

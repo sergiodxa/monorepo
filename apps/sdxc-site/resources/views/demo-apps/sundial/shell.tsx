@@ -52,6 +52,7 @@ import {
 	shiftDate,
 } from "./data";
 import { PersonDot } from "./event";
+import { QuickAdd } from "./quick-add";
 import { SHELL_COOKIE } from "./state";
 import { clockAt, instancesIn } from "./time";
 import { viewHref, viewSpan } from "./views";
@@ -457,6 +458,13 @@ export function SundialShell(handle: Handle<SundialShell.Props>) {
 				}
 				nav={
 					<>
+						<div mix={[raw({ paddingBlockEnd: "0.75rem" }), FULL_SIDEBAR_ONLY]}>
+							<QuickAdd
+								action={actionHref("events/quick")}
+								back={context.back}
+								timeZone={context.zone}
+							/>
+						</div>
 						<div
 							mix={[raw({ paddingInline: "0.5rem", paddingBlockEnd: "0.5rem" }), FULL_SIDEBAR_ONLY]}
 						>

@@ -76,6 +76,8 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 		import("~/resources/views/demo-apps/wayfern/dates-field"),
 	"file:resources/views/demo-apps/wayfern/guests-field.tsx": () =>
 		import("~/resources/views/demo-apps/wayfern/guests-field"),
+	"file:resources/views/demo-apps/sundial/quick-add.tsx": () =>
+		import("~/resources/views/demo-apps/sundial/quick-add"),
 	"file:resources/views/demo-apps/vesper/search-live.tsx": () =>
 		import("~/resources/views/demo-apps/vesper/search-live"),
 	"file:resources/views/demo-apps/pinhole/double-tap-like.tsx": () =>

@@ -54,6 +54,7 @@ import {
 	localDateTime,
 	organizerOf,
 } from "./model";
+import { quickEvent } from "./quick";
 import { SundialShell, rangeTitle } from "./shell";
 import {
 	SHELL_COOKIE,
@@ -542,6 +543,27 @@ async function submitImport(form: FormData, scene: Scene): Promise<DemoAppRedire
 	return { page, toast: "imported", cookies: changesCookies(scene.visitor, next, page) };
 }
 
+/** Adds the event a quick-add line reads as, inviting the teammates it names. */
+function submitQuick(form: FormData, scene: Scene): DemoAppRedirect {
+	let back = backOf(form);
+	let quick = quickEvent(field(form, "text"), scene.context.zone, new Date(scene.context.now.at));
+	if (!quick) return { page: back };
+	let { visitor } = scene;
+	let event = sendInvitations(create(newId(visitor.changes), quick.fields), scene);
+	let next = store(visitor.changes, seedsOf(scene), { calendar: quick.fields.calendar, event });
+	let view = back.split("?")[0] ?? "";
+	let page = viewPage(
+		PAGES[view] === "find" || PAGES[view] === "import" ? "week" : (PAGES[view] ?? "week"),
+		quick.date,
+	);
+	let invited = guestsOf(event).some((guest) => guest !== ME);
+	return {
+		page,
+		toast: invited ? "invited" : "created",
+		cookies: changesCookies(visitor, next, page),
+	};
+}
+
 /** Moves or resizes an occurrence to a day and minutes on the viewer's clock, as the grid posts. */
 function submitMove(form: FormData, scene: Scene): DemoAppRedirect | null {
 	let back = backOf(form);
@@ -672,6 +694,7 @@ export default {
 				second === "none" ? null : (ZONES.find((entry) => entry.id === second)?.id ?? null);
 			return { page: back, toast: "zones", cookies: [zonesCookie(zone, secondZone)] };
 		}
+		if (page === "events/quick") return submitQuick(form, scene);
 		let [first, key, action, extra] = page.split("/");
 		if (first !== "events" || key === undefined || extra !== undefined) return null;
 		let decoded = decodeURIComponent(key);

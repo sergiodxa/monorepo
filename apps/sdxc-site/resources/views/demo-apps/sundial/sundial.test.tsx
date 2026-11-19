@@ -13,9 +13,10 @@ import { fetchApp } from "~/app/test/router";
 
 import type { Seed } from "./data";
 
-import { PEOPLE, findPerson, mondayOf } from "./data";
+import { PEOPLE, findPerson, mondayOf, shiftDate } from "./data";
 import { freeSlots, workingSpans } from "./find";
 import { toEntry } from "./model";
+import { preview } from "./quick-add";
 import { eventsOf, readVisitor, seedEntries } from "./state";
 import { clockAt, hourLabels, instancesIn, segmentsOf } from "./time";
 
@@ -344,6 +345,53 @@ describe("Sundial's files and invitations", () => {
 		let text = (await reply.text()).replaceAll("\r\n ", "");
 		expect(text).toContain("METHOD:REPLY");
 		expect(text).toMatch(/PARTSTAT=ACCEPTED[^\r]*:mailto:noor@ridgeline\.studio/);
+	});
+});
+
+describe("Sundial's quick add", () => {
+	test("adds the event a line reads as, titled by what is left and inviting who it names", async () => {
+		let today = clockAt(Date.now(), "America/New_York").date;
+		let tomorrow = shiftDate(today, 1);
+		let response = await post("events/quick", {
+			text: "Lunch with Mara tomorrow 1pm",
+			back: "month?d=2026-11-18",
+		});
+		expect(response.headers.get("Location")).toMatch(
+			new RegExp(`^/demo/apps/sundial/month\\?d=${tomorrow}&toast=invited\\.`),
+		);
+		let [entry] = readVisitor(cookiesOf(response)).changes.added;
+		expect(entry?.event.title).toBe("Lunch with Mara");
+		expect([entry?.event.start, entry?.event.duration, entry?.event.timeZone]).toEqual([
+			`${tomorrow}T13:00:00`,
+			"PT1H",
+			"America/New_York",
+		]);
+		expect(Object.keys(entry?.event.participants ?? {}).sort()).toEqual(["mara", "noor"]);
+	});
+
+	test("reads a repeat and a length, and an all-day span", async () => {
+		let yoga = readVisitor(
+			cookiesOf(
+				await post("events/quick", { text: "Yoga every Monday at 7am for 45 minutes", back: "" }),
+			),
+		).changes.added[0];
+		expect(yoga?.event.recurrenceRules).toEqual([
+			{ "@type": "RecurrenceRule", frequency: "weekly", byDay: [{ day: "mo" }] },
+		]);
+		expect(yoga?.event.duration).toBe("PT45M");
+		let offsite = readVisitor(
+			cookiesOf(await post("events/quick", { text: "Offsite Dec 3-5", back: "" })),
+		).changes.added[0];
+		expect([offsite?.event.showWithoutTime, offsite?.event.duration, offsite?.event.title]).toEqual(
+			[true, "P3D", "Offsite"],
+		);
+	});
+
+	test("reads a line back the way the box previews it", () => {
+		expect(
+			preview("Lunch with Mara Dec 3 1pm", "America/New_York", new Date("2026-11-18T17:00:00Z")),
+		).toBe("“Lunch with Mara” · Thu, Dec 3 · 1:00 PM");
+		expect(preview("Buy milk", "America/New_York", new Date())).toBe("");
 	});
 });
 

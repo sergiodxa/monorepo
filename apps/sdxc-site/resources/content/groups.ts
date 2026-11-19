@@ -192,6 +192,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"iife",
 			"dates",
 			"duration",
+			"natural-dates",
 			"money",
 			"strings",
 			"semver",
