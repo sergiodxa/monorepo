@@ -1,0 +1,17 @@
+{
+	"name": "@sdxc/natural-dates",
+	"version": "0.0.1",
+	"description": "Find English date, time, duration and repeat phrases in text, resolved against a clock and a time zone",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/dates": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	}
+}

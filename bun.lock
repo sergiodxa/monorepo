@@ -1975,6 +1975,14 @@
       "name": "@sdxc/money",
       "version": "0.0.1",
     },
+    "packages/natural-dates": {
+      "name": "@sdxc/natural-dates",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/dates": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/newsletter": {
       "name": "@sdxc/newsletter",
       "version": "0.0.1",
@@ -3586,6 +3594,8 @@
     "@sdxc/micropub": ["@sdxc/micropub@workspace:packages/micropub"],
 
     "@sdxc/money": ["@sdxc/money@workspace:packages/money"],
+
+    "@sdxc/natural-dates": ["@sdxc/natural-dates@workspace:packages/natural-dates"],
 
     "@sdxc/newsletter": ["@sdxc/newsletter@workspace:packages/newsletter"],
 

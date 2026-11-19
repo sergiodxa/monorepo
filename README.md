@@ -337,6 +337,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/database-middleware](packages/database-middleware) | Middleware that publishes a remix/data-table database as ctx.db on a request, a job or a command               |
 | [@sdxc/dates](packages/dates)                             | Zone-aware date operations with Intl-only formatting                                                           |
 | [@sdxc/duration](packages/duration)                       | Typed duration strings converted to milliseconds or seconds                                                    |
+| [@sdxc/natural-dates](packages/natural-dates)             | Find English date, time, duration and repeat phrases in text, resolved against a clock and a time zone         |
 | [@sdxc/iife](packages/iife)                               | Immediately invoke a callback where an expression is needed                                                    |
 | [@sdxc/money](packages/money)                             | Money in integer minor units: parse typed amounts, split, convert and format with Intl                         |
 | [@sdxc/random](packages/random)                           | Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state              |
