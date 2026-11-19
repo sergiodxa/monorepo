@@ -432,6 +432,12 @@ Dashboard and workspace components.
   and watched bar.
 - `TitleHero` — a title's art edge to edge under the top bar, faded into the page, with
   `.Eyebrow`, `.Title`, `.Facts`, `.Rating`, `.Summary` and `.Actions`.
+- `ReelFeed` — a full-height vertical feed of `.Item` videos, one per screen on scroll snap;
+  `ReelFeedSync` preloads the next reel, pauses the rest, steps one reel per key or wheel flick
+  and follows each reel's address.
+- `StoryViewer` — full-screen `.Group`s of timed `.Segment`s under progress bars, with link tap
+  zones; `StoryViewerSync` advances, pauses on hold and closes on a swipe down.
+- `StoryRing` — a picture in a seen or unseen story ring.
 
 ### Component helpers
 
