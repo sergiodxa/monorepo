@@ -74,6 +74,7 @@ export * from "./rating-breakdown.js";
 export * from "./scroll-area.js";
 export * from "./search-field.js";
 export * from "./section.js";
+export * from "./section-bar.js";
 export * from "./select.js";
 export * from "./selection-indicator.js";
 export * from "./sentinel-row.js";

@@ -178,7 +178,7 @@ export function SectionBar(handle: Handle<SectionBar.Props>) {
  * the row's view. A page scrolled to its end marks the last section, however short it is.
  */
 export const SectionBarSpy: EntryComponent<SectionBar.SpyProps> = clientEntry(
-	"@sdxc/ui/app/section-bar#SectionBarSpy",
+	"@sdxc/ui/section-bar#SectionBarSpy",
 	function SectionBarSpy(handle: Handle<SectionBar.SpyProps>) {
 		let pending = false;
 		let current = "";

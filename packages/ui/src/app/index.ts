@@ -93,7 +93,6 @@ export * from "./gantt.js";
 export * from "./review-thread.js";
 export * from "./save-bar.js";
 export * from "./save-status.js";
-export * from "./section-bar.js";
 export * from "./selection-bar.js";
 export * from "./settings-layout.js";
 export * from "./settings-section.js";
