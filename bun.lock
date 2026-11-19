@@ -491,6 +491,7 @@
         "@sdxc/natural-dates": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/png": "workspace:*",
+        "@sdxc/qr": "workspace:*",
         "@sdxc/random": "workspace:*",
         "@sdxc/raster": "workspace:*",
         "@sdxc/result": "workspace:*",
