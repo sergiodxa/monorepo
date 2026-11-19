@@ -43,7 +43,6 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/app/status-strip": () => import("@sdxc/ui/app/status-strip"),
 	"@sdxc/ui/app/table": () => import("@sdxc/ui/app/table"),
 	"@sdxc/ui/app/toasts": () => import("@sdxc/ui/app/toasts"),
-	"@sdxc/ui/carousel": () => import("@sdxc/ui/carousel"),
 	"@sdxc/ui/character-count": () => import("@sdxc/ui/character-count"),
 	"@sdxc/ui/chat/composer-submit": () => import("@sdxc/ui/chat/composer-submit"),
 	"@sdxc/ui/commerce/option-group": () => import("@sdxc/ui/commerce/option-group"),
@@ -62,10 +61,12 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/video/video-shelf": () => import("@sdxc/ui/video/video-shelf"),
 	"file:resources/views/demo-apps/main-frame-sync.tsx": () =>
 		import("~/resources/views/demo-apps/main-frame-sync"),
+	"file:resources/views/demo-apps/murmur/player.tsx": () =>
+		import("~/resources/views/demo-apps/murmur/player"),
 	"file:resources/views/demo-apps/vesper/search-live.tsx": () =>
 		import("~/resources/views/demo-apps/vesper/search-live"),
-	"file:resources/views/demo-apps/pinhole/double-tap-like.tsx": () =>
-		import("~/resources/views/demo-apps/pinhole/double-tap-like"),
+	"file:resources/views/demo-apps/pinhole/carousel-sync.tsx": () =>
+		import("~/resources/views/demo-apps/pinhole/carousel-sync"),
 	"file:resources/views/demo-apps/pinhole/reel-title.tsx": () =>
 		import("~/resources/views/demo-apps/pinhole/reel-title"),
 	"file:resources/views/demo-apps/pulse/services-table.tsx": () =>
