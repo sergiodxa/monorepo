@@ -69,7 +69,15 @@ import {
 } from "./state";
 import { SundialThumbnail } from "./thumbnail";
 import { clockAt, instancesIn, instantAt, nowIn } from "./time";
-import { AgendaScreen, DaysView, MonthScreen, VIEW_PATHS, WeekView, viewPage } from "./views";
+import {
+	AgendaScreen,
+	DaysView,
+	MonthScreen,
+	VIEW_PATHS,
+	WeekView,
+	YearScreen,
+	viewPage,
+} from "./views";
 
 /** Dial blue at hue 245: the shadow a gnomon casts on a bright morning. */
 const BRAND = [
@@ -113,7 +121,7 @@ const TOKENS = {
 } as const;
 
 /** The pages a post may return to, so a post can never send the visitor elsewhere. */
-const BACK = /^(|days|day|month|agenda|find|import)\?[\w=&%.,~:-]*$/;
+const BACK = /^(|days|day|month|year|agenda|find|import)\?[\w=&%.,~:-]*$/;
 
 /** The calendar screens every path answers with. */
 const PAGES: Record<string, ScreenId> = {
@@ -121,6 +129,7 @@ const PAGES: Record<string, ScreenId> = {
 	[VIEW_PATHS.days]: "days",
 	[VIEW_PATHS.day]: "day",
 	[VIEW_PATHS.month]: "month",
+	[VIEW_PATHS.year]: "year",
 	[VIEW_PATHS.agenda]: "agenda",
 	find: "find",
 	import: "import",
@@ -345,6 +354,7 @@ function route(
 		if (view === "days") return <DaysView context={context} count={3} />;
 		if (view === "day") return <DaysView context={context} count={1} />;
 		if (view === "month") return <MonthScreen context={context} />;
+		if (view === "year") return <YearScreen context={context} />;
 		if (view === "agenda") return <AgendaScreen context={context} />;
 		if (view === "import")
 			return (
@@ -589,6 +599,7 @@ const SCREENS = [
 	"days",
 	"day",
 	"month",
+	"year",
 	"agenda",
 	"find",
 	"find?with=priya,aiko&length=60",

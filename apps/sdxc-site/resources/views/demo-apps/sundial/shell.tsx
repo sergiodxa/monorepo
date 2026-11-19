@@ -12,6 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 import {
 	ArrowDownUpIcon,
 	CalendarDaysIcon,
+	CalendarIcon,
 	CalendarRangeIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
@@ -101,6 +102,7 @@ const HELP_GROUPS: KeyboardHelp.Group[] = [
 			{ keys: "x", label: "Three-day view" },
 			{ keys: "w", label: "Week view" },
 			{ keys: "m", label: "Month view" },
+			{ keys: "y", label: "Year view" },
 			{ keys: "a", label: "Agenda" },
 			{ keys: "f", label: "Find a time" },
 		],
@@ -117,6 +119,7 @@ const VIEWS: Array<{ id: ViewId; label: string; short: string; key: string; icon
 	{ id: "days", label: "3 days", short: "3D", key: "x", icon: <Columns3Icon /> },
 	{ id: "week", label: "Week", short: "Week", key: "w", icon: <CalendarRangeIcon /> },
 	{ id: "month", label: "Month", short: "Month", key: "m", icon: <CalendarDaysIcon /> },
+	{ id: "year", label: "Year", short: "Year", key: "y", icon: <CalendarIcon /> },
 	{ id: "agenda", label: "Agenda", short: "List", key: "a", icon: <ListIcon /> },
 ];
 
@@ -358,6 +361,7 @@ export function rangeTitle(context: ViewContext): string {
 			Date.parse(`${value}T00:00:00Z`),
 		);
 	if (context.view === "month") return date(context.anchor, { month: "long", year: "numeric" });
+	if (context.view === "year") return context.anchor.slice(0, 4);
 	if (context.view === "import") return "Import and export";
 	if (context.view === "day" || context.view === "find")
 		return date(context.anchor, { weekday: "long", month: "long", day: "numeric" });
@@ -390,6 +394,13 @@ function arrows(context: ViewContext): { previous: string; next: string } {
 		let at = (shift: number) =>
 			new Date(Date.UTC(year, month - 1 + shift, 1)).toISOString().slice(0, 10);
 		return { previous: viewHref("month", at(-1)), next: viewHref("month", at(1)) };
+	}
+	if (context.view === "year") {
+		let year = Number(context.anchor.slice(0, 4));
+		return {
+			previous: viewHref("year", `${year - 1}-01-01`),
+			next: viewHref("year", `${year + 1}-01-01`),
+		};
 	}
 	let { step } = viewSpan(context.view, context.anchor);
 	return {

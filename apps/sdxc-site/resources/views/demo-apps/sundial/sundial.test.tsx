@@ -353,10 +353,12 @@ describe("Sundial's screens", () => {
 		"days",
 		"day",
 		"month",
+		"year",
+		"import",
 		"agenda",
 		"find",
 		"?new=1",
-		"?edit=review~2026-11-16&d=2026-11-18",
+		"?edit=review~once&d=2026-11-18",
 	])("renders %s with every teammate available to invite", async (page) => {
 		let started = performance.now();
 		let response = await fetchApp(

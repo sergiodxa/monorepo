@@ -15,6 +15,7 @@ import { Agenda } from "@sdxc/ui/schedule/agenda";
 import { DayStrip } from "@sdxc/ui/schedule/day-strip";
 import { MonthView } from "@sdxc/ui/schedule/month-view";
 import { TimeGrid } from "@sdxc/ui/schedule/time-grid";
+import { YearView } from "@sdxc/ui/schedule/year-view";
 
 import type { Entry } from "./model";
 import type { Instance } from "./time";
@@ -35,7 +36,7 @@ import {
 } from "./time";
 
 /** The calendar screens, by the path each lives at. */
-export type ViewId = "week" | "days" | "day" | "month" | "agenda";
+export type ViewId = "week" | "days" | "day" | "month" | "year" | "agenda";
 
 /** Every screen with a day in its address: the calendar views, Find a time, and Import and export. */
 export type Screen = ViewId | "find" | "import";
@@ -46,6 +47,7 @@ export const VIEW_PATHS: Record<ViewId, string> = {
 	days: "days",
 	day: "day",
 	month: "month",
+	year: "year",
 	agenda: "agenda",
 };
 
@@ -90,6 +92,11 @@ export function viewSpan(
 	if (view === "days") return { first: anchor, days: 3, step: 3 };
 	if (view === "day") return { first: anchor, days: 1, step: 1 };
 	if (view === "agenda") return { first: anchor, days: 14, step: 14 };
+	if (view === "year") {
+		let year = Number(anchor.slice(0, 4));
+		let days = Math.round((Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86_400_000);
+		return { first: `${year}-01-01`, days, step: 0 };
+	}
 	let first = mondayOf(`${anchor.slice(0, 7)}-01`);
 	return { first: shiftDate(first, -1), days: 42, step: 0 };
 }
@@ -141,13 +148,15 @@ namespace Grid {
 		view: ViewId;
 		/** Leaves out the second zone, for a phone's narrow grid. */
 		single?: boolean;
+		/** Where a swipe left and right lead: the previous and next range. */
+		pages: { previous: string; next: string };
 	}
 }
 
 /** A time grid over some days: the lane of all-day events, the timed ones, and the now line. */
 function Grid(handle: Handle<Grid.Props>) {
 	return () => {
-		let { id, context, first, count, label, view, single = false } = handle.props;
+		let { id, context, first, count, label, view, single = false, pages } = handle.props;
 		let days = Array.from({ length: count }, (_, index) => shiftDate(first, index));
 		let instances = instancesIn(context.events, first, count, context.zone);
 		let spans: TimeGrid.Span[] = instances.filter(inLane).map((instance) => {
@@ -201,6 +210,7 @@ function Grid(handle: Handle<Grid.Props>) {
 					create: { action: href(VIEW_PATHS[view]), method: "get", fields: { d: context.anchor } },
 					move: { action: actionHref("move"), fields: { back: context.back } },
 				}}
+				pages={pages}
 				labels={GRID_LABELS}
 				mix={[raw({ flex: "1 1 auto", minBlockSize: "0" })]}
 			/>
@@ -296,6 +306,10 @@ export function WeekView(handle: Handle<{ context: ViewContext }>) {
 						count={7}
 						label={`Week of ${formatDay(monday)}`}
 						view="week"
+						pages={{
+							previous: viewHref("week", shiftDate(context.anchor, -7)),
+							next: viewHref("week", shiftDate(context.anchor, 7)),
+						}}
 					/>
 				</div>
 				<div
@@ -311,6 +325,10 @@ export function WeekView(handle: Handle<{ context: ViewContext }>) {
 						label={`Three days from ${formatDay(context.anchor)}`}
 						view="days"
 						single
+						pages={{
+							previous: viewHref("week", shiftDate(context.anchor, -3)),
+							next: viewHref("week", shiftDate(context.anchor, 3)),
+						}}
 					/>
 				</div>
 			</>
@@ -339,6 +357,10 @@ export function DaysView(handle: Handle<{ context: ViewContext; count: 1 | 3 }>)
 						count === 1 ? formatDay(context.anchor) : `Three days from ${formatDay(context.anchor)}`
 					}
 					view={view}
+					pages={{
+						previous: viewHref(view, shiftDate(context.anchor, -count)),
+						next: viewHref(view, shiftDate(context.anchor, count)),
+					}}
 				/>
 			</div>
 		);
@@ -354,41 +376,210 @@ function shortTime(instance: Instance, zone: string): string {
 		.replace(" PM", "p");
 }
 
-/** The month: bars for all-day and multi-day events, a dot and time for the rest. */
+/** The month that starts `count` months after the one holding `date`, as `YYYY-MM`. */
+function monthAfter(date: string, count: number): string {
+	let [year = 2026, month = 1] = date.split("-").map(Number);
+	return new Date(Date.UTC(year, month - 1 + count, 1)).toISOString().slice(0, 7);
+}
+
+/** One month's events, as `MonthView` draws them. */
+function monthEvents(context: ViewContext, month: string): MonthView.Event[] {
+	let span = viewSpan("month", `${month}-01`);
+	return instancesIn(context.events, span.first, span.days, context.zone).map((instance) => {
+		let lane = inLane(instance);
+		let range = lane ? laneDays(instance, context.zone) : null;
+		return {
+			id: instance.key,
+			start: range?.first ?? clockAt(instance.start.getTime(), context.zone).date,
+			end: range?.last,
+			allDay: lane,
+			title: instance.event.title ?? "",
+			time: lane ? undefined : shortTime(instance, context.zone),
+			color: eventColor(instance),
+			popover: card(context, instance),
+			past: instance.end.getTime() < context.now.at,
+		};
+	});
+}
+
+/** How many months the month screen scrolls through: the anchor's, then the ones after it. */
+const MONTHS_SHOWN = 3;
+
+/**
+ * The month: the anchor's month and the two after it in one continuous scroll, each under a
+ * sticky name, beside the chosen day's events. Picking a day selects it in place; on a phone the
+ * following months fold away and the chosen day's list sits under the grid.
+ */
 export function MonthScreen(handle: Handle<{ context: ViewContext }>) {
 	return () => {
 		let { context } = handle.props;
-		let span = viewSpan("month", context.anchor);
-		let instances = instancesIn(context.events, span.first, span.days, context.zone);
-		let events: MonthView.Event[] = instances.map((instance) => {
-			let lane = inLane(instance);
-			let range = lane ? laneDays(instance, context.zone) : null;
-			return {
-				id: instance.key,
-				start: range?.first ?? clockAt(instance.start.getTime(), context.zone).date,
-				end: range?.last,
-				allDay: lane,
-				title: instance.event.title ?? "",
-				time: lane ? undefined : shortTime(instance, context.zone),
-				color: eventColor(instance),
-				popover: card(context, instance),
-				past: instance.end.getTime() < context.now.at,
-			};
+		let monthName = new Intl.DateTimeFormat(LOCALE, {
+			month: "long",
+			year: "numeric",
+			timeZone: "UTC",
 		});
+		let chosen = instancesIn(context.events, context.anchor, 1, context.zone);
 		return (
-			<MonthView
-				id="sundial-month"
-				month={context.anchor.slice(0, 7)}
-				weekStartsOn={1}
-				locale={LOCALE}
-				today={context.today}
-				selected={context.anchor}
-				events={events}
-				dayHref={(date) => viewHref("day", date)}
-				max={4}
-				labels={{ more: "+{count} more", count: "{count} events" }}
-				mix={[raw({ flex: "1 1 auto", minBlockSize: "0", overflowY: "auto" })]}
-			/>
+			<div
+				data-slot="sundial-month"
+				mix={[
+					raw({
+						display: "grid",
+						gridTemplateColumns: "minmax(0, 1fr) 19rem",
+						flex: "1 1 auto",
+						minBlockSize: "0",
+					}),
+					media(
+						"(max-width: 64rem)",
+						raw({
+							gridTemplateColumns: "minmax(0, 1fr)",
+							alignContent: "start",
+							overflowY: "auto",
+						}),
+					),
+				]}
+			>
+				<div
+					data-slot="sundial-months"
+					mix={[
+						raw({ overflowY: "auto", minBlockSize: "0", scrollSnapType: "y proximity" }),
+						media("(max-width: 64rem)", raw({ overflowY: "visible", minBlockSize: "auto" })),
+					]}
+				>
+					{Array.from({ length: MONTHS_SHOWN }, (_, index) => {
+						let month = monthAfter(context.anchor, index);
+						let name = monthName.format(Date.parse(`${month}-01T00:00:00Z`));
+						return (
+							<section
+								aria-label={name}
+								data-month={month}
+								mix={[
+									raw({ scrollSnapAlign: "start" }),
+									index === 0 ? raw({}) : media("(max-width: 64rem)", raw({ display: "none" })),
+								]}
+							>
+								<h2
+									mix={[
+										raw({
+											position: "sticky",
+											insetBlockStart: "0",
+											zIndex: "2",
+											margin: "0",
+											padding: "0.625rem 0.75rem 0.375rem",
+											fontSize: "0.9375rem",
+											fontWeight: "650",
+											color: "var(--ui-neutral-fg-emphasis)",
+											backgroundColor: "var(--ui-bg, Canvas)",
+										}),
+									]}
+								>
+									{name}
+								</h2>
+								<MonthView
+									id={`sundial-month-${month}`}
+									month={month}
+									weekStartsOn={1}
+									locale={LOCALE}
+									today={context.today}
+									selected={context.anchor}
+									events={monthEvents(context, month)}
+									dayHref={(date) => viewHref("month", date)}
+									max={4}
+									labels={{ more: "+{count} more", count: "{count} events" }}
+								/>
+							</section>
+						);
+					})}
+				</div>
+				<aside
+					aria-label={`Events on ${formatDay(context.anchor)}`}
+					mix={[
+						raw({
+							overflowY: "auto",
+							minBlockSize: "0",
+							paddingInline: "0.5rem",
+							borderInlineStart: "1px solid var(--ui-neutral-border)",
+						}),
+						media(
+							"(max-width: 64rem)",
+							raw({
+								borderInlineStart: "none",
+								borderBlockStart: "1px solid var(--ui-neutral-border)",
+								overflowY: "visible",
+								minBlockSize: "auto",
+							}),
+						),
+					]}
+				>
+					<Agenda
+						id="sundial-month-day"
+						label={`Events on ${formatDay(context.anchor)}`}
+						days={[
+							{
+								date: context.anchor,
+								href: viewHref("day", context.anchor),
+								events: chosen.map((instance) => ({
+									id: instance.key,
+									title: instance.event.title ?? "",
+									time: formatTimes(instance, context.zone),
+									color: eventColor(instance),
+									detail: locationOf(instance.event),
+									popover: card(context, instance),
+									past: instance.end.getTime() < context.now.at,
+								})),
+							},
+						]}
+						today={context.today}
+						locale={LOCALE}
+					/>
+					{chosen.length === 0 ? (
+						<p
+							mix={[
+								raw({
+									margin: "0.5rem 0.75rem",
+									fontSize: "0.875rem",
+									color: "var(--ui-neutral-fg-muted)",
+								}),
+							]}
+						>
+							Nothing planned. Pick another day, or press C to add an event.
+						</p>
+					) : null}
+				</aside>
+			</div>
+		);
+	};
+}
+
+/** The year: twelve months whose dots weigh how busy each day is. */
+export function YearScreen(handle: Handle<{ context: ViewContext }>) {
+	return () => {
+		let { context } = handle.props;
+		let span = viewSpan("year", context.anchor);
+		let counts: Record<string, number> = {};
+		for (let instance of instancesIn(context.events, span.first, span.days, context.zone)) {
+			if (instance.days) continue;
+			let date = clockAt(instance.start.getTime(), context.zone).date;
+			counts[date] = (counts[date] ?? 0) + 1;
+		}
+		return (
+			<div
+				mix={[
+					raw({ flex: "1 1 auto", minBlockSize: "0", overflowY: "auto", padding: "1rem 1.25rem" }),
+				]}
+			>
+				<YearView
+					year={Number(context.anchor.slice(0, 4))}
+					counts={counts}
+					today={context.today}
+					selected={context.anchor}
+					weekStartsOn={1}
+					locale={LOCALE}
+					dayHref={(date) => viewHref("day", date)}
+					monthHref={(month) => viewHref("month", `${month}-01`)}
+					labels={{ count: "{count} events" }}
+				/>
+			</div>
 		);
 	};
 }
