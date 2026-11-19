@@ -67,7 +67,7 @@ developer tools and offline play.
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@sdxc/novel`         | `scenes`, `scene`, `chapter`, `cast`, `character`, `assets`, `interactions`, `interaction`, `createScene`, `createNovel`, `lazy`, the frame, reply, state and event types, `NovelTypes` |
 | `@sdxc/novel/ui`      | `NovelPlayer` and its parts (stage, textbox, choice menu, backlog, save and settings screens, memories and gallery) as `remix/component` components                                     |
-| `@sdxc/novel/test`    | `createTestPlay` and `explore`                                                                                                                                                          |
+| `@sdxc/novel/test`    | `createTestPlay`, `check` and `explore`                                                                                                                                                 |
 | `@sdxc/novel/dev`     | Developer tools: scene jumping, state inspection, flowchart, event log, hot reload                                                                                                      |
 | `@sdxc/novel/offline` | An opt-in service worker that caches declared assets                                                                                                                                    |
 
@@ -352,7 +352,8 @@ interface GameState {
 
 - **The position is anchored on a message key.** The player can only be stopped at a line or a
   menu, and both have a key, so inserting or removing beats anywhere in a scene leaves a save
-  valid. When the key no longer exists, the play resumes at the start of its scene.
+  valid. When the key no longer exists, the play resumes at the start of its scene; a pause,
+  interaction or call anchored as `<key>+<n>` whose count no longer resolves resumes at `<key>`.
 - **The stage and audio are saved**, so loading draws what was on screen without replaying the
   scene.
 - **New state fields take their schema default.** For larger changes,
@@ -736,8 +737,8 @@ transitions are presentation the player configures.
 ## Current Progress
 
 - [x] Phase 1: Declarations and the engine
-- [ ] Phase 2: Saves, persistence and events
-- [ ] Phase 3: Static checks and exploration
+- [x] Phase 2: Saves, persistence and events
+- [x] Phase 3: Static checks and exploration
 - [ ] Phase 4: The player UI
 - [ ] Phase 5: Loading and developer tools
 - [ ] Phase 6: Offline
@@ -798,3 +799,59 @@ Made while building Phase 1, without a review, where this ADR left the detail op
   the published build.
 - **`meta.scene` is the scene's title key**, or its name without one, and `meta.playTime` counts the
   time between a play's start and the read of `play.state`, carried over from a save.
+
+### Phase 2 and 3 decisions
+
+Made while building Phases 2 and 3, without a review, where this ADR left the detail open:
+
+- **A menu option's directives are `do`, not `then`**, and so is a `when` directive's branch. An
+  object with a `then` member is a thenable, which `unicorn/no-thenable` flags in every app that
+  writes option objects; the package's lint override is gone and apps need none.
+- **Voices receive `{ speaker, key, locale }`.** With `createNovel({ locales })`, or the locales of
+  `messages`, the novel asks once per locale and the frame carries a map of locale to URL, which a
+  Vite `import.meta.glob` table per locale folder answers; without locales it asks once.
+- **`Persistent` replaces Phase 1's per-play `seen` and `chosen`.** Lines and options are keyed as
+  `<scene>:<key>`; a line keeps the values it was last shown with (`{}` without values).
+  `start({ persistent })` validates the stored value and starts from empty data when it is missing
+  or refused, and callbacks read it as `tools.persistent`.
+- **A run's records settle with its stop.** Lines, choices, unlocks, chapters, endings and story
+  errors are queued while the engine works on its copy and applied, then emitted in play order
+  followed by one `persist`, only when the run reaches its stop, so a refused reply or a failed
+  jump records nothing.
+- **Event timing.** `scene` fires when a scene starts from its top (a new play, `goto`, `call`),
+  never on a resumed save or a return; `chapter` whenever the play enters a scene of another
+  chapter than the scene before it; `unlock` only the first time in any playthrough; `ending` for
+  every ending, `key: null` included, recording only keyed ones.
+- **`version` defaults to 1 and `migrate` is keyed by the version a step upgrades from.** A step
+  receives a copy and answers a `Result`; the novel stamps the next version. A throw, a failure, a
+  missing step or a save newer than the novel answers `migration-failed`; a save that is not an
+  object answers `invalid-state`.
+- **A counted anchor that no longer resolves resumes at its key's line**, and any other missing
+  anchor at the scene's start.
+- **`error` carries a `NovelError` with `subject`** (and `locale` for a message). It reports
+  dead-end menus (`<scene>:<menu anchor>`), undeclared assets and characters (`cast.<id>`) or
+  assets declared without a URL, keys a `createNovel({ messages })` catalog lacks, unmapped scenes,
+  load failures, endless loops and failing listeners (`listener-failed`). Each story problem is
+  reported once per play. Refused replies stay on the error frame alone, as a caller's mistake.
+- **Placeholders.** An undeclared asset is still drawn from its declaration, a missing message
+  still travels as its key, and a dead-end menu is passed. A jump to an unmapped scene keeps the
+  error frame to retry, since there is nothing to continue with.
+- **Listeners.** `on` returns an unsubscribe, `use` returns the novel, a rejected promise is
+  reported like a throw, and a failing `error` listener is dropped so a report cannot loop.
+  `play.save(slot)` takes a string slot and returns the state it emitted.
+- **`check` and `explore` live in `@sdxc/novel/test`**, as tooling that never ships to players.
+  `check` is async because lazy modules load, and answers a flat list of problems with a
+  `severity`: errors for duplicate anchors (line keys and menu anchors), unmapped jumps, undeclared
+  assets and failed loads; warnings for shared columns (walked in document order within a scene,
+  branches on a copy), menus whose every option has `when`, and declared scenes the initial scene
+  never reaches.
+- **`explore` branches by resuming from a save** at each menu and interaction, so every path is
+  exactly what `start({ from })` and `createTestPlay` replay. A stop is skipped when the same
+  position, call stack, state, taken options and random position was already reached on an equal
+  or shorter path, which keeps the shortest path to each ending; `Persistent` is left out of that
+  key. A path is a seed and its steps, replayed with `TestPlay.follow(steps)`; endings, dead ends,
+  unexplored interactions and errors each keep their shortest path. Defaults: `maxDepth` 100,
+  `maxPaths` 1000, `seeds: ["explore"]`. Its plays are quiet, so the app's listeners never hear
+  them, and missing messages are checked on every shown frame and every entered scene's titles.
+- **`createTestPlay` logs the play's events** through a sink of its own while the novel's
+  listeners still receive them, takes `persistent` like `start()`, and gains `save` and `follow`.

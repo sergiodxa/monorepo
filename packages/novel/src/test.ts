@@ -1,7 +1,7 @@
 /**
- * `createTestPlay()`: a play driven by the reply a test names instead of by a UI, so a scene's
- * test reads as the path a player takes. A reply that does not fit the current frame fails the
- * test with the engine's own error.
+ * The `@sdxc/novel/test` entry: `createTestPlay()`, a play driven by the reply a test names, and
+ * `check()` and `explore()`, which read and walk the whole story. A reply that does not fit the
+ * current frame fails the test with the engine's own error.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,12 +13,29 @@ import { isFailure } from "@sdxc/result";
 
 import type { SceneDeclaration } from "./declarations.js";
 import type { NovelEventName, NovelEvents } from "./events.js";
+import type { ExploreStep } from "./explore.js";
 import type { Ending, Frame, GameState, InteractionFrame, StopFrame } from "./frames.js";
 import type { Novel, Play, StartOptions } from "./novel.js";
 import type { Persistent } from "./persistent.js";
 import type { NovelState, SchemaInput } from "./types.js";
 
 import { INTERNALS } from "./novel.js";
+
+export type { CheckProblem, CheckReport } from "./check.js";
+export type {
+	ExploredDeadEnd,
+	ExploredEnding,
+	ExploredError,
+	ExploredInteraction,
+	ExploreOptions,
+	ExplorePath,
+	ExploreReport,
+	ExploreStep,
+	InteractionAnswers,
+} from "./explore.js";
+
+export { check } from "./check.js";
+export { explore } from "./explore.js";
 
 /** One thing the player saw or did, in the order it happened. */
 export type TranscriptEntry =
@@ -60,6 +77,11 @@ export interface TestPlay {
 	readonly persistent: Persistent;
 	/** Emits `save` for `slot` and answers the saved state. */
 	save(slot: string): GameState;
+	/**
+	 * Replays a path `explore()` reported: advances to each menu or interaction and answers it,
+	 * then advances to the next menu or interaction, or to the end.
+	 */
+	follow(steps: readonly ExploreStep[]): Promise<StopFrame | undefined>;
 	/** Starts the play, or answers the current line or pause; resolves to the next frame. */
 	advance(): Promise<StopFrame | undefined>;
 	/** Advances through lines and pauses until a frame of `type`, which it resolves to. */
@@ -129,6 +151,13 @@ export function createTestPlay(novel: Novel, options: StartOptions = {}): TestPl
 		return frame as Extract<StopFrame, { type: Type }>;
 	}
 
+	/** Advances through lines and pauses until a menu, an interaction or the end. */
+	async function settle(): Promise<StopFrame | undefined> {
+		if (!begun) await send(undefined);
+		while (frame?.type === "line" || frame?.type === "pause") await send(frame.advance());
+		return frame;
+	}
+
 	let testPlay: TestPlay = {
 		play,
 		get frame() {
@@ -158,6 +187,14 @@ export function createTestPlay(novel: Novel, options: StartOptions = {}): TestPl
 		},
 		save(slot) {
 			return play.save(slot);
+		},
+		async follow(steps) {
+			for (let step of steps) {
+				await settle();
+				if (step.type === "choice") await testPlay.choose(step.option);
+				else await testPlay.complete(step.output as CompleteOutput);
+			}
+			return settle();
 		},
 		async advance() {
 			if (!begun) return send(undefined);

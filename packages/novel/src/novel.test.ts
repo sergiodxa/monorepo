@@ -14,7 +14,7 @@ import { failure, isFailure, isSuccess, success, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import { createTestPlay } from "./test.js";
+import { check, createTestPlay, explore } from "./test.js";
 
 import type {
 	ChoiceFrame,
@@ -1075,5 +1075,213 @@ describe("events", () => {
 			en: "/voice/en/mika/opening.hello.ogg",
 			ja: "/voice/ja/mika/opening.hello.ogg",
 		});
+	});
+});
+
+/** The fishing outputs exploration tries: a poor catch and a good one. */
+const FISHING = { fishing: () => [{ caught: 1 }, { caught: 4 }] };
+
+describe("check", () => {
+	test("reports the fixture's unmapped jump and the scenes nothing reaches", async () => {
+		let report = await check(fixture());
+		expect(report.ok).toBe(false);
+		expect(report.problems).toEqual([
+			{
+				code: "unmapped-scene",
+				severity: "error",
+				scene: "prologue.jump",
+				target: "prologue.unwritten",
+			},
+			{ code: "unreachable-scene", severity: "warning", scene: "prologue.unwritten" },
+			{ code: "unreachable-scene", severity: "warning", scene: "prologue.jump" },
+		]);
+	});
+
+	test("reports duplicate keys, shared columns, possible dead ends, undeclared assets and failed loads", async () => {
+		let broken = scenes({ start: scene(), failing: scene() });
+		let other = assets({ music: { loud: "/music/loud.ogg" } });
+		let novel = createNovel({
+			scenes: broken,
+			cast: CAST,
+			assets: ASSETS,
+			state: STATE,
+			initial: broken.start,
+		});
+		novel.map(
+			broken.start,
+			createScene(broken.start, (ctx) => [
+				ctx.enter(CAST.mika, { at: "left" }),
+				ctx.enter(CAST.ren, { at: "1/3", layers: { body: "school", face: "grin" } }),
+				ctx.play(other.music.loud),
+				ctx.narrate("opening.welcome"),
+				ctx.choose(
+					{
+						"opening.flirt": { when: (state) => state.charm > 10, do: [] },
+						"opening.secret": { when: (state) => state.gold > 10, do: [] },
+					},
+					{ prompt: "opening.welcome" },
+				),
+			]),
+		);
+		novel.map(
+			broken.failing,
+			lazy(async () => {
+				throw new Error("network down");
+			}),
+		);
+		let report = await check(novel);
+		expect(report.ok).toBe(false);
+		expect(report.problems).toEqual([
+			{
+				code: "shared-slot",
+				severity: "warning",
+				scene: "start",
+				at: "1/3",
+				characters: ["mika", "ren"],
+			},
+			{ code: "missing-asset", severity: "error", scene: "start", asset: "music.loud" },
+			{ code: "dead-end-menu", severity: "warning", scene: "start", menu: "opening.welcome" },
+			{ code: "duplicate-key", severity: "error", scene: "start", key: "opening.welcome" },
+			{
+				code: "load-failed",
+				severity: "error",
+				scene: "failing",
+				message: 'Scene "failing" failed to load.',
+			},
+			{ code: "unreachable-scene", severity: "warning", scene: "failing" },
+		]);
+	});
+});
+
+describe("explore", () => {
+	test("finds every ending with its shortest path, and each path replays", async () => {
+		let novel = fixture();
+		let report = await explore(novel, { seeds: ["fixture", "mika"], interactions: FISHING });
+
+		expect(report.capped).toEqual({ paths: false, depth: false });
+		expect(report.endings.map((ending) => String(ending.key)).sort()).toEqual([
+			"endings.bad",
+			"endings.good",
+		]);
+		let good = report.endings.find((ending) => ending.key === "endings.good");
+		expect(good?.steps).toEqual([
+			{ type: "choice", option: "opening.done" },
+			{ type: "custom", interaction: "fishing", output: { caught: 1 } },
+			{ type: "choice", option: "cafe.stay" },
+		]);
+		for (let ending of report.endings) {
+			let play = createTestPlay(fixture(), { seed: ending.seed });
+			await play.follow(ending.steps);
+			expect(play.ending).toEqual({ key: ending.key, scene: ending.scene });
+		}
+		expect(report.unreachableScenes).toEqual(["prologue.unwritten", "prologue.jump"]);
+		expect(report.problems.map((problem) => problem.code)).toContain("unmapped-scene");
+		expect(report.deadEndMenus).toEqual([]);
+		expect(report.errors).toEqual([]);
+	});
+
+	test("reports interactions it has no outputs for", async () => {
+		let report = await explore(fixture());
+		expect(report.endings).toEqual([]);
+		expect(report.unexplored).toEqual([
+			{
+				seed: "explore",
+				steps: [{ type: "choice", option: "opening.done" }],
+				scene: "prologue.cafe",
+				interaction: "fishing",
+			},
+		]);
+	});
+
+	test("stops at its caps and says so", async () => {
+		let shallow = await explore(fixture(), { interactions: FISHING, maxDepth: 1 });
+		expect(shallow.capped.depth).toBe(true);
+		expect(shallow.endings).toEqual([]);
+
+		let narrow = await explore(fixture(), { interactions: FISHING, maxPaths: 1 });
+		expect(narrow.capped.paths).toBe(true);
+		expect(narrow.paths).toBe(1);
+	});
+
+	test("terminates a loop that comes back to the same menu with the same state", async () => {
+		let novel = oneScene((ctx) => [
+			ctx.narrate("opening.welcome"),
+			ctx.choose({
+				"opening.askName": [ctx.goto(SCENES.prologue.unwritten)],
+				"opening.done": [ctx.ending("endings.good")],
+			}),
+		]);
+		let report = await explore(novel);
+		expect(report.endings).toEqual([
+			{
+				seed: "explore",
+				steps: [{ type: "choice", option: "opening.done" }],
+				key: "endings.good",
+				scene: "prologue.unwritten",
+			},
+		]);
+	});
+
+	test("explores draws from every seed", async () => {
+		let seeds = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"];
+		let lucky = seeds.find((seed) => createRandom(seed).bool());
+		let unlucky = seeds.find((seed) => !createRandom(seed).bool());
+		let novel = oneScene((ctx) => [
+			ctx.when(
+				(_state, { random }) => random.bool(),
+				[ctx.ending("endings.good")],
+				[ctx.ending("endings.bad")],
+			),
+		]);
+		let report = await explore(novel, { seeds: [lucky ?? "", unlucky ?? ""] });
+		expect(report.endings).toEqual([
+			{ seed: lucky, steps: [], key: "endings.good", scene: "prologue.unwritten" },
+			{ seed: unlucky, steps: [], key: "endings.bad", scene: "prologue.unwritten" },
+		]);
+		for (let ending of report.endings) {
+			let play = createTestPlay(novel, { seed: ending.seed });
+			await play.follow(ending.steps);
+			expect(play.ending?.key).toBe(ending.key);
+		}
+	});
+
+	test("reports dead-end menus, jumps it cannot take, missing assets and missing messages", async () => {
+		let other = assets({ backgrounds: { street: "/bg/street.webp" } });
+		let novel = oneScene((ctx) => [
+			ctx.show(other.backgrounds.street),
+			ctx.narrate("opening.welcome"),
+			ctx.choose({
+				"opening.askName": [ctx.goto(SCENES.prologue.jump)],
+				"opening.askJob": [
+					ctx.choose({ "opening.flirt": { when: () => false, do: [] } }),
+					ctx.ending("endings.bad"),
+				],
+			}),
+		]);
+		let report = await explore(novel, {
+			messages: { en: EN, ja: { opening: { welcome: "ようこそ" } } },
+		});
+		expect(report.errors).toMatchObject([
+			{
+				steps: [{ type: "choice", option: "opening.askName" }],
+				code: "unmapped-scene",
+			},
+		]);
+		expect(report.deadEndMenus).toEqual([
+			{
+				seed: "explore",
+				steps: [{ type: "choice", option: "opening.askJob" }],
+				menu: "prologue.unwritten:opening.flirt",
+			},
+		]);
+		expect(report.missingAssets).toEqual(["backgrounds.street"]);
+		expect(report.missingMessages).toEqual({
+			ja: ["chapters.prologue", "opening.askJob", "opening.askName"],
+		});
+
+		let replay = createTestPlay(novel, { seed: "explore" });
+		await replay.follow(report.deadEndMenus[0]?.steps ?? []);
+		expect(replay.events.map((event) => event.type)).toContain("error");
+		expect(replay.ending?.key).toBe("endings.bad");
 	});
 });

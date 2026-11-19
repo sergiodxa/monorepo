@@ -127,13 +127,24 @@ createNovel({
 ## Entry points
 
 - `@sdxc/novel`: declarations, `createScene`, `createNovel`, `lazy`, and the frame, reply, state and event types.
-- `@sdxc/novel/test`: `createTestPlay`, which drives a play by naming each reply.
+- `@sdxc/novel/test`: `createTestPlay`, which drives a play by naming each reply; `check`, the static checks over every scene; and `explore`, which plays every combination of choices.
 
 ```typescript
-import { createTestPlay } from "@sdxc/novel/test";
+import { check, createTestPlay, explore } from "@sdxc/novel/test";
 
 let play = createTestPlay(novel, { seed: "mika", state: { gold: 40 } });
 await play.advanceUntil("choice");
 await play.choose("opening.stay");
 expect(play.state.gold).toBe(45);
+
+expect((await check(novel)).ok).toBe(true);
+
+let report = await explore(novel, {
+	interactions: { fishing: () => [{ caught: 0 }, { caught: 5 }] },
+});
+for (let ending of report.endings) {
+	let replay = createTestPlay(novel, { seed: ending.seed });
+	await replay.follow(ending.steps);
+	expect(replay.ending?.key).toBe(ending.key);
+}
 ```
