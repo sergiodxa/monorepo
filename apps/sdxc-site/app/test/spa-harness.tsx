@@ -49,6 +49,9 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 	"@sdxc/ui/autocomplete": () => import("@sdxc/ui/autocomplete"),
 	"@sdxc/ui/character-count": () => import("@sdxc/ui/character-count"),
 	"@sdxc/ui/chat/composer-submit": () => import("@sdxc/ui/chat/composer-submit"),
+	"@sdxc/ui/chat/composer-format": () => import("@sdxc/ui/chat/composer-format"),
+	"@sdxc/ui/chat/emoji-picker": () => import("@sdxc/ui/chat/emoji-picker"),
+	"@sdxc/ui/chat/mention-menu": () => import("@sdxc/ui/chat/mention-menu"),
 	"@sdxc/ui/commerce/option-group": () => import("@sdxc/ui/commerce/option-group"),
 	"@sdxc/ui/commerce/order-tracker": () => import("@sdxc/ui/commerce/order-tracker"),
 	"@sdxc/ui/confirm": () => import("@sdxc/ui/confirm"),
@@ -79,6 +82,8 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
 		import("~/resources/views/demo-apps/pinhole/double-tap-like"),
 	"file:resources/views/demo-apps/pinhole/reel-title.tsx": () =>
 		import("~/resources/views/demo-apps/pinhole/reel-title"),
+	"file:resources/views/demo-apps/parley/live.tsx": () =>
+		import("~/resources/views/demo-apps/parley/live"),
 	"file:resources/views/demo-apps/pulse/services-table.tsx": () =>
 		import("~/resources/views/demo-apps/pulse/services-table"),
 };
