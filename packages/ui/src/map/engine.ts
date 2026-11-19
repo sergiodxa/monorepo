@@ -259,6 +259,17 @@ function bindPopups(stage: HTMLElement, signal: AbortSignal): void {
 }
 
 /**
+ * Folds the basemap's credit into its (i) button. The engine opens it on load, and on a phone
+ * the open line covers whatever floats at the map's foot until the first pan.
+ */
+function collapseAttribution(container: HTMLElement): void {
+	let attribution = container.querySelector(".maplibregl-compact-show");
+	if (attribution === null) return;
+	attribution.classList.remove("maplibregl-compact-show");
+	attribution.setAttribute("open", "");
+}
+
+/**
  * Mounts MapLibre into the stage and keeps the stage's HTML parts on the map: markers, labels
  * and bubbles move by `left`/`top`, routes by their path data. Resolves `undefined` when WebGL
  * or the library is unavailable, leaving the server render as it was.
@@ -338,6 +349,7 @@ async function startMap(
 		container.remove();
 		return undefined;
 	}
+	collapseAttribution(container);
 
 	let members = new WeakMap<Element, LngLat[]>();
 	let quiet = false;

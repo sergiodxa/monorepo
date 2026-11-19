@@ -157,6 +157,40 @@ describe("GeoMap", () => {
 		expect(find<HTMLInputElement>(stage, 'input[data-map-area="zoom"]').value).toBe("12");
 	});
 
+	test("folds a style basemap's credit into its button once the map is live", async () => {
+		let style = {
+			version: 8,
+			sources: { land: { type: "geojson", data: ISLAND, attribution: "Test tiles" } },
+			layers: [
+				{ id: "sea", type: "background", paint: { "background-color": "#cfe0e8" } },
+				{ id: "land", type: "fill", source: "land", paint: { "fill-color": "#eee" } },
+			],
+		};
+		let url = URL.createObjectURL(new Blob([JSON.stringify(style)], { type: "application/json" }));
+		let host = mount(
+			<GeoMap
+				id="m-credit"
+				label="Island"
+				center={ISLAND_CENTER}
+				zoom={11}
+				labels={LABELS}
+				workerUrl={WORKER_URL}
+				basemap={{ kind: "style", light: url, dark: url }}
+			/>,
+			320,
+			480,
+		);
+		let stage = find(host, '[data-slot="map"]');
+		await expect.poll(() => stage.dataset.engine, { timeout: 15_000 }).toMatch(/^(live|static)$/);
+		if (stage.dataset.engine === "static") return;
+		await expect
+			.poll(() => stage.querySelector(".maplibregl-ctrl-attrib"), { timeout: 5_000 })
+			.not.toBeNull();
+		let attribution = find(stage, ".maplibregl-ctrl-attrib");
+		expect(attribution.textContent).toContain("Test tiles");
+		expect(attribution.classList.contains("maplibregl-compact-show")).toBe(false);
+	});
+
 	test("reclusters in the browser and zooms into a bubble when clicked", async () => {
 		let host = mount(
 			<GeoMap
