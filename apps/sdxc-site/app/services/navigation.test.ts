@@ -102,12 +102,13 @@ describe("buildComponentsNav", () => {
 			"App",
 			"Video",
 			"Commerce",
+			"Audio",
 			"Mixins",
 			"Behaviors",
 			"Animations",
 			"Styles",
 		]);
-		expect(tree.sections.at(9)?.entries).toContainEqual({
+		expect(tree.sections.at(10)?.entries).toContainEqual({
 			title: "hotkey",
 			href: "/api/ui/mixins/hotkey",
 		});
@@ -148,6 +149,14 @@ describe("namespace groups", () => {
 			"VideoCard",
 			"VideoPlayer",
 			"VideoShelf",
+		]);
+		expect(titles("Audio")).toEqual([
+			"Foundations",
+			"Equalizer",
+			"MediaTile",
+			"PlayerBar",
+			"QueueList",
+			"TrackList",
 		]);
 		expect(
 			["Landing", "Docs", "Chat", "Color", "App"].map(

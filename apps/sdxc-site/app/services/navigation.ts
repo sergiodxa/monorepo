@@ -152,6 +152,7 @@ const COMPONENT_GROUPS: Array<{ module: ComponentModule; title: string }> = [
 	{ module: "app", title: "App" },
 	{ module: "video", title: "Video" },
 	{ module: "commerce", title: "Commerce" },
+	{ module: "audio", title: "Audio" },
 ];
 
 /**

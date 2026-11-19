@@ -10,6 +10,7 @@
 import type { ComponentModule } from "~/app/services/components";
 
 import APP from "~/resources/content/foundations/app";
+import AUDIO from "~/resources/content/foundations/audio";
 import CHAT from "~/resources/content/foundations/chat";
 import COLOR from "~/resources/content/foundations/color";
 import COMMERCE from "~/resources/content/foundations/commerce";
@@ -74,6 +75,7 @@ const FOUNDATIONS_BY_MODULE: Record<ComponentModule, Foundations> = {
 	app: APP,
 	video: VIDEO,
 	commerce: COMMERCE,
+	audio: AUDIO,
 };
 
 /** Every namespace's Foundations, in the order the sidebar lists the namespaces. */

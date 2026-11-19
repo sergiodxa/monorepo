@@ -122,7 +122,8 @@ type ModuleKind =
 	| "chat"
 	| "color"
 	| "video"
-	| "commerce";
+	| "commerce"
+	| "audio";
 
 /** Quiet stage wash in the site's brand hue — one step off the card, like DemoMiniature. */
 const WASH = {
@@ -246,6 +247,7 @@ const CATALOGUE = [
 	{ slug: "editor-layout", module: "app" },
 	{ slug: "empty", module: "app" },
 	{ slug: "episode-list", module: "video" },
+	{ slug: "equalizer", module: "audio" },
 	{ slug: "episode-player", module: "landing" },
 	{ slug: "event-ticker", module: "landing" },
 	{ slug: "fan-out-diagram", module: "landing" },
@@ -292,6 +294,7 @@ const CATALOGUE = [
 	{ slug: "map-canvas", module: "components" },
 	{ slug: "marker", module: "chat" },
 	{ slug: "marquee", module: "landing" },
+	{ slug: "media-tile", module: "audio" },
 	{ slug: "media-grid", module: "components" },
 	{ slug: "menu", module: "components" },
 	{ slug: "menu-item-card", module: "commerce" },
@@ -319,6 +322,7 @@ const CATALOGUE = [
 	{ slug: "phone-fan", module: "landing" },
 	{ slug: "phone-frame", module: "landing" },
 	{ slug: "plan-notice", module: "docs" },
+	{ slug: "player-bar", module: "audio" },
 	{ slug: "popover", module: "components" },
 	{ slug: "price-breakdown", module: "components" },
 	{ slug: "price-list", module: "landing" },
@@ -329,6 +333,7 @@ const CATALOGUE = [
 	{ slug: "property-list", module: "components" },
 	{ slug: "props-table", module: "docs" },
 	{ slug: "quantity-stepper", module: "commerce" },
+	{ slug: "queue-list", module: "audio" },
 	{ slug: "radio-group", module: "components" },
 	{ slug: "rails", module: "landing" },
 	{ slug: "range-calendar", module: "components" },
@@ -399,6 +404,7 @@ const CATALOGUE = [
 	{ slug: "toggle-button", module: "components" },
 	{ slug: "toolbar", module: "app" },
 	{ slug: "tooltip", module: "components" },
+	{ slug: "track-list", module: "audio" },
 	{ slug: "tree", module: "app" },
 	{ slug: "typed-terminal", module: "landing" },
 	{ slug: "typeset", module: "components" },
@@ -896,17 +902,15 @@ const OVERRIDES: Record<string, Shape[]> = {
 	]),
 	"month-view": appShell([
 		...[0, 1, 2, 3].flatMap((row) =>
-			[0, 1, 2, 3, 4, 5].map(
-				(column): Shape => ({
-					kind: "rect",
-					x: 56 + column * 14,
-					y: 32 + row * 15,
-					w: 12,
-					h: 13,
-					r: 2,
-					tone: "hairline",
-				}),
-			),
+			[0, 1, 2, 3, 4, 5].map((column): Shape => ({
+				kind: "rect",
+				x: 56 + column * 14,
+				y: 32 + row * 15,
+				w: 12,
+				h: 13,
+				r: 2,
+				tone: "hairline",
+			})),
 		),
 		{ kind: "rect", x: 70, y: 39, w: 38, h: 3, r: 1.5, tone: "accent" },
 		{ kind: "circle", cx: 104, cy: 66, r: 4, tone: "accent" },
@@ -1222,6 +1226,61 @@ const OVERRIDES: Record<string, Shape[]> = {
 		{ kind: "line", x1: 68, y1: 74, x2: 92, y2: 74, tone: "label", weight: 1.6 },
 		{ kind: "circle", cx: 131, cy: 56, r: 6, tone: "surface", ring: true },
 		{ kind: "stroke", d: "M129.5 53 L132.5 56 L129.5 59", tone: "ink", weight: 1.4 },
+	]),
+	equalizer: windowScene([
+		{ kind: "rect", x: 58, y: 54, w: 8, h: 26, r: 2, tone: "accent" },
+		{ kind: "rect", x: 70, y: 36, w: 8, h: 44, r: 2, tone: "accent" },
+		{ kind: "rect", x: 82, y: 46, w: 8, h: 34, r: 2, tone: "accent" },
+		{ kind: "rect", x: 94, y: 60, w: 8, h: 20, r: 2, tone: "accent" },
+	]),
+	"media-tile": windowScene([
+		{ kind: "rect", x: 52, y: 22, w: 56, h: 56, r: 5, tone: "ink" },
+		{ kind: "circle", cx: 80, cy: 50, r: 12, tone: "label" },
+		{ kind: "circle", cx: 99, cy: 69, r: 7, tone: "accent" },
+		{ kind: "stroke", d: "M97.5 66 L101.5 69 L97.5 72 Z", tone: "surface", weight: 1.2 },
+		txt("Tidelight", 52, 88, 8, "ink", { font: "semibold" }),
+		txt("2025 · Lumen Harbor", 52, 97, 6, "muted"),
+	]),
+	"player-bar": windowScene([
+		{ kind: "rect", x: 20, y: 60, w: 16, h: 16, r: 3, tone: "ink" },
+		txt("Salt Glass", 40, 67, 6, "ink", { font: "semibold" }),
+		txt("Lumen Harbor", 40, 75, 5, "muted"),
+		{ kind: "circle", cx: 80, cy: 62, r: 6, tone: "ink" },
+		{ kind: "circle", cx: 66, cy: 62, r: 2, tone: "label" },
+		{ kind: "circle", cx: 94, cy: 62, r: 2, tone: "label" },
+		{ kind: "line", x1: 62, y1: 74, x2: 78, y2: 74, tone: "accent", weight: 1.6 },
+		{ kind: "line", x1: 78, y1: 74, x2: 100, y2: 74, tone: "label", weight: 1.6 },
+		{ kind: "line", x1: 118, y1: 68, x2: 138, y2: 68, tone: "label", weight: 1.6 },
+		{ kind: "line", x1: 118, y1: 68, x2: 130, y2: 68, tone: "ink", weight: 1.6 },
+	]),
+	"queue-list": windowScene([
+		txt("Up next", 36, 34, 8, "ink", { font: "semibold" }),
+		{ kind: "rect", x: 36, y: 42, w: 12, h: 12, r: 2, tone: "accent" },
+		{ kind: "line", x1: 54, y1: 46, x2: 92, y2: 46, tone: "accent", weight: 1.6 },
+		{ kind: "line", x1: 54, y1: 51, x2: 78, y2: 51, tone: "label", weight: 1.3 },
+		{ kind: "rect", x: 36, y: 60, w: 12, h: 12, r: 2, tone: "ink" },
+		{ kind: "line", x1: 54, y1: 64, x2: 98, y2: 64, tone: "ink", weight: 1.6 },
+		{ kind: "line", x1: 54, y1: 69, x2: 82, y2: 69, tone: "label", weight: 1.3 },
+		{ kind: "rect", x: 36, y: 78, w: 12, h: 12, r: 2, tone: "ink" },
+		{ kind: "line", x1: 54, y1: 82, x2: 90, y2: 82, tone: "ink", weight: 1.6 },
+		{ kind: "line", x1: 54, y1: 87, x2: 74, y2: 87, tone: "label", weight: 1.3 },
+	]),
+	"track-list": windowScene([
+		txt("#", 26, 34, 5, "muted"),
+		txt("TITLE", 38, 34, 5, "muted", { tracking: 0.6 }),
+		{ kind: "line", x1: 24, y1: 38, x2: 136, y2: 38, tone: "hairline", weight: 1 },
+		txt("1", 27, 50, 6, "muted"),
+		{ kind: "line", x1: 38, y1: 48, x2: 84, y2: 48, tone: "ink", weight: 1.6 },
+		txt("3:42", 134, 50, 6, "muted", { align: "end" }),
+		{ kind: "rect", x: 22, y: 56, w: 116, h: 14, r: 3, tone: "label" },
+		{ kind: "rect", x: 25, y: 61, w: 1.6, h: 5, r: 0.5, tone: "accent" },
+		{ kind: "rect", x: 27.6, y: 59, w: 1.6, h: 7, r: 0.5, tone: "accent" },
+		{ kind: "rect", x: 30.2, y: 62, w: 1.6, h: 4, r: 0.5, tone: "accent" },
+		{ kind: "line", x1: 38, y1: 63, x2: 92, y2: 63, tone: "accent", weight: 1.6 },
+		txt("2:58", 134, 65, 6, "muted", { align: "end" }),
+		txt("3", 27, 80, 6, "muted"),
+		{ kind: "line", x1: 38, y1: 78, x2: 78, y2: 78, tone: "ink", weight: 1.6 },
+		txt("4:06", 134, 80, 6, "muted", { align: "end" }),
 	]),
 	"profile-picker": windowScene([
 		txt("Who's watching?", 80, 40, 8, "ink", { align: "center", font: "semibold" }),
