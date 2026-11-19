@@ -5,7 +5,7 @@ section:
     title: Jobs, email & alerts
     order: 7.3
 order: 3
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-19
 outcomes:
     - "How to declare emails in a `@sdxc/mail` registry and write their templates"
     - "How to send, defer or queue an email by name from requests, jobs and commands"
@@ -106,18 +106,18 @@ from the same HTML.
 
 The copy lives in the same bundles your pages read:
 
-```json {% title="resources/locales/en.json" %}
-{
-	"emails": {
-		"postingPublished": {
-			"subject": "{$title} is live",
-			"heading": "Your position is live",
-			"body": "{$title} at {$company} is now on the board for thirty days.",
-			"action": "View the posting",
-			"footer": "You received this because this address was listed as the contact."
-		}
-	}
-}
+```typescript {% title="resources/locales/en.ts" %}
+export default {
+	emails: {
+		postingPublished: {
+			subject: "{$title} is live",
+			heading: "Your position is live",
+			body: "{$title} at {$company} is now on the board for thirty days.",
+			action: "View the posting",
+			footer: "You received this because this address was listed as the contact.",
+		},
+	},
+} as const;
 ```
 
 ## Map it on the registry
@@ -147,8 +147,8 @@ declare module "@sdxc/mail" {
 
 `translate` is the translator
 [Translate your app](/docs/building-remix-apps/translate-your-app) builds for work outside a
-request. The `MailTypes` block types `t` with the keys of your bundles, so a misspelled key
-fails the type check.
+request. The `MailTypes` block types `t` with your bundles, so a misspelled key or a value the
+message does not read fails the type check.
 
 ## Publish a mailer to requests and jobs
 

@@ -5,7 +5,7 @@ section:
     title: Routing & forms
     order: 4
 order: 6
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-19
 outcomes:
     - "How to detect each request's language and translate MessageFormat 2 messages in handlers and views"
     - "How to reach the translator from any component, island or job"
@@ -25,38 +25,64 @@ npm add @sdxc/i18n @sdxc/logger @sdxc/messageformat @sdxc/result @sdxc/ui remix
 ## Write the messages
 
 A bundle is a plain object per language, nested by key segment, with MessageFormat 2 strings
-as leaves:
+as leaves. Declare the fallback language's bundle `as const`, so each message's text is known to
+the type checker:
 
-```json {% title="resources/locales/en.json" %}
-{
-	"projects": {
-		"title": "Projects",
-		"greeting": "Welcome back, {$name}",
-		"count": ".input {$count :number}\n.match $count\n0 {{No projects yet}}\none {{{$count} project}}\n* {{{$count} projects}}",
-		"invite": "Read {#docs}the guide{/docs} before inviting your team."
-	}
-}
+```typescript {% title="resources/locales/en.ts" %}
+export default {
+	projects: {
+		title: "Projects",
+		greeting: "Welcome back, {$name}",
+		count: ".input {$count :number}\n.match $count\n0 {{No projects yet}}\none {{{$count} project}}\n* {{{$count} projects}}",
+		invite: "Read {#docs}the guide{/docs} before inviting your team.",
+	},
+} as const;
 ```
 
 `{$name}` interpolates a value, a plural `.match`es on the language's plural category with `*`
 catching the rest, and `{#docs}…{/docs}` is markup a component turns into an element.
 
+Every other language satisfies `LocaleMessages`, so a key English has and Spanish lacks, or one
+Spanish kept after English dropped it, fails to compile:
+
+```typescript {% title="resources/locales/es.ts" %}
+import type { LocaleMessages } from "@sdxc/i18n";
+
+import type en from "~/resources/locales/en";
+
+export default {
+	projects: {
+		title: "Proyectos",
+		greeting: "Hola de nuevo, {$name}",
+		count: ".input {$count :number}\n.match $count\n0 {{Aún no hay proyectos}}\none {{{$count} proyecto}}\n* {{{$count} proyectos}}",
+		invite: "Lee {#docs}la guía{/docs} antes de invitar a tu equipo.",
+	},
+} satisfies LocaleMessages<typeof en>;
+```
+
 State the languages once, in a module the middleware and everything outside a request share:
 
 ```typescript {% title="app/initializers/i18n.ts" %}
-import type { Messages } from "@sdxc/i18n";
-
-import en from "~/resources/locales/en.json";
-import es from "~/resources/locales/es.json";
+import en from "~/resources/locales/en";
+import es from "~/resources/locales/es";
 
 export const SUPPORTED_LANGUAGES = ["en", "es"];
 
 export const FALLBACK_LANGUAGE = "en";
 
-export const RESOURCES: Record<string, Messages> = { en, es };
+export const RESOURCES = { en, es };
+
+declare module "@sdxc/i18n" {
+	interface I18nTypes {
+		messages: typeof en;
+	}
+}
 ```
 
 Keep one resources object for the whole app, since compiled messages are cached per object.
+The `I18nTypes` block types every translator the package hands you, `ctx.intl`, `intl(handle)`,
+`Trans` and the one for work outside a request, so a misspelled key or a missing value fails
+the type check: `ctx.intl.t("projects.greeting")` asks for `name`.
 
 ## Detect the language per request
 
