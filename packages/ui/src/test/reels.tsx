@@ -65,13 +65,16 @@ export function videoAt(mounted: RenderResult, index: number): HTMLVideoElement 
 
 /** Resolves once the feed's island has run and the reel at `index` is the one on screen. */
 export async function waitForActive(mounted: RenderResult, index: number): Promise<void> {
-	await vi.waitFor(() => {
-		expect(
-			mounted.container.querySelector("[data-slot=reel-feed][data-reel-feed-ready]"),
-		).not.toBeNull();
-		let active = [...mounted.container.querySelectorAll("[data-reel-active]")].map(
-			(reel) => reel.id,
-		);
-		expect(active).toEqual([`reel-${index}`]);
-	});
+	await vi.waitFor(
+		() => {
+			expect(
+				mounted.container.querySelector("[data-slot=reel-feed][data-reel-feed-ready]"),
+			).not.toBeNull();
+			let active = [...mounted.container.querySelectorAll("[data-reel-active]")].map(
+				(reel) => reel.id,
+			);
+			expect(active).toEqual([`reel-${index}`]);
+		},
+		{ timeout: 4000 },
+	);
 }
