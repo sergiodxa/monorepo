@@ -277,6 +277,7 @@ export const FACE_KIND = {
 	"usage-estimate": "landing-pricing",
 	"view-options": "view-options",
 	"video-player": "video",
+	"year-view": "calendar",
 	"youtube-embed": "video",
 } as const;
 

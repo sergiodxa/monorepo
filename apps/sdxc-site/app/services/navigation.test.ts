@@ -133,6 +133,7 @@ describe("namespace groups", () => {
 			"FreeBusy",
 			"MonthView",
 			"TimeGrid",
+			"YearView",
 		]);
 		expect(titles("Landing")).toEqual(
 			expect.arrayContaining(["LandingHero", "FlowDiagram", "LandingSection", "SiteHeader"]),

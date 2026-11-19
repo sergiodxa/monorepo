@@ -438,6 +438,7 @@ const CATALOGUE = [
 	{ slug: "video-card", module: "video" },
 	{ slug: "video-player", module: "video" },
 	{ slug: "video-shelf", module: "video" },
+	{ slug: "year-view", module: "schedule" },
 	{ slug: "youtube-embed", module: "components" },
 ] as const satisfies ReadonlyArray<{ slug: string; module: ModuleKind }>;
 
@@ -1221,6 +1222,23 @@ const OVERRIDES: Record<string, Shape[]> = {
 		{ kind: "rect", x: 112, y: 62, w: 24, h: 20, r: 2, tone: "surface", ring: true },
 		{ kind: "line", x1: 82, y1: 74, x2: 110, y2: 74, tone: "accent", weight: 1.4 },
 		{ kind: "circle", cx: 82, cy: 74, r: 2, tone: "accent" },
+	]),
+	"year-view": appShell([
+		...[0, 1, 2].flatMap((month) =>
+			[0, 1, 2, 3].flatMap((row) =>
+				[0, 1, 2, 3, 4].map(
+					(column): Shape => ({
+						kind: "circle",
+						cx: 60 + month * 27 + column * 5,
+						cy: 40 + row * 9,
+						r: 1.6,
+						tone: (month * 7 + row * 3 + column) % 4 === 0 ? "accent" : "hairline",
+					}),
+				),
+			),
+		),
+		...[0, 1, 2].map((month) => txt(["Sep", "Oct", "Nov"][month] ?? "", 58 + month * 27, 32, 5, "muted")),
+		{ kind: "circle", cx: 114, cy: 58, r: 3, tone: "accent" },
 	]),
 	"tab-bar": deviceScene([
 		{ kind: "line", x1: 62, y1: 30, x2: 98, y2: 30, tone: "label", weight: 1.4 },
