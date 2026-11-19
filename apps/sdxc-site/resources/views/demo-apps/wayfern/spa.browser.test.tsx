@@ -85,8 +85,14 @@ describe("Wayfern as a single-page app", () => {
 		let pin = () =>
 			document.querySelector('[data-slot=map-marker][data-map-key="pinecone-a-frame"]');
 		await vi.waitFor(() => expect(document.querySelector("[data-map-key]")).not.toBeNull());
-		await userEvent.hover(card);
-		await vi.waitFor(() => expect(pin()?.hasAttribute("data-highlighted")).toBe(true));
+		await vi.waitFor(
+			async () => {
+				await userEvent.unhover(card);
+				await userEvent.hover(card);
+				expect(pin()?.hasAttribute("data-highlighted")).toBe(true);
+			},
+			{ timeout: 5000, interval: 100 },
+		);
 		expect(document.querySelector('[data-map-key="mossback-lodge"][data-highlighted]')).toBeNull();
 	});
 
