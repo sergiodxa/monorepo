@@ -458,7 +458,7 @@ export function SundialShell(handle: Handle<SundialShell.Props>) {
 				}
 				nav={
 					<>
-						<div mix={[raw({ paddingBlockEnd: "0.75rem" }), FULL_SIDEBAR_ONLY]}>
+						<div mix={[raw({ paddingBlockEnd: "0.5rem" }), FULL_SIDEBAR_ONLY]}>
 							<QuickAdd
 								action={actionHref("events/quick")}
 								back={context.back}

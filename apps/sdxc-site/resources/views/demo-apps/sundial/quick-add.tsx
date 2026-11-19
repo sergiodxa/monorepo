@@ -161,10 +161,10 @@ export function QuickAdd(handle: Handle<QuickAdd.Props>) {
 					aria-live="polite"
 					mix={[
 						raw({
-							minBlockSize: "1rem",
 							fontSize: "0.75rem",
 							lineHeight: "1rem",
 							color: "var(--ui-neutral-fg-muted)",
+							"&:empty": { display: "none" },
 						}),
 					]}
 				/>
