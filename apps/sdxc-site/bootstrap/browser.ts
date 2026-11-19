@@ -60,6 +60,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/chat/composer-submit": () => import("@sdxc/ui/chat/composer-submit"),
 	"@sdxc/ui/confirm": () => import("@sdxc/ui/confirm"),
 	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),
+	"@sdxc/ui/lightbox": () => import("@sdxc/ui/lightbox"),
 	"@sdxc/ui/docs/code-tabs-sync": () => import("@sdxc/ui/docs/code-tabs-sync"),
 	"@sdxc/ui/docs/copy-button": () => import("@sdxc/ui/docs/copy-button"),
 	"@sdxc/ui/docs/docs-nav-tools": () => import("@sdxc/ui/docs/docs-nav-tools"),

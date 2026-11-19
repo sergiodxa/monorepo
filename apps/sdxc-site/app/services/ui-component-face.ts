@@ -268,6 +268,7 @@ const CATALOGUE = [
 	{ slug: "landing-header", module: "landing" },
 	{ slug: "landing-hero", module: "landing" },
 	{ slug: "landing-section", module: "landing" },
+	{ slug: "lightbox", module: "components" },
 	{ slug: "link", module: "components" },
 	{ slug: "link-button", module: "components" },
 	{ slug: "listbox", module: "components" },
@@ -301,6 +302,7 @@ const CATALOGUE = [
 	{ slug: "phone-frame", module: "landing" },
 	{ slug: "plan-notice", module: "docs" },
 	{ slug: "popover", module: "components" },
+	{ slug: "price-breakdown", module: "components" },
 	{ slug: "price-list", module: "landing" },
 	{ slug: "pricing-band", module: "landing" },
 	{ slug: "product-frame", module: "landing" },
@@ -311,6 +313,8 @@ const CATALOGUE = [
 	{ slug: "radio-group", module: "components" },
 	{ slug: "rails", module: "landing" },
 	{ slug: "range-calendar", module: "components" },
+	{ slug: "range-months", module: "components" },
+	{ slug: "rating-breakdown", module: "components" },
 	{ slug: "range-picker", module: "app" },
 	{ slug: "relative-time", module: "components" },
 	{ slug: "resizable", module: "app" },
@@ -398,6 +402,68 @@ function graphTone(level: number): Tone {
  * inside the shared window / device / docs chrome.
  */
 const OVERRIDES: Record<string, Shape[]> = {
+	lightbox: windowScene([
+		{ kind: "rect", x: 16, y: 23, w: 128, h: 67, r: 8, tone: "ink" },
+		{ kind: "rect", x: 16, y: 23, w: 128, h: 10, tone: "ink" },
+		{ kind: "rect", x: 44, y: 30, w: 72, h: 46, r: 3, tone: "accent" },
+		{ kind: "circle", cx: 102, cy: 41, r: 5, tone: "label" },
+		{ kind: "path", d: "M44 76 L66 54 L82 68 L94 60 L116 76 Z", tone: "chrome" },
+		{ kind: "circle", cx: 28, cy: 53, r: 6, tone: "surface" },
+		{ kind: "stroke", d: "M29.5 50 L26.5 53 L29.5 56", tone: "ink", weight: 1.4 },
+		{ kind: "circle", cx: 132, cy: 53, r: 6, tone: "surface" },
+		{ kind: "stroke", d: "M130.5 50 L133.5 53 L130.5 56", tone: "ink", weight: 1.4 },
+		{ kind: "stroke", d: "M133 27 L138 32", tone: "label", weight: 1.2 },
+		{ kind: "stroke", d: "M138 27 L133 32", tone: "label", weight: 1.2 },
+		txt("2 / 5", 80, 85, 5.5, "label", { align: "center" }),
+	]),
+	"price-breakdown": windowScene([
+		txt("4 nights", 30, 37, 6.5, "ink"),
+		txt("$728", 130, 37, 6.5, "ink", { align: "end" }),
+		txt("$182 x 4", 30, 44, 5, "muted"),
+		txt("Cleaning fee", 30, 54, 6.5, "ink"),
+		txt("$45", 130, 54, 6.5, "ink", { align: "end" }),
+		txt("Discount", 30, 64, 6.5, "accent"),
+		txt("-$73", 130, 64, 6.5, "accent", { align: "end" }),
+		{ kind: "line", x1: 30, y1: 70, x2: 130, y2: 70, tone: "hairline", weight: 1 },
+		txt("Total", 30, 81, 7.5, "ink", { font: "semibold" }),
+		txt("$700", 130, 81, 7.5, "ink", { align: "end", font: "semibold" }),
+	]),
+	"range-months": windowScene([
+		txt("Sep", 24, 34, 7, "ink", { font: "semibold" }),
+		txt("Oct", 86, 34, 7, "ink", { font: "semibold" }),
+		{ kind: "stroke", d: "M134 30 L138 34 L134 38", weight: 1.4, tone: "muted" },
+		...calendarGrid(22, 42, 6, [15, 16, 17, 18, 19]),
+		...calendarGrid(84, 42, 6, []),
+	]),
+	"rating-breakdown": windowScene([
+		{
+			kind: "path",
+			d: "M30 30 L32.1 34.3 L36.8 35 L33.4 38.3 L34.2 43 L30 40.8 L25.8 43 L26.6 38.3 L23.2 35 L27.9 34.3 Z",
+			tone: "accent",
+		},
+		txt("4.86", 40, 42, 12, "ink", { font: "semibold" }),
+		txt("128 reviews", 74, 41, 6, "muted"),
+		...[0.89, 0.08, 0.02, 0.01, 0].flatMap((share, index): Shape[] => {
+			let y = 52 + index * 8;
+			return [
+				txt(String(5 - index), 28, y + 2, 5.5, "muted", { align: "end" }),
+				{ kind: "line", x1: 34, y1: y, x2: 132, y2: y, tone: "label", weight: 3 },
+				...(share > 0
+					? [
+							{
+								kind: "line",
+								x1: 34,
+								y1: y,
+								x2: 34 + 98 * share,
+								y2: y,
+								tone: "ink",
+								weight: 3,
+							} as Shape,
+						]
+					: []),
+			];
+		}),
+	]),
 	"map-canvas": windowScene([
 		{ kind: "rect", x: 20, y: 27, w: 120, h: 59, r: 4, tone: "chrome" },
 		{ kind: "path", d: "M98 27 L140 27 L140 86 L112 86 L104 70 L108 54 L98 40 Z", tone: "label" },
