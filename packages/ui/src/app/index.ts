@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export * from "./agenda.js";
 export * from "./amount.js";
 export * from "./app-shell-toggle.js";
 export * from "./app-shell.js";
@@ -35,6 +36,7 @@ export * from "./empty.js";
 export * from "./file-trigger.js";
 export * from "./filter-bar.js";
 export * from "./filter-menu.js";
+export * from "./free-busy.js";
 export * from "./grid-list.js";
 export * from "./keyboard-help.js";
 export * from "./ledger.js";
@@ -83,6 +85,7 @@ export * from "./mixins/toast-stack.js";
 export * from "./mixins/tree-keys.js";
 export * from "./mixins/tree-filter.js";
 export { TREE_NAVIGATION_ROW_SELECTOR, treeNavigation } from "./mixins/tree-navigation.js";
+export * from "./month-view.js";
 export * from "./optimistic-toggle.js";
 export * from "./page-header.js";
 export * from "./payment-card.js";
@@ -91,6 +94,7 @@ export * from "./range-picker.js";
 export * from "./resizable.js";
 export * from "./gantt.js";
 export * from "./review-thread.js";
+export * from "./route-dialog.js";
 export * from "./save-bar.js";
 export * from "./save-status.js";
 export * from "./selection-bar.js";
@@ -108,6 +112,7 @@ export * from "./styles/legend-toggle.js";
 export * from "./styles/toast-stack.js";
 export * from "./tab-bar.js";
 export * from "./table.js";
+export * from "./time-grid.js";
 export * from "./toast.js";
 export * from "./toasts.js";
 export * from "./toolbar.js";
