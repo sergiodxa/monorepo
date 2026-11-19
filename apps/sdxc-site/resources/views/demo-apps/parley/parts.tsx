@@ -42,12 +42,6 @@ import {
 } from "~/resources/views/demo-apps/parley/data";
 import { CATALOG, CUSTOM_EMOJI, customEmoji } from "~/resources/views/demo-apps/parley/emoji";
 
-/**
- * Expands shortcodes and emoticons in a text node, except inside a link, where an address's
- * `:/` stays as typed rather than turning into a face.
- */
-const EMOJI_VISITOR = emojis(CATALOG);
-
 /** The scheme a mention or channel reference carries until the link renderer reads it. */
 const REFERENCE = "parley:";
 
@@ -310,9 +304,7 @@ export function MessageText(handle: Handle<{ text: string; edited?: RemixNode }>
 		let parsed = Markdown.parse(text);
 		let body: RemixNode = text;
 		if (!isFailure(parsed)) {
-			let expanded = Markdown.walk(parsed.data.document, {
-				text: (node, parent) => (parent?.type === "link" ? node : EMOJI_VISITOR.text?.(node)),
-			});
+			let expanded = Markdown.walk(parsed.data.document, emojis(CATALOG));
 			let walked = isFailure(expanded)
 				? expanded
 				: Markdown.walk(expanded.data, { text: (node) => references(node) });
