@@ -10,13 +10,14 @@
 import type { Trans } from "@sdxc/i18n/ui";
 import type { Handle, Props as TagProps, RemixElement } from "remix/component";
 
+import { typewriterText } from "@sdxc/ui/styles";
+import { Typewriter } from "@sdxc/ui/utils";
 import { css, ref } from "remix/component";
 
 import type { LineFrame } from "../frames.js";
 import type { AudioSound } from "../stage.js";
 
 import { Message } from "./message.js";
-import { Typewriter, UNREVEALED_HIGHLIGHT } from "./typewriter.js";
 
 export namespace Textbox {
 	/** Props {@link Textbox} accepts. */
@@ -109,11 +110,8 @@ export function Textbox(handle: Handle<Textbox.Props>) {
 						fontSize: "calc(3.4cqh * var(--novel-font-scale, 1))",
 						lineHeight: "var(--novel-text-leading, 1.45)",
 						zIndex: 3,
-						[`& ::highlight(${UNREVEALED_HIGHLIGHT}), &::highlight(${UNREVEALED_HIGHLIGHT})`]: {
-							color: "transparent",
-							textShadow: "none",
-						},
 					}),
+					typewriterText(),
 					mix,
 				]}
 			>

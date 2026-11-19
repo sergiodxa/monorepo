@@ -13,6 +13,7 @@ import type { RenderResult } from "remix/component/test";
 
 import { createI18n } from "@sdxc/i18n";
 import { IntlProvider } from "@sdxc/i18n/ui";
+import { TYPEWRITER_HIGHLIGHT } from "@sdxc/ui/utils";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -20,7 +21,6 @@ import type { ChoiceFrame, FrameOption, LineFrame, Reply } from "../frames.js";
 
 import { ChoiceMenu, timeoutOption } from "./choice-menu.js";
 import { Captions, Textbox } from "./textbox.js";
-import { Typewriter, UNREVEALED_HIGHLIGHT } from "./typewriter.js";
 
 let mounted: RenderResult | undefined;
 
@@ -82,7 +82,7 @@ function line(key: string, extra: Partial<LineFrame> = {}): LineFrame {
 
 /** The unrevealed text of the shared highlight. */
 function unrevealed(): string {
-	let highlight = CSS.highlights.get(UNREVEALED_HIGHLIGHT);
+	let highlight = CSS.highlights.get(TYPEWRITER_HIGHLIGHT);
 	return [...(highlight ?? [])].map((range) => (range as Range).toString()).join("");
 }
 
@@ -121,11 +121,11 @@ describe("Textbox", () => {
 
 	test("reads a speed's rate and a pause's length from their markup options", () => {
 		let defaults = mount(<Textbox frame={line("line.slow")} typing={false} textSpeed={40} />);
-		expect(defaults.$("[data-novel-speed]")!.dataset["novelSpeed"]).toBe("0.5");
-		expect(defaults.$("[data-novel-speed]")!.textContent).toBe("slow");
+		expect(defaults.$("[data-typewriter-speed]")!.dataset["typewriterSpeed"]).toBe("0.5");
+		expect(defaults.$("[data-typewriter-speed]")!.textContent).toBe("slow");
 		mounted?.cleanup();
 		let paused = mount(<Textbox frame={line("line.pause")} typing={false} textSpeed={40} />);
-		expect(paused.$("[data-novel-pause]")!.dataset["novelPause"]).toBe("");
+		expect(paused.$("[data-typewriter-pause]")!.dataset["typewriterPause"]).toBe("");
 		mounted?.cleanup();
 		let fast = mount(
 			<Textbox
@@ -134,13 +134,12 @@ describe("Textbox", () => {
 				textSpeed={40}
 			/>,
 		);
-		expect([...fast.$$("[data-novel-speed]")].map((span) => span.dataset["novelSpeed"])).toEqual([
-			"4",
-			"0.25",
-		]);
+		expect(
+			[...fast.$$("[data-typewriter-speed]")].map((span) => span.dataset["typewriterSpeed"]),
+		).toEqual(["4", "0.25"]);
 		mounted?.cleanup();
 		let held = mount(<Textbox frame={line("line.held")} typing={false} textSpeed={40} />);
-		expect(held.$("[data-novel-pause]")!.dataset["novelPause"]).toBe("250");
+		expect(held.$("[data-typewriter-pause]")!.dataset["typewriterPause"]).toBe("250");
 		expect(held.$("[data-novel-line]")!.textContent).toBe("Wait for it.");
 	});
 
@@ -151,7 +150,7 @@ describe("Textbox", () => {
 		expect(result.$("[data-novel-textbox]")!.textContent).toBe("Hello there.");
 		let style = getComputedStyle(
 			result.$("[data-novel-line]")!,
-			`::highlight(${UNREVEALED_HIGHLIGHT})`,
+			`::highlight(${TYPEWRITER_HIGHLIGHT})`,
 		);
 		expect(style.color).toBe("rgba(0, 0, 0, 0)");
 	});
@@ -188,40 +187,6 @@ describe("Textbox", () => {
 		mount(<Textbox frame={line("line.plain")} typing textSpeed={0} onRevealed={revealed} />);
 		await vi.waitFor(() => expect(revealed).toHaveBeenCalledOnce());
 		expect(unrevealed()).toBe("");
-	});
-});
-
-describe(Typewriter, () => {
-	/** Renders a line into a fresh element. */
-	function element(html: string): HTMLElement {
-		let root = document.createElement("p");
-		root.innerHTML = html;
-		document.body.append(root);
-		return root;
-	}
-
-	test("holds at a pause and halves the speed inside speed markup", async () => {
-		let root = element(
-			'Wait<span data-novel-pause="300"></span> for <span data-novel-speed="0.5">it</span>',
-		);
-		let writer = new Typewriter(root);
-		let started = performance.now();
-		writer.start(100);
-		await writer.done;
-		let elapsed = performance.now() - started;
-		expect(elapsed).toBeGreaterThanOrEqual(4 * 10 + 300 + 4 * 10 + 2 * 20 - 5);
-		root.remove();
-	});
-
-	test("finishes early and releases its highlight range", () => {
-		let root = element("Some text");
-		let writer = new Typewriter(root);
-		writer.start(1);
-		expect(unrevealed()).toBe("Some text");
-		writer.finish();
-		expect(writer.finished).toBe(true);
-		expect(unrevealed()).toBe("");
-		root.remove();
 	});
 });
 

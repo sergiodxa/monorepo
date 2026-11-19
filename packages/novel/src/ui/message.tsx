@@ -53,7 +53,7 @@ function positive(value: unknown): number | undefined {
  */
 function Speed(handle: Handle<Trans.MarkupProps>) {
 	return () => (
-		<span data-novel-speed={String(positive(handle.props.options.rate) ?? DEFAULT_SPEED_RATE)}>
+		<span data-typewriter-speed={String(positive(handle.props.options.rate) ?? DEFAULT_SPEED_RATE)}>
 			{handle.props.children}
 		</span>
 	);
@@ -63,7 +63,7 @@ function Speed(handle: Handle<Trans.MarkupProps>) {
 function Pause(handle: Handle<Trans.MarkupProps>) {
 	return () => {
 		let ms = positive(handle.props.options.ms);
-		return <span data-novel-pause={ms === undefined ? "" : String(ms)} />;
+		return <span data-typewriter-pause={ms === undefined ? "" : String(ms)} />;
 	};
 }
 

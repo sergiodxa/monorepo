@@ -9,6 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { Letterbox } from "@sdxc/ui";
 import { createMixin, css } from "remix/component";
 
 import type { FrameCharacter, FrameStage, StageScenery } from "../stage.js";
@@ -100,9 +101,9 @@ export namespace Stage {
 }
 
 /**
- * Draws a stage. The surface keeps 16:9 inside any box by sizing itself in container query
- * units, so the same component draws a full-screen play and a save slot's thumbnail, and text on
- * it can size in `cqh` to scale with the stage.
+ * Draws a stage on a 16:9 `Letterbox` surface that keeps its ratio inside any box, so the same
+ * component draws a full-screen play and a save slot's thumbnail, and text on it can size in
+ * `cqh` to scale with the stage.
  *
  * @example <Stage stage={frame.stage} locale={locale}><Textbox frame={frame} … /></Stage>
  */
@@ -124,19 +125,14 @@ export function Stage(handle: Handle<Stage.Props>) {
 			stage.characters.length >= 2 &&
 			stage.characters.some((character) => character.speaking);
 		return (
-			<div
+			<Letterbox
 				{...rest}
+				ratio={16 / 9}
 				data-novel-stage=""
 				data-instant={String(instant)}
 				mix={[
 					css({
-						position: "relative",
-						inlineSize: "100%",
-						blockSize: "100%",
-						aspectRatio: "16 / 9",
-						containerType: "size",
-						overflow: "hidden",
-						background: "var(--novel-letterbox, #000)",
+						"--ui-letterbox-bars": "var(--novel-letterbox, #000)",
 						"--novel-transition-duration": "600ms",
 						"@keyframes novel-in": { from: { opacity: 0 }, to: { opacity: 1 } },
 						"@keyframes novel-out": { from: { opacity: 1 }, to: { opacity: 0 } },
@@ -235,18 +231,11 @@ export function Stage(handle: Handle<Stage.Props>) {
 					mix,
 				]}
 			>
-				<div
+				<Letterbox.Surface
 					data-novel-surface=""
 					data-focus={focused ? "on" : "off"}
 					mix={css({
-						position: "absolute",
-						inset: 0,
-						margin: "auto",
-						inlineSize: "min(100cqw, calc(100cqh * 16 / 9))",
-						blockSize: "min(100cqh, calc(100cqw * 9 / 16))",
-						containerType: "size",
 						containerName: "novel-stage",
-						overflow: "clip",
 						background: "var(--novel-stage-background, #000)",
 					})}
 				>
@@ -274,8 +263,8 @@ export function Stage(handle: Handle<Stage.Props>) {
 						name={transitions ? `${prefix}-image` : undefined}
 					/>
 					{children}
-				</div>
-			</div>
+				</Letterbox.Surface>
+			</Letterbox>
 		);
 	};
 }

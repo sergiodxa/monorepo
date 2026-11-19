@@ -13,6 +13,7 @@ import type { RenderResult } from "remix/component/test";
 
 import { createI18n } from "@sdxc/i18n";
 import { IntlProvider } from "@sdxc/i18n/ui";
+import { TYPEWRITER_HIGHLIGHT } from "@sdxc/ui/utils";
 import { css, on } from "remix/component";
 import { render } from "remix/component/test";
 import * as s from "remix/data-schema";
@@ -34,7 +35,6 @@ import {
 } from "../index.js";
 
 import { NovelPlayer } from "./player.js";
-import { UNREVEALED_HIGHLIGHT } from "./typewriter.js";
 
 /** An SVG image as a data URL, so images decode without a server. */
 function svg(color: string, width = 320, height = 640): string {
@@ -271,7 +271,7 @@ describe("NovelPlayer", () => {
 	test("finishes the typewriter on the first click and advances on the second", async () => {
 		let player = mount({ settings: { textSpeed: 1 } });
 		await vi.waitFor(() => expect(player.phase()).toBe("typing"), { timeout: 5000 });
-		expect(CSS.highlights.get(UNREVEALED_HIGHLIGHT)?.size).toBeGreaterThan(0);
+		expect(CSS.highlights.get(TYPEWRITER_HIGHLIGHT)?.size).toBeGreaterThan(0);
 		clickStage(player);
 		await vi.waitFor(() => expect(player.phase()).toBe("waiting"));
 		expect(player.line()).toBe("Welcome to the café.");

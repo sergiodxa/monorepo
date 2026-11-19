@@ -12,6 +12,7 @@ import type { Handle, Props as TagProps, RemixElement, RemixNode } from "remix/c
 
 import { intl } from "@sdxc/i18n/ui";
 import { Dialog } from "@sdxc/ui";
+import { moveFocus, swipeDirection } from "@sdxc/ui/utils";
 import { css, on, ref } from "remix/component";
 
 import type { SceneDeclaration } from "../declarations.js";
@@ -27,7 +28,7 @@ import { ChoiceMenu } from "./choice-menu.js";
 import { Director } from "./director.js";
 import { EndingsList } from "./endings.js";
 import { Gallery } from "./gallery.js";
-import { gamepadActions, moveFocus, swipeDirection } from "./input.js";
+import { gamepadActions } from "./input.js";
 import { Memories } from "./memories.js";
 import { Message } from "./message.js";
 import { MusicRoom } from "./music-room.js";
