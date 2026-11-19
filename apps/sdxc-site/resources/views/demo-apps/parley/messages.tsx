@@ -496,54 +496,54 @@ export function RunGroup(handle: Handle<RunGroup.Props>) {
 	};
 }
 
+/** The day pill's look, shared by the pinned label and the slot that holds its place. */
+const PILL = {
+	fontWeight: "600",
+	fontSize: "0.75rem",
+	lineHeight: "1.25rem",
+	paddingInline: "0.75rem",
+	paddingBlock: "0.125rem",
+	borderRadius: "999px",
+	border: "1px solid var(--ui-neutral-border)",
+	backgroundColor: "var(--ui-bg)",
+	color: "var(--ui-neutral-fg-emphasis)",
+};
+
 /**
- * A day's separator, pinned to the top of the log while its day scrolls under it. Once pinned it
- * drops its rules and keeps only the pill, so the lines never cross the messages passing beneath.
+ * A day's separator: its rules stay in the log, and only the pill pins to the top while its day
+ * scrolls under it, so no line ever crosses the messages passing beneath. The pinned pill takes no
+ * room of its own; an invisible copy inside the rules holds its place.
  */
 function DaySeparator(handle: Handle<{ label: string }>) {
 	return () => (
-		<div
-			mix={[
-				raw({
-					position: "sticky",
-					insetBlockStart: "0",
-					zIndex: "2",
-					containerType: "scroll-state",
-					pointerEvents: "none",
-				}),
-			]}
-		>
-			<Marker
-				variant="separator"
+		<>
+			<div
 				mix={[
 					raw({
-						paddingBlock: "0.5rem",
-						paddingInline: "1.25rem",
-						"@container scroll-state(stuck: top)": {
-							"&::before, &::after": { opacity: "0" },
-						},
+						position: "sticky",
+						insetBlockStart: "0",
+						zIndex: "2",
+						blockSize: "0",
+						display: "flex",
+						justifyContent: "center",
+						pointerEvents: "none",
 					}),
 				]}
 			>
-				<Marker.Content
-					mix={[
-						raw({
-							fontWeight: "600",
-							fontSize: "0.75rem",
-							paddingInline: "0.75rem",
-							paddingBlock: "0.125rem",
-							borderRadius: "999px",
-							border: "1px solid var(--ui-neutral-border)",
-							backgroundColor: "var(--ui-bg)",
-							color: "var(--ui-neutral-fg-emphasis)",
-							pointerEvents: "auto",
-						}),
-					]}
-				>
+				<span mix={[raw({ ...PILL, marginBlockStart: "0.5rem", blockSize: "fit-content" })]}>
+					{handle.props.label}
+				</span>
+			</div>
+			<Marker
+				variant="separator"
+				aria-hidden="true"
+				mix={[raw({ paddingBlock: "0.5rem", paddingInline: "1.25rem" })]}
+			>
+				<Marker.Content mix={[raw({ ...PILL, visibility: "hidden" })]}>
 					{handle.props.label}
 				</Marker.Content>
 			</Marker>
-		</div>
+		</>
 	);
 }
 
