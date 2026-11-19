@@ -113,10 +113,15 @@ describe("Wayfern's search", () => {
 });
 
 describe("Wayfern's visitor state", () => {
-	test("starts with saved stays and two trips, and drops anything tampered", () => {
+	test("starts with saved stays and a trip of every kind, and drops anything tampered", () => {
 		let traveller = readTraveller(null, today());
 		expect(traveller.saved).toContain("the-canopy");
-		expect(traveller.trips.map((trip) => trip.id)).toEqual(["WF-7M3QK", "WF-2D9LX"]);
+		expect(traveller.trips.map((trip) => trip.id)).toEqual([
+			"WF-8F2TL",
+			"WF-7M3QK",
+			"WF-3CRV9",
+			"WF-2D9LX",
+		]);
 		let tampered = readTraveller(
 			"wayfern.saved=the-canopy%2Cnope; wayfern.trips=WF-AAAAA.nope.2026-01-01.2026-01-03.2.0.fern-visa.confirmed",
 			today(),

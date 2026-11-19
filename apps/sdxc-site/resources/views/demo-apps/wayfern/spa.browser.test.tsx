@@ -85,7 +85,7 @@ describe("Wayfern as a single-page app", () => {
 
 		let card = document.querySelector<HTMLElement>('[data-stay="pinecone-a-frame"] h2 a')!;
 		let pin = () =>
-			document.querySelector('[data-slot=map-canvas-pin][data-map-key="pinecone-a-frame"]');
+			document.querySelector('[data-slot=map-marker][data-map-key="pinecone-a-frame"]');
 		await vi.waitFor(() => expect(document.querySelector("[data-map-key]")).not.toBeNull());
 		await userEvent.hover(card);
 		await vi.waitFor(() => expect(pin()?.hasAttribute("data-highlighted")).toBe(true));
@@ -132,6 +132,47 @@ describe("Wayfern as a single-page app", () => {
 		);
 		expect(document.querySelector("h1")?.textContent).toBe("Confirm and pay");
 		expect(document.querySelectorAll('input[name="card"][type="radio"]')).toHaveLength(3);
+	});
+
+	test("picks both flights, a fare and seats, then reaches passengers, all in main", async () => {
+		await page.viewport(1280, 900);
+		let depart = addDays(today(), 30);
+		mounted = await mountApp(
+			wayfern,
+			"wayfern",
+			`flights?from=SRL&to=MRW&depart=${depart}&return=${addDays(depart, 5)}`,
+		);
+		let marker = region();
+
+		await press(document.querySelector("#flight-results ~ ol a[aria-label^='Select']"));
+		await vi.waitFor(() => expect(document.querySelector("h1")?.textContent).toContain("Return"));
+		await press(document.querySelector("#flight-results ~ ol a[aria-label^='Select']"));
+		await vi.waitFor(() => expect(document.querySelector("h1")?.textContent).toBe("Your flights"));
+		await press(document.querySelector('a[href*="/flights/fares?"]'));
+		await vi.waitFor(() =>
+			expect(document.querySelector("h1")?.textContent).toBe("Choose your fare"),
+		);
+		await press(document.querySelector("form[action$='/flights/seats'] button[type=submit]"));
+		await vi.waitFor(() => expect(document.querySelector("h1")?.textContent).toBe("Pick a seat"));
+		for (
+			let step = 0;
+			step < 6 && document.querySelector("h1")?.textContent === "Pick a seat";
+			step++
+		) {
+			let seat = document.querySelector<HTMLInputElement>(
+				"input[name=seat][type=radio]:not(:disabled)",
+			)!;
+			seat.click();
+			let before = screenUrl();
+			await press(document.querySelector("form[action$='/flights/seats'] button[type=submit]"));
+			await vi.waitFor(() => expect(screenUrl()).not.toBe(before));
+		}
+		await vi.waitFor(() =>
+			expect(document.querySelector("h1")?.textContent).toBe("Passengers and payment"),
+		);
+		expect(region()).toBe(marker);
+		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
+		expect(document.querySelectorAll("input[name=card]")).toHaveLength(3);
 	});
 
 	test("switches between the list and the map on a phone", async () => {

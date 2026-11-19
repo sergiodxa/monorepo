@@ -22,7 +22,7 @@ import { findStay, href } from "./data";
 import { SPLIT, TOP_BAR } from "./layout";
 import { NightlyPrice, Page, StayCard, StayPhoto, Title } from "./parts";
 import { money } from "./pricing";
-import { StaysMap } from "./results";
+import { StaysMap } from "./stays-map";
 
 /** One wishlist. */
 export interface Wishlist {
@@ -291,11 +291,11 @@ export function WishlistPage(handle: Handle<{ ctx: Screen; list: Wishlist }>) {
 					>
 						<div mix={[raw({ overflow: "clip", borderRadius: "1rem" })]}>
 							<StaysMap
+								id="wayfern-list-map"
 								stays={list.stays}
 								labels={new Map(list.stays.map((stay) => [stay.id, money(stay.nightly)]))}
 								query=""
 								label={`${list.name} on the map`}
-								shape="tall"
 							/>
 						</div>
 					</aside>

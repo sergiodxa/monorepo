@@ -17,13 +17,23 @@ import { when } from "@sdxc/u/state";
 import type { Screen } from "./screen";
 
 import { photoSrc } from "./art";
+import { readCarSearch } from "./cars";
 import { PLACES, STAYS, href } from "./data";
-import { addDays, formatRange, weekday } from "./days";
+import { addDays, formatRange, readDay, weekday } from "./days";
+import { readFlightSearch } from "./flight-query";
 import { GUTTER, MEASURE, WIDE } from "./layout";
+import { originOf } from "./packages-view";
 import { NightlyPrice, StayCard, TotalPrice } from "./parts";
 import { isBooked, quote } from "./pricing";
 import { readSearch, tripQuery, withQuery } from "./query";
 import { SearchForm, SearchPill } from "./search";
+import {
+	CarSearchForm,
+	FlightSearchForm,
+	PackageSearchForm,
+	SearchTabs,
+	readTab,
+} from "./travel-search";
 
 /** A home section: a heading with an optional link to see more, then its cards. */
 function Section(
@@ -108,6 +118,103 @@ function Section(
 	};
 }
 
+/** The form of the tab the address names, in one layout. */
+function TabForm(handle: Handle<{ ctx: Screen; layout: "bar" | "stack"; id: string }>) {
+	return () => {
+		let { base, today, url } = handle.props.ctx;
+		let { id, layout } = handle.props;
+		let tab = readTab(url.searchParams.get("tab"));
+		let search = readSearch(url.searchParams);
+		if (tab === "flights")
+			return (
+				<FlightSearchForm
+					flight={readFlightSearch(url.searchParams)}
+					today={today}
+					base={base}
+					layout={layout}
+					id={id}
+				/>
+			);
+		if (tab === "cars")
+			return (
+				<CarSearchForm
+					car={readCarSearch(url.searchParams, readDay)}
+					today={today}
+					base={base}
+					layout={layout}
+					id={id}
+				/>
+			);
+		if (tab === "packages")
+			return (
+				<PackageSearchForm
+					search={search}
+					origin={originOf(url.searchParams)}
+					today={today}
+					base={base}
+					layout={layout}
+					id={id}
+				/>
+			);
+		return layout === "bar" ? (
+			<SearchForm search={search} today={today} layout="bar" id={id} base={base} />
+		) : (
+			<SearchPill search={search} />
+		);
+	};
+}
+
+/**
+ * The hero's search: the tabs, then the chosen tab's form, a pill bar on a wide screen and a
+ * stack of fields on a phone (stays open the full-screen sheet instead).
+ */
+function HeroSearch(handle: Handle<{ ctx: Screen }>) {
+	return () => {
+		let { url } = handle.props.ctx;
+		let tab = readTab(url.searchParams.get("tab"));
+		let wide = raw({
+			display: "none",
+			inlineSize: "100%",
+			justifyContent: "center",
+			[`@media ${WIDE}`]: { display: "flex" },
+		});
+		let narrow = raw({
+			display: "grid",
+			inlineSize: "100%",
+			[`@media ${WIDE}`]: { display: "none" },
+		});
+		return (
+			<div
+				mix={[
+					raw({
+						display: "grid",
+						justifyItems: "center",
+						gap: "1rem",
+						inlineSize: "100%",
+						marginBlockStart: "0.75rem",
+					}),
+				]}
+			>
+				<SearchTabs
+					current={tab}
+					hrefFor={(next) => href(next === "stays" ? "" : `?tab=${next}`)}
+				/>
+				<div mix={[wide]}>
+					<TabForm ctx={handle.props.ctx} layout="bar" id="hero" />
+				</div>
+				<div
+					mix={[
+						narrow,
+						raw({ justifyItems: tab === "stays" ? "center" : "stretch", textAlign: "start" }),
+					]}
+				>
+					<TabForm ctx={handle.props.ctx} layout="stack" id="hero-phone" />
+				</div>
+			</div>
+		);
+	};
+}
+
 /** The grid every row of stay cards on home sits in, wrapping from four columns to one. */
 function CardGrid(handle: Handle<{ children: RemixNode }>) {
 	return () => (
@@ -140,8 +247,7 @@ namespace Home {
 /** The home screen. */
 export default function Home(handle: Handle<Home.Props>) {
 	return () => {
-		let { back, base, today, traveller, url } = handle.props.ctx;
-		let search = readSearch(url.searchParams);
+		let { back, today, traveller } = handle.props.ctx;
 		let friday = nextFriday(today);
 		let sunday = addDays(friday, 2);
 		let weekend = { start: friday, end: sunday, adults: 2, children: 0 };
@@ -229,32 +335,7 @@ export default function Home(handle: Handle<Home.Props>) {
 							Cabins in the pines, boathouses on still lakes and lofts above market squares, each
 							kept by someone who lives nearby.
 						</p>
-						<div
-							mix={[
-								raw({
-									display: "none",
-									inlineSize: "100%",
-									justifyContent: "center",
-									marginBlockStart: "0.75rem",
-									[`@media ${WIDE}`]: { display: "flex" },
-								}),
-							]}
-						>
-							<SearchForm search={search} today={today} layout="bar" id="hero" base={base} />
-						</div>
-						<div
-							mix={[
-								raw({
-									display: "flex",
-									inlineSize: "100%",
-									justifyContent: "center",
-									marginBlockStart: "0.5rem",
-									[`@media ${WIDE}`]: { display: "none" },
-								}),
-							]}
-						>
-							<SearchPill search={search} />
-						</div>
+						<HeroSearch ctx={handle.props.ctx} />
 					</div>
 				</section>
 

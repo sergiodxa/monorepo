@@ -221,6 +221,8 @@ namespace StayCard {
 		stay: Stay;
 		/** The query each link carries, so the listing opens priced for the trip being planned. */
 		query: string;
+		/** Where the card leads instead of the listing, such as a package built on the stay. */
+		href?: string;
 		saved: boolean;
 		/** The page the heart returns to. */
 		back: string;
@@ -243,7 +245,8 @@ namespace StayCard {
 export function StayCard(handle: Handle<StayCard.Props>) {
 	return () => {
 		let { back, eager, level = 3, mapKey, note, price, query, saved, stay } = handle.props;
-		let url = href(query === "" ? `stay/${stay.id}` : `stay/${stay.id}?${query}`);
+		let url =
+			handle.props.href ?? href(query === "" ? `stay/${stay.id}` : `stay/${stay.id}?${query}`);
 		let headingMix = [
 			raw({
 				margin: "0",

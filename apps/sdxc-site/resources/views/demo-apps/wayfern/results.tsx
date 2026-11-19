@@ -21,13 +21,10 @@ import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { Checkbox, Popover, HeadingScope } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
-import { MapCanvas, MapCanvasSync } from "@sdxc/ui/map/map-canvas";
 
-import type { Stay } from "./data";
 import type { Search } from "./query";
 import type { Screen } from "./screen";
 
-import { MAP_COLORS, RegionArt, regionView } from "./art";
 import { AMENITIES, FILTER_AMENITIES, STAY_TYPES, findPlace, href } from "./data";
 import { formatRange } from "./days";
 import { GUTTER, SPLIT, TOP_BAR } from "./layout";
@@ -43,6 +40,7 @@ import {
 	withQuery,
 	writeSearch,
 } from "./query";
+import { AREA_FORM, StaysMap } from "./stays-map";
 
 /** The results page address for a search. */
 function resultsHref(search: Search): string {
@@ -442,62 +440,6 @@ function Filters(handle: Handle<{ search: Search }>) {
 	};
 }
 
-namespace StaysMap {
-	export interface Props {
-		stays: Stay[];
-		/** Each stay's pin label, such as its nightly price. */
-		labels: Map<string, string>;
-		/** The query each pin's link carries. */
-		query: string;
-		/** The place to crop to; the whole region when omitted. */
-		place?: string;
-		label: string;
-		/** The stay a listing page is about, raised and inverted. */
-		current?: string;
-		/** Pins link rows on the page by stay id. */
-		linked?: boolean;
-		/** `tall` crops the map to a portrait panel. Default: `wide`. */
-		shape?: "wide" | "tall";
-	}
-}
-
-/**
- * The region map with a pin per stay, each a link to its listing; pins carry the stay's id,
- * so a row and its pin light each other on hover once the sync island runs.
- */
-export function StaysMap(handle: Handle<StaysMap.Props>) {
-	return () => {
-		let {
-			current,
-			label,
-			labels,
-			linked = true,
-			place,
-			query,
-			shape = "wide",
-			stays,
-		} = handle.props;
-		return (
-			<div mix={[raw({ ...MAP_COLORS, inlineSize: "100%", "--ui-map-radius": "1rem" })]}>
-				<MapCanvas label={label} viewBox={regionView(place, shape)} art={<RegionArt />}>
-					{stays.map((stay) => (
-						<MapCanvas.Pin
-							x={stay.x}
-							y={stay.y}
-							label={labels.get(stay.id) ?? money(stay.nightly)}
-							href={href(withQuery(`stay/${stay.id}`, query))}
-							aria-label={`${stay.name}, ${labels.get(stay.id) ?? money(stay.nightly)}`}
-							current={stay.id === current}
-							mapKey={linked ? stay.id : undefined}
-						/>
-					))}
-				</MapCanvas>
-				{linked ? <MapCanvasSync /> : null}
-			</div>
-		);
-	};
-}
-
 /** The phone's floating switch between the list and the map, a link that keeps the search. */
 function ViewToggle(handle: Handle<{ search: Search }>) {
 	return () => {
@@ -685,24 +627,39 @@ export default function Results(handle: Handle<{ ctx: Screen }>) {
 						mix={[
 							raw({
 								display: "grid",
-								alignContent: "center",
 								blockSize: "100%",
 								overflow: "clip",
 								borderRadius: "1rem",
-								backgroundColor: "var(--wf-map-sea)",
-								...MAP_COLORS,
 								minBlockSize: showMap ? "calc(100dvh - 11rem)" : "0",
 							}),
 						]}
 					>
 						<StaysMap
+							id="wayfern-results-map"
 							stays={stays}
-							shape="tall"
 							labels={labels}
 							query={query}
 							place={search.place}
+							camera={search.camera}
 							label={heading}
+							navigate={(view) => resultsHref({ ...search, camera: view })}
+							area
 						/>
+						<form id={AREA_FORM} method="get" action={href("s")} hidden>
+							{[
+								...new URLSearchParams(
+									writeSearch({
+										...search,
+										place: undefined,
+										text: undefined,
+										bounds: undefined,
+										camera: undefined,
+									}),
+								),
+							].map(([name, value]) => (
+								<input type="hidden" name={name} value={value} />
+							))}
+						</form>
 					</div>
 				</aside>
 				<ViewToggle search={search} />

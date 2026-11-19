@@ -12,6 +12,7 @@ import type { Amenity, Place, Stay, StayType } from "./data";
 import { AMENITIES, PLACES, STAYS, STAY_TYPES, findPlace } from "./data";
 import { addDays, readDay } from "./days";
 import { isBooked } from "./pricing";
+import { toLngLat } from "./region";
 
 /** How the results are ordered. */
 export type Sort = "recommended" | "price-low" | "price-high" | "rating";
@@ -45,6 +46,10 @@ export interface Search {
 	sort: Sort;
 	/** The phone's map/list toggle; the wide layout always shows both. */
 	view: "list" | "map";
+	/** "Search this area": only stays inside `west,south,east,north`. */
+	bounds?: [number, number, number, number];
+	/** Where the map was left, so a moved map comes back the same after a search. */
+	camera?: { center: [number, number]; zoom: number };
 }
 
 /** Reads a whole number within bounds, falling back when the text is anything else. */
@@ -108,7 +113,23 @@ export function readSearch(params: URLSearchParams): Search {
 		max: max === undefined || max >= PRICE_BOUNDS.max ? undefined : max,
 		sort: SORTS.some((entry) => entry.id === sort) ? (sort as Sort) : "recommended",
 		view: params.get("view") === "map" ? "map" : "list",
+		bounds: readNumbers(params.get("bounds"), 4) as Search["bounds"],
+		camera: readCamera(params),
 	};
+}
+
+/** Reads `count` comma-separated finite numbers, or `undefined` for anything else. */
+function readNumbers(text: string | null, count: number): number[] | undefined {
+	let values = (text ?? "").split(",").map(Number);
+	return values.length === count && values.every(Number.isFinite) ? values : undefined;
+}
+
+/** Reads the map's camera from `center` and `zoom`, kept only when both are sensible. */
+function readCamera(params: URLSearchParams): Search["camera"] {
+	let center = readNumbers(params.get("center"), 2);
+	let zoom = Number(params.get("zoom"));
+	if (center === undefined || !Number.isFinite(zoom) || zoom < 3 || zoom > 18) return undefined;
+	return { center: [center[0]!, center[1]!], zoom };
 }
 
 /**
@@ -132,6 +153,11 @@ export function writeSearch(search: Search): string {
 	for (let amenity of search.amenities) params.append("amenity", amenity);
 	if (search.sort !== "recommended") params.set("sort", search.sort);
 	if (search.view !== "list") params.set("view", search.view);
+	if (search.bounds !== undefined) params.set("bounds", search.bounds.join(","));
+	if (search.camera !== undefined) {
+		params.set("center", search.camera.center.join(","));
+		params.set("zoom", String(search.camera.zoom));
+	}
 	return params.toString();
 }
 
@@ -167,6 +193,8 @@ export function findStays(search: Search): Stay[] {
 		if (search.place !== undefined && stay.place !== search.place) return false;
 		if (search.text !== undefined && !matchesText(stay, search.text)) return false;
 		if (search.types.length > 0 && !search.types.includes(stay.type)) return false;
+		if (search.bounds !== undefined && !inBounds(toLngLat(stay.x, stay.y), search.bounds))
+			return false;
 		if (!search.amenities.every((amenity) => stay.amenities.includes(amenity))) return false;
 		if (stay.guests < guests) return false;
 		let nightly = stay.nightly / 100;
@@ -177,6 +205,14 @@ export function findStays(search: Search): Stay[] {
 			: isFree(stay, search.start, search.end);
 	});
 	return sortStays(found, search.sort);
+}
+
+/** Whether a point lies inside `west,south,east,north`. */
+function inBounds(
+	[lng, lat]: [number, number],
+	[west, south, east, north]: [number, number, number, number],
+): boolean {
+	return lng >= west && lng <= east && lat >= south && lat <= north;
 }
 
 /** Whether every night from check-in to the night before check-out is open. */

@@ -27,11 +27,18 @@ import { MainFrameSync } from "~/resources/views/demo-apps/main-frame-sync";
 import type { CheckoutDraft } from "./checkout";
 import type { Screen } from "./screen";
 import type { Destination } from "./shell";
+import type { Trip } from "./state";
 
+import { bookCar, bookFlights, bookPackage, icsFile } from "./bookings";
+import CarsPage, { CarCheckout, offerFor } from "./cars-view";
 import Checkout from "./checkout";
 import { STAYS, actionHref, findCard, findPlace, findStay, href } from "./data";
 import { today as todayKey } from "./days";
+import { addDays as plusDays, today as todayOf } from "./days";
+import FlightsPage, { FareCalendarPage, FaresPage, SeatsPage } from "./flights-view";
 import Home from "./home";
+import { itemsOf } from "./itinerary";
+import PackagesPage, { PackagePage, dealFor, originOf } from "./packages-view";
 import { Page, Title } from "./parts";
 import { checkRequest } from "./pricing";
 import { readSearch } from "./query";
@@ -240,6 +247,12 @@ function route(request: DemoAppRequest, draft?: CheckoutDraft): WayfernScreen {
 		}
 		if (first === "trips")
 			found = { title: "Trips", current: "trips", content: <Trips ctx={ctx} /> };
+		if (first === "flights")
+			found = { title: "Flights", current: "explore", content: <FlightsPage ctx={ctx} /> };
+		if (first === "cars")
+			found = { title: "Car rental", current: "explore", content: <CarsPage ctx={ctx} /> };
+		if (first === "packages")
+			found = { title: "Packages", current: "explore", content: <PackagesPage ctx={ctx} /> };
 		if (first === "wishlists")
 			found = { title: "Wishlists", current: "wishlists", content: <Wishlists ctx={ctx} /> };
 	} else if (extra === undefined && second !== undefined) {
@@ -257,6 +270,43 @@ function route(request: DemoAppRequest, draft?: CheckoutDraft): WayfernScreen {
 				status: draft === undefined ? undefined : 400,
 				current: "explore",
 				content: <Checkout stay={stay} ctx={ctx} draft={draft} />,
+			};
+		if (first === "flights" && second === "calendar")
+			found = {
+				title: "Fare calendar",
+				current: "explore",
+				content: <FareCalendarPage ctx={ctx} />,
+			};
+		if (first === "flights" && second === "fares")
+			found = { title: "Choose your fare", current: "explore", content: <FaresPage ctx={ctx} /> };
+		if (first === "flights" && second === "seats")
+			found = {
+				title: "Seats and passengers",
+				current: "explore",
+				content: <SeatsPage ctx={ctx} />,
+			};
+		let offer = first === "cars" ? offerFor(second, request.url.searchParams) : undefined;
+		if (offer !== undefined)
+			found = {
+				title: `${offer.car.name} from ${offer.company.name}`,
+				current: "explore",
+				content: <CarCheckout ctx={ctx} offer={offer} />,
+			};
+		let deal =
+			first === "packages" && stay !== undefined
+				? dealFor(
+						stay,
+						originOf(request.url.searchParams),
+						readSearch(request.url.searchParams),
+						ctx.today,
+						heldNights(ctx.traveller, stay.id),
+					)
+				: undefined;
+		if (deal !== undefined)
+			found = {
+				title: `${deal.stay.name} package`,
+				current: "explore",
+				content: <PackagePage ctx={ctx} deal={deal} />,
 			};
 		let trip = ctx.traveller.trips.find((entry) => entry.id === second);
 		if (first === "trips" && trip !== undefined)
@@ -306,6 +356,9 @@ function screenFor(request: DemoAppRequest, screen: WayfernScreen): DemoAppScree
 	return { title: screen.title, status: screen.status, body, frames: { [MAIN_FRAME]: body } };
 }
 
+/** A departure a month ahead, which the sample flight, car and package screens search for. */
+const SAMPLE_DAY = plusDays(todayOf(), 30);
+
 /** Every screen a visitor reaches by clicking, so a test can walk them all. */
 const SCREENS = [
 	"",
@@ -325,6 +378,16 @@ const SCREENS = [
 	"wishlists/saved",
 	"wishlists/lakes",
 	"wishlists/family",
+	"flights",
+	`flights?from=SRL&to=MRW&depart=${SAMPLE_DAY}&return=${plusDays(SAMPLE_DAY, 5)}`,
+	`flights?trip=one&from=KSH&to=VLS&depart=${SAMPLE_DAY}&stops=0`,
+	`flights/calendar?from=SRL&to=MRW&depart=${SAMPLE_DAY}&return=${plusDays(SAMPLE_DAY, 5)}`,
+	"cars",
+	`cars?pickup=MRW&pickupday=${SAMPLE_DAY}&dropoffday=${plusDays(SAMPLE_DAY, 4)}`,
+	"packages",
+	`packages?where=tallow-pines&checkin=${SAMPLE_DAY}&checkout=${plusDays(SAMPLE_DAY, 3)}`,
+	"trips/WF-8F2TL",
+	"trips/WF-3CRV9",
 ];
 
 export default {
@@ -389,8 +452,9 @@ export default {
 			};
 		}
 		if (first === "trips" && second === "restore" && third === undefined) {
+			let now = Date.now();
 			let cancelled = traveller.trips.find(
-				(trip) => trip.status === "cancelled" && trip.end > today,
+				(trip) => trip.status === "cancelled" && itemsOf(trip).some((item) => item.ends > now),
 			);
 			if (cancelled === undefined) return { page: "trips" };
 			let trips = traveller.trips.map((trip) =>
@@ -437,7 +501,8 @@ export default {
 					route(retry, { card: fields.card, message: fields.message, problems }),
 				);
 			}
-			let trip = {
+			let trip: Trip = {
+				kind: "stay",
 				id: tripCode(Date.now() + traveller.trips.length * 7919),
 				stay: stay.id,
 				start: search.start!,
@@ -453,6 +518,17 @@ export default {
 				cookies: [tripsCookie([trip, ...traveller.trips])],
 			};
 		}
+		if (first === "flights" && second === "book" && third === undefined)
+			return bookFlights(form, request, traveller);
+		if (first === "cars" && third === "book") return bookCar(second, form, traveller);
+		if (first === "packages" && third === "book")
+			return bookPackage(second, form, traveller, today);
 		return null;
+	},
+	file(part, request) {
+		let match = /^(journey|booking)\/(WF-[A-Z0-9]{5})\.ics$/.exec(part);
+		return match === null
+			? null
+			: icsFile(match[1] as "journey" | "booking", match[2]!, request.cookie);
 	},
 } satisfies DemoApp;

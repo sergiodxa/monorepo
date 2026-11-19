@@ -25,6 +25,12 @@ const LABELS = {
 	end: "check-out",
 };
 
+/** The field names a stay's dates post as. */
+const DEFAULT_NAMES = { start: "checkin", end: "checkout" };
+
+/** The captions over a stay's two dates. */
+const DEFAULT_CAPTIONS = { start: "Check in", end: "Check out" };
+
 /** How far ahead the calendar reaches, matching what a stay can be booked for. */
 const HORIZON_DAYS = 330;
 
@@ -47,6 +53,12 @@ namespace DatesField {
 		submitOnRange?: boolean;
 		/** Draws the two fields as a bordered pair, as a booking card does, rather than bar segments. */
 		boxed?: boolean;
+		/** The form field names the two ends post as. Default: `checkin` and `checkout`. */
+		names?: { start: string; end: string };
+		/** The captions over the two ends. Default: "Check in" and "Check out". */
+		captions?: { start: string; end: string };
+		/** Picks one day only, such as a one-way flight's departure. */
+		single?: boolean;
 		/** How many months the calendar shows side by side. Default: `2`. */
 		months?: number;
 	}
@@ -92,10 +104,11 @@ export const DatesField = clientEntry(
 		function link(next: { start?: string; end?: string; month: string }): string {
 			let [path = "", query = ""] = handle.props.base.split("?", 2);
 			let params = new URLSearchParams(query);
-			params.delete("checkin");
-			params.delete("checkout");
-			if (next.start !== undefined) params.set("checkin", next.start);
-			if (next.end !== undefined) params.set("checkout", next.end);
+			let names = handle.props.names ?? DEFAULT_NAMES;
+			params.delete(names.start);
+			params.delete(names.end);
+			if (next.start !== undefined) params.set(names.start, next.start);
+			if (next.end !== undefined) params.set(names.end, next.end);
 			params.set("month", next.month);
 			return `${path}?${params}`;
 		}
@@ -110,15 +123,17 @@ export const DatesField = clientEntry(
 			if (anchor === null || event.metaKey || event.ctrlKey || event.shiftKey) return;
 			event.preventDefault();
 			let params = new URL(anchor.getAttribute("href") ?? "", location.href).searchParams;
-			start = params.get("checkin") ?? undefined;
-			end = params.get("checkout") ?? undefined;
+			let names = handle.props.names ?? DEFAULT_NAMES;
+			start = params.get(names.start) ?? undefined;
+			end = handle.props.single === true ? undefined : (params.get(names.end) ?? undefined);
 			month = params.get("month") ?? month;
 			void handle.update().then(() => {
 				let form = document.getElementById(`${handle.props.id}-checkin`)?.closest("form");
 				form
 					?.querySelector<HTMLInputElement>(`#${handle.props.id}-checkin`)
 					?.dispatchEvent(new Event("change", { bubbles: true }));
-				if (handle.props.submitOnRange === true && start !== undefined && end !== undefined) {
+				let done = start !== undefined && (end !== undefined || handle.props.single === true);
+				if (handle.props.submitOnRange === true && done) {
 					document.getElementById(`${handle.props.id}-panel`)?.hidePopover();
 					form?.requestSubmit();
 				}
@@ -135,7 +150,9 @@ export const DatesField = clientEntry(
 
 		return () => {
 			follow();
-			let { boxed = false, booked = [], id, months = 2, today } = handle.props;
+			let { boxed = false, booked = [], id, months = 2, single = false, today } = handle.props;
+			let names = handle.props.names ?? DEFAULT_NAMES;
+			let captions = handle.props.captions ?? DEFAULT_CAPTIONS;
 			let taken = new Set(booked);
 			let nights = start !== undefined && end !== undefined ? nightsBetween(start, end) : 0;
 			let field = [
@@ -186,29 +203,35 @@ export const DatesField = clientEntry(
 					mix={[
 						raw({
 							display: "grid",
-							gridTemplateColumns: "1fr 1fr",
+							gridTemplateColumns: single ? "1fr" : "1fr 1fr",
 							minInlineSize: "0",
 							...(boxed ? {} : { gap: "0" }),
 						}),
 					]}
 				>
-					<input type="hidden" id={`${id}-checkin`} name="checkin" value={start ?? ""} />
-					<input type="hidden" id={`${id}-checkout`} name="checkout" value={end ?? ""} />
+					<input type="hidden" id={`${id}-checkin`} name={names.start} value={start ?? ""} />
+					{single ? null : (
+						<input type="hidden" id={`${id}-checkout`} name={names.end} value={end ?? ""} />
+					)}
 					<button
 						type="button"
 						popovertarget={`${id}-panel`}
 						mix={[
 							...field,
-							boxed ? raw({ borderInlineEnd: "1px solid var(--ui-neutral-border)" }) : raw({}),
+							boxed && !single
+								? raw({ borderInlineEnd: "1px solid var(--ui-neutral-border)" })
+								: raw({}),
 						]}
 					>
-						<span mix={[caption]}>Check in</span>
+						<span mix={[caption]}>{captions.start}</span>
 						<span mix={[value]}>{dayText(start)}</span>
 					</button>
-					<button type="button" popovertarget={`${id}-panel`} mix={field}>
-						<span mix={[caption]}>Check out</span>
-						<span mix={[value]}>{dayText(end)}</span>
-					</button>
+					{single ? null : (
+						<button type="button" popovertarget={`${id}-panel`} mix={field}>
+							<span mix={[caption]}>{captions.end}</span>
+							<span mix={[value]}>{dayText(end)}</span>
+						</button>
+					)}
 					<Popover
 						id={`${id}-panel`}
 						placement="bottom"
@@ -235,7 +258,7 @@ export const DatesField = clientEntry(
 								}),
 							]}
 						>
-							{panelHeading(start, nights)}
+							{single ? "Pick a day" : panelHeading(start, nights)}
 						</p>
 						<RangeMonths
 							headingLevel={3}
@@ -243,6 +266,7 @@ export const DatesField = clientEntry(
 							months={months}
 							start={start}
 							end={end}
+							single={single}
 							today={today}
 							min={today}
 							max={addDays(today, HORIZON_DAYS)}

@@ -37,8 +37,8 @@ import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { Dialog, HeadingScope } from "@sdxc/ui";
 import { Lightbox } from "@sdxc/ui/lightbox";
-import { PriceBreakdown } from "@sdxc/ui/travel/price-breakdown";
 import { RangeMonths } from "@sdxc/ui/range-months";
+import { PriceBreakdown } from "@sdxc/ui/travel/price-breakdown";
 import { RatingBreakdown } from "@sdxc/ui/travel/rating-breakdown";
 
 import type { Amenity, Stay } from "./data";
@@ -64,8 +64,8 @@ import { GUTTER, MEASURE, TOP_BAR, WIDE } from "./layout";
 import { HostFace, Rating, SaveButton, photoCaption } from "./parts";
 import { BOOKING_HORIZON_DAYS, checkRequest, isBooked, money, nightPrice, quote } from "./pricing";
 import { readSearch, tripQuery, withQuery } from "./query";
-import { StaysMap } from "./results";
 import { heldNights } from "./state";
+import { StaysMap } from "./stays-map";
 
 /** The icon each amenity is listed with. */
 const AMENITY_ICONS: Record<Amenity, typeof WifiIcon> = {
@@ -1012,6 +1012,7 @@ export default function StayPage(handle: Handle<{ stay: Stay; ctx: Screen }>) {
 				>
 					<div mix={[raw({ maxInlineSize: "56rem", overflow: "clip", borderRadius: "1rem" })]}>
 						<StaysMap
+							id="wayfern-stay-map"
 							stays={[stay]}
 							labels={new Map([[stay.id, typeLabel(stay.type)]])}
 							query=""

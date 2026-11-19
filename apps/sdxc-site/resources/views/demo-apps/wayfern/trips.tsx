@@ -1,7 +1,7 @@
 /**
- * The traveller's trips: what is coming up, what is done and what was cancelled, and one
- * trip's confirmation with its code, the host, the price paid and a cancel that offers Undo.
- * A trip is the visitor's own, read from their cookie, so nothing here reaches anyone else.
+ * The traveller's trips as one itinerary: every stay, flight and car booked, gathered into
+ * journeys on a day-by-day timeline that exports to calendars; and one booking's page with its
+ * boarding passes, rental or stay details, the price paid and a cancel that offers Undo.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,178 +11,239 @@ import type { Handle, RemixNode } from "remix/component";
 
 import {
 	CalendarCheckIcon,
+	CalendarPlusIcon,
 	CalendarXIcon,
 	ChevronLeftIcon,
 	CircleCheckIcon,
 	KeyRoundIcon,
 	LuggageIcon,
 } from "@sdxc/icons";
+import { stringify } from "@sdxc/jscalendar";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
-import { Dialog, HeadingScope } from "@sdxc/ui";
+import { Badge, Dialog, HeadingScope } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
+import { BoardingPass } from "@sdxc/ui/travel/boarding-pass";
 import { PriceBreakdown } from "@sdxc/ui/travel/price-breakdown";
+import { TripTimeline } from "@sdxc/ui/travel/trip-timeline";
 
+import { demoAppActionHref } from "~/resources/views/demo-apps";
+
+import type { Journey } from "./itinerary";
+import type { Quote } from "./pricing";
 import type { Screen } from "./screen";
-import type { Trip } from "./state";
+import type { CarTrip, FlightTrip, StayTrip, Trip } from "./state";
 
-import { actionHref, findCard, findStay, hostOf, href, placeOf } from "./data";
-import { addDays, formatDay, formatRange, nightsBetween } from "./days";
+import { CarArt } from "./car-art";
+import { findCarOffer, findRentalPlace } from "./cars";
+import { actionHref, findCard, findStay, hashOf, hostOf, href, placeOf } from "./data";
+import { formatDay, formatRange, nightsBetween } from "./days";
+import { FARE_CLASSES, cabinOf, findAirline, findAirport, findFlight, localTime } from "./flights";
+import { AirlineMark } from "./flights-view";
+import { COAST_ZONE, itemsOf, journeysOf, toGroup } from "./itinerary";
 import { WIDE } from "./layout";
 import { HostFace, Page, StayPhoto, Title } from "./parts";
 import { money, quote } from "./pricing";
 import { partyLabel } from "./query";
+import { carQuote, flightQuote, seatFee } from "./travel-pricing";
 
-/** Where a trip stands relative to today. */
-function tripState(trip: Trip, today: string): "upcoming" | "now" | "past" | "cancelled" {
+/** The words each kind of booking is read as on the timeline. */
+const KIND_LABELS = { flight: "Flight", stay: "Stay", car: "Car" };
+
+/** Where a booking stands relative to now. */
+export function tripState(trip: Trip, now: number): "upcoming" | "now" | "past" | "cancelled" {
 	if (trip.status === "cancelled") return "cancelled";
-	if (trip.end <= today) return "past";
-	if (trip.start <= today) return "now";
-	return "upcoming";
+	let items = itemsOf(trip);
+	let starts = Math.min(...items.map((item) => item.starts));
+	let ends = Math.max(...items.map((item) => item.ends));
+	if (ends <= now) return "past";
+	return starts <= now ? "now" : "upcoming";
 }
 
-/** The word a trip row leads with: how soon, now, done or cancelled. */
-function stateLabel(state: ReturnType<typeof tripState>, until: number): string {
-	if (state === "upcoming") return until === 1 ? "Tomorrow" : `In ${until} days`;
-	if (state === "now") return "Happening now";
-	if (state === "past") return "Stayed";
-	return "Cancelled";
+/** A booking's name, as its page and the past list title it. */
+export function bookingTitle(trip: Trip): string {
+	if (trip.kind === "stay") return findStay(trip.stay)?.name ?? "Stay";
+	if (trip.kind === "car")
+		return `${findCarOffer(trip.place, trip.offer)?.company.name ?? "Rental"} car`;
+	let first = findFlight(trip.legs[0]!.option)!;
+	let from = findAirport(first.segments[0]!.from)!.city;
+	let to = findAirport(first.segments.at(-1)!.to)!.city;
+	return trip.legs.length > 1 ? `Flights ${from} ⇄ ${to}` : `Flight ${from} → ${to}`;
 }
 
-/** The confirmation's headline status, celebrating a trip booked a moment ago. */
-function heroLabel(state: ReturnType<typeof tripState>, fresh: boolean): string {
-	if (state === "cancelled") return "Cancelled";
-	if (fresh) return "Booked. You're going!";
-	if (state === "past") return "Stayed";
-	return "Confirmed";
+/** The ".ics" address of a journey or one booking. */
+function icsHref(kind: "journey" | "booking", id: string): string {
+	return href(`files/${kind}/${id}.ics`);
 }
 
-/** One trip as a row: photo, place, dates and where it stands, linking to its confirmation. */
-function TripRow(handle: Handle<{ trip: Trip; today: string }>) {
+/** A small bordered pill, for the calendar actions. */
+function pillLink() {
+	return [
+		raw({
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "0.375rem",
+			minBlockSize: "2.5rem",
+			paddingInline: "0.875rem",
+			border: "1px solid var(--ui-neutral-border)",
+			borderRadius: "999px",
+			background: "var(--ui-bg)",
+			color: "var(--ui-neutral-fg-emphasis)",
+			font: "inherit",
+			fontSize: "0.875rem",
+			fontWeight: "600",
+			textDecoration: "none",
+			cursor: "pointer",
+		}),
+		when("&:hover", raw({ borderColor: "var(--ui-neutral-fg-muted)" })),
+		when(
+			"&:focus-visible",
+			raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "2px" }),
+		),
+	];
+}
+
+/** The buttons that put a journey in a calendar: an `.ics` download and an import into Sundial. */
+function CalendarActions(handle: Handle<{ journey: Journey }>) {
 	return () => {
-		let { today, trip } = handle.props;
-		let stay = findStay(trip.stay)!;
-		let state = tripState(trip, today);
-		let until = nightsBetween(today, trip.start);
+		let { journey } = handle.props;
+		let group = toGroup({
+			...journey,
+			items: journey.items.filter((item) => item.status === "confirmed"),
+		});
 		return (
-			<li>
+			<div mix={[raw({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
 				<a
-					href={href(`trips/${trip.id}`)}
-					data-rmx-prefetch="intent"
-					mix={[
-						raw({
-							display: "grid",
-							gridTemplateColumns: "6rem minmax(0, 1fr)",
-							gap: "1rem",
-							alignItems: "center",
-							padding: "0.75rem",
-							borderRadius: "1rem",
-							color: "inherit",
-							textDecoration: "none",
-							boxShadow: "0 0 0 1px var(--ui-neutral-border)",
-							opacity: state === "cancelled" ? "0.7" : "1",
-							[`@media ${WIDE}`]: { gridTemplateColumns: "9rem minmax(0, 1fr)" },
-						}),
-						when(
-							"&:hover",
-							raw({
-								boxShadow:
-									"0 0 0 1px var(--ui-neutral-fg-muted), 0 8px 20px -12px rgb(0 0 0 / 0.3)",
-							}),
-						),
-						when(
-							"&:focus-visible",
-							raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "2px" }),
-						),
-					]}
+					href={icsHref("journey", journey.id)}
+					download={`wayfern-${journey.id}.ics`}
+					mix={pillLink()}
 				>
-					<span
-						mix={[
-							raw({
-								display: "block",
-								aspectRatio: "4 / 3",
-								overflow: "clip",
-								borderRadius: "0.75rem",
-							}),
-						]}
-					>
-						<StayPhoto stay={stay} />
-					</span>
-					<span mix={[raw({ display: "grid", gap: "0.125rem", minInlineSize: "0" })]}>
-						<span
-							mix={[
-								raw({
-									fontSize: "0.8125rem",
-									fontWeight: "650",
-									color: state === "cancelled" ? "var(--ui-danger-fg)" : "var(--ui-brand-fg)",
-								}),
-							]}
-						>
-							{stateLabel(state, until)}
-						</span>
-						<strong mix={[raw({ fontSize: "1.0625rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
-							{placeOf(stay).name}
-						</strong>
-						<span mix={[raw({ color: "var(--ui-neutral-fg)" })]}>{stay.name}</span>
-						<span mix={[raw({ fontSize: "0.875rem", color: "var(--ui-neutral-fg-muted)" })]}>
-							{formatRange(trip.start, trip.end)} · {trip.id}
-						</span>
-					</span>
+					<CalendarPlusIcon aria-hidden="true" size={16} />
+					Add to calendar (.ics)
 				</a>
-			</li>
+				<form
+					method="post"
+					action={demoAppActionHref("sundial")("import")}
+					data-rmx-document=""
+					mix={[raw({ display: "contents" })]}
+				>
+					<input type="hidden" name="group" value={stringify(group)} />
+					<input type="hidden" name="source" value={`Wayfern trip to ${journey.title}`} />
+					<button type="submit" mix={pillLink()}>
+						<CalendarCheckIcon aria-hidden="true" size={16} />
+						Open in Sundial
+					</button>
+				</form>
+			</div>
 		);
 	};
 }
 
-/** A titled group of trips, or nothing when it is empty. */
-function TripGroup(handle: Handle<{ title: string; trips: Trip[]; today: string }>) {
+/** One journey as a timeline: a heading per local day, its items in time order. */
+function JourneyTimeline(handle: Handle<{ journey: Journey }>) {
 	return () => {
-		let { title, today, trips } = handle.props;
-		if (trips.length === 0) return null;
+		let { journey } = handle.props;
+		let days = new Map<string, RemixNode[]>();
+		let push = (day: string, node: RemixNode) => days.set(day, [...(days.get(day) ?? []), node]);
+		for (let item of journey.items) {
+			let start = localTime(item.starts, item.startZone);
+			let end = localTime(item.ends, item.endZone);
+			let status =
+				item.status === "cancelled" ? <Badge color="danger">Cancelled</Badge> : undefined;
+			let details = (
+				<a
+					href={href(`trips/${item.trip}`)}
+					mix={[raw({ fontWeight: "600", color: "var(--ui-neutral-fg-emphasis)" })]}
+				>
+					Details
+				</a>
+			);
+			let name = item.title.replace("Stay at ", "");
+			if (item.kind === "flight") {
+				push(
+					start.day,
+					<TripTimeline.Item
+						kind="flight"
+						time={start.time}
+						dateTime={new Date(item.starts).toISOString()}
+						title={item.title}
+						details={[`${item.from} → ${item.to} · lands ${end.time} local`, item.detail]}
+						status={status}
+						actions={details}
+					/>,
+				);
+				continue;
+			}
+			let [opening, closing] =
+				item.kind === "stay" ? ["Check in", "Check out"] : ["Pick up", "Return"];
+			push(
+				start.day,
+				<TripTimeline.Item
+					kind={item.kind}
+					time={start.time}
+					dateTime={new Date(item.starts).toISOString()}
+					title={`${opening} · ${name}`}
+					details={[item.from, item.detail]}
+					status={status}
+					actions={details}
+				/>,
+			);
+			push(
+				end.day,
+				<TripTimeline.Item
+					kind={item.kind}
+					time={end.time}
+					dateTime={new Date(item.ends).toISOString()}
+					title={`${closing} · ${name}`}
+					details={[item.to ?? item.from]}
+					status={status}
+				/>,
+			);
+		}
+		let ordered = [...days].sort(([a], [b]) => a.localeCompare(b));
+		let first = ordered[0]?.[0] ?? "";
 		return (
-			<section aria-label={title} mix={[raw({ marginBlockStart: "2rem" })]}>
-				<h2
-					mix={[
-						raw({
-							margin: "0 0 1rem",
-							fontSize: "1.25rem",
-							fontWeight: "650",
-							color: "var(--ui-neutral-fg-emphasis)",
-						}),
-					]}
-				>
-					{title}
-				</h2>
-				<ul
-					mix={[
-						raw({
-							display: "grid",
-							gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 24rem), 1fr))",
-							gap: "1rem",
-							margin: "0",
-							padding: "0",
-							listStyle: "none",
-						}),
-					]}
-				>
-					{trips.map((trip) => (
-						<TripRow trip={trip} today={today} />
-					))}
-				</ul>
-			</section>
+			<TripTimeline aria-label={`Trip to ${journey.title}`} kindLabels={KIND_LABELS} level={3}>
+				{ordered.map(([day, nodes]) => (
+					<TripTimeline.Day
+						heading={formatDay(day, { weekday: true })}
+						date={day}
+						detail={`Day ${nightsBetween(first, day) + 1}`}
+					>
+						{nodes}
+					</TripTimeline.Day>
+				))}
+			</TripTimeline>
 		);
 	};
 }
 
-/** The trips screen. */
+/** The days a journey spans, read on the coast's clock, for its eyebrow. */
+function journeyDates(journey: Journey): string {
+	return formatRange(
+		localTime(journey.starts, journey.items[0]!.startZone).day,
+		localTime(journey.ends, COAST_ZONE).day,
+	);
+}
+
+/** The trips screen: each upcoming journey's timeline, then everything past or cancelled. */
 export default function Trips(handle: Handle<{ ctx: Screen }>) {
 	return () => {
-		let { today, traveller } = handle.props.ctx;
-		let upcoming = traveller.trips
-			.filter((trip) => ["upcoming", "now"].includes(tripState(trip, today)))
-			.sort((a, b) => a.start.localeCompare(b.start));
-		let past = traveller.trips.filter((trip) => tripState(trip, today) === "past");
-		let cancelled = traveller.trips.filter((trip) => trip.status === "cancelled");
+		let { traveller } = handle.props.ctx;
+		let now = Date.now();
+		let journeys = journeysOf(traveller);
+		let upcoming = journeys.filter(
+			(journey) => journey.ends > now && journey.items.some((item) => item.status === "confirmed"),
+		);
+		let rest = journeys.filter((journey) => !upcoming.includes(journey)).reverse();
+		let pastCodes = [...new Set(rest.flatMap((journey) => journey.items.map((item) => item.trip)))];
+		let cancelled = traveller.trips.filter(
+			(trip) => trip.status === "cancelled" && !pastCodes.includes(trip.id),
+		);
+		let older = [
+			...pastCodes.map((code) => traveller.trips.find((trip) => trip.id === code)!),
+			...cancelled,
+		];
 		return (
 			<Page>
 				<Title>Trips</Title>
@@ -192,8 +253,8 @@ export default function Trips(handle: Handle<{ ctx: Screen }>) {
 							<Empty kind="first-run" icon={<LuggageIcon />}>
 								<Empty.Title>No trips booked yet</Empty.Title>
 								<Empty.Description>
-									When you book a stay, it shows here with everything you need for the day you
-									arrive.
+									Book a stay, a flight or a car and it shows here, on one timeline with everything
+									else you booked.
 								</Empty.Description>
 								<Empty.Action>
 									<a
@@ -206,17 +267,135 @@ export default function Trips(handle: Handle<{ ctx: Screen }>) {
 							</Empty>
 						</HeadingScope>
 					</div>
-				) : (
-					<TripGroup title="Coming up" trips={upcoming} today={today} />
+				) : null}
+				{upcoming.map((journey) => (
+					<section
+						aria-labelledby={`journey-${journey.id}`}
+						mix={[
+							raw({
+								marginBlockStart: "2rem",
+								padding: "clamp(1rem, 3vw, 1.75rem)",
+								borderRadius: "1.25rem",
+								boxShadow: "0 0 0 1px var(--ui-neutral-border)",
+							}),
+						]}
+					>
+						<div
+							mix={[
+								raw({
+									display: "flex",
+									justifyContent: "space-between",
+									alignItems: "start",
+									gap: "1rem",
+									flexWrap: "wrap",
+									marginBlockEnd: "1.25rem",
+								}),
+							]}
+						>
+							<div>
+								<p
+									mix={[
+										raw({
+											margin: "0",
+											fontSize: "0.875rem",
+											fontWeight: "650",
+											color: "var(--ui-brand-fg)",
+										}),
+									]}
+								>
+									{journeyDates(journey)}
+								</p>
+								<h2
+									id={`journey-${journey.id}`}
+									mix={[
+										raw({
+											margin: "0",
+											fontFamily: "var(--ui-font-serif)",
+											fontSize: "1.75rem",
+											fontWeight: "600",
+											color: "var(--ui-neutral-fg-emphasis)",
+										}),
+									]}
+								>
+									Trip to {journey.title}
+								</h2>
+							</div>
+							<CalendarActions journey={journey} />
+						</div>
+						<JourneyTimeline journey={journey} />
+					</section>
+				))}
+				{older.length === 0 ? null : (
+					<section aria-labelledby="journeys-past" mix={[raw({ marginBlockStart: "2.5rem" })]}>
+						<h2
+							id="journeys-past"
+							mix={[
+								raw({
+									margin: "0 0 1rem",
+									fontSize: "1.25rem",
+									fontWeight: "650",
+									color: "var(--ui-neutral-fg-emphasis)",
+								}),
+							]}
+						>
+							Past and cancelled
+						</h2>
+						<ul
+							mix={[
+								raw({
+									display: "grid",
+									gap: "0.75rem",
+									margin: "0",
+									padding: "0",
+									listStyle: "none",
+								}),
+							]}
+						>
+							{older.map((trip) => (
+								<li>
+									<a
+										href={href(`trips/${trip.id}`)}
+										mix={[
+											raw({
+												display: "flex",
+												justifyContent: "space-between",
+												gap: "1rem",
+												padding: "1rem 1.25rem",
+												borderRadius: "1rem",
+												boxShadow: "0 0 0 1px var(--ui-neutral-border)",
+												color: "inherit",
+												textDecoration: "none",
+											}),
+											when("&:hover", raw({ boxShadow: "0 0 0 1px var(--ui-neutral-fg-muted)" })),
+										]}
+									>
+										<span>
+											<strong>{bookingTitle(trip)}</strong> · {trip.id}
+										</span>
+										<span
+											mix={[
+												raw({
+													color:
+														trip.status === "cancelled"
+															? "var(--ui-danger-fg)"
+															: "var(--ui-neutral-fg-muted)",
+												}),
+											]}
+										>
+											{trip.status === "cancelled" ? "Cancelled" : "Taken"}
+										</span>
+									</a>
+								</li>
+							))}
+						</ul>
+					</section>
 				)}
-				<TripGroup title="Where you've been" trips={past} today={today} />
-				<TripGroup title="Cancelled" trips={cancelled} today={today} />
 			</Page>
 		);
 	};
 }
 
-/** A label and value on the confirmation, with an icon. */
+/** A label and value on a booking page, with an icon. */
 function Fact(handle: Handle<{ icon: RemixNode; term: string; children: RemixNode }>) {
 	return () => (
 		<div
@@ -242,23 +421,255 @@ function Fact(handle: Handle<{ icon: RemixNode; term: string; children: RemixNod
 	);
 }
 
-/** The dialog asking to confirm a cancellation, which names what is refunded. */
+/** The dialog asking to confirm a cancellation. */
 const CANCEL_DIALOG = "wayfern-cancel";
 
+/** What a booking cost, as its receipt prints it. */
+export function priceOf(trip: Trip): Quote {
+	if (trip.kind === "stay") return quote(findStay(trip.stay)!, trip.start, trip.end);
+	if (trip.kind === "car") {
+		let item = itemsOf(trip)[0]!;
+		return carQuote(
+			findCarOffer(trip.place, trip.offer)!,
+			item.starts,
+			item.ends,
+			trip.extras,
+			trip.dropoff !== trip.place,
+		);
+	}
+	return flightQuote(
+		trip.legs.map((leg) => {
+			let option = findFlight(leg.option)!;
+			let fees = option.segments.reduce((sum, segment, index) => {
+				let seat = cabinOf(segment)
+					.rows.flatMap((row) => row.seats)
+					.find((entry) => entry.id === leg.seats[index]);
+				return (
+					sum +
+					(seat === undefined ? 0 : seatFee(leg.fare, seat.price) * (trip.adults + trip.children))
+				);
+			}, 0);
+			return { option, fare: leg.fare, seatFees: fees };
+		}),
+		trip.adults,
+		trip.children,
+	);
+}
+
+/** The labels every boarding pass shows. */
+function passLabels(code: string) {
+	return {
+		passenger: "Passenger",
+		flight: "Flight",
+		date: "Date",
+		gate: "Gate",
+		boards: "Boards",
+		seat: "Seat",
+		zone: "Zone",
+		cabin: "Fare",
+		confirmation: "Confirmation",
+		from: "From",
+		to: "To",
+		code: `Boarding code for confirmation ${code}`,
+	};
+}
+
+/** A flight booking's boarding passes: one per segment, for the lead passenger. */
+function BoardingPasses(handle: Handle<{ trip: FlightTrip }>) {
+	return () => {
+		let { trip } = handle.props;
+		let passes: RemixNode[] = [];
+		for (let leg of trip.legs) {
+			let option = findFlight(leg.option)!;
+			option.segments.forEach((segment, index) => {
+				let from = findAirport(segment.from)!;
+				let to = findAirport(segment.to)!;
+				let seed = hashOf(`${trip.id}${segment.flight}`);
+				let seat = leg.seats[index] ?? "—";
+				passes.push(
+					<BoardingPass
+						label={`Boarding pass for ${segment.flight}`}
+						airline={{
+							name: findAirline(segment.airline)?.name ?? segment.airline,
+							mark: <AirlineMark code={segment.airline} size={1.75} />,
+						}}
+						passenger={trip.lead.toUpperCase()}
+						from={{
+							code: from.code,
+							city: from.city,
+							time: localTime(segment.departs, from.timeZone).time,
+						}}
+						to={{
+							code: to.code,
+							city: to.city,
+							time: localTime(segment.arrives, to.timeZone).time,
+						}}
+						flight={segment.flight}
+						date={formatDay(localTime(segment.departs, from.timeZone).day, { weekday: true })}
+						gate={`${"ABC"[seed % 3]}${(seed >>> 3) % 40}`}
+						boards={localTime(segment.departs - 40 * 60_000, from.timeZone).time}
+						seat={seat}
+						zone={String(1 + ((seed >>> 7) % 5))}
+						cabin={FARE_CLASSES.find((fare) => fare.id === leg.fare)?.name ?? "Standard"}
+						confirmation={trip.id}
+						code={`${trip.id}-${segment.flight}-${seat}`}
+						labels={passLabels(trip.id)}
+					/>,
+				);
+			});
+		}
+		return (
+			<div
+				mix={[
+					raw({
+						display: "grid",
+						gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 19rem), 1fr))",
+						gap: "1.25rem",
+					}),
+				]}
+			>
+				{passes}
+			</div>
+		);
+	};
+}
+
+/** A stay booking's dates, code, party and host. */
+function StayDetails(handle: Handle<{ trip: StayTrip }>) {
+	return () => {
+		let { trip } = handle.props;
+		let stay = findStay(trip.stay)!;
+		let host = hostOf(stay);
+		return (
+			<div mix={[raw({ display: "grid", gap: "1.5rem" })]}>
+				<dl
+					mix={[
+						raw({
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
+							gap: "1.25rem",
+							margin: "0",
+						}),
+					]}
+				>
+					<Fact icon={<CalendarCheckIcon size={20} />} term="Check-in">
+						{formatDay(trip.start, { weekday: true, year: true })} after 3pm
+					</Fact>
+					<Fact icon={<CalendarXIcon size={20} />} term="Check-out">
+						{formatDay(trip.end, { weekday: true, year: true })} by 11am
+					</Fact>
+					<Fact icon={<KeyRoundIcon size={20} />} term="Confirmation code">
+						<span mix={[raw({ fontFamily: "ui-monospace, monospace", letterSpacing: "0.06em" })]}>
+							{trip.id}
+						</span>
+					</Fact>
+					<Fact icon={<LuggageIcon size={20} />} term="Who's coming">
+						{partyLabel(trip)}
+					</Fact>
+				</dl>
+				<div
+					mix={[
+						raw({
+							display: "flex",
+							alignItems: "center",
+							gap: "1rem",
+							padding: "1.25rem",
+							borderRadius: "1rem",
+							boxShadow: "0 0 0 1px var(--ui-neutral-border)",
+						}),
+					]}
+				>
+					<HostFace name={host.name} hues={host.hues} size={3.5} />
+					<div mix={[raw({ display: "grid", gap: "0.125rem" })]}>
+						<strong>Your host, {host.name}</strong>
+						<span mix={[raw({ fontSize: "0.875rem", color: "var(--ui-neutral-fg-muted)" })]}>
+							Responds {host.responds}. The address and door code arrive two days before you do.
+						</span>
+					</div>
+				</div>
+				<a
+					href={href(`stay/${stay.id}`)}
+					mix={[
+						raw({
+							justifySelf: "start",
+							fontWeight: "650",
+							color: "var(--ui-neutral-fg-emphasis)",
+						}),
+					]}
+				>
+					View the listing
+				</a>
+			</div>
+		);
+	};
+}
+
+/** A car booking's pickup, return, code and car. */
+function CarDetails(handle: Handle<{ trip: CarTrip }>) {
+	return () => {
+		let { trip } = handle.props;
+		let offer = findCarOffer(trip.place, trip.offer)!;
+		return (
+			<div mix={[raw({ display: "grid", gap: "1.5rem" })]}>
+				<div mix={[raw({ maxInlineSize: "20rem" })]}>
+					<CarArt car={offer.car} />
+				</div>
+				<dl
+					mix={[
+						raw({
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
+							gap: "1.25rem",
+							margin: "0",
+						}),
+					]}
+				>
+					<Fact icon={<CalendarCheckIcon size={20} />} term="Pick up">
+						{findRentalPlace(trip.place)?.name},{" "}
+						{formatDay(trip.pickupAt.slice(0, 10), { weekday: true })} at {trip.pickupAt.slice(11)}
+					</Fact>
+					<Fact icon={<CalendarXIcon size={20} />} term="Return">
+						{findRentalPlace(trip.dropoff)?.name},{" "}
+						{formatDay(trip.dropoffAt.slice(0, 10), { weekday: true })} by{" "}
+						{trip.dropoffAt.slice(11)}
+					</Fact>
+					<Fact icon={<KeyRoundIcon size={20} />} term="Confirmation code">
+						<span mix={[raw({ fontFamily: "ui-monospace, monospace", letterSpacing: "0.06em" })]}>
+							{trip.id}
+						</span>
+					</Fact>
+					<Fact icon={<LuggageIcon size={20} />} term="Car">
+						{offer.car.name} · {offer.car.model} or similar
+					</Fact>
+				</dl>
+			</div>
+		);
+	};
+}
+
+/** The confirmation's headline status, celebrating a booking made a moment ago. */
+function heroLabel(state: ReturnType<typeof tripState>, fresh: boolean): string {
+	if (state === "cancelled") return "Cancelled";
+	if (fresh) return "Booked. You're going!";
+	if (state === "past") return "Taken";
+	return "Confirmed";
+}
+
 /**
- * One trip's confirmation: a hero on the stay's photo, the code, the dates and check-in, the
- * host, what was paid and with which card, and a cancel that confirms in a native dialog.
+ * One booking's page: a hero for its kind, its details (boarding passes for a flight), what was
+ * paid and with which card, an `.ics` of it, and a cancel that confirms in a native dialog.
  */
 export function TripPage(handle: Handle<{ ctx: Screen; trip: Trip }>) {
 	return () => {
 		let { ctx, trip } = handle.props;
-		let stay = findStay(trip.stay)!;
-		let host = hostOf(stay);
 		let card = findCard(trip.card)!;
-		let price = quote(stay, trip.start, trip.end);
-		let state = tripState(trip, ctx.today);
-		let refundable = state === "upcoming" && nightsBetween(ctx.today, trip.start) >= 7;
+		let price = priceOf(trip);
+		let now = Date.now();
+		let state = tripState(trip, now);
+		let starts = Math.min(...itemsOf(trip).map((item) => item.starts));
+		let refundable = state === "upcoming" && starts - now >= 7 * 86_400_000;
 		let fresh = ctx.url.searchParams.get("toast")?.startsWith("booked") === true;
+		let stay = trip.kind === "stay" ? findStay(trip.stay) : undefined;
 		return (
 			<Page narrow>
 				<a
@@ -288,10 +699,12 @@ export function TripPage(handle: Handle<{ ctx: Screen; trip: Trip }>) {
 							borderRadius: "1.25rem",
 							aspectRatio: "21 / 9",
 							minBlockSize: "12rem",
+							background:
+								"linear-gradient(135deg, var(--ui-color-brand-700), var(--ui-color-brand-500))",
 						}),
 					]}
 				>
-					<StayPhoto stay={stay} kind="view" eager />
+					{stay === undefined ? null : <StayPhoto stay={stay} kind="view" eager />}
 					<div
 						mix={[
 							raw({
@@ -301,7 +714,7 @@ export function TripPage(handle: Handle<{ ctx: Screen; trip: Trip }>) {
 								alignContent: "end",
 								gap: "0.25rem",
 								padding: "clamp(1rem, 3vw, 2rem)",
-								background: "linear-gradient(to top, rgb(0 0 0 / 0.65), transparent 70%)",
+								background: "linear-gradient(to top, rgb(0 0 0 / 0.6), transparent 70%)",
 								color: "white",
 							}),
 						]}
@@ -335,7 +748,7 @@ export function TripPage(handle: Handle<{ ctx: Screen; trip: Trip }>) {
 								}),
 							]}
 						>
-							{stay.name}, {placeOf(stay).name}
+							{stay === undefined ? bookingTitle(trip) : `${stay.name}, ${placeOf(stay).name}`}
 						</h1>
 					</div>
 				</div>
@@ -350,68 +763,17 @@ export function TripPage(handle: Handle<{ ctx: Screen; trip: Trip }>) {
 						}),
 					]}
 				>
-					<div mix={[raw({ display: "grid", gap: "2rem", alignContent: "start" })]}>
-						<dl
-							mix={[
-								raw({
-									display: "grid",
-									gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
-									gap: "1.25rem",
-									margin: "0",
-								}),
-							]}
-						>
-							<Fact icon={<CalendarCheckIcon size={20} />} term="Check-in">
-								{formatDay(trip.start, { weekday: true, year: true })} after 3pm
-							</Fact>
-							<Fact icon={<CalendarXIcon size={20} />} term="Check-out">
-								{formatDay(trip.end, { weekday: true, year: true })} by 11am
-							</Fact>
-							<Fact icon={<KeyRoundIcon size={20} />} term="Confirmation code">
-								<span
-									mix={[raw({ fontFamily: "ui-monospace, monospace", letterSpacing: "0.06em" })]}
-								>
-									{trip.id}
-								</span>
-							</Fact>
-							<Fact icon={<LuggageIcon size={20} />} term="Who's coming">
-								{partyLabel(trip)}
-							</Fact>
-						</dl>
-						<div
-							mix={[
-								raw({
-									display: "flex",
-									alignItems: "center",
-									gap: "1rem",
-									padding: "1.25rem",
-									borderRadius: "1rem",
-									boxShadow: "0 0 0 1px var(--ui-neutral-border)",
-								}),
-							]}
-						>
-							<HostFace name={host.name} hues={host.hues} size={3.5} />
-							<div mix={[raw({ display: "grid", gap: "0.125rem" })]}>
-								<strong mix={[raw({ color: "var(--ui-neutral-fg-emphasis)" })]}>
-									Your host, {host.name}
-								</strong>
-								<span mix={[raw({ fontSize: "0.875rem", color: "var(--ui-neutral-fg-muted)" })]}>
-									Responds {host.responds}. The address and door code arrive{" "}
-									{formatDay(addDays(trip.start, -2))}.
-								</span>
-							</div>
-						</div>
+					<div mix={[raw({ display: "grid", gap: "1.5rem", alignContent: "start" })]}>
+						{trip.kind === "flight" ? <BoardingPasses trip={trip} /> : null}
+						{trip.kind === "stay" ? <StayDetails trip={trip} /> : null}
+						{trip.kind === "car" ? <CarDetails trip={trip} /> : null}
 						<a
-							href={href(`stay/${stay.id}`)}
-							mix={[
-								raw({
-									justifySelf: "start",
-									fontWeight: "650",
-									color: "var(--ui-neutral-fg-emphasis)",
-								}),
-							]}
+							href={icsHref("booking", trip.id)}
+							download={`wayfern-${trip.id}.ics`}
+							mix={[...pillLink(), raw({ justifySelf: "start" })]}
 						>
-							View the listing
+							<CalendarPlusIcon aria-hidden="true" size={16} />
+							Add to calendar (.ics)
 						</a>
 					</div>
 					<aside
@@ -451,18 +813,18 @@ export function TripPage(handle: Handle<{ ctx: Screen; trip: Trip }>) {
 									command="show-modal"
 									mix={dangerLink()}
 								>
-									Cancel this trip
+									Cancel this booking
 								</button>
 								<HeadingScope level={2}>
 									<Dialog id={CANCEL_DIALOG} aria-labelledby={`${CANCEL_DIALOG}-title`}>
 										<Dialog.Header>
 											<Dialog.Title id={`${CANCEL_DIALOG}-title`}>
-												Cancel your stay at {stay.name}?
+												Cancel {bookingTitle(trip)}?
 											</Dialog.Title>
 											<Dialog.Description>
 												{refundable
-													? `You get ${money(price.total)} back, the whole amount. ${host.name.split(" ")[0]} is told straight away.`
-													: `It's within a week of check-in, so the first night and the service fee are kept.`}
+													? `You get ${money(price.total)} back, the whole amount.`
+													: "It's within a week, so part of the price is kept."}
 											</Dialog.Description>
 										</Dialog.Header>
 										<Dialog.Footer>
@@ -472,7 +834,7 @@ export function TripPage(handle: Handle<{ ctx: Screen; trip: Trip }>) {
 												command="close"
 												mix={quietButton()}
 											>
-												Keep my trip
+												Keep it
 											</button>
 											<form
 												method="post"
@@ -480,7 +842,7 @@ export function TripPage(handle: Handle<{ ctx: Screen; trip: Trip }>) {
 												mix={[raw({ display: "contents" })]}
 											>
 												<button type="submit" mix={dangerButton()}>
-													Cancel trip
+													Cancel booking
 												</button>
 											</form>
 										</Dialog.Footer>

@@ -28,6 +28,10 @@ namespace GuestsField {
 		kids: number;
 		/** The most guests the stay sleeps; sixteen for a search. */
 		max?: number;
+		/** The caption over the field. Default: "Who". */
+		caption?: string;
+		/** The age ranges under each count, which differ between stays and flights. */
+		hints?: { adults: string; children: string };
 		/** Draws the field as a booking card's bordered row rather than a bar segment. */
 		boxed?: boolean;
 	}
@@ -76,7 +80,7 @@ export const GuestsField = clientEntry(
 				{
 					kind: "adults" as const,
 					label: "Adults",
-					hint: "Ages 13 or above",
+					hint: handle.props.hints?.adults ?? "Ages 13 or above",
 					value: adults,
 					min: 1,
 					cap: max - children,
@@ -84,7 +88,7 @@ export const GuestsField = clientEntry(
 				{
 					kind: "children" as const,
 					label: "Children",
-					hint: "Ages 2 to 12",
+					hint: handle.props.hints?.children ?? "Ages 2 to 12",
 					value: children,
 					min: 0,
 					cap: max - adults,
@@ -126,7 +130,7 @@ export const GuestsField = clientEntry(
 						]}
 					>
 						<span mix={[raw({ fontSize: "0.75rem", fontWeight: "700", letterSpacing: "0.02em" })]}>
-							Who
+							{handle.props.caption ?? "Who"}
 						</span>
 						<span
 							data-guests-summary=""
