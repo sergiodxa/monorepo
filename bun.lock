@@ -466,6 +466,7 @@
         "@sdxc/diagram": "workspace:*",
         "@sdxc/diff": "workspace:*",
         "@sdxc/emoji": "workspace:*",
+        "@sdxc/facets": "workspace:*",
         "@sdxc/file-storage-r2": "workspace:*",
         "@sdxc/font": "workspace:*",
         "@sdxc/health": "workspace:*",
