@@ -505,6 +505,24 @@ Booking a stay or a trip.
 - `RatingBreakdown` — a review score with `.Group` lists of `.Bar` meters, per star or per category.
 - `PriceBreakdown` — a receipt `<dl>` of `.Line`s (`detail`, `tone="discount"`, a named `<output>`)
   and a bold `.Total`.
+- `FlightSegment` — one leg: airline mark, name and number, then a `FlightRoute` (times, codes, a track
+  with a dot per stop, "+1" day badge), aircraft and cabin; `FlightRoute` also ships on its own.
+- `FlightItinerary` — a journey summarised on one line over a native `<details>` listing `.Segment`s
+  and `.Layover`s (`tone="warning"` for a short or overnight connection).
+- `FlightOption` — a flight results row: badges, one `.Journey` per direction, the price and a select action.
+- `FareOptions` — fare classes as radio cards in a `<fieldset>`, with `.Option` features marked
+  included, not included or for a fee, and an optional ribbon.
+- `FareCalendar` — flexible dates: a month of day links with each day's fare, the cheapest tinted and
+  named so; `variant="strip"` is a scrolling row of `days` around `selected`.
+- `SeatMap` — a cabin seat picker: a fuselage of native radios under one `name` (`layout="ABC DEF"`,
+  taken seats disabled, tinted kinds, exits, wing, sections), scrolling in its box; `.Legend` swatches.
+- `BoardingPass` — a wallet-style pass with a brand band, route, field grid and perforated stub;
+  `PassCode` draws the deterministic code-like art it carries.
+- `CarOffer` — a rental car result: picture, class and model, spec chips, perks, company and rating,
+  pickup point, daily and total price, actions.
+- `PackageSavings` — a bundle's price beside its `.Part`s' struck-through separate prices and a saving badge.
+- `TripTimeline` — a whole trip on a rail: `.Day` headings over `.Item`s (flight, stay, car, activity, note)
+  with time, details, status and actions.
 
 
 ### Finance (`@sdxc/ui/finance`)
