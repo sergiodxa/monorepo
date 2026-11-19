@@ -1,6 +1,6 @@
 /**
- * An order's live tracking and the order history. Tracking draws the city with the courier on
- * the route, the status timeline and the receipt, and follows the server's progress stream;
+ * An order's live tracking and the order history. Tracking shows the courier's route on a
+ * street map, the status timeline and the receipt, following the server's progress stream;
  * the history lists every order with Reorder, and Track for one still on its way.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -9,22 +9,13 @@
 
 import type { Handle } from "remix/component";
 
-import {
-	BikeIcon,
-	MessageCircleIcon,
-	PhoneIcon,
-	RotateCcwIcon,
-	StarIcon,
-	StoreIcon,
-	HouseIcon,
-} from "@sdxc/icons";
+import { BikeIcon, MessageCircleIcon, PhoneIcon, RotateCcwIcon, StarIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { LinkButton } from "@sdxc/ui";
 import { OrderLive, OrderSteps } from "@sdxc/ui/commerce/order-tracker";
-import { MapCanvas } from "@sdxc/ui/map/map-canvas";
 
-import type { Address, Order, Restaurant } from "./data";
+import type { Order } from "./data";
 import type { Visitor } from "./state";
 
 import { DishArt } from "./art";
@@ -39,157 +30,13 @@ import {
 	money,
 	streamHref,
 } from "./data";
+import { DeliveryMap } from "./delivery-map";
 import { CARD_RADIUS, Gutter } from "./parts";
 import { choiceSummary, lineCount, priceLines } from "./state";
 import { COURIER, STEPS, orderProgress } from "./tracking";
 
 /** The id of the element the live island updates. */
 const TRACK_ROOT = "bocado-track";
-
-/** The spacing of the city's street grid, in map units: a street runs along every multiple. */
-const STREET = 50;
-
-/** Rounds a coordinate to the nearest street, kept within the map's inner streets. */
-function nearestStreet(value: number, low: number, high: number): number {
-	return Math.min(Math.max(Math.round(value / STREET) * STREET, low), high);
-}
-
-/**
- * Moves a place onto the street in front of it: onto the nearest north–south street, clear
- * of the river, so its pin sits on asphalt and every route can start and end on a street.
- *
- * @param at The place as the data puts it.
- */
-export function onStreet(at: readonly [number, number]): readonly [number, number] {
-	return [nearestStreet(at[0], STREET, 400 - STREET), Math.min(Math.max(at[1], 72), 284)];
-}
-
-/**
- * The route a courier rides along the city's streets: down the restaurant's street to a
- * cross street halfway, along it, and up the door's street, so it never cuts through a block.
- *
- * @param from The restaurant, already on a street.
- * @param to The door, already on a street.
- */
-export function routePath(from: readonly [number, number], to: readonly [number, number]): string {
-	let middle = nearestStreet((from[1] + to[1]) / 2, STREET * 2, 300 - STREET);
-	return `M${from[0]} ${from[1]} V${middle} H${to[0]} V${to[1]}`;
-}
-
-/** The city under every map: blocks, a river, a park and the avenues between them. */
-function CityArt() {
-	return () => (
-		<g>
-			<rect x="0" y="0" width="400" height="300" fill="var(--bocado-map-land)" />
-			{[0, 1, 2, 3, 4, 5, 6, 7].flatMap((col) =>
-				[0, 1, 2, 3, 4, 5].map((row) => (
-					<rect
-						x={8 + col * 50}
-						y={8 + row * 50}
-						width="34"
-						height="34"
-						rx="5"
-						fill="var(--bocado-map-block)"
-					/>
-				)),
-			)}
-			<path
-				d="M-10 40 C80 60 120 20 210 46 S330 30 410 10 V-10 H-10Z"
-				fill="var(--bocado-map-water)"
-			/>
-			<rect x="208" y="208" width="84" height="84" rx="10" fill="var(--bocado-map-park)" />
-			<path d="M250 208 V292 M208 250 H292" stroke="var(--bocado-map-land)" stroke-width="5" />
-			<circle cx="228" cy="230" r="9" fill="var(--bocado-map-tree)" />
-			<circle cx="272" cy="272" r="11" fill="var(--bocado-map-tree)" />
-			<circle cx="228" cy="274" r="7" fill="var(--bocado-map-tree)" />
-			<path d="M0 150 H400 M200 0 V300" stroke="var(--bocado-map-avenue)" stroke-width="6" />
-		</g>
-	);
-}
-
-/** The glyph riding the route: the courier on a bike, in a brand disc. */
-function CourierGlyph() {
-	return () => (
-		<g>
-			<circle r="13" fill="var(--ui-brand-bg-solid)" stroke="white" stroke-width="3" />
-			<g
-				transform="translate(-7 -7)"
-				fill="none"
-				stroke="white"
-				stroke-width="1.8"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<circle cx="3" cy="10" r="3" />
-				<circle cx="11" cy="10" r="3" />
-				<path d="M3 10 6 4h4l1 6M6 4 5 2h2" />
-			</g>
-		</g>
-	);
-}
-
-namespace DeliveryMap {
-	export interface Props {
-		restaurant: Restaurant;
-		address: Address;
-		/** The courier's place on the route, from 0 to 1. */
-		courier: number;
-	}
-}
-
-/** The delivery map: the route from the restaurant to the door with the courier on it. */
-export function DeliveryMap(handle: Handle<DeliveryMap.Props>) {
-	return () => {
-		let { address, courier, restaurant } = handle.props;
-		let from = onStreet(restaurant.at);
-		let to = onStreet(address.at);
-		let route = routePath(from, to);
-		return (
-			<MapCanvas
-				label={`Map from ${restaurant.name} to ${address.label}`}
-				viewBox="0 0 400 300"
-				art={<CityArt />}
-				mix={[
-					raw({
-						"--bocado-map-land": "oklch(0.95 0.015 90)",
-						"--bocado-map-block": "oklch(0.91 0.02 85)",
-						"--bocado-map-water": "oklch(0.86 0.05 225)",
-						"--bocado-map-park": "oklch(0.88 0.07 145)",
-						"--bocado-map-tree": "oklch(0.78 0.1 145)",
-						"--bocado-map-avenue": "oklch(0.98 0.01 90)",
-						"--ui-map-radius": CARD_RADIUS,
-						"@media (prefers-color-scheme: dark)": {
-							"--bocado-map-land": "oklch(0.26 0.012 340)",
-							"--bocado-map-block": "oklch(0.31 0.014 340)",
-							"--bocado-map-water": "oklch(0.32 0.05 240)",
-							"--bocado-map-park": "oklch(0.33 0.05 150)",
-							"--bocado-map-tree": "oklch(0.4 0.07 150)",
-							"--bocado-map-avenue": "oklch(0.36 0.012 340)",
-						},
-					}),
-				]}
-			>
-				<MapCanvas.Route d={route} done={courier} />
-				<MapCanvas.Marker route={route} progress={courier}>
-					<CourierGlyph />
-				</MapCanvas.Marker>
-				<MapCanvas.Pin
-					x={from[0]}
-					y={from[1]}
-					label={<StoreIcon size={14} aria-label={restaurant.name} />}
-					tone="neutral"
-				/>
-				<MapCanvas.Pin
-					x={to[0]}
-					y={to[1]}
-					label={<HouseIcon size={14} aria-label={address.label} />}
-					tone="brand"
-					current
-				/>
-			</MapCanvas>
-		);
-	};
-}
 
 /** When an order was placed, as its receipt says it. */
 function placedLabel(order: Order, now: number): string {

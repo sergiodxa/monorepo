@@ -118,7 +118,7 @@ export interface Restaurant {
 	/** Opens later today; it takes no orders until then. */
 	opensAt?: string;
 	street: string;
-	/** Where it sits on the delivery map, in the map's 400 × 300 drawing. */
+	/** Where it sits, as longitude and latitude on a street in Roma or Condesa, Mexico City. */
 	at: readonly [number, number];
 	groups: OptionGroup[];
 	sections: MenuSection[];
@@ -131,7 +131,7 @@ export interface Address {
 	line: string;
 	/** What the courier is told at the door. */
 	note: string;
-	/** Where it sits on the delivery map. */
+	/** Where it sits, as longitude and latitude on the street in front of the door. */
 	at: readonly [number, number];
 }
 
@@ -227,7 +227,7 @@ export const RESTAURANTS: Restaurant[] = [
 		price: 1,
 		promo: "Free horchata over $20",
 		street: "Calle Olmo 31",
-		at: [96, 84],
+		at: [-99.16324, 19.41916],
 		groups: [
 			{
 				id: "tortilla",
@@ -361,7 +361,7 @@ export const RESTAURANTS: Restaurant[] = [
 		distance: 2.4,
 		price: 2,
 		street: "Riverside Walk 8",
-		at: [292, 70],
+		at: [-99.15892, 19.42317],
 		groups: [
 			{
 				id: "broth",
@@ -484,7 +484,7 @@ export const RESTAURANTS: Restaurant[] = [
 		price: 2,
 		promo: "20% off over $30",
 		street: "Plaza Lumen 2",
-		at: [182, 132],
+		at: [-99.16549, 19.415],
 		groups: [
 			{
 				id: "size",
@@ -607,7 +607,7 @@ export const RESTAURANTS: Restaurant[] = [
 		distance: 0.9,
 		price: 1,
 		street: "Market Row 14",
-		at: [136, 196],
+		at: [-99.16991, 19.41296],
 		groups: [
 			{
 				id: "patties",
@@ -708,7 +708,7 @@ export const RESTAURANTS: Restaurant[] = [
 		price: 2,
 		promo: "15% off your first bowl",
 		street: "Calle Olmo 5",
-		at: [70, 150],
+		at: [-99.17465, 19.41624],
 		groups: [
 			{
 				id: "base",
@@ -793,7 +793,7 @@ export const RESTAURANTS: Restaurant[] = [
 		distance: 3.1,
 		price: 2,
 		street: "Lantern Lane 40",
-		at: [330, 150],
+		at: [-99.1542, 19.41998],
 		groups: [
 			{
 				id: "cook",
@@ -891,7 +891,7 @@ export const RESTAURANTS: Restaurant[] = [
 		distance: 1.5,
 		price: 1,
 		street: "Calle Ceiba 19",
-		at: [214, 230],
+		at: [-99.16101, 19.41004],
 		groups: [
 			{
 				id: "arepa-cheese",
@@ -975,7 +975,7 @@ export const RESTAURANTS: Restaurant[] = [
 		price: 2,
 		promo: "Free naan over $25",
 		street: "Hillcrest Road 77",
-		at: [352, 236],
+		at: [-99.15307, 19.41157],
 		groups: [
 			{
 				id: "heat",
@@ -1062,7 +1062,7 @@ export const RESTAURANTS: Restaurant[] = [
 		distance: 0.5,
 		price: 1,
 		street: "Calle Olmo 2",
-		at: [52, 110],
+		at: [-99.17182, 19.41812],
 		groups: [
 			{
 				id: "milk",
@@ -1131,7 +1131,7 @@ export const RESTAURANTS: Restaurant[] = [
 		price: 1,
 		opensAt: "4:00 PM",
 		street: "Plaza Lumen 9",
-		at: [196, 104],
+		at: [-99.16802, 19.42059],
 		groups: [
 			{
 				id: "scoops",
@@ -1180,7 +1180,7 @@ export const RESTAURANTS: Restaurant[] = [
 		price: 2,
 		promo: "Free potatoes over $25",
 		street: "Market Row 3",
-		at: [160, 244],
+		at: [-99.16685, 19.40793],
 		groups: [
 			{
 				id: "portion",
@@ -1247,7 +1247,7 @@ export const RESTAURANTS: Restaurant[] = [
 		distance: 2.7,
 		price: 1,
 		street: "Hillcrest Road 12",
-		at: [262, 188],
+		at: [-99.15755, 19.41625],
 		groups: [
 			{
 				id: "wrap",
@@ -1316,21 +1316,21 @@ export const ADDRESSES: Address[] = [
 		label: "Home",
 		line: "Calle Ceiba 48, Apt 3B",
 		note: "Ring 3B, then the second door on the left.",
-		at: [188, 178],
+		at: [-99.17117, 19.41049],
 	},
 	{
 		id: "studio",
 		label: "Studio",
 		line: "Riverside Walk 21, Floor 2",
 		note: "Leave it at reception.",
-		at: [250, 92],
+		at: [-99.16003, 19.42292],
 	},
 	{
 		id: "parents",
 		label: "Mamá's",
 		line: "Hillcrest Road 90",
 		note: "Blue gate, the dog is friendly.",
-		at: [318, 262],
+		at: [-99.15605, 19.40623],
 	},
 ];
 

@@ -13,7 +13,7 @@ import { describe, expect, test } from "vitest";
 import { fetchApp } from "~/app/test/router";
 
 import { ADDRESSES, RESTAURANTS, findRestaurant, readSearch, searchRestaurants } from "./data";
-import { onStreet, routePath } from "./orders";
+import { deliveryRoute, routeView } from "./delivery-map";
 import { cartCookie, decodeLines, lineTotal, priceLines, readVisitor, validLine } from "./state";
 import { parseProgressLine, progressAt, progressLine } from "./tracking";
 
@@ -263,15 +263,40 @@ describe("Bocado's order tracking", () => {
 });
 
 describe("Bocado's delivery map", () => {
-	test("routes every courier along streets, never through a block", () => {
+	test("has a route along the streets from every restaurant to every saved address", () => {
 		for (let restaurant of RESTAURANTS) {
 			for (let address of ADDRESSES) {
-				let from = onStreet(restaurant.at);
-				let path = routePath(from, onStreet(address.at));
-				let [, x, , middle, across] = path.match(/^M(\d+) (\d+) V(\d+) H(\d+) V\d+$/) ?? [];
-				expect(Number(x) % 50, path).toBe(0);
-				expect(Number(middle) % 50, path).toBe(0);
-				expect(Number(across) % 50, path).toBe(0);
+				let path = deliveryRoute(restaurant, address);
+				expect(path.length, `${restaurant.id} → ${address.id}`).toBeGreaterThan(2);
+				expect(path[0]).toEqual([...restaurant.at]);
+				expect(path.at(-1)).toEqual([...address.at]);
+			}
+		}
+	});
+
+	test("starts on a view where the whole route fits a phone's 340 × 255 map with room for pins", () => {
+		let pixel = ([longitude, latitude]: [number, number], zoom: number): [number, number] => {
+			let size = 512 * 2 ** zoom;
+			let sin = Math.sin((latitude * Math.PI) / 180);
+			return [
+				((longitude + 180) / 360) * size,
+				(0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * size,
+			];
+		};
+		for (let restaurant of RESTAURANTS) {
+			for (let address of ADDRESSES) {
+				let path = deliveryRoute(restaurant, address);
+				let view = routeView(path);
+				let [cx, cy] = pixel(view.center, view.zoom);
+				for (let point of path) {
+					let [x, y] = pixel(point, view.zoom);
+					expect(Math.abs(x - cx), `${restaurant.id} → ${address.id}`).toBeLessThanOrEqual(
+						170 - 20,
+					);
+					expect(Math.abs(y - cy), `${restaurant.id} → ${address.id}`).toBeLessThanOrEqual(
+						127 - 20,
+					);
+				}
 			}
 		}
 	});

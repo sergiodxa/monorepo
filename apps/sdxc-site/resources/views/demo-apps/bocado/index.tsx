@@ -38,6 +38,7 @@ import {
 	href,
 	readSearch,
 } from "./data";
+import { MAP_HOST } from "./delivery-map";
 import Home from "./home";
 import { OrdersPage, TrackingPage } from "./orders";
 import { Gutter } from "./parts";
@@ -368,6 +369,7 @@ export default {
 	thumbnail: () => <BocadoThumbnail />,
 	screens: SCREENS,
 	cookies: [],
+	csp: { connectSrc: [MAP_HOST], imgSrc: [MAP_HOST, "blob:"], workerSrc: ["blob:"] },
 	isPersonal,
 	toasts: TOASTS,
 	stream: (part, request) => trackingStream(part, request),
