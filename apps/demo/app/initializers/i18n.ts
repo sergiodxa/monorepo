@@ -7,12 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Messages } from "@sdxc/i18n";
-
 import { createTranslator } from "@sdxc/i18n";
 
-import en from "~/resources/locales/en.json";
-import es from "~/resources/locales/es.json";
+import en from "~/resources/locales/en";
+import es from "~/resources/locales/es";
 
 /** Languages the board answers in. */
 export const SUPPORTED_LANGUAGES = ["en", "es"];
@@ -20,8 +18,15 @@ export const SUPPORTED_LANGUAGES = ["en", "es"];
 /** Language a request falls back to when it asks for none the board speaks. */
 export const FALLBACK_LANGUAGE = "en";
 
+declare module "@sdxc/i18n" {
+	/** Types every translator's keys and values by the English bundle, which Spanish mirrors. */
+	interface I18nTypes {
+		messages: typeof en;
+	}
+}
+
 /** Message bundles, one per supported language. */
-export const RESOURCES: Record<string, Messages> = { en, es };
+export const RESOURCES = { en, es };
 
 /**
  * Translates outside a request, such as in an email, into the reader's language; an
