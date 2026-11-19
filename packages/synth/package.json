@@ -1,0 +1,13 @@
+{
+	"name": "@sdxc/synth",
+	"version": "0.0.1",
+	"description": "A deterministic software synthesizer: instruments, notes and scores rendered to PCM and WAV, with a seeded song generator on top",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	}
+}

@@ -2474,6 +2474,10 @@
         "remix": "3.2.0",
       },
     },
+    "packages/synth": {
+      "name": "@sdxc/synth",
+      "version": "0.0.1",
+    },
     "packages/trace-context": {
       "name": "@sdxc/trace-context",
       "version": "0.0.1",

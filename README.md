@@ -268,6 +268,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/facets](packages/facets)             | Faceted filtering over in-memory records: URL filters, disjunctive facet counts and range buckets      |
 | [@sdxc/seo](packages/seo)                   | Canonical URLs, schema.org builders and head metadata                                                  |
 | [@sdxc/sitemap](packages/sitemap)           | Sitemap generation and parsing                                                                         |
+| [@sdxc/synth](packages/synth)               | Deterministic synthesizer: instruments, notes and scores to PCM and WAV, plus a seeded song generator  |
 | [@sdxc/webmention](packages/webmention)     | Receive, verify, discover and send Webmentions                                                         |
 | [@sdxc/websub](packages/websub)             | WebSub subscriber and publisher: subscribe, verify intent and signatures, notify hubs                  |
 
