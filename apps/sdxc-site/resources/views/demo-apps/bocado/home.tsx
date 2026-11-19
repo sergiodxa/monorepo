@@ -122,7 +122,10 @@ function OrderAgain(handle: Handle<{ visitor: Visitor }>) {
 		let totals = priceLines(restaurant, order.lines, { tip: order.tip, priority: order.priority });
 		let count = lineCount(order.lines);
 		return (
-			<section aria-labelledby="bocado-again" mix={[raw({ marginBlockStart: "2rem" })]}>
+			<section
+				aria-labelledby="bocado-again"
+				mix={[raw({ marginBlockStart: "2rem", containerType: "inline-size" })]}
+			>
 				<h2
 					id="bocado-again"
 					mix={[
@@ -144,6 +147,7 @@ function OrderAgain(handle: Handle<{ visitor: Visitor }>) {
 							gridTemplateColumns: "4rem minmax(0, 1fr) auto",
 							alignItems: "center",
 							gap: "1rem",
+							"@container (max-width: 28rem)": { gap: "0.75rem" },
 							padding: "0.875rem 1rem",
 							borderRadius: CARD_RADIUS,
 							backgroundColor: "var(--ui-neutral-bg-subtle)",
@@ -220,6 +224,12 @@ function OrderAgain(handle: Handle<{ visitor: Visitor }>) {
 									color: "var(--ui-brand-fg-on-solid, white)",
 									backgroundColor: "var(--ui-brand-bg-solid)",
 									cursor: "pointer",
+									"@container (max-width: 28rem)": {
+										justifyContent: "center",
+										inlineSize: "2.5rem",
+										paddingInline: "0",
+										"& > [data-reorder-label]": { display: "none" },
+									},
 								}),
 								when(
 									"&:focus-visible",
@@ -228,7 +238,7 @@ function OrderAgain(handle: Handle<{ visitor: Visitor }>) {
 							]}
 						>
 							<RotateCcwIcon aria-hidden="true" size={16} />
-							<span>Reorder</span>
+							<span data-reorder-label="">Reorder</span>
 						</button>
 					</form>
 				</div>
