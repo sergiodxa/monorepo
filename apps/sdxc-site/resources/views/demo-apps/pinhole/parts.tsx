@@ -12,8 +12,6 @@ import type { Handle, RemixNode } from "remix/component";
 import {
 	BadgeCheckIcon,
 	BookmarkIcon,
-	ChevronLeftIcon,
-	ChevronRightIcon,
 	FilmIcon,
 	HeartIcon,
 	LayersIcon,
@@ -22,8 +20,10 @@ import {
 } from "@sdxc/icons";
 import { keyframes } from "@sdxc/u/animation";
 import { raw } from "@sdxc/u/general";
+import { gap } from "@sdxc/u/layout";
 import { motionReduce } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
+import { Carousel, CarouselSync, MediaGrid } from "@sdxc/ui";
 import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
 import { CopyButton } from "@sdxc/ui/docs/copy-button";
 import { StoryRing } from "@sdxc/ui/video/story-ring";
@@ -34,8 +34,8 @@ import type { Comment, Person, Post, Reel } from "./data";
 import type { VisitorState } from "./state";
 
 import { PersonAvatar, PhotoArt } from "./art";
-import { CarouselSync } from "./carousel-sync";
 import { actionHref, compact, findPerson, href, shortAge, storyOf } from "./data";
+import { DoubleTapLike } from "./double-tap-like";
 import { isLiked, isSaved, likeCount } from "./state";
 
 /** A visually hidden span, for words a screen reader needs and the eye does not. */
@@ -155,85 +155,99 @@ function frameRatio(post: Post, fit: "frame" | "fill"): string {
 namespace Media {
 	export interface Props {
 		post: Post;
-		/** The id prefix the slides and dots take, unique on the page. */
+		/** The id prefix the viewport and slides take, unique on the page. */
 		id: string;
 		/** `fill` stretches the media to its box, beside the comments on a wide post page. */
 		fit?: "frame" | "fill";
 	}
 }
 
+/** A round arrow over the media's edge, shown once the carousel runs and only where a pointer hovers. */
+function overlayArrow(side: "start" | "end") {
+	return [
+		raw({
+			position: "absolute",
+			insetBlockStart: "50%",
+			insetInlineStart: side === "start" ? "0.625rem" : "auto",
+			insetInlineEnd: side === "end" ? "0.625rem" : "auto",
+			translate: "0 -50%",
+			display: "none",
+			inlineSize: "2rem !important",
+			blockSize: "2rem !important",
+			padding: "0 !important",
+			borderRadius: "999px !important",
+			backgroundColor: "rgb(255 255 255 / 0.88) !important",
+			color: "oklch(0.2 0.01 60) !important",
+			boxShadow: "0 1px 4px rgb(0 0 0 / 0.25)",
+			opacity: "0",
+			transition: "opacity 150ms ease",
+			"@media (hover: hover)": { "[data-carousel-ready] &": { display: "grid" } },
+			"[data-pinhole-media]:hover &:not([disabled]), &:focus-visible": { opacity: "1" },
+			"&[disabled]": { visibility: "hidden" },
+		}),
+		motionReduce(raw({ transition: "none" })),
+	];
+}
+
 /**
- * A post's photographs: one, or several on a horizontal snap track with arrows on a pointer
- * screen, dots and an `n / N` count; a double tap likes the post with a burst over the photo.
+ * A post's photographs: one, or several in a {@link Carousel} on a horizontal snap track with
+ * arrows on a pointer screen, dots and an `n / N` count; a double tap likes the post with a
+ * burst over the photo.
  */
 export function Media(handle: Handle<Media.Props>) {
 	return () => {
 		let { fit = "frame", id, post } = handle.props;
-		let many = post.photos.length > 1;
+		let total = post.photos.length;
+		let many = total > 1;
+		let viewport = `${id}-photos`;
 		return (
-			<div
+			<Carousel
 				data-pinhole-media=""
+				aria-label={many ? `${total} photos` : undefined}
+				style="--ui-carousel-slide-size: 100%; --ui-carousel-gap: 0px"
 				mix={[
+					gap(0),
 					raw({
 						position: "relative",
 						overflow: "hidden",
 						backgroundColor: "var(--ui-neutral-bg-tint)",
 						aspectRatio: frameRatio(post, fit),
 						blockSize: fit === "fill" ? "100%" : "auto",
-						"&:hover [data-carousel-step]:not([disabled])": { opacity: "1" },
+						"--ui-carousel-dot": "rgb(255 255 255 / 0.55)",
+						"--ui-carousel-dot-current": "oklch(0.99 0 0)",
 					}),
 				]}
 			>
-				<div
-					data-carousel-viewport=""
-					role={many ? "group" : undefined}
-					aria-roledescription={many ? "carousel" : undefined}
-					aria-label={many ? `${post.photos.length} photos` : undefined}
-					tabindex={many ? 0 : undefined}
+				<Carousel.Viewport
+					id={viewport}
+					tabindex={many ? 0 : -1}
 					mix={[
 						raw({
-							display: "flex",
 							blockSize: "100%",
 							marginInlineEnd: "-1px",
-							overflowX: many ? "auto" : "hidden",
-							overflowY: "hidden",
-							scrollSnapType: "x mandatory",
-							overscrollBehaviorX: "contain",
 							scrollbarWidth: "none",
+							overscrollBehaviorX: "contain",
 							"&::-webkit-scrollbar": { display: "none" },
 						}),
-						when(
-							"&:focus-visible",
-							raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "-2px" }),
-						),
 					]}
 				>
-					{post.photos.map((photo, index) => (
-						<div
-							id={`${id}-photo-${index + 1}`}
-							data-carousel-slide=""
-							role={many ? "group" : undefined}
-							aria-roledescription={many ? "slide" : undefined}
-							aria-label={many ? `${index + 1} of ${post.photos.length}` : undefined}
-							mix={[
-								raw({
-									position: "relative",
-									flex: "0 0 100%",
-									blockSize: "100%",
-									scrollSnapAlign: "start",
-									scrollSnapStop: "always",
-								}),
-							]}
-						>
-							<PhotoArt photo={photo} />
-						</div>
-					))}
-				</div>
+					<Carousel.Track mix={[raw({ blockSize: "100%" })]}>
+						{post.photos.map((photo, index) => (
+							<Carousel.Slide
+								id={`${id}-photo-${index + 1}`}
+								aria-label={many ? `${index + 1} of ${total}` : undefined}
+								mix={[raw({ position: "relative", blockSize: "100%" })]}
+							>
+								<PhotoArt photo={photo} />
+							</Carousel.Slide>
+						))}
+					</Carousel.Track>
+				</Carousel.Viewport>
 				{many ? (
 					<>
-						<span
-							data-carousel-count=""
-							aria-hidden="true"
+						<Carousel.Count
+							viewport={viewport}
+							total={total}
 							mix={[
 								raw({
 									position: "absolute",
@@ -246,103 +260,38 @@ export function Media(handle: Handle<Media.Props>) {
 									color: "oklch(0.98 0.01 80)",
 									fontFamily: "var(--ui-font-mono)",
 									fontSize: "0.75rem",
-									fontVariantNumeric: "tabular-nums",
 								}),
 							]}
-						>
-							1 / {post.photos.length}
-						</span>
-						<CarouselStep direction={-1} />
-						<CarouselStep direction={1} />
-						<div
-							aria-hidden="true"
+						/>
+						<Carousel.Previous
+							commandfor={viewport}
+							aria-label="Previous photo"
+							mix={overlayArrow("start")}
+						/>
+						<Carousel.Next
+							commandfor={viewport}
+							aria-label="Next photo"
+							mix={overlayArrow("end")}
+						/>
+						<Carousel.Dots
+							commandfor={viewport}
+							count={total}
+							label={(index) => `Photo ${index + 1} of ${total}`}
 							mix={[
 								raw({
 									position: "absolute",
-									insetBlockEnd: "0.625rem",
+									insetBlockEnd: "0.25rem",
 									insetInline: "0",
-									display: "flex",
-									justifyContent: "center",
-									gap: "0.3125rem",
-									pointerEvents: "none",
+									"& > button::before": { boxShadow: "0 0 2px rgb(0 0 0 / 0.4)" },
 								}),
 							]}
-						>
-							{post.photos.map((_, index) => (
-								<span
-									data-carousel-dot=""
-									data-current={index === 0 ? "" : undefined}
-									mix={[
-										raw({
-											inlineSize: "0.375rem",
-											blockSize: "0.375rem",
-											borderRadius: "999px",
-											backgroundColor: "rgb(255 255 255 / 0.55)",
-											boxShadow: "0 0 2px rgb(0 0 0 / 0.4)",
-											transition: "background-color 150ms ease, transform 150ms ease",
-										}),
-										when(
-											"&[data-current]",
-											raw({ backgroundColor: "oklch(0.99 0 0)", transform: "scale(1.2)" }),
-										),
-										motionReduce(raw({ transition: "none" })),
-									]}
-								/>
-							))}
-						</div>
+						/>
+						<CarouselSync />
 					</>
 				) : null}
 				<HeartBurst />
-				<CarouselSync />
-			</div>
-		);
-	};
-}
-
-/** An arrow over the media's edge, revealed by the island on a screen that can hover. */
-function CarouselStep(handle: Handle<{ direction: -1 | 1 }>) {
-	return () => {
-		let back = handle.props.direction === -1;
-		return (
-			<button
-				type="button"
-				hidden
-				data-carousel-step={String(handle.props.direction)}
-				aria-label={back ? "Previous photo" : "Next photo"}
-				mix={[
-					raw({
-						position: "absolute",
-						insetBlockStart: "50%",
-						insetInlineStart: back ? "0.625rem" : "auto",
-						insetInlineEnd: back ? "auto" : "0.625rem",
-						translate: "0 -50%",
-						display: "grid",
-						placeItems: "center",
-						inlineSize: "2rem",
-						blockSize: "2rem",
-						padding: "0",
-						border: "0",
-						borderRadius: "999px",
-						backgroundColor: "rgb(255 255 255 / 0.88)",
-						color: "oklch(0.2 0.01 60)",
-						boxShadow: "0 1px 4px rgb(0 0 0 / 0.25)",
-						cursor: "pointer",
-						opacity: "0",
-						transition: "opacity 150ms ease",
-						"@media (hover: none)": { display: "none" },
-					}),
-					when("&[hidden]", raw({ display: "none" })),
-					when("&[disabled]", raw({ visibility: "hidden" })),
-					when("&:focus-visible", raw({ opacity: "1", outline: "2px solid var(--ui-brand-ring)" })),
-					motionReduce(raw({ transition: "none" })),
-				]}
-			>
-				{back ? (
-					<ChevronLeftIcon size={18} aria-hidden="true" />
-				) : (
-					<ChevronRightIcon size={18} aria-hidden="true" />
-				)}
-			</button>
+				<DoubleTapLike />
+			</Carousel>
 		);
 	};
 }
@@ -1049,114 +998,74 @@ namespace PhotoGrid {
 	}
 }
 
+/** One tile's facts: where it leads, its picture, its name and its counts. */
+function tileFacts(tile: Tile, state: VisitorState) {
+	if (tile.kind === "reel") {
+		let author = findPerson(tile.reel.author);
+		return {
+			page: `reels/${tile.reel.id}`,
+			photo: tile.reel.scene,
+			name: `Reel by ${author?.name}: ${tile.reel.caption}`,
+			likes: likeCount(state, tile.reel),
+			comments: tile.reel.comments,
+			badge: <FilmIcon />,
+		};
+	}
+	let { post } = tile;
+	let author = findPerson(post.author);
+	return {
+		page: `p/${post.id}`,
+		photo: post.photos[0]!,
+		name: `Post by ${author?.name}: ${post.photos[0]!.alt}`,
+		likes: likeCount(state, post),
+		comments: post.comments.length,
+		badge: post.photos.length > 1 ? <LayersIcon /> : undefined,
+	};
+}
+
 /**
- * Three columns of square tiles with a hairline gap, each a link to its post or reel; a reel
- * or a post of several photos marks its corner, and a pointer shows its likes and comments.
+ * A {@link MediaGrid} of posts and reels: each tile its post's first photo or its reel's
+ * scene, a reel or a post of several photos marked in its corner, and its likes and comments
+ * shown on hover or focus.
  */
 export function PhotoGrid(handle: Handle<PhotoGrid.Props>) {
 	return () => {
 		let { label, layout = "grid", state, tiles } = handle.props;
 		return (
-			<ul
-				aria-label={label}
-				mix={[
-					raw({
-						display: "grid",
-						gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-						gridAutoFlow: "dense",
-						gap: "2px",
-						margin: "0",
-						padding: "0",
-						listStyle: "none",
-						"@media (min-width: 48rem)": { gap: "0.25rem" },
-					}),
-				]}
+			<MediaGrid
+				label={label}
+				mix={[raw({ "@media (min-width: 48rem)": { "--ui-media-grid-gap": "0.25rem" } })]}
 			>
 				{tiles.map((tile) => {
-					let tall = layout === "mosaic" && tile.kind === "reel";
-					let target = tile.kind === "post" ? `p/${tile.post.id}` : `reels/${tile.reel.id}`;
-					let photo = tile.kind === "post" ? tile.post.photos[0]! : tile.reel.scene;
-					let likes =
-						tile.kind === "post" ? likeCount(state, tile.post) : likeCount(state, tile.reel);
-					let comments = tile.kind === "post" ? tile.post.comments.length : tile.reel.comments;
-					let author = findPerson(tile.kind === "post" ? tile.post.author : tile.reel.author);
-					let name =
-						tile.kind === "post"
-							? `Post by ${author?.name}: ${photo.alt}`
-							: `Reel by ${author?.name}: ${tile.reel.caption}`;
+					let facts = tileFacts(tile, state);
 					return (
-						<li mix={[raw({ gridRow: tall ? "span 2" : "auto", minInlineSize: "0" })]}>
-							<a
-								href={href(target)}
-								aria-label={name}
-								data-rmx-prefetch="intent"
-								mix={[
-									raw({
-										position: "relative",
-										display: "block",
-										blockSize: "100%",
-										aspectRatio: tall ? "auto" : "1",
-										overflow: "hidden",
-										color: "oklch(0.99 0 0)",
-										"& [data-grid-stats]": { opacity: "0" },
-									}),
-									when(
-										"&:hover [data-grid-stats], &:focus-visible [data-grid-stats]",
-										raw({ opacity: "1" }),
-									),
-									when(
-										"&:focus-visible",
-										raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "-2px" }),
-									),
-								]}
-							>
-								<PhotoArt photo={photo} decorative />
-								{tile.kind === "reel" || tile.post.photos.length > 1 ? (
+						<MediaGrid.Item
+							href={href(facts.page)}
+							label={facts.name}
+							tall={layout === "mosaic" && tile.kind === "reel"}
+							badge={facts.badge}
+							overlay={
+								<>
 									<span
-										aria-hidden="true"
-										mix={[
-											raw({
-												position: "absolute",
-												insetBlockStart: "0.5rem",
-												insetInlineEnd: "0.5rem",
-												filter: "drop-shadow(0 1px 2px rgb(0 0 0 / 0.5))",
-											}),
-										]}
+										mix={[raw({ display: "inline-flex", alignItems: "center", gap: "0.375rem" })]}
 									>
-										{tile.kind === "reel" ? <FilmIcon size={18} /> : <LayersIcon size={18} />}
+										<HeartIcon size={18} fill="currentColor" strokeWidth={0} />{" "}
+										{compact(facts.likes)}
 									</span>
-								) : null}
-								<span
-									data-grid-stats=""
-									aria-hidden="true"
-									mix={[
-										raw({
-											position: "absolute",
-											inset: "0",
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "center",
-											gap: "1.25rem",
-											backgroundColor: "rgb(20 14 8 / 0.35)",
-											fontWeight: "700",
-											transition: "opacity 120ms ease",
-											"& > span": { display: "inline-flex", alignItems: "center", gap: "0.375rem" },
-										}),
-									]}
-								>
-									<span>
-										<HeartIcon size={18} fill="currentColor" strokeWidth={0} /> {compact(likes)}
-									</span>
-									<span>
+									<span
+										mix={[raw({ display: "inline-flex", alignItems: "center", gap: "0.375rem" })]}
+									>
 										<MessageCircleIcon size={18} fill="currentColor" strokeWidth={0} />{" "}
-										{compact(comments)}
+										{compact(facts.comments)}
 									</span>
-								</span>
-							</a>
-						</li>
+								</>
+							}
+						>
+							<PhotoArt photo={facts.photo} decorative />
+						</MediaGrid.Item>
 					);
 				})}
-			</ul>
+			</MediaGrid>
 		);
 	};
 }

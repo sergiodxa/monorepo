@@ -79,6 +79,24 @@ describe("Pinhole as a single-page app", () => {
 		expect(document.querySelector('a[aria-current="page"][href$="?tab=reels"]')).not.toBeNull();
 	});
 
+	test("steps a post's photos from its dots and likes it on a double tap", async () => {
+		mounted = await mountApp(pinhole, "pinhole", "");
+		let media = document.querySelector<HTMLElement>("#post-kiln-opening [data-pinhole-media]")!;
+		await vi.waitFor(() => expect(media.hasAttribute("data-carousel-ready")).toBe(true));
+		let viewport = media.querySelector<HTMLElement>("[data-slot=viewport]")!;
+		viewport.style.scrollBehavior = "auto";
+
+		media.querySelector<HTMLButtonElement>('[aria-label="Photo 2 of 3"]')!.click();
+		await vi.waitFor(() =>
+			expect(media.querySelector("[data-slot=count]")?.textContent).toBe("2 / 3"),
+		);
+
+		let likeForm = document.querySelector("#post-kiln-opening [data-like] form")!;
+		viewport.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+		expect(media.hasAttribute("data-burst")).toBe(true);
+		await vi.waitFor(() => expect(likeForm.hasAttribute("data-pressed")).toBe(true));
+	});
+
 	test("opens the reels feed scrolled to the reel its address names", async () => {
 		let reel = REELS[3]!;
 		mounted = await mountApp(pinhole, "pinhole", `reels/${reel.id}`);
