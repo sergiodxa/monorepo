@@ -49,7 +49,7 @@ describe("ProductMockup", () => {
 
 			expect(frame).toContain('role="img"');
 			expect(frame).toContain(
-				`aria-label="${escapeAttribute(t(`landing.mockups.${altKey(area)}`))}"`,
+				`aria-label="${escapeAttribute(t(`landing.mockups.${altKey(area as MockupArea)}`))}"`,
 			);
 			expect(mockup).toContain('aria-hidden="true"');
 			expect(html).not.toContain("landing.mockups.");
@@ -73,9 +73,16 @@ describe("ProductMockup", () => {
 });
 
 /** The locale key an area's text alternative lives under. */
-function altKey(area: string): string {
-	return area.replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase());
+function altKey(area: MockupArea): CamelCase<MockupArea> {
+	return area.replace(/-(\w)/g, (_, letter: string) =>
+		letter.toUpperCase(),
+	) as CamelCase<MockupArea>;
 }
+
+/** A kebab-case area as the camelCase key its alt text is stored under. */
+type CamelCase<S extends string> = S extends `${infer Head}-${infer Tail}`
+	? `${Head}${Capitalize<CamelCase<Tail>>}`
+	: S;
 
 /** The opening tag carrying `marker`, so a test reads that element's attributes alone. */
 function openingTag(html: string, marker: string): string {

@@ -31,6 +31,13 @@ import {
 /** A network check a page can lead with. */
 export type NetworkCheck = "dns" | "tcp" | "ssl";
 
+/** The sidebar item each lead's monitors live under; a certificate is checked by an HTTP monitor. */
+const LEAD_NAVIGATION_ITEM = {
+	dns: "dnsMonitors",
+	tcp: "tcpMonitors",
+	ssl: "httpMonitors",
+} as const satisfies Record<NetworkCheck, string>;
+
 /** Tracked records: name, type, value and state key under `page.dnsMonitorDetail.records.state`. */
 const RECORDS = [
 	["example.com", "A", "203.0.113.10", "ok"],
@@ -135,9 +142,7 @@ export default function NetworkMockup(handle: Handle<{ t: Translate; lead: Netwo
 		return (
 			<MockupWindow
 				label={t(`landing.mockups.${lead}`)}
-				title={t(
-					`app.layout.sidebar.navigation.items.${lead === "ssl" ? "httpMonitors" : `${lead}Monitors`}`,
-				)}
+				title={t(`app.layout.sidebar.navigation.items.${LEAD_NAVIGATION_ITEM[lead]}`)}
 				active={lead === "ssl" ? "http" : lead}
 			>
 				<PageTitle title="example.com" />

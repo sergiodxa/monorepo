@@ -68,7 +68,9 @@ export interface TeamDigestMonitor {
  * the digests can ask for is greppable in the locale files, and total over the union so an
  * unnamed state is impossible.
  */
-export function teamDigestStatusKey(status: UptimeBar.Status): string {
+export function teamDigestStatusKey(
+	status: UptimeBar.Status,
+): `emails.teamDigest.status.${"up" | "degraded" | "down" | "noData"}` {
 	if (status === "up") return "emails.teamDigest.status.up";
 	if (status === "degraded") return "emails.teamDigest.status.degraded";
 	if (status === "down") return "emails.teamDigest.status.down";
@@ -76,7 +78,9 @@ export function teamDigestStatusKey(status: UptimeBar.Status): string {
 }
 
 /** The same, for the kind of monitor a row is about. */
-export function teamDigestTypeKey(type: DailyStatsMonitorType): string {
+export function teamDigestTypeKey(
+	type: DailyStatsMonitorType,
+): `emails.teamDigest.types.${DailyStatsMonitorType}` {
 	if (type === "http") return "emails.teamDigest.types.http";
 	if (type === "dns") return "emails.teamDigest.types.dns";
 	if (type === "tcp") return "emails.teamDigest.types.tcp";

@@ -24,6 +24,7 @@ import { badgeVariant } from "~/resources/components/badge";
 import RowMenu from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { flowIntervalLabel } from "~/resources/views/flow-monitors/interval-label";
 import { sharedFilterLabels } from "~/resources/views/shared/filter-labels";
 import ListKeys from "~/resources/views/shared/list-keys";
 import routes from "~/routes/web";
@@ -191,9 +192,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 															{t(`table.status.${status}`)}
 														</Table.StatusCell>
 														<Table.Cell>
-															{ctx.intl.t(
-																`page.createFlowMonitor.form.fields.interval.options.${monitor.interval_seconds}`,
-															)}
+															{flowIntervalLabel(ctx.intl.t, ctx.locale, monitor.interval_seconds)}
 														</Table.Cell>
 														<Table.DateCell
 															date={monitor.last_checked_at}

@@ -24,6 +24,13 @@ export const SUPPORTED_LANGUAGES: string[] = [...supportedLanguages];
 /** The language that answers a request asking for none the app speaks, and any key a bundle lacks. */
 export const FALLBACK_LANGUAGE = "en";
 
+declare module "@sdxc/i18n" {
+	/** Types every translator's keys and values by the English bundle, which every other language mirrors. */
+	interface I18nTypes {
+		messages: typeof en;
+	}
+}
+
 /** The message bundles, one per supported language. */
 export const RESOURCES = { en, es, de, ja, fr, it };
 

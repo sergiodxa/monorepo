@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { redirect } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -39,7 +41,7 @@ export const MONITOR_IMPORT_REPORT = "monitorImport";
  * translated message per field the schema named.
  */
 function importSubmission(
-	t: (key: string, values?: Record<string, unknown>) => string,
+	t: Translate,
 	values: FormData,
 	issues: ReadonlyArray<{
 		message: string;

@@ -7,7 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { LocaleMessages } from "@sdxc/i18n";
+
 import type { ApiKeyScope } from "~/database/schema";
+import type en from "~/resources/locales/en";
 
 export default {
 	mcp: {
@@ -16,10 +19,28 @@ export default {
 			description:
 				"Point an agent at Uptime over Streamable HTTP MCP. One API key with the mcp scope plus the resource scopes your tools need.",
 		},
-		heading: "エージェント向け Uptime",
-		description:
-			"The whole monitoring API is available as Model Context Protocol tools. Create monitors, read status, manage alerts, and more — from any MCP client that can reach a remote server.",
+		hero: {
+			title: "エージェントが",
+			highlight: "操作できる監視",
+			description:
+				"Streamable HTTP MCP で監視 API 全体をツールに。モニターの作成、ステータスの確認、アラートの管理を、リモートサーバーに届く任意のクライアントから行えます。",
+			ctaOut: "サインインして MCP を設定",
+		},
+		protocol: {
+			badge: "Streamable HTTP",
+		},
+		tools: {
+			badge: "エージェントファーストの監視",
+			title: "REST API をそのままツールに",
+			description:
+				"使い捨てのスクリプトはもう不要です。権限を絞った API キーをエージェントに渡せば、REST API と同じように Uptime を操作できます。",
+			api: "公開 API のすべての機能がツールになります。モニター、DNS、TCP、フロー、cron ジョブ、アラート、メンテナンス、ステータスページ、レポート、チーム管理。",
+			scopes: "接続には mcp 権限が必要で、その先は REST API と同じリソース権限を使います。",
+			remote:
+				"mcp-bridge（@sdxc/mcp）を通じて、プロトコル 2026-07-28 の Streamable HTTP で接続します。",
+		},
 		setup: {
+			badge: "セットアップ",
 			heading: "Connect your client",
 			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this mcp-bridge config into Cursor, Claude, or any stdio MCP client.",
 			stepTitles: {
@@ -35,19 +56,14 @@ export default {
 				configure: "Paste the mcp-bridge config into your client’s mcp.json.",
 				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
 			},
+			scopesNote:
+				"UPTIME_MCP_TOKEN に API キーを設定してください。接続には mcp 権限が必要で、さらに使いたいツールが求める権限もすべて付与します（例: monitors:read）。",
 			copy: "Copy config",
 			openKeys: "Open the dashboard",
 		},
-		sell: {
-			heading: "Agent-first monitoring",
-			body: "Skip writing one-off scripts. Give an agent a scoped API key and let it operate Uptime the same way the REST API does.",
-			points: {
-				api: "Every public API capability is a tool — monitors, DNS, TCP, flows, cron jobs, alerts, maintenance, status pages, reports, and team admin.",
-				scopes:
-					"Keys need the mcp scope to connect, then the same resource scopes the REST API already uses.",
-				remote:
-					"Connect over Streamable HTTP with protocol 2026-07-28 through mcp-bridge on @sdxc/mcp.",
-			},
+		finalCta: {
+			title: "エージェントに見張りを任せる",
+			body: "サインインし、mcp と必要なリソース権限を付けたキーを発行して、設定をクライアントに貼り付けてください。",
 			cta: "サインインして MCP を設定",
 		},
 	},
@@ -370,6 +386,62 @@ export default {
 				"ランディングページも決済 API も、その裏で動くジョブも、同じチェックでカバーします。",
 			learnMore: "詳細を見る",
 			tailoredFor: "対象ソリューション：",
+
+			websiteMonitoring: {
+				meta: {
+					title: "ウェブサイト監視 | Uptime",
+					description:
+						"世界 9 リージョンからウェブサイトの稼働状況とパフォーマンスを監視。応答時間と SSL 証明書を追跡し、ダウン時にはすぐにアラートを受け取れます。",
+				},
+			},
+
+			apiMonitoring: {
+				meta: {
+					title: "API 監視 | Uptime",
+					description:
+						"詳細なステータスチェックで REST API とエンドポイントを監視。レスポンスコードを追跡し、レイテンシを計測して、API の健全性を確認します。",
+				},
+			},
+
+			cronJobs: {
+				meta: {
+					title: "cron ジョブ監視 | Uptime",
+					description:
+						"スケジュールされたタスクと cron ジョブを監視。ジョブの遅延、実行ウィンドウの見逃し、未完了をアラートでお知らせします。",
+				},
+			},
+
+			healthcheck: {
+				meta: {
+					title: "ヘルスチェック監視 | Uptime",
+					description:
+						"サービスの自動ヘルスチェック。エンドポイント、データベース、内部サービスを任意の間隔で監視します。",
+				},
+			},
+
+			ecommerce: {
+				meta: {
+					title: "E コマース監視 | Uptime",
+					description:
+						"稼働監視でオンラインストアを守りましょう。チェックアウト、決済、商品ページを見張り、売上の損失を防ぎます。",
+				},
+			},
+
+			saas: {
+				meta: {
+					title: "SaaS アプリケーション監視 | Uptime",
+					description:
+						"包括的な監視で SaaS プロダクトの信頼性を保ちます。API、ダッシュボード、バックグラウンドジョブをひとつのプラットフォームで追跡できます。",
+				},
+			},
+
+			microservices: {
+				meta: {
+					title: "マイクロサービス監視 | Uptime",
+					description:
+						"分散システムとマイクロサービスアーキテクチャを監視。障害がインフラ全体に連鎖する前に検知します。",
+				},
+			},
 
 			list: {
 				websiteMonitoring: {
@@ -1800,6 +1872,13 @@ export default {
 					".input {$count :number}\n.match $count\n* {{{$date}はモニター{$count}件すべてが正常でした。}}",
 				summary:
 					".input {$count :number}\n.match $count\n* {{{$date}はモニター{$count}件中{$up}件が正常でした。}}",
+			},
+
+			traces: {
+				heading: "Performance トレースの準備ができました",
+				summary:
+					".input {$count :number}\n.match $count\n* {{昨日 {$count} 件のフローが Performance トレースを記録しました。7 日以内にダウンロードしてください。}}",
+				download: "{$monitor} のトレースをダウンロード",
 			},
 
 			weekly: {
@@ -5602,7 +5681,14 @@ export default {
 					tests: "テスト",
 					requests: "リクエスト",
 					duration: "所要時間",
+					trace: "トレース",
 				},
+			},
+
+			trace: {
+				download: "Performance トレースをダウンロード",
+				missing: "この実行には Performance トレースがありません。",
+				expired: "この Performance トレースは期限切れです。トレースは 7 日間保存されます。",
 			},
 		},
 
@@ -6802,4 +6888,4 @@ export default {
 			},
 		},
 	},
-};
+} satisfies LocaleMessages<typeof en>;

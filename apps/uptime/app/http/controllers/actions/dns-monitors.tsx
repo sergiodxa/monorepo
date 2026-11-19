@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
 import { currentLog } from "@sdxc/logger";
@@ -18,6 +20,7 @@ import { Session } from "remix/session";
 
 import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { DnsCheckStatus } from "~/app/services/dns/check";
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
 import type { ZoneFileRecord } from "~/app/services/zone-file";
 import type { SelectDnsMonitor } from "~/database/schema";
 
@@ -57,8 +60,10 @@ const ZONE_FILE_LIMIT_LABEL = `${MAX_ZONE_FILE_BYTES / 1024} KiB`;
  * too many names must be split across monitors — and both are decided before any query runs.
  */
 interface ZoneFileRefusal {
-	messageKey: string;
-	values: Record<string, string | number>;
+	messageKey:
+		| "actions.importDnsMonitorZoneFile.errors.tooLarge"
+		| "actions.importDnsMonitorZoneFile.errors.tooManyNames";
+	values: { limit: string | number };
 }
 
 /**
@@ -98,7 +103,11 @@ function readZoneFile(
 }
 
 /** Every field a DNS monitor form can flag, with the issue copy each shows when refused. */
-const FORM_FIELD_ISSUES: Record<string, string> = {
+const FORM_FIELD_ISSUES: Record<
+	string,
+	| `page.dnsMonitors.form.issues.${PrefixedKey<"page.dnsMonitors.form.issues">}`
+	| "actions.importDnsMonitorZoneFile.errors.generic"
+> = {
 	name: "page.dnsMonitors.form.issues.name",
 	domain: "page.dnsMonitors.form.issues.domain",
 	interval_seconds: "page.dnsMonitors.form.issues.interval",
@@ -112,7 +121,7 @@ const FORM_FIELD_ISSUES: Record<string, string> = {
  * form-wide summary the page already shows.
  */
 function dnsSubmission(
-	t: (key: string) => string,
+	t: Translate,
 	values: FormData,
 	issues: ReadonlyArray<{
 		message: string;

@@ -40,7 +40,7 @@ export const memberships = table({
 		updated_at: c.integer(),
 		subject_id: c.text(),
 		team_id: c.text(),
-		role: c.enum(["member", "admin"]).default("member"),
+		role: c.enum(["member", "admin"] as const).default("member"),
 		/**
 		 * When this membership was last sent the daily and the weekly team digest, or `null`
 		 * for one that never has been. Stamped per membership so one person in three teams
@@ -254,13 +254,13 @@ export const monitors = table({
 		author_id: c.text(),
 		name: c.text(),
 		url: c.text(),
-		method: c.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]).default("HEAD"),
+		method: c.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const).default("HEAD"),
 		expected_status: c.integer().default(200),
 		interval_seconds: c.integer().default(60),
 		degraded_after_ms: c.integer().default(5000),
 		timeout_seconds: c.integer().default(10),
 		location_hint: c
-			.enum(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"])
+			.enum(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const)
 			.default("wnam"),
 		ssl_monitoring_enabled: c.boolean().default(false),
 		ssl_expiry_warning_days: c.integer().default(30),
@@ -268,7 +268,7 @@ export const monitors = table({
 		ssl_issuer: c.text().nullable(),
 		ssl_last_checked_at: c.integer().nullable(),
 		ssl_status: c
-			.enum(["unknown", "valid", "expiring", "expired", "error"])
+			.enum(["unknown", "valid", "expiring", "expired", "error"] as const)
 			.nullable()
 			.default("unknown"),
 		/**
@@ -276,9 +276,9 @@ export const monitors = table({
 		 * overrides the logs; `transparency` is the newest valid certificate Certificate
 		 * Transparency logs hold for the monitor's host, refreshed by the daily check.
 		 */
-		ssl_expiry_source: c.enum(["manual", "transparency"]).default("transparency"),
+		ssl_expiry_source: c.enum(["manual", "transparency"] as const).default("transparency"),
 		/** The last log lookup's outcome; `null` until the first one runs. */
-		ssl_transparency_status: c.enum(["found", "not-found", "unavailable"]).nullable(),
+		ssl_transparency_status: c.enum(["found", "not-found", "unavailable"] as const).nullable(),
 		ssl_transparency_checked_at: c.integer().nullable(),
 		/**
 		 * What the last completed check classified this monitor as, when, and how long it
@@ -319,7 +319,7 @@ export const monitorContentChecks = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		monitor_id: c.text(),
-		type: c.enum(["contains", "not_contains", "regex"]),
+		type: c.enum(["contains", "not_contains", "regex"] as const),
 		value: c.text(),
 		case_sensitive: c.boolean().default(false),
 		is_enabled: c.boolean().default(true),
@@ -372,7 +372,7 @@ export const dnsMonitors = table({
 		next_due_at: c.integer().nullable(),
 		is_enabled: c.boolean().default(true),
 		last_checked_at: c.integer().nullable(),
-		last_status: c.enum(["ok", "changed", "error"]).nullable(),
+		last_status: c.enum(["ok", "changed", "error"] as const).nullable(),
 		/**
 		 * The registration's state from the last RDAP lookup. `unavailable` means
 		 * the registry has no record or no RDAP service; `error` means no lookup has succeeded
@@ -427,11 +427,22 @@ export const dnsMonitorRecords = table({
 		dns_monitor_id: c.text(),
 		/** Absolute owner name, lowercased, no trailing dot. The apex is `domain` itself. */
 		name: c.text(),
-		record_type: c.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS", "CAA", "TLSA", "DS", "SVCB"]),
+		record_type: c.enum([
+			"A",
+			"AAAA",
+			"CNAME",
+			"MX",
+			"TXT",
+			"NS",
+			"CAA",
+			"TLSA",
+			"DS",
+			"SVCB",
+		] as const),
 		/** Normalized RDATA, per-type folding applied at write time. Part of the identity. */
 		value: c.text(),
 		/** How this row first entered the table. */
-		source: c.enum(["resolver", "zone_file"]),
+		source: c.enum(["resolver", "zone_file"] as const),
 		/** Whether a deviation from this record alerts. Discovery-time default is `true`. */
 		is_enabled: c.boolean().default(true),
 		status: c.enum(dnsRecordStates),
@@ -450,7 +461,7 @@ export const dnsMonitorResults = table({
 	columns: {
 		id: c.text().primaryKey(),
 		dns_monitor_id: c.text(),
-		status: c.enum(["ok", "changed", "error"]),
+		status: c.enum(["ok", "changed", "error"] as const),
 		/**
 		 * Counters: one row per check of the monitor, so retention volume holds steady
 		 * regardless of how many names get swept. Each defaults to `0`, so a caller with
@@ -496,7 +507,7 @@ export const tcpMonitors = table({
 		next_due_at: c.integer().nullable(),
 		is_enabled: c.boolean().default(true),
 		last_checked_at: c.integer().nullable(),
-		last_status: c.enum(["up", "down", "timeout"]).nullable(),
+		last_status: c.enum(["up", "down", "timeout"] as const).nullable(),
 		last_response_time_ms: c.integer().nullable(),
 	},
 });
@@ -509,7 +520,7 @@ export const tcpMonitorResults = table({
 	columns: {
 		id: c.text().primaryKey(),
 		tcp_monitor_id: c.text(),
-		status: c.enum(["up", "down", "timeout"]),
+		status: c.enum(["up", "down", "timeout"] as const),
 		response_time_ms: c.integer().nullable(),
 		error_message: c.text().nullable(),
 		checked_at: c.integer(),
@@ -537,7 +548,7 @@ export const sslMonitors = table({
 		issuer: c.text().nullable(),
 		last_checked_at: c.integer().nullable(),
 		status: c
-			.enum(["unknown", "valid", "expiring", "expired", "error"])
+			.enum(["unknown", "valid", "expiring", "expired", "error"] as const)
 			.nullable()
 			.default("unknown"),
 	},
@@ -628,9 +639,9 @@ export const alerts = table({
 		 * means every monitor of every type. Cast because a nullable enum column infers as
 		 * `string | null`, which would otherwise leak into every scope comparison.
 		 */
-		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow"]).nullable() as ColumnBuilder<
-			"http" | "dns" | "tcp" | "cron" | "flow" | null
-		>,
+		monitor_type: c
+			.enum(["http", "dns", "tcp", "cron", "flow"] as const)
+			.nullable() as ColumnBuilder<"http" | "dns" | "tcp" | "cron" | "flow" | null>,
 		monitor_id: c.text().nullable(),
 		name: c.text(),
 		notify_on_recovery: c.boolean().default(true),
@@ -768,10 +779,12 @@ export const alertEvents = table({
 		sent_at: c.integer(),
 		alert_id: c.text(),
 		monitor_id: c.text(),
-		event_type: c.enum(["down", "up", "degraded"]),
+		event_type: c.enum(["down", "up", "degraded"] as const),
 		status: c.enum(alertEventStatuses),
 		error_message: c.text().nullable(),
-		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow", "ssl", "registration"]).nullable(),
+		monitor_type: c
+			.enum(["http", "dns", "tcp", "cron", "flow", "ssl", "registration"] as const)
+			.nullable(),
 		monitor_name: c.text().nullable(),
 		snapshot: (c.json() as ColumnBuilder<AlertEventSnapshot>).nullable(),
 		delivery_ref: (c.json() as ColumnBuilder<AlertDeliveryRef>).nullable(),
@@ -794,9 +807,9 @@ export const maintenanceWindows = table({
 		 * both columns means every monitor of every type. Cast because the nullable enum
 		 * infers as `string | null`, which would otherwise leak into scope comparisons.
 		 */
-		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow"]).nullable() as ColumnBuilder<
-			"http" | "dns" | "tcp" | "cron" | "flow" | null
-		>,
+		monitor_type: c
+			.enum(["http", "dns", "tcp", "cron", "flow"] as const)
+			.nullable() as ColumnBuilder<"http" | "dns" | "tcp" | "cron" | "flow" | null>,
 		monitor_id: c.text().nullable(),
 		name: c.text(),
 		starts_at: c.integer(),
@@ -949,7 +962,7 @@ export const monitorDailyStats = table({
 		id: c.text().primaryKey(),
 		created_at: c.integer(),
 		monitor_id: c.text(),
-		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow"]),
+		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow"] as const),
 		/**
 		 * @example "2026-02-14"
 		 */
@@ -960,7 +973,7 @@ export const monitorDailyStats = table({
 		avg_response_time_ms: c.integer().nullable(),
 		max_response_time_ms: c.integer().nullable(),
 		p95_response_time_ms: c.integer().nullable(),
-		status: c.enum(["up", "degraded", "down"]),
+		status: c.enum(["up", "degraded", "down"] as const),
 	},
 });
 

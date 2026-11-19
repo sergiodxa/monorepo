@@ -73,9 +73,9 @@ interface DailyPage {
 
 /**
  * The column keys are written untranslated in the standard dialect, the only one the API
- * sends, so its translator hands every key back as it came.
+ * sends, so its translator hands every key back as it came and reads no values.
  */
-function untranslated(key: string): string {
+function untranslated(key: string, ..._values: unknown[]): string {
 	return key;
 }
 

@@ -8,6 +8,7 @@
  */
 
 import type { RegisteredAccess } from "@sdxc/authz";
+import type { Translate } from "@sdxc/i18n";
 import type { JobEnqueuer } from "@sdxc/jobs";
 
 import { redirect } from "@sdxc/http/response";
@@ -22,6 +23,7 @@ import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { FormSubmission } from "~/app/http/validators/form-submission";
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { issueField, translateIssues } from "~/app/http/validators/form-submission";
@@ -42,7 +44,7 @@ const ACTIVATION_MONITOR_COUNT = 2;
 const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
 /** The `page.monitorForm.errors` key per field the create and update forms can flag. */
-const ISSUE_KEYS: Record<string, string> = {
+const ISSUE_KEYS: Record<string, Exclude<PrefixedKey<"page.monitorForm.errors">, "importUrls">> = {
 	name: "name",
 	url: "url",
 	expected_status: "expectedStatus",
@@ -56,7 +58,7 @@ const ISSUE_KEYS: Record<string, string> = {
  * `monitor_id`) names no visible field and is left out.
  */
 function monitorSubmission(
-	t: (key: string) => string,
+	t: Translate,
 	values: FormData,
 	issues: ReadonlyArray<{
 		message: string;
@@ -70,10 +72,10 @@ function monitorSubmission(
 
 	return {
 		values,
-		issues: translateIssues(visible, (field) => ({
-			field,
-			message: t(`page.monitorForm.errors.${ISSUE_KEYS[field ?? ""]}`),
-		})),
+		issues: translateIssues(visible, (field) => {
+			let key = ISSUE_KEYS[field ?? ""];
+			return { field, message: key === undefined ? "" : t(`page.monitorForm.errors.${key}`) };
+		}),
 	};
 }
 

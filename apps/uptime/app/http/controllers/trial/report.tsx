@@ -166,7 +166,7 @@ function segmentFill(status: UptimeBar.Status) {
 
 /** The locale key naming what one day of the bar reports, `noData` included. */
 function segmentLabelKey(status: UptimeBar.Status) {
-	return `page.trial.report.bar.status.${status ?? "noData"}`;
+	return `page.trial.report.bar.status.${status ?? "noData"}` as const;
 }
 
 /**

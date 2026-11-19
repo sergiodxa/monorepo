@@ -65,7 +65,9 @@ const DELETE_DIALOG_ID = "delete-dns-monitor";
  * lookup's error: the two answers about the name each name their own fix, and every other
  * failure is an outage retried on its own. `null` when the last lookup succeeded.
  */
-function registrationReasonKey(monitor: SelectDnsMonitor): string | null {
+function registrationReasonKey(
+	monitor: SelectDnsMonitor,
+): "notFound" | "unsupportedTld" | "failing" | null {
 	if (monitor.registration_error === null) return null;
 	if (monitor.registration_error === "not-found") return "notFound";
 	if (monitor.registration_error === "unsupported-tld") return "unsupportedTld";

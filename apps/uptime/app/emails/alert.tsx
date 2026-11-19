@@ -26,7 +26,9 @@ type Alert = EmailInput<EmailPropsOutput<typeof emails.alert>>;
  * event type so every key an email can ask for is greppable in the locale files. Total
  * over the column's plain string type, so an unrecognized value still names a state.
  */
-function statusKey(eventType: SelectAlertEvent["event_type"]): string {
+function statusKey(
+	eventType: SelectAlertEvent["event_type"],
+): `emails.alert.status.${"up" | "degraded" | "down"}` {
 	if (eventType === "up") return "emails.alert.status.up";
 	if (eventType === "degraded") return "emails.alert.status.degraded";
 	return "emails.alert.status.down";
@@ -37,7 +39,9 @@ function statusKey(eventType: SelectAlertEvent["event_type"]): string {
  * for the same reason {@link statusKey} is. Each key is a whole sentence, since the three
  * outcomes are distinct claims a translator states in their own language's word order.
  */
-function findingKey(kind: DnsFinding["kind"]): string {
+function findingKey(
+	kind: DnsFinding["kind"],
+): `emails.alert.values.dnsFinding.${"missing" | "changed" | "new"}` {
 	if (kind === "missing") return "emails.alert.values.dnsFinding.missing";
 	if (kind === "changed") return "emails.alert.values.dnsFinding.changed";
 	return "emails.alert.values.dnsFinding.new";

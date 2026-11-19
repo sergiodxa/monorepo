@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Messages } from "@sdxc/i18n";
-
 import { createI18n } from "@sdxc/i18n";
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
@@ -22,7 +20,7 @@ import en from "~/resources/locales/en";
 
 import AppShell from "./app-shell";
 
-const RESOURCES: Record<string, Messages> = { en, de };
+const RESOURCES = { en, de };
 
 /** Queues a toast so the flash region appears in the markup when rendering the shell in `locale`. */
 function render(locale: "en" | "de", data: AppShellData | null = null) {

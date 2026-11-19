@@ -23,11 +23,19 @@ import { RangeSlider } from "~/resources/components/range-slider";
 /** Cloudflare Durable Object location hints this app offers as monitoring regions. */
 const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
 
+/** A region hint the app offers. */
+export type LocationHint = (typeof LOCATION_HINTS)[number];
+
+/** Whether a stored hint is one the app still offers, and so has a label and an emoji. */
+export function isLocationHint(hint: string | null): hint is LocationHint {
+	return LOCATION_HINTS.some((offered) => offered === hint);
+}
+
 /**
  * Compact, representative animal emoji for each {@link LOCATION_HINTS} region hint,
  * spliced into its translated label wherever a region is named.
  */
-export const LOCATION_HINT_EMOJI: Record<(typeof LOCATION_HINTS)[number], string> = {
+export const LOCATION_HINT_EMOJI: Record<LocationHint, string> = {
 	wnam: "🦬",
 	enam: "🦅",
 	sam: "🦙",

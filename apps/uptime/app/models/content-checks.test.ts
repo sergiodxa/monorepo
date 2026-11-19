@@ -165,7 +165,9 @@ describe("evaluateContentChecks", () => {
 	});
 
 	test("an unrecognized type fails rather than passing silently", () => {
-		expect(evaluateContentChecks([check({ type: "jsonpath", value: "OK" })], "Status: OK")).toBe(
+		/** A row written before the column narrowed, or by hand, can hold a type the app never offers. */
+		let unknownType = "jsonpath" as SelectMonitorContentCheck["type"];
+		expect(evaluateContentChecks([check({ type: unknownType, value: "OK" })], "Status: OK")).toBe(
 			false,
 		);
 	});

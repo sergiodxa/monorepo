@@ -21,6 +21,7 @@ import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { FormSubmission } from "~/app/http/validators/form-submission";
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
 import type { SelectCronJobMonitor } from "~/database/schema";
 
 import {
@@ -39,7 +40,7 @@ import routes from "~/routes/web";
  * The `page.cronJobs.form.errors.*` message for each field the schema checks. The grace period
  * has no inline slot in its stepper, so its issue renders at the top of the form instead.
  */
-const FIELD_ERRORS: Record<string, string> = {
+const FIELD_ERRORS: Record<string, PrefixedKey<"page.cronJobs.form.errors">> = {
 	name: "name",
 	description: "description",
 	cron_expression: "cronExpression",
@@ -60,16 +61,17 @@ function formIssues(
 	t: Translate,
 	generic: string,
 ): Form.Issue[] {
-	let fields = new Set<string>();
+	let fields = new Map<string, PrefixedKey<"page.cronJobs.form.errors">>();
 	for (let issue of issues) {
 		let segment = issue.path?.[0];
 		let name = typeof segment === "object" ? String(segment.key) : String(segment);
-		if (name in FIELD_ERRORS) fields.add(name);
+		let key = FIELD_ERRORS[name];
+		if (key !== undefined) fields.set(name, key);
 	}
 	if (fields.size === 0) return [{ message: generic }];
 
-	return [...fields].map((name) => {
-		let message = t(`page.cronJobs.form.errors.${FIELD_ERRORS[name]}`);
+	return [...fields].map(([name, key]) => {
+		let message = t(`page.cronJobs.form.errors.${key}`);
 		return INLINE_FIELDS.has(name) ? { message, path: [name] } : { message };
 	});
 }

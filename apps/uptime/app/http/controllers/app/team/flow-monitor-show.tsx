@@ -31,6 +31,7 @@ import RowMenu from "~/resources/components/row-menu";
 import RunFlowButton, { FLOW_RESULTS_FRAME } from "~/resources/components/run-flow-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { flowIntervalLabel } from "~/resources/views/flow-monitors/interval-label";
 import routes from "~/routes/web";
 
 /** `error` is neutral, not `down`: it means this app could not find out. */
@@ -130,9 +131,7 @@ export default createAction(routes.app.team.flowMonitors.show, {
 					<div mix={[vstack({ gap: 8, align: "stretch" })]}>
 						<PropertyList>
 							<PropertyList.Item label={t("info.interval")}>
-								{ctx.intl.t(
-									`page.createFlowMonitor.form.fields.interval.options.${monitor.interval_seconds}`,
-								)}
+								{flowIntervalLabel(ctx.intl.t, ctx.locale, monitor.interval_seconds)}
 							</PropertyList.Item>
 							<PropertyList.Item label={t("info.lastChecked")}>
 								{monitor.last_checked_at === null ? null : (

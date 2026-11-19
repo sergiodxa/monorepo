@@ -16,6 +16,8 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
+
 import { CreateApiKeySchema, DeleteApiKeySchema } from "~/app/http/validators/api-key";
 import { issueField, translateIssues } from "~/app/http/validators/form-submission";
 import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
@@ -23,7 +25,10 @@ import NewApiKeyPage from "~/resources/views/api-keys/new-api-key-page";
 import routes from "~/routes/web";
 
 /** The `page.apiKeys.fieldErrors` key per field the form can flag. */
-const ISSUE_KEYS: Record<string, string> = { name: "name", scopes: "scopes" };
+const ISSUE_KEYS: Record<string, PrefixedKey<"page.apiKeys.fieldErrors">> = {
+	name: "name",
+	scopes: "scopes",
+};
 
 /**
  * POST /actions/:team/create-api-key. A rejected submission renders the new key form again with
@@ -41,10 +46,13 @@ export const createApiKey = createAction(routes.teamAdminActions.apiKey.create, 
 			: result.error.issues;
 		let issues: Form.Issue[] = translateIssues(
 			reported.filter((issue) => (issueField(issue) ?? "") in ISSUE_KEYS),
-			(field) => ({
-				field,
-				message: ctx.intl.t(`page.apiKeys.fieldErrors.${ISSUE_KEYS[field ?? ""]}`),
-			}),
+			(field) => {
+				let key = ISSUE_KEYS[field ?? ""];
+				return {
+					field,
+					message: key === undefined ? "" : ctx.intl.t(`page.apiKeys.fieldErrors.${key}`),
+				};
+			},
 		);
 		return ctx.render(<NewApiKeyPage submission={{ values: ctx.formData, issues }} />, {
 			status: 422,

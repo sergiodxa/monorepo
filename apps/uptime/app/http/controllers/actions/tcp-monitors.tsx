@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -16,6 +18,7 @@ import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { FormSubmission } from "~/app/http/validators/form-submission";
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
 
 import { translateIssues } from "~/app/http/validators/form-submission";
@@ -34,7 +37,7 @@ import NewTcpMonitorPage from "~/resources/views/tcp-monitors/new-page";
 import routes from "~/routes/web";
 
 /** The `page.tcpMonitors.form.issues` key per field the form can flag. */
-const ISSUE_KEYS: Record<string, string> = {
+const ISSUE_KEYS: Record<string, PrefixedKey<"page.tcpMonitors.form.issues">> = {
 	name: "name",
 	host: "host",
 	port: "port",
@@ -48,7 +51,7 @@ const ISSUE_KEYS: Record<string, string> = {
  * form-wide summary the page already shows.
  */
 function tcpSubmission(
-	t: (key: string) => string,
+	t: Translate,
 	values: FormData,
 	issues: ReadonlyArray<{
 		message: string;

@@ -37,9 +37,18 @@ namespace PricingEstimateView {
 		estimate: PricingEstimate;
 		t: Translate;
 		/** The pricing figures the copy quotes, already formatted for `locale`. */
-		values: Record<string, string>;
+		values: CopyValues;
 		/** The section anchor the form submits to, so the reloaded page opens on the bill. */
 		action: string;
+	}
+
+	/** Every figure the pricing copy quotes, each formatted for the reader's locale. */
+	export interface CopyValues {
+		price: string;
+		included: string;
+		blockPrice: string;
+		blockSize: string;
+		flowRunPrice: string;
 	}
 }
 
@@ -164,7 +173,7 @@ export default function PricingEstimateView(handle: Handle<PricingEstimateView.P
 					>
 						{STEPS.map((step) => (
 							<li key={step} mix={[vstack({ gap: 1, align: "stretch" })]}>
-								<strong>{t(`landing.pricing.howItWorks.list.${step}.title`, values)}</strong>
+								<strong>{t(`landing.pricing.howItWorks.list.${step}.title`)}</strong>
 								<span mix={[fontSize("sm"), fg("neutral.muted")]}>
 									{t(`landing.pricing.howItWorks.list.${step}.description`, values)}
 								</span>

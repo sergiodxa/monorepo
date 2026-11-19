@@ -18,6 +18,7 @@ import { Badge, LinkButton } from "@sdxc/ui";
 import { clearFiltersHref, Empty, FilterBar, paramValues, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
+import type { SelectAlertEvent } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import appShellData from "~/app/http/middleware/app-shell-data";
@@ -60,13 +61,11 @@ const EVENT_COLOR: Record<string, "danger" | "warning" | "success"> = {
 };
 
 /**
- * The translated label for an alert event's status; a status the locales have no copy for
- * reads as "skipped", so a status added to the database later still renders a label.
+ * The translated label for an alert event's status. Every status the database accepts has
+ * copy, so a status added to the schema fails to compile until the locales name it.
  */
-function statusLabel(t: Translate, status: string): string {
-	let key = `page.alertHistory.table.status.${status}`;
-	let label = t(key);
-	return label === key ? t("page.alertHistory.table.status.skipped") : label;
+function statusLabel(t: Translate, status: SelectAlertEvent["status"]): string {
+	return t(`page.alertHistory.table.status.${status}`);
 }
 
 /** The facet value a stored delivery status files under, folding every suppression into `skipped`. */

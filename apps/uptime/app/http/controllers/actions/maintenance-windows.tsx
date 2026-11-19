@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -17,6 +19,7 @@ import { Session } from "remix/session";
 import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { UptimeModels } from "~/app/models";
 import type { MonitorScope } from "~/app/services/monitor-scope";
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
 
 import { translateIssues } from "~/app/http/validators/form-submission";
 import {
@@ -44,7 +47,7 @@ async function resolveSubmittedScope(
 }
 
 /** The `page.maintenanceWindows.form.issues` key per field the form can flag. */
-const ISSUE_KEYS: Record<string, string> = {
+const ISSUE_KEYS: Record<string, PrefixedKey<"page.maintenanceWindows.form.issues">> = {
 	name: "name",
 	scope: "scope",
 	starts_at: "startsAt",
@@ -56,7 +59,7 @@ const ISSUE_KEYS: Record<string, string> = {
  * words. The one rule naming no field compares the two clocks, so it lands on the end time.
  */
 function windowSubmission(
-	t: (key: string) => string,
+	t: Translate,
 	values: FormData,
 	issues: ReadonlyArray<{
 		message: string;

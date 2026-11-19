@@ -136,7 +136,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						value="true"
 						defaultChecked={submittedChecked(submission, "is_enabled", monitor.is_enabled)}
 					>
-						{t("isEnabled.label")}
+						{intl.t("page.editTcpMonitor.form.fields.isEnabled.label")}
 					</Switch>
 				)}
 			</>

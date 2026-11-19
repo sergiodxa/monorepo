@@ -22,6 +22,7 @@ import { Session } from "remix/session";
 
 import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { FlowSourceInspection } from "~/app/services/flow-check";
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
 import type { SelectFlowMonitor } from "~/database/schema";
 
 import {
@@ -38,7 +39,7 @@ import NewFlowMonitorPage from "~/resources/views/flow-monitors/new-page";
 import routes from "~/routes/web";
 
 /** The `page.flowMonitors.form.errors.*` message for each field the schema checks. */
-const FIELD_ERRORS: Record<string, string> = {
+const FIELD_ERRORS: Record<string, PrefixedKey<"page.flowMonitors.form.errors">> = {
 	name: "name",
 	source: "source",
 	interval_seconds: "interval",
@@ -49,16 +50,17 @@ const FIELD_ERRORS: Record<string, string> = {
  * falling back to a form-level message when none names a known field.
  */
 function formIssues(issues: ValidationError["issues"], t: Translate): Form.Issue[] {
-	let fields = new Set<string>();
+	let fields = new Map<string, PrefixedKey<"page.flowMonitors.form.errors">>();
 	for (let issue of issues) {
 		let segment = issue.path?.[0];
 		let name = typeof segment === "object" ? String(segment.key) : String(segment);
-		if (name in FIELD_ERRORS) fields.add(name);
+		let key = FIELD_ERRORS[name];
+		if (key !== undefined) fields.set(name, key);
 	}
 	if (fields.size === 0) return [{ message: t("page.flowMonitors.form.errors.generic") }];
 
-	return [...fields].map((name) => ({
-		message: t(`page.flowMonitors.form.errors.${FIELD_ERRORS[name]}`),
+	return [...fields].map(([name, key]) => ({
+		message: t(`page.flowMonitors.form.errors.${key}`),
 		path: [name],
 	}));
 }

@@ -49,7 +49,7 @@ import { badgeVariant } from "~/resources/components/badge";
 import RunMonitorButton from "~/resources/components/run-monitor-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { LOCATION_HINT_EMOJI } from "~/resources/views/monitors/form";
+import { isLocationHint, LOCATION_HINT_EMOJI } from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
 
 /** The request's translator, as every section below receives it. */
@@ -400,9 +400,9 @@ function ConfigurationSection(handle: Handle<ConfigurationSection.Props>) {
 						label={t("page.monitorDetail.properties.region")}
 						empty={t("page.monitorDetail.properties.noRegion")}
 					>
-						{hint && hint in LOCATION_HINT_EMOJI
+						{isLocationHint(hint)
 							? t(`page.createMonitor.form.fields.region.options.${hint}`, {
-									emoji: LOCATION_HINT_EMOJI[hint as keyof typeof LOCATION_HINT_EMOJI],
+									emoji: LOCATION_HINT_EMOJI[hint],
 								})
 							: undefined}
 					</PropertyList.Item>
@@ -438,6 +438,7 @@ const SSL_TONE: Record<SslStatus, BadgeTone> = {
 	expiring: "degraded",
 	expired: "down",
 	unknown: "neutral",
+	error: "neutral",
 };
 
 namespace SslSection {

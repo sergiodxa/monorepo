@@ -6288,7 +6288,7 @@ export default {
 							"cron-jobs:delete":
 								"Delete cron jobs. Deleting one stops its ping URL from being accepted.",
 							mcp: "Reach the Streamable HTTP MCP endpoint. It grants no API ability on its own — also grant the resource scopes each tool needs.",
-						} satisfies Record<ApiKeyScope, string>,
+						} as const satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
 						label: "Expiration Date (Optional)",
@@ -6897,4 +6897,4 @@ export default {
 			},
 		},
 	},
-};
+} as const;

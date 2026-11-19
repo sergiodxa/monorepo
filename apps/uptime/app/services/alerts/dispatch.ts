@@ -484,7 +484,7 @@ export async function notifyDnsResult(
 	/** Only reachable with an `ok` status when the policy above found a recovery. */
 	let isRecovery = result.status === "ok";
 
-	let eventType = iife(() => {
+	let eventType = iife((): AlertEventType => {
 		if (isRecovery) return "up";
 		if (result.status === "error") return "down";
 		return "degraded";
@@ -524,7 +524,7 @@ export async function notifyTcpResult(
 	/** Only reachable with an `up` status when the policy above found a recovery. */
 	let isRecovery = result.status === "up";
 
-	let eventType = iife(() => {
+	let eventType = iife((): AlertEventType => {
 		if (isRecovery) return "up";
 		if (result.status === "down") return "down";
 		return "degraded";
@@ -566,7 +566,7 @@ export async function notifyCronJobResult(
 	/** Only reachable with a `healthy` status when the policy above found a recovery. */
 	let isRecovery = newStatus === "healthy";
 
-	let eventType = iife(() => {
+	let eventType = iife((): AlertEventType => {
 		if (isRecovery) return "up";
 		if (newStatus === "missed") return "down";
 		return "degraded";

@@ -121,7 +121,9 @@ export function TrialFooter(handle: Handle<TrialFooter.Props>) {
  * every key the emails can ask for is greppable in the locale files, the same way the
  * alert email spells its own out.
  */
-export function trialStatusKey(status: TrialStatus): string {
+export function trialStatusKey(
+	status: TrialStatus,
+): `emails.trial.status.${"up" | "degraded" | "down"}` {
 	if (status === "up") return "emails.trial.status.up";
 	if (status === "degraded") return "emails.trial.status.degraded";
 	return "emails.trial.status.down";

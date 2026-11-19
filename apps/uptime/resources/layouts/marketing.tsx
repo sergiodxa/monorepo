@@ -37,6 +37,9 @@ import { DialogDismiss } from "@sdxc/ui";
 import { SiteFooter, SiteHeader } from "@sdxc/ui/landing";
 import { landingContainer } from "@sdxc/ui/styles";
 
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
+
+import { withPrefix } from "~/app/services/prefixed-translate";
 import { BRAND_MARK_PATHS } from "~/config/brand";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import SiteOwnerCard from "~/resources/components/site-owner-card";
@@ -112,12 +115,15 @@ export function buildMarketingChrome(
 	let useCase = (slug: string) => routes.marketing.useCase.href({ slug });
 	let audience = (slug: string) => routes.marketing.audience.href({ slug });
 	let comparison = (slug: string) => routes.marketing.comparison.href({ slug });
-	let label = (key: string) => t(`landing.footer.sections.${key}`);
+	let label = withPrefix(t, "landing.footer.sections");
 	/**
 	 * Pairs a footer label with its one-line header description, so every mega-panel item
 	 * sets a second line beside its icon tile and the footer reuses the same label and href.
 	 */
-	let entry = (key: string, href: string): SiteHeader.Link => ({
+	let entry = (
+		key: PrefixedKey<"landing.footer.sections"> & PrefixedKey<"landing.header.descriptions">,
+		href: string,
+	): SiteHeader.Link => ({
 		label: label(key),
 		href,
 		description: t(`landing.header.descriptions.${key}`),

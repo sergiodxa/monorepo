@@ -278,36 +278,40 @@ export default createAction(routes.home, async (ctx) => {
 	 * Six of the smaller capabilities, two rows of three. API access is argued by the API
 	 * and MCP band above, so it is not repeated here.
 	 */
-	let CAPABILITIES = [
-		{
-			key: "maintenanceWindows",
-			icon: <CirclePauseIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
-		},
-		{
-			key: "contentMonitoring",
-			icon: <FileTextIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
-		},
-		{
-			key: "recoveryAlerts",
-			icon: <RefreshCwIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
-		},
-		{ key: "alertCooldowns", icon: <TimerIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
-		{ key: "customHeaders", icon: <CodeIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
-		{ key: "cronMonitoring", icon: <ClockIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
-	].map((feature) => ({
+	let CAPABILITIES = (
+		[
+			{
+				key: "maintenanceWindows",
+				icon: <CirclePauseIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			},
+			{
+				key: "contentMonitoring",
+				icon: <FileTextIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			},
+			{
+				key: "recoveryAlerts",
+				icon: <RefreshCwIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			},
+			{ key: "alertCooldowns", icon: <TimerIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
+			{ key: "customHeaders", icon: <CodeIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
+			{ key: "cronMonitoring", icon: <ClockIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
+		] as const
+	).map((feature) => ({
 		icon: feature.icon,
 		title: t(`landing.completeFeatureSet.list.${feature.key}.title`),
 		description: t(`landing.completeFeatureSet.list.${feature.key}.description`),
 	}));
 
-	let USE_CASE_LINKS = [
-		{ key: "websiteMonitoring", slug: "website-monitoring", Icon: GlobeIcon },
-		{ key: "apiMonitoring", slug: "api-monitoring", Icon: TerminalIcon },
-		{ key: "saas", slug: "saas", Icon: AppWindowIcon },
-		{ key: "microservices", slug: "microservices", Icon: BoxesIcon },
-		{ key: "healthChecks", slug: "healthcheck", Icon: HeartPulseIcon },
-		{ key: "ecommerce", slug: "ecommerce", Icon: ShoppingCartIcon },
-	].map((useCase) => ({
+	let USE_CASE_LINKS = (
+		[
+			{ key: "websiteMonitoring", slug: "website-monitoring", Icon: GlobeIcon },
+			{ key: "apiMonitoring", slug: "api-monitoring", Icon: TerminalIcon },
+			{ key: "saas", slug: "saas", Icon: AppWindowIcon },
+			{ key: "microservices", slug: "microservices", Icon: BoxesIcon },
+			{ key: "healthChecks", slug: "healthcheck", Icon: HeartPulseIcon },
+			{ key: "ecommerce", slug: "ecommerce", Icon: ShoppingCartIcon },
+		] as const
+	).map((useCase) => ({
 		icon: <useCase.Icon size={20} strokeWidth={1.5} aria-hidden="true" />,
 		href: routes.marketing.useCase.href({ slug: useCase.slug }),
 		title: t(`landing.useCases.list.${useCase.key}.title`),
@@ -319,11 +323,13 @@ export default createAction(routes.home, async (ctx) => {
 	 * each reads as a deliberate pick a visitor can act on. The other three stay reachable
 	 * through the header's solutions menu, the footer and the sitemap.
 	 */
-	let AUDIENCE_LINKS = [
-		{ key: "agencies", slug: "agencies" },
-		{ key: "soloDevelopers", slug: "solo-devs" },
-		{ key: "startups", slug: "startups" },
-	].map((audience) => ({
+	let AUDIENCE_LINKS = (
+		[
+			{ key: "agencies", slug: "agencies" },
+			{ key: "soloDevelopers", slug: "solo-devs" },
+			{ key: "startups", slug: "startups" },
+		] as const
+	).map((audience) => ({
 		href: routes.marketing.audience.href({ slug: audience.slug }),
 		label: t(`landing.useCases.audiences.${audience.key}`),
 	}));
@@ -345,43 +351,50 @@ export default createAction(routes.home, async (ctx) => {
 	 * The three reasons to keep reading, stated as checkable product facts: coverage,
 	 * usage accounting, and cost. The cost line interpolates {@link pricingCopyValues}.
 	 */
-	let BENEFITS = [
-		{
-			key: "everythingIncluded",
-			icon: <LayersIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
-		},
-		{ key: "noMonitorMath", icon: <UsersIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
-		{ key: "payForUsage", icon: <CreditCardIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
-	].map((benefit) => ({
+	let BENEFITS = (
+		[
+			{
+				key: "everythingIncluded",
+				icon: <LayersIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			},
+			{ key: "noMonitorMath", icon: <UsersIcon size={20} strokeWidth={1.5} aria-hidden="true" /> },
+			{
+				key: "payForUsage",
+				icon: <CreditCardIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			},
+		] as const
+	).map((benefit) => ({
 		icon: benefit.icon,
 		title: t(`landing.benefits.list.${benefit.key}.title`),
 		description: t(`landing.benefits.list.${benefit.key}.description`, pricingCopyValues),
 	}));
 
 	/** FAQ entries; the billing answers interpolate {@link pricingCopyValues}. */
-	let FAQS = [
-		"first",
-		"second",
-		"third",
-		"fourth",
-		"fifth",
-		"sixth",
-		"seventh",
-		"eighth",
-		"ninth",
-		"tenth",
-		"eleventh",
-		"twelfth",
-		"thirteenth",
-		"fourteenth",
-		"fifteenth",
-		"sixteenth",
-		"seventeenth",
-		"eighteenth",
-		"nineteenth",
-		"twentieth",
-		"twentyFirst",
-	].map((key) => ({
+	let FAQS = (
+		[
+			"first",
+			"second",
+			"third",
+			"fourth",
+			"fifth",
+			"sixth",
+			"seventh",
+			"eighth",
+			"ninth",
+			"tenth",
+			"eleventh",
+			"twelfth",
+			"thirteenth",
+			"fourteenth",
+			"fifteenth",
+			"sixteenth",
+			"seventeenth",
+			"eighteenth",
+			"nineteenth",
+			"twentieth",
+			"twentyFirst",
+		] as const
+	).map((key) => ({
 		question: t(`landing.faq.list.${key}.q`),
 		answer: t(`landing.faq.list.${key}.a`, pricingCopyValues),
 	}));

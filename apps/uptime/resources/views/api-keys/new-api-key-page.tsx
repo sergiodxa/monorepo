@@ -145,9 +145,7 @@ export default function NewApiKeyPage(handle: Handle<NewApiKeyPage.Props>) {
 												{scope}
 											</Checkbox>
 											<Description id={descriptionId(scope)} mix={pis("1.75rem")}>
-												{t(`page.apiKeys.form.fields.scopes.descriptions.${scope}`, {
-													nsSeparator: false,
-												})}
+												{t(`page.apiKeys.form.fields.scopes.descriptions.${scope}`)}
 											</Description>
 										</div>
 									))}

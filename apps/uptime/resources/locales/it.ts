@@ -7,7 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { LocaleMessages } from "@sdxc/i18n";
+
 import type { ApiKeyScope } from "~/database/schema";
+import type en from "~/resources/locales/en";
 
 export default {
 	mcp: {
@@ -16,10 +19,29 @@ export default {
 			description:
 				"Point an agent at Uptime over Streamable HTTP MCP. One API key with the mcp scope plus the resource scopes your tools need.",
 		},
-		heading: "Uptime per gli agent",
-		description:
-			"The whole monitoring API is available as Model Context Protocol tools. Create monitors, read status, manage alerts, and more — from any MCP client that can reach a remote server.",
+		hero: {
+			title: "Monitoraggio che gli agent possono",
+			highlight: "gestire",
+			description:
+				"Streamable HTTP MCP trasforma l'intera API di monitoraggio in strumenti — crea monitor, leggi lo stato, gestisci gli avvisi — da qualsiasi client in grado di raggiungere un server remoto.",
+			ctaOut: "Accedi per configurare MCP",
+		},
+		protocol: {
+			badge: "Streamable HTTP",
+		},
+		tools: {
+			badge: "Monitoraggio pensato per gli agent",
+			title: "L'API REST, come strumenti",
+			description:
+				"Basta script usa e getta. Dai a un agent una chiave API con permessi mirati e lascia che gestisca Uptime come fa l'API REST.",
+			api: "Ogni funzionalità dell'API pubblica è uno strumento: monitor, DNS, TCP, flussi, cron job, avvisi, manutenzione, pagine di stato, report e amministrazione del team.",
+			scopes:
+				"Le chiavi hanno bisogno del permesso mcp per connettersi, poi degli stessi permessi sulle risorse che l'API REST usa già.",
+			remote:
+				"Connettiti tramite Streamable HTTP con il protocollo 2026-07-28 attraverso mcp-bridge su @sdxc/mcp.",
+		},
 		setup: {
+			badge: "La tua configurazione",
 			heading: "Connect your client",
 			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this mcp-bridge config into Cursor, Claude, or any stdio MCP client.",
 			stepTitles: {
@@ -35,19 +57,14 @@ export default {
 				configure: "Paste the mcp-bridge config into your client’s mcp.json.",
 				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
 			},
+			scopesNote:
+				"Imposta UPTIME_MCP_TOKEN con la tua chiave API. Le chiavi hanno bisogno del permesso mcp per connettersi, più ogni altro permesso già richiesto dagli strumenti che vuoi usare (ad esempio monitors:read).",
 			copy: "Copy config",
 			openKeys: "Open the dashboard",
 		},
-		sell: {
-			heading: "Agent-first monitoring",
-			body: "Skip writing one-off scripts. Give an agent a scoped API key and let it operate Uptime the same way the REST API does.",
-			points: {
-				api: "Every public API capability is a tool — monitors, DNS, TCP, flows, cron jobs, alerts, maintenance, status pages, reports, and team admin.",
-				scopes:
-					"Keys need the mcp scope to connect, then the same resource scopes the REST API already uses.",
-				remote:
-					"Connect over Streamable HTTP with protocol 2026-07-28 through mcp-bridge on @sdxc/mcp.",
-			},
+		finalCta: {
+			title: "Metti un agent di guardia",
+			body: "Accedi, crea una chiave con mcp e i permessi sulle risorse che ti servono, poi incolla la configurazione nel tuo client.",
 			cta: "Accedi per configurare MCP",
 		},
 	},
@@ -372,6 +389,62 @@ export default {
 				"Gli stessi controlli coprono una landing page, un'API di pagamento e i job che ci sono dietro.",
 			learnMore: "Scopri di più",
 			tailoredFor: "Soluzioni su misura per:",
+
+			websiteMonitoring: {
+				meta: {
+					title: "Monitoraggio siti web | Uptime",
+					description:
+						"Monitora disponibilità e prestazioni del tuo sito da 9 regioni nel mondo. Tieni traccia dei tempi di risposta e dei certificati SSL e ricevi avvisi immediati in caso di down.",
+				},
+			},
+
+			apiMonitoring: {
+				meta: {
+					title: "Monitoraggio API | Uptime",
+					description:
+						"Monitora API REST ed endpoint con controlli di stato dettagliati. Tieni traccia dei codici di risposta, misura la latenza e verifica lo stato di salute della tua API.",
+				},
+			},
+
+			cronJobs: {
+				meta: {
+					title: "Monitoraggio cron job | Uptime",
+					description:
+						"Monitora attività pianificate e cron job. Ricevi un avviso quando un job è in ritardo, salta la sua finestra o non termina.",
+				},
+			},
+
+			healthcheck: {
+				meta: {
+					title: "Monitoraggio health check | Uptime",
+					description:
+						"Health check automatici per i tuoi servizi. Monitora endpoint, database e servizi interni con intervalli personalizzabili.",
+				},
+			},
+
+			ecommerce: {
+				meta: {
+					title: "Monitoraggio e-commerce | Uptime",
+					description:
+						"Proteggi il tuo negozio online con il monitoraggio della disponibilità. Tieni d'occhio checkout, pagamenti e pagine prodotto per non perdere vendite.",
+				},
+			},
+
+			saas: {
+				meta: {
+					title: "Monitoraggio applicazioni SaaS | Uptime",
+					description:
+						"Mantieni affidabile il tuo prodotto SaaS con un monitoraggio completo. Tieni d'occhio API, dashboard e job in background su un'unica piattaforma.",
+				},
+			},
+
+			microservices: {
+				meta: {
+					title: "Monitoraggio microservizi | Uptime",
+					description:
+						"Monitora sistemi distribuiti e architetture a microservizi. Individua i guasti prima che si propaghino nella tua infrastruttura.",
+				},
+			},
 
 			list: {
 				websiteMonitoring: {
@@ -1835,6 +1908,13 @@ export default {
 					".input {$count :number}\n.match $count\none {{Il monitor del team è stato attivo il {$date}.}}\n* {{Tutti e {$count} i monitor erano attivi il {$date}.}}",
 				summary:
 					".input {$count :number}\n.match $count\none {{Il monitor del team non è stato attivo il {$date}.}}\n* {{{$up} monitor su {$count} erano attivi il {$date}.}}",
+			},
+
+			traces: {
+				heading: "Tracce Performance pronte",
+				summary:
+					".input {$count :number}\n.match $count\none {{Ieri un flusso ha registrato una traccia Performance. Scaricala entro 7 giorni.}}\n* {{Ieri {$count} flussi hanno registrato una traccia Performance. Scaricale entro 7 giorni.}}",
+				download: "Scarica la traccia di {$monitor}",
 			},
 
 			weekly: {
@@ -5671,7 +5751,14 @@ export default {
 					tests: "Test",
 					requests: "Richieste",
 					duration: "Durata",
+					trace: "Traccia",
 				},
+			},
+
+			trace: {
+				download: "Scarica la traccia Performance",
+				missing: "Questa esecuzione non ha una traccia Performance.",
+				expired: "Questa traccia Performance è scaduta. Le tracce vengono conservate per 7 giorni.",
 			},
 		},
 
@@ -6881,4 +6968,4 @@ export default {
 			},
 		},
 	},
-};
+} satisfies LocaleMessages<typeof en>;

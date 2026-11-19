@@ -9,7 +9,7 @@
  */
 
 import type { InvalidCronReason } from "@sdxc/cron";
-import type { Messages, Translate } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 
 import { Schedule } from "@sdxc/cron";
 import { createI18n } from "@sdxc/i18n";
@@ -24,7 +24,7 @@ import fr from "~/resources/locales/fr";
 import it from "~/resources/locales/it";
 import ja from "~/resources/locales/ja";
 
-const LOCALES: Record<string, Messages> = { en, es, de, fr, it, ja };
+const LOCALES = { en, es, de, fr, it, ja };
 
 /** The translator for one language, as a controller would hand it to the helpers. */
 function translator(language: string): Translate {

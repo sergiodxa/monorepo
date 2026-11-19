@@ -15,6 +15,7 @@ import { streamify } from "@sdxc/csv";
 import { isWholeMonth } from "@sdxc/dates";
 
 import type { Report } from "~/app/models/reports";
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
 import type { ReportDialect } from "~/app/services/reports/dialect";
 
 import { numberCell } from "~/app/services/reports/dialect";
@@ -144,15 +145,20 @@ function reportPeriod(range: DayRange): string {
  * @param t - The translator
  * @returns The CSV columns
  */
-function columns<Key extends string>(
+function columns<Key extends PrefixedKey<"page.reports.columns">>(
 	keys: readonly Key[],
 	dialect: ReportDialect,
 	t: Translate,
 ): Column<Record<Key, Cell>>[] {
 	return keys.map((key) => ({
 		key,
-		header: dialect.translateHeaders ? t(`page.reports.columns.${key}`) : key,
+		header: dialect.translateHeaders ? columnHeader(key, t) : key,
 	}));
+}
+
+/** The translated heading of the column `key`. */
+function columnHeader(key: PrefixedKey<"page.reports.columns">, t: Translate): string {
+	return t(`page.reports.columns.${key}`);
 }
 
 /**

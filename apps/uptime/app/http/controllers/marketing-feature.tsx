@@ -50,7 +50,7 @@ import {
 	MCP_JSON,
 	ZONE_FILE,
 } from "~/resources/content/code-samples";
-import { features } from "~/resources/content/marketing";
+import { features, isFeatureSlug } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import NotFoundView from "~/resources/views/not-found";
@@ -166,7 +166,7 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 	let chrome = buildMarketingChrome(t);
 
 	let content = features[slug];
-	if (!content) {
+	if (!content || !isFeatureSlug(slug)) {
 		let props = {
 			title: t("notFound.title"),
 			description: t("notFound.description"),

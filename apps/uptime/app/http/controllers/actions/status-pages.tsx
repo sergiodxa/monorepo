@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -26,11 +28,16 @@ import { listScopeMonitors } from "~/app/services/scope-monitors";
 import routes from "~/routes/web";
 
 /** The fields the form can flag; an issue elsewhere reads as the form's own. */
-const ISSUE_FIELDS = new Set(["name", "slug", "title"]);
+const ISSUE_FIELDS = ["name", "slug", "title"] as const;
+
+/** Whether `field` is one the form flags under its own input. */
+function isIssueField(field: string | undefined): field is (typeof ISSUE_FIELDS)[number] {
+	return ISSUE_FIELDS.some((issueField) => issueField === field);
+}
 
 /** The submission as the form page renders it again, each schema issue in the page's own words. */
 function pageSubmission(
-	t: (key: string) => string,
+	t: Translate,
 	values: FormData,
 	issues: ReadonlyArray<{
 		message: string;
@@ -40,7 +47,7 @@ function pageSubmission(
 	return {
 		values,
 		issues: translateIssues(issues, (field) =>
-			field !== undefined && ISSUE_FIELDS.has(field)
+			isIssueField(field)
 				? { field, message: t(`page.statusPages.form.issues.${field}`) }
 				: { field: undefined, message: t("page.statusPages.form.issues.generic") },
 		),
@@ -48,7 +55,7 @@ function pageSubmission(
 }
 
 /** The issue a slug another page already uses renders under the slug field. */
-function slugTaken(t: (key: string) => string, values: FormData): FormSubmission {
+function slugTaken(t: Translate, values: FormData): FormSubmission {
 	return {
 		values,
 		issues: [{ message: t("page.statusPages.form.issues.slugTaken"), path: ["slug"] }],

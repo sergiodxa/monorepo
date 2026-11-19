@@ -133,7 +133,7 @@ describe("dns-monitor-card-results", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		for (let status of ["ok", "ok", "ok", "error"]) {
+		for (let status of ["ok", "ok", "ok", "error"] as const) {
 			await db.create(dnsMonitorResults, {
 				id: generateUUID(),
 				dns_monitor_id: monitor.id,

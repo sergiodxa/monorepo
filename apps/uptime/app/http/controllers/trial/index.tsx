@@ -774,7 +774,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 						inset
 						eyebrow={t("page.trial.cta.badge")}
 						title={t("page.trial.cta.title", { price })}
-						description={t("page.trial.cta.description", { price, days })}
+						description={t("page.trial.cta.description")}
 						actions={
 							<>
 								<LinkButton href={routes.app.index.href()} color="neutral" size="lg">

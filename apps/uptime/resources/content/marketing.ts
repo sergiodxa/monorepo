@@ -211,8 +211,8 @@ const DEFAULT_STEPS: MarketingContent.Step[] = [
 	},
 ];
 
-/** `/features/:slug` content, keyed by slug. */
-export const features: Record<string, MarketingContent.Page> = {
+/** `/features/:slug` content, keyed by slug; {@link FeatureSlug} reads its keys. */
+const FEATURE_PAGES = {
 	monitors: {
 		slug: "monitors",
 		metaTitle: "HTTP Monitoring | Uptime Monitors",
@@ -1095,7 +1095,18 @@ export const features: Record<string, MarketingContent.Page> = {
 			},
 		],
 	},
-};
+} satisfies Record<string, MarketingContent.Page>;
+
+/** A `/features/:slug` page's slug; each one's headline band is translated under its name. */
+export type FeatureSlug = keyof typeof FEATURE_PAGES;
+
+/** `/features/:slug` content, keyed by slug. */
+export const features: Record<string, MarketingContent.Page> = FEATURE_PAGES;
+
+/** Whether `slug` names a feature page, so its translated headline band can be read. */
+export function isFeatureSlug(slug: string): slug is FeatureSlug {
+	return Object.hasOwn(FEATURE_PAGES, slug);
+}
 
 /** `/for/:slug` content, keyed by audience slug. */
 export const audiences: Record<string, MarketingContent.Page> = {

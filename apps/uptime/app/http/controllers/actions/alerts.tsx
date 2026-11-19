@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -18,6 +20,7 @@ import { Session } from "remix/session";
 import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { UptimeModels } from "~/app/models";
 import type { MonitorScope } from "~/app/services/monitor-scope";
+import type { PrefixedKey } from "~/app/services/prefixed-translate";
 import type { AlertConfig } from "~/database/schema";
 
 import {
@@ -98,7 +101,7 @@ const CHANNEL_FIELD: Record<CreateAlertValues["strategy"], string> = {
 };
 
 /** The `page.alerts.form.issues` key per field the form can flag. */
-const ISSUE_KEYS: Record<string, string> = {
+const ISSUE_KEYS: Record<string, PrefixedKey<"page.alerts.form.issues">> = {
 	name: "name",
 	scope: "scope",
 	strategy: "strategy",
@@ -116,7 +119,7 @@ const ISSUE_KEYS: Record<string, string> = {
  * channel requires, which is the one the person sees.
  */
 function alertSubmission(
-	t: (key: string, values?: Record<string, unknown>) => string,
+	t: Translate,
 	values: FormData,
 	issues: ReadonlyArray<{
 		message: string;

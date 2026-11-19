@@ -35,11 +35,11 @@ import StatCard from "~/resources/components/stat-card";
 import Sparkline from "~/resources/views/monitors/sparkline";
 
 /** The dashboard table's status label for each badge tone. */
-const STATUS_KEY: Record<Exclude<BadgeTone, "neutral">, string> = {
+const STATUS_KEY = {
 	up: "page.dashboard.table.status.up",
 	degraded: "page.dashboard.table.status.degraded",
 	down: "page.dashboard.table.status.down",
-};
+} as const satisfies Record<Exclude<BadgeTone, "neutral">, string>;
 
 /** Draws the dashboard with the example monitors. */
 export default function DashboardMockup(handle: Handle<{ t: Translate }>) {
