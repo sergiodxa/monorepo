@@ -540,9 +540,11 @@ Calendars, schedules and finding a time together.
 
 - `TimeGrid` — day, multi-day or week columns of hours: overlapping events side by side, an all-day
   lane, an hour column per time zone and a moving now line; with `edit`, a drag creates, moves or
-  resizes an event and Alt+arrows move the focused one, each posting a form.
+  resizes an event and Alt+arrows move the focused one, each posting a form; with `pages`, a swipe
+  on a touch screen follows the previous or next range.
 - `MonthView`, `Agenda`, `DayStrip` — a month of day cells with bars and "+N more", an agenda grouped
   by day, and a phone's scrolling strip of days with a note under each.
+- `YearView` — twelve small months whose day dots weigh how busy each day is, every day a link.
 - `FreeBusy` — people's busy times side by side over one day, with outside-hours hatching and the
   free slots everyone can make.
 - `layoutTimedItems()`, `layoutSpanItems()` — the overlap columns and all-day rows the views place

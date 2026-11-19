@@ -12,4 +12,5 @@ export * from "./day-strip.js";
 export * from "./free-busy.js";
 export * from "./month-view.js";
 export * from "./time-grid.js";
+export * from "./year-view.js";
 export * from "./utils/time-grid-layout.js";

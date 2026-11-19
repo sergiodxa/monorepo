@@ -70,7 +70,7 @@ export const timeGridDrag: MixinFactory<HTMLElement, [options: TimeGridDragOptio
 	handle.addEventListener("insert", (event: { node: HTMLElement }) => {
 		let grid = event.node.closest<HTMLElement>('[data-slot="time-grid"]');
 		if (!grid) return;
-		cleanup.push(openScroll(grid), tickNow(grid), drag(grid), keys(grid));
+		cleanup.push(openScroll(grid), tickNow(grid), drag(grid), keys(grid), swipe(grid));
 	});
 
 	handle.addEventListener("remove", () => {
@@ -109,6 +109,57 @@ export const timeGridDrag: MixinFactory<HTMLElement, [options: TimeGridDragOptio
 			pendingFocus = null;
 		}
 		return () => body.removeEventListener("scroll", remember);
+	}
+
+	/**
+	 * Follows the grid's previous or next link on a quick horizontal swipe of a finger across the
+	 * hours, sliding the columns with the finger meanwhile; a press on an editable event is a
+	 * drag instead, and a mostly vertical stroke stays a scroll.
+	 */
+	function swipe(grid: HTMLElement): () => void {
+		let previous = grid.querySelector<HTMLAnchorElement>('[data-slot="time-grid-previous"]');
+		let next = grid.querySelector<HTMLAnchorElement>('[data-slot="time-grid-next"]');
+		let body = grid.querySelector<HTMLElement>('[data-slot="time-grid-body"]');
+		let canvas = grid.querySelector<HTMLElement>('[data-slot="time-grid-canvas"]');
+		if (!previous || !next || !body || !canvas) return () => {};
+		let start: { x: number; y: number; at: number; id: number } | null = null;
+		let slide = (offset: number) => {
+			canvas.style.transform = offset === 0 ? "" : `translateX(${offset}px)`;
+		};
+		let down = (event: PointerEvent) => {
+			if (event.pointerType !== "touch") return;
+			if ((event.target as HTMLElement).closest("[data-editable]")) return;
+			start = { x: event.clientX, y: event.clientY, at: event.timeStamp, id: event.pointerId };
+		};
+		let move = (event: PointerEvent) => {
+			if (!start || event.pointerId !== start.id) return;
+			let dx = event.clientX - start.x;
+			if (Math.abs(dx) > Math.abs(event.clientY - start.y)) slide(dx * 0.4);
+		};
+		let up = (event: PointerEvent) => {
+			if (!start || event.pointerId !== start.id) return;
+			let dx = event.clientX - start.x;
+			let dy = event.clientY - start.y;
+			let quick = event.timeStamp - start.at < 700;
+			start = null;
+			slide(0);
+			if (!quick || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 2) return;
+			(dx > 0 ? previous : next).click();
+		};
+		let cancel = () => {
+			start = null;
+			slide(0);
+		};
+		body.addEventListener("pointerdown", down);
+		window.addEventListener("pointermove", move);
+		window.addEventListener("pointerup", up);
+		window.addEventListener("pointercancel", cancel);
+		return () => {
+			body.removeEventListener("pointerdown", down);
+			window.removeEventListener("pointermove", move);
+			window.removeEventListener("pointerup", up);
+			window.removeEventListener("pointercancel", cancel);
+		};
 	}
 
 	/** Moves the now line on from the minute the server read, hiding it once the day is over. */

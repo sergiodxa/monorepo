@@ -154,6 +154,11 @@ export namespace TimeGrid {
 		/** Formats the day headers and the times a change announces. @default "en" */
 		locale?: string;
 		edit?: Edit;
+		/**
+		 * The previous and next ranges' addresses, which a horizontal swipe on a touch screen
+		 * follows; keep visible arrows beside the grid, since a swipe has no affordance.
+		 */
+		pages?: { previous: string; next: string };
 		labels: Labels;
 	}
 }
@@ -303,6 +308,7 @@ export function TimeGrid(handle: Handle<TimeGrid.Props>) {
 			scrollTo = 480,
 			locale = "en",
 			edit,
+			pages,
 			labels,
 			mix,
 			...rest
@@ -563,6 +569,7 @@ export function TimeGrid(handle: Handle<TimeGrid.Props>) {
 							overflowX: "hidden",
 							overscrollBehavior: "contain",
 							scrollbarGutter: "stable",
+							touchAction: "pan-y pinch-zoom",
 						}),
 					]}
 				>
@@ -698,6 +705,12 @@ export function TimeGrid(handle: Handle<TimeGrid.Props>) {
 						})}
 					</div>
 				</div>
+				{pages === undefined ? null : (
+					<>
+						<a hidden href={pages.previous} data-slot="time-grid-previous" tabIndex={-1} />
+						<a hidden href={pages.next} data-slot="time-grid-next" tabIndex={-1} />
+					</>
+				)}
 				{edit?.create ? <EditForm kind="create" form={edit.create} /> : null}
 				{edit?.move ? <EditForm kind="move" form={edit.move} /> : null}
 				<span
