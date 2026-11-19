@@ -1204,6 +1204,14 @@
         "remix": "3.2.0",
       },
     },
+    "packages/facets": {
+      "name": "@sdxc/facets",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+      },
+    },
     "packages/feed": {
       "name": "@sdxc/feed",
       "version": "0.0.1",
@@ -3446,6 +3454,8 @@
     "@sdxc/epub": ["@sdxc/epub@workspace:packages/epub"],
 
     "@sdxc/expression": ["@sdxc/expression@workspace:packages/expression"],
+
+    "@sdxc/facets": ["@sdxc/facets@workspace:packages/facets"],
 
     "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
 

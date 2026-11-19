@@ -1,0 +1,17 @@
+{
+	"name": "@sdxc/facets",
+	"version": "0.0.1",
+	"description": "Faceted filtering over in-memory records: URL filters, disjunctive facet counts and range buckets",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*"
+	}
+}

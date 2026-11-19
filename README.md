@@ -265,6 +265,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/robots](packages/robots)             | Read, write and evaluate robots.txt and robots directives                                              |
 | [@sdxc/rss](packages/rss)                   | RSS 2.0 feed builder and parser                                                                        |
 | [@sdxc/search](packages/search)             | Full-text search over SQLite tables: safe query parsing, FTS5 and LIKE matching, ranking, highlighting |
+| [@sdxc/facets](packages/facets)             | Faceted filtering over in-memory records: URL filters, disjunctive facet counts and range buckets      |
 | [@sdxc/seo](packages/seo)                   | Canonical URLs, schema.org builders and head metadata                                                  |
 | [@sdxc/sitemap](packages/sitemap)           | Sitemap generation and parsing                                                                         |
 | [@sdxc/webmention](packages/webmention)     | Receive, verify, discover and send Webmentions                                                         |
