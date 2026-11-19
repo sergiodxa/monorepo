@@ -351,6 +351,10 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/demo-apps/stream")),
 	);
 	router.map(
+		routes.demoFiles.app,
+		lazy(() => import("~/app/http/controllers/demo-apps/file")),
+	);
+	router.map(
 		routes.demoMedia,
 		lazy(() => import("~/app/http/controllers/demo-media")),
 	);

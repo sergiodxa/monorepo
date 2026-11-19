@@ -101,6 +101,7 @@ export default createAction(routes.sitemap, async (ctx) => {
 		demoApps: false,
 		demoFrames: false,
 		demoStreams: false,
+		demoFiles: false,
 		demoMedia: false,
 	});
 

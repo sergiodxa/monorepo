@@ -214,5 +214,12 @@ export default route({
 	demoStreams: {
 		app: get("/demo/apps/:app/streams/*part"),
 	},
+	/**
+	 * A file a demo app offers to download or subscribe to, such as a calendar's `.ics`, answered
+	 * with the app's own content type under the app's path, so its cookies reach it.
+	 */
+	demoFiles: {
+		app: get("/demo/apps/:app/files/*part"),
+	},
 	demoMedia: get("/demo/media/*file"),
 });

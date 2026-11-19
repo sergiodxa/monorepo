@@ -117,6 +117,11 @@ export interface DemoApp {
 	 */
 	stream?: (part: string, request: DemoAppRequest) => ReadableStream<string> | null;
 	/**
+	 * Answers a file the app offers at `/demo/apps/:app/files/*part`, such as a calendar's `.ics`
+	 * to download or subscribe to, with its own content type and headers. `null` answers `404`.
+	 */
+	file?: (part: string, request: DemoAppRequest) => Response | null | Promise<Response | null>;
+	/**
 	 * Renders the content of the named `<Frame>` a screen mounts with the screen's own address
 	 * as its `src`, for a request carrying that name in `X-Remix-Target`: a link, a form or the
 	 * frame's first render. `null` for a name the screen does not own answers the whole screen.
