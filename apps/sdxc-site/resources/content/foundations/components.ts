@@ -289,6 +289,16 @@ const COMPONENTS: Foundations = {
 					default: "set by AspectRatio from ratio; 1",
 					controls: "The box's aspect ratio.",
 				},
+				{
+					name: "--ui-letterbox-ratio",
+					default: "set by Letterbox from ratio; 16 / 9",
+					controls: "Width divided by height of `Letterbox.Surface`, as a number.",
+				},
+				{
+					name: "--ui-letterbox-bars",
+					default: "#000",
+					controls: "Colour of the bars a `Letterbox` paints beside its surface.",
+				},
 			],
 		},
 		{

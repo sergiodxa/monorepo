@@ -301,6 +301,7 @@ const CATALOGUE = [
 	{ slug: "landing-hero", module: "landing" },
 	{ slug: "landing-section", module: "landing" },
 	{ slug: "ledger", module: "finance" },
+	{ slug: "letterbox", module: "components" },
 	{ slug: "lightbox", module: "components" },
 	{ slug: "link", module: "components" },
 	{ slug: "link-button", module: "components" },
@@ -953,6 +954,11 @@ const OVERRIDES: Record<string, Shape[]> = {
 	"link-button": windowScene([
 		{ kind: "rect", x: 44, y: 46, w: 72, h: 20, r: 10, tone: "surface", ring: true },
 		txt("Open docs", 80, 59, 8, "ink", { align: "center", font: "semibold" }),
+	]),
+	letterbox: windowScene([
+		{ kind: "rect", x: 40, y: 30, w: 80, h: 56, r: 4, tone: "ink" },
+		{ kind: "rect", x: 40, y: 35.5, w: 80, h: 45, tone: "accent" },
+		txt("16:9", 80, 61, 9, "surface", { align: "center", font: "semibold" }),
 	]),
 	"label-chip": windowScene([
 		{ kind: "rect", x: 34, y: 38, w: 36, h: 14, r: 7, tone: "accent" },
