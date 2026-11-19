@@ -301,8 +301,8 @@ export function DemoNote(handle: Handle<DemoNote.Props>) {
 				fontSize: "0.8125rem",
 				lineHeight: "1.45",
 				color: "var(--ui-neutral-fg-muted)",
-				backgroundColor: "color-mix(in oklch, var(--ui-brand-solid) 7%, transparent)",
-				border: "1px dashed color-mix(in oklch, var(--ui-brand-solid) 35%, transparent)",
+				backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 7%, transparent)",
+				border: "1px dashed color-mix(in oklch, var(--ui-brand-bg-solid) 35%, transparent)",
 			})}
 		>
 			<InfoIcon

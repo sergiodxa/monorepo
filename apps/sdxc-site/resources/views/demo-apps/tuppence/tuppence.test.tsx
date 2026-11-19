@@ -69,6 +69,16 @@ describe("Tuppence's statement", () => {
 		expect(figures.before).toBeLessThanOrEqual(figures.beforeWhole);
 	});
 
+	test("draws an overspend as a hatched segment past the limit, and no pace tick", async () => {
+		let html = await page("/budgets");
+		let over = html.slice(html.indexOf('id="budget-eating-out"'));
+		expect(over.slice(0, over.indexOf("</li>"))).toContain('data-slot="budget-over"');
+		let fine = html.slice(html.indexOf('id="budget-groceries"'));
+		expect(fine.slice(0, fine.indexOf("</li>"))).not.toContain('data-slot="budget-over"');
+		expect(html).not.toContain("Where the month&#x27;s pace puts you today");
+		expect(html).toMatch(/data-slot="alert"[\s\S]*?data-slot="icon"[\s\S]*?data-slot="content"/);
+	});
+
 	test("flags one budget over and one near, so the alert means something", () => {
 		let states = budgetStatuses(readWallet(null)).map((status) => status.state);
 		expect(states.filter((state) => state === "over")).toHaveLength(1);

@@ -66,7 +66,7 @@ function MonthTabs(handle: Handle<{ month: string }>) {
 								color: "inherit",
 								textDecoration: "none",
 								"&[aria-current='page']": {
-									backgroundColor: "var(--ui-brand-solid)",
+									backgroundColor: "var(--ui-brand-bg-solid)",
 									color: "var(--ui-brand-fg-on-solid, white)",
 								},
 								"&:not([aria-current]):hover": {

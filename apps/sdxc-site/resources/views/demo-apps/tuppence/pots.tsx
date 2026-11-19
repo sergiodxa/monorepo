@@ -143,7 +143,7 @@ export function PotsScreen(handle: Handle<PotsScreen.Props>) {
 											boxShadow: `0 0 0 1px light-dark(oklch(0.62 0.13 ${pot.hue}), oklch(0.74 0.12 ${pot.hue}))`,
 										},
 										"&:focus-visible": {
-											outline: "2px solid var(--ui-brand-solid)",
+											outline: "2px solid var(--ui-brand-bg-solid)",
 											outlineOffset: "2px",
 										},
 									})}
@@ -363,11 +363,12 @@ function PotDetail(handle: Handle<PotDetail.Props>) {
 										cursor: "pointer",
 										fontSize: "0.9375rem",
 										"&:has(:checked)": {
-											boxShadow: "0 0 0 2px var(--ui-brand-solid)",
-											backgroundColor: "color-mix(in oklch, var(--ui-brand-solid) 6%, transparent)",
+											boxShadow: "0 0 0 2px var(--ui-brand-bg-solid)",
+											backgroundColor:
+												"color-mix(in oklch, var(--ui-brand-bg-solid) 6%, transparent)",
 										},
 										"&:has(:focus-visible)": {
-											outline: "2px solid var(--ui-brand-solid)",
+											outline: "2px solid var(--ui-brand-bg-solid)",
 											outlineOffset: "2px",
 										},
 									})}
@@ -377,7 +378,7 @@ function PotDetail(handle: Handle<PotDetail.Props>) {
 										name="direction"
 										value={way}
 										checked={way === direction}
-										mix={raw({ accentColor: "var(--ui-brand-solid)" })}
+										mix={raw({ accentColor: "var(--ui-brand-bg-solid)" })}
 									/>
 									<span mix={raw({ fontWeight: "600" })}>
 										{way === "in" ? "Add to pot" : "Withdraw"}
@@ -414,7 +415,9 @@ function PotDetail(handle: Handle<PotDetail.Props>) {
 								required
 								mix={raw({ flex: "1 1 12rem" })}
 							/>
-							<Button type="submit">Move money</Button>
+							<Button type="submit" color="brand">
+								Move money
+							</Button>
 						</div>
 						<DemoNote>
 							nothing leaves any account. The move lives in this browser for a week, or until you

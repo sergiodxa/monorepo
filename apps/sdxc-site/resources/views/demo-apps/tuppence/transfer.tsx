@@ -96,7 +96,7 @@ function PickPayee() {
 										textDecoration: "none",
 										"&:hover": { backgroundColor: "var(--ui-neutral-bg-tint-hover)" },
 										"&:focus-visible": {
-											outline: "2px solid var(--ui-brand-solid)",
+											outline: "2px solid var(--ui-brand-bg-solid)",
 											outlineOffset: "-2px",
 										},
 									})}
@@ -207,7 +207,9 @@ function EnterAmount(handle: Handle<EnterAmount.Props>) {
 							<LinkButton href={href("transfer")} variant="ghost" color="neutral">
 								Back
 							</LinkButton>
-							<Button type="submit">Review</Button>
+							<Button type="submit" color="brand">
+								Review
+							</Button>
 						</div>
 					</form>
 				</Panel>
@@ -325,7 +327,7 @@ function Review(handle: Handle<Review.Props>) {
 							>
 								Change
 							</LinkButton>
-							<Button type="submit" data-slot="send-button">
+							<Button type="submit" color="brand" data-slot="send-button">
 								Send {label}
 							</Button>
 						</div>

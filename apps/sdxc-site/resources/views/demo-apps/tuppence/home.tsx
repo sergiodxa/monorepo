@@ -22,8 +22,8 @@ import {
 import { raw } from "@sdxc/u/general";
 import { Link } from "@sdxc/ui";
 import { Chart } from "@sdxc/ui/app/chart";
-import { DayStrip } from "@sdxc/ui/schedule/day-strip";
 import { Ledger } from "@sdxc/ui/finance/ledger";
+import { DayStrip } from "@sdxc/ui/schedule/day-strip";
 
 import type { Wallet } from "./state";
 
@@ -83,7 +83,7 @@ function QuickAction(handle: Handle<{ href: string; label: string; icon: JSX.Ele
 				},
 				"&:focus-visible": { outline: "none" },
 				"&:focus-visible > span": {
-					outline: "2px solid var(--ui-brand-solid)",
+					outline: "2px solid var(--ui-brand-bg-solid)",
 					outlineOffset: "2px",
 				},
 			})}
@@ -202,7 +202,7 @@ function AccountCards(handle: Handle<{ wallet: Wallet }>) {
 								boxShadow: "0 0 0 1px var(--ui-brand-border, var(--tuppence-hairline))",
 							},
 							"&:focus-visible": {
-								outline: "2px solid var(--ui-brand-solid)",
+								outline: "2px solid var(--ui-brand-bg-solid)",
 								outlineOffset: "2px",
 							},
 						})}
@@ -218,7 +218,7 @@ function AccountCards(handle: Handle<{ wallet: Wallet }>) {
 									borderRadius: "999px",
 									fontFamily: SERIF,
 									fontWeight: "700",
-									backgroundColor: "color-mix(in oklch, var(--ui-brand-solid) 14%, transparent)",
+									backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 14%, transparent)",
 									color: "var(--ui-brand-fg)",
 								})}
 							>
@@ -360,7 +360,7 @@ function SpendingThisMonth(handle: Handle<{ wallet: Wallet }>) {
 						display: "flex",
 						flexDirection: "column",
 						gap: "0.375rem",
-						"--ui-chart-1": "var(--ui-brand-solid)",
+						"--ui-chart-1": "var(--ui-brand-bg-solid)",
 					})}
 				>
 					<Chart
@@ -560,10 +560,13 @@ function BudgetAlerts(handle: Handle<{ wallet: Wallet }>) {
 					color: "inherit",
 					textDecoration: "none",
 					backgroundColor:
-						"color-mix(in oklch, var(--ui-warning-solid, orange) 12%, var(--tuppence-card))",
+						"color-mix(in oklch, var(--ui-warning-bg-solid, orange) 12%, var(--tuppence-card))",
 					boxShadow:
-						"0 0 0 1px color-mix(in oklch, var(--ui-warning-solid, orange) 30%, transparent)",
-					"&:focus-visible": { outline: "2px solid var(--ui-brand-solid)", outlineOffset: "2px" },
+						"0 0 0 1px color-mix(in oklch, var(--ui-warning-bg-solid, orange) 30%, transparent)",
+					"&:focus-visible": {
+						outline: "2px solid var(--ui-brand-bg-solid)",
+						outlineOffset: "2px",
+					},
 				})}
 			>
 				<TriangleAlertIcon

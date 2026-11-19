@@ -88,7 +88,7 @@ function RecurringRow(handle: Handle<{ entry: Recurring; marked: boolean }>) {
 					padding: "0.625rem 0.75rem",
 					borderRadius: "0.875rem",
 					"&[data-marked]": {
-						backgroundColor: "color-mix(in oklch, var(--ui-brand-solid) 10%, transparent)",
+						backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 10%, transparent)",
 					},
 				})}
 			>

@@ -56,7 +56,10 @@ function EditBudget(handle: Handle<EditBudget.Props>) {
 						fontWeight: "500",
 						color: "var(--ui-brand-fg)",
 						borderRadius: "0.375rem",
-						"&:focus-visible": { outline: "2px solid var(--ui-brand-solid)", outlineOffset: "2px" },
+						"&:focus-visible": {
+							outline: "2px solid var(--ui-brand-bg-solid)",
+							outlineOffset: "2px",
+						},
 					})}
 				>
 					{label}
@@ -81,7 +84,9 @@ function EditBudget(handle: Handle<EditBudget.Props>) {
 						required
 						mix={raw({ flex: "1 1 10rem" })}
 					/>
-					<Button type="submit">Save budget</Button>
+					<Button type="submit" color="brand">
+						Save budget
+					</Button>
 				</form>
 			</details>
 		);
@@ -93,15 +98,14 @@ function BudgetRow(handle: Handle<{ status: BudgetStatus; editing: boolean }>) {
 	return () => {
 		let { status, editing } = handle.props;
 		let category = findCategory(status.category);
-		let used = Math.min(status.spent / status.budget, 1);
-		let month = TODAY.slice(0, 7);
-		let pace = Number(TODAY.slice(8)) / daysInMonth(month);
+		let scale = Math.max(status.spent, status.budget);
+		let within = (Math.min(status.spent, status.budget) / scale) * 100;
+		let over = (Math.max(0, status.spent - status.budget) / scale) * 100;
 		let left = status.budget - status.spent;
-		let tone = {
-			over: "var(--ui-danger-solid)",
-			near: "var(--ui-warning-solid)",
-			fine: `var(--ui-chart-${category?.color ?? 1})`,
-		}[status.state];
+		let tone =
+			status.state === "near"
+				? "var(--ui-warning-bg-solid)"
+				: `var(--ui-chart-${category?.color ?? 1})`;
 		return (
 			<li
 				id={`budget-${status.category}`}
@@ -146,35 +150,36 @@ function BudgetRow(handle: Handle<{ status: BudgetStatus; editing: boolean }>) {
 						aria-valuenow={Math.round((status.spent / status.budget) * 100)}
 						aria-valuetext={`${Math.round((status.spent / status.budget) * 100)}% used`}
 						mix={raw({
-							position: "relative",
+							display: "flex",
+							gap: "2px",
 							blockSize: "0.625rem",
 							borderRadius: "999px",
+							overflow: "hidden",
 							backgroundColor: "color-mix(in oklch, var(--ui-fg) 8%, transparent)",
 						})}
 					>
 						<span
 							data-slot="budget-fill"
 							mix={raw({
-								position: "absolute",
-								insetBlock: "0",
-								insetInlineStart: "0",
-								inlineSize: `${used * 100}%`,
-								borderRadius: "999px",
+								flex: "none",
+								inlineSize: `${within}%`,
+								borderRadius: over > 0 ? "999px 0 0 999px" : "999px",
 								backgroundColor: tone,
 							})}
 						/>
-						<span
-							title="Where the month's pace puts you today"
-							mix={raw({
-								position: "absolute",
-								insetBlock: "-0.25rem",
-								insetInlineStart: `${pace * 100}%`,
-								inlineSize: "2px",
-								borderRadius: "1px",
-								backgroundColor: "var(--ui-fg)",
-								opacity: "0.55",
-							})}
-						/>
+						{over > 0 ? (
+							<span
+								data-slot="budget-over"
+								mix={raw({
+									flex: "1 1 auto",
+									borderRadius: "0 999px 999px 0",
+									backgroundColor:
+										"color-mix(in oklch, var(--ui-danger-bg-solid) 14%, transparent)",
+									backgroundImage:
+										"repeating-linear-gradient(-45deg, var(--ui-danger-bg-solid) 0 3px, transparent 3px 7px)",
+								})}
+							/>
+						) : null}
 					</div>
 					<div
 						mix={raw({
@@ -252,17 +257,26 @@ export function BudgetsScreen(handle: Handle<BudgetsScreen.Props>) {
 				/>
 				{alerts.length === 0 ? null : (
 					<Alert color={alerts.some((status) => status.state === "over") ? "danger" : "warning"}>
-						<TriangleAlertIcon size={18} aria-hidden="true" />
-						<span>
-							{alerts
-								.map((status) => {
-									let name = findCategory(status.category)?.name;
-									return status.state === "over"
-										? `${name} is over its limit.`
-										: `${name} has used ${Math.round((status.spent / status.budget) * 100)}% with ${daysLeft()} days left.`;
-								})
-								.join(" ")}
-						</span>
+						<Alert.Icon>
+							<TriangleAlertIcon />
+						</Alert.Icon>
+						<Alert.Content>
+							<Alert.Title>
+								{alerts.length === 1
+									? "One budget needs a look"
+									: `${alerts.length} budgets need a look`}
+							</Alert.Title>
+							<Alert.Description>
+								{alerts
+									.map((status) => {
+										let name = findCategory(status.category)?.name;
+										return status.state === "over"
+											? `${name} is over its limit.`
+											: `${name} has used ${Math.round((status.spent / status.budget) * 100)}% with ${daysLeft()} days left.`;
+									})
+									.join(" ")}
+							</Alert.Description>
+						</Alert.Content>
 					</Alert>
 				)}
 				<Panel title={`${monthName(month)} budgets`}>

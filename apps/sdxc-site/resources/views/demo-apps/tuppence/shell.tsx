@@ -95,7 +95,7 @@ export function TuppenceMark(handle: Handle<{ size?: number }>) {
 				data-slot="tuppence-mark"
 				mix={raw({ display: "block", flex: "none" })}
 			>
-				<rect width="32" height="32" rx="9" fill="var(--ui-brand-solid)" />
+				<rect width="32" height="32" rx="9" fill="var(--ui-brand-bg-solid)" />
 				<circle
 					cx="13"
 					cy="16"
@@ -113,7 +113,7 @@ export function TuppenceMark(handle: Handle<{ size?: number }>) {
 				/>
 				<path
 					d="M19.5 12.2v7.6M17 14.2h5"
-					stroke="var(--ui-brand-solid)"
+					stroke="var(--ui-brand-bg-solid)"
 					stroke-width="1.8"
 					stroke-linecap="round"
 				/>

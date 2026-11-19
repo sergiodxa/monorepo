@@ -39,8 +39,11 @@ function CardChoice(handle: Handle<{ card: Card; current: boolean; frozen: boole
 					textDecoration: "none",
 					boxShadow: "0 0 0 1px var(--tuppence-hairline)",
 					backgroundColor: "var(--tuppence-card)",
-					"&[aria-current='page']": { boxShadow: "0 0 0 2px var(--ui-brand-solid)" },
-					"&:focus-visible": { outline: "2px solid var(--ui-brand-solid)", outlineOffset: "2px" },
+					"&[aria-current='page']": { boxShadow: "0 0 0 2px var(--ui-brand-bg-solid)" },
+					"&:focus-visible": {
+						outline: "2px solid var(--ui-brand-bg-solid)",
+						outlineOffset: "2px",
+					},
 				})}
 			>
 				<span mix={raw({ inlineSize: "4.5rem", flex: "none" })} aria-hidden="true">
@@ -220,7 +223,7 @@ export function CardsScreen(handle: Handle<CardsScreen.Props>) {
 										display: "block",
 										blockSize: "100%",
 										inlineSize: `${used * 100}%`,
-										backgroundColor: "var(--ui-brand-solid)",
+										backgroundColor: "var(--ui-brand-bg-solid)",
 										borderRadius: "999px",
 									})}
 								/>
