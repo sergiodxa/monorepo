@@ -13,9 +13,8 @@ import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { cdp, page, userEvent } from "vitest/browser";
 
-import { mapLink, mapLinks } from "../mixins/map-link.js";
-
 import { MapCanvas } from "./map-canvas.js";
+import { mapLink, mapLinks } from "./mixins/map-link.js";
 
 import "../reset.css";
 import "../theme.css";

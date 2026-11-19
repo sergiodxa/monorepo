@@ -218,9 +218,6 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Alert` — an inline status panel.
 - `Badge`, `TagGroup` — a status pill, and a labeled set of removable pills.
 - `Spinner` — a busy indicator.
-- `RatingBreakdown` — a review score with `.Group` lists of `.Bar` meters, per star or per category.
-- `PriceBreakdown` — a receipt `<dl>` of `.Line`s (`detail`, `tone="discount"`, a named `<output>`)
-  and a bold `.Total`.
 - `LabelChip` — a label pill in any colour whose text stays readable in both schemes.
 
 ### Components: layout and content
@@ -243,9 +240,6 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `HeadingScope`, `Heading` — a heading-depth scope, and the `<h1>`–`<h6>` that reads it.
   `Heading` accepts `size="display" | "chapter"` for landing type recipes.
 - `SharedElement` — a host with a stable view-transition name across page loads.
-- `MapCanvas` — a drawn map in one SVG viewBox: caller art, `.Route` (travelled share solid, the rest
-  dashed), `.Marker` (a glyph along a path at `progress`) and `.Pin` price pills as links or buttons;
-  `MapCanvasSync` lights a pin and the list row sharing its `mapKey`.
 - `Calendar`, `RangeCalendar`, `DatePicker`, `DateRangePicker` — month grids for a day or a range,
   and popover pickers around them; `Calendar` without children renders `<input type="date">`.
 - `RangeMonths` — consecutive month grids whose days are links the caller builds, for picking a
@@ -501,6 +495,24 @@ Ordering something to be delivered, such as food from a restaurant.
 - `OrderSteps`, `OrderLive` — an order's status timeline, and an island (`@sdxc/ui/commerce/order-tracker`)
   that follows a `step progress minutes` text stream to move the steps, headline, estimate and any map marker.
 
+### Map (`@sdxc/ui/map`)
+
+Places on a map, with the list they belong to.
+
+- `MapCanvas` — a drawn map in one SVG viewBox: caller art, `.Route` (travelled share solid, the rest
+  dashed), `.Marker` (a glyph along a path at `progress`) and `.Pin` price pills as links or buttons;
+  `MapCanvasSync` lights a pin and the list row sharing its `mapKey`.
+- `mapLink(key)`, `mapLinks()` — mixins that light every element sharing a `data-map-key` while one
+  is hovered or focused, so a list row and its pin highlight together.
+
+### Travel (`@sdxc/ui/travel`)
+
+Booking a stay or a trip.
+
+- `RatingBreakdown` — a review score with `.Group` lists of `.Bar` meters, per star or per category.
+- `PriceBreakdown` — a receipt `<dl>` of `.Line`s (`detail`, `tone="discount"`, a named `<output>`)
+  and a bold `.Total`.
+
 ### Component helpers
 
 - `readFormContext(handle): Form.Context | undefined` and
@@ -540,7 +552,6 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `liveFrame(options)`            | a text input in a frame         | The frame reloaded from `src(value)` once typing pauses.                            |
 | `listboxKeys()`                 | `ListBox`                       | Arrow, Home/End and typeahead navigation.                                           |
 | `longPress(options?)`           | any element                     | Fires after a pointer holds still for `duration`.                                   |
-| `mapLink(key)`, `mapLinks()`    | a list row, or one hidden host  | Lights every element sharing `data-map-key` while one is hovered or focused.        |
 | `menuKeys(options?)`            | `Menu`                          | The ARIA menu pattern: roving focus, arrows, typeahead.                             |
 | `mirrorSelectedOption()`        | a `<selectedcontent>`           | Keeps the customizable select's trigger showing the chosen option.                  |
 | `otpSlots()`                    | an `OtpField` group             | Focus moving across slots, and pasted codes split.                                  |

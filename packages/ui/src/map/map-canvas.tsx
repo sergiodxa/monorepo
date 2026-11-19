@@ -14,7 +14,7 @@ import { motionReduce, motionSafe } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 import { clientEntry } from "remix/component";
 
-import { mapLink, mapLinks } from "../mixins/map-link.js";
+import { mapLink, mapLinks } from "./mixins/map-link.js";
 
 /** Coordinate space a stage draws in when the caller names none. */
 const DEFAULT_VIEW_BOX = "0 0 400 300";
@@ -482,7 +482,7 @@ MapCanvas.Pin = function MapCanvasPin(handle: Handle<MapCanvas.PinProps>) {
  * @example <MapCanvasSync />
  */
 export const MapCanvasSync: EntryComponent<Record<never, never>> = clientEntry(
-	"@sdxc/ui/map-canvas#MapCanvasSync",
+	"@sdxc/ui/map/map-canvas#MapCanvasSync",
 	function MapCanvasSync() {
 		return () => <span hidden mix={[mapLinks()]} />;
 	},

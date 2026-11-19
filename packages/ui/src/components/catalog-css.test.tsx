@@ -20,7 +20,12 @@ import { describe, expect, test } from "vitest";
  * read from their files so the helpers a namespace barrel also forwards stay out.
  */
 const MODULES = import.meta.glob<Record<string, unknown>>(
-	["./*.tsx", "../{landing,docs,chat,color,app,video}/*.tsx", "!./*.test.tsx", "!../*/*.test.tsx"],
+	[
+		"./*.tsx",
+		"../{landing,docs,chat,color,app,video,map,travel}/*.tsx",
+		"!./*.test.tsx",
+		"!../*/*.test.tsx",
+	],
 	{ eager: true },
 );
 
