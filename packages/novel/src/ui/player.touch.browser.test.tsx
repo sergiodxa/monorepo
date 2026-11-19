@@ -17,6 +17,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createNovel, createScene, scene, scenes } from "../index.js";
 
+import { touchControls } from "./controls.js";
 import { NovelPlayer } from "./player.js";
 
 /** The story state, the same shape the package's fixture declares. */
@@ -56,7 +57,7 @@ function mount() {
 	let intl = createI18n({ locale: "en", fallbackLanguage: "en", resources: { en: MESSAGES } });
 	mounted = render(
 		<IntlProvider intl={intl}>
-			<NovelPlayer novel={novel} settings={{ textSpeed: 0 }} />
+			<NovelPlayer novel={novel} settings={{ textSpeed: 0 }} mix={touchControls()} />
 		</IntlProvider>,
 		{ container },
 	);
@@ -114,8 +115,8 @@ describe("NovelPlayer on a touch screen", () => {
 		await shows(result, "One.");
 	});
 
-	test("lets the stage take every gesture instead of scrolling the page", () => {
+	test("lets the player take every gesture instead of scrolling the page", () => {
 		mount();
-		expect(getComputedStyle(mounted!.$("[data-novel-stage]")!).touchAction).toBe("none");
+		expect(getComputedStyle(mounted!.$("[data-novel-player]")!).touchAction).toBe("none");
 	});
 });

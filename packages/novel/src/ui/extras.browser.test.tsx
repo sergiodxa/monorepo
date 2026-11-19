@@ -13,6 +13,7 @@ import type { RenderResult } from "remix/component/test";
 
 import { createI18n } from "@sdxc/i18n";
 import { IntlProvider } from "@sdxc/i18n/ui";
+import { on } from "remix/component";
 import { render } from "remix/component/test";
 import * as s from "remix/data-schema";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -34,6 +35,7 @@ import {
 
 import { AudioMixer } from "./audio.js";
 import { ChapterSelect, SceneReplay } from "./chapters.js";
+import { keyboardControls } from "./controls.js";
 import { EndingsList } from "./endings.js";
 import { Gallery } from "./gallery.js";
 import { Memories } from "./memories.js";
@@ -265,16 +267,21 @@ describe("ChapterSelect and SceneReplay", () => {
 
 /** Mounts a player over the fixture with instant text. */
 function player(props: Partial<NovelPlayer.Props> = {}) {
+	let saved = vi.fn();
+	let ended = vi.fn();
 	let result = mount(
 		<NovelPlayer
 			novel={fixture()}
 			start={{ seed: "extras" }}
 			settings={{ textSpeed: 0 }}
+			mix={[keyboardControls(), on("novel:save", saved), on("novel:ending", ended)]}
 			{...props}
 		/>,
 	);
 	return {
 		result,
+		saved,
+		ended,
 		line: () => result.$("[data-novel-line]")?.textContent ?? null,
 		root: () => result.$("[data-novel-player]")!,
 		phase: () => result.$("[data-novel-player]")!.dataset["phase"],
@@ -343,8 +350,8 @@ describe("NovelPlayer extras", () => {
 	});
 
 	test("replays a scene without saving, then resumes the play it interrupted", async () => {
-		let onSave = vi.fn();
-		let view = player({ onSave });
+		let view = player();
+		let onSave = view.saved;
 		await shows(view, "Welcome.");
 		view.next();
 		await shows(view, "Hello, Ada!");
@@ -371,8 +378,8 @@ describe("NovelPlayer extras", () => {
 	});
 
 	test("ends a chapter replay at its ending and resumes the interrupted play", async () => {
-		let ended = vi.fn();
-		let view = player({ onEnding: ended });
+		let view = player();
+		let ended = view.ended;
 		await shows(view, "Welcome.");
 		let dialog = await openScreen(view, "chapters");
 		let prologue = await vi.waitFor(() => {

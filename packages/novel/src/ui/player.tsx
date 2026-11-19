@@ -1,7 +1,7 @@
 /**
  * `NovelPlayer`: owns a play, renders its current frame on the stage with the textbox, menu,
- * captions and quick menu, and wires every input (click, keys, wheel, touch, gamepad) and screen
- * (backlog, saves, settings, the library extras). Storage stays the app's, through its callbacks.
+ * captions and quick menu, and its screens (backlog, saves, settings, the library extras). Input
+ * comes from the control mixins, and saves, settings and endings leave as bubbling DOM events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,11 +12,10 @@ import type { Handle, Props as TagProps, RemixElement, RemixNode } from "remix/c
 
 import { intl } from "@sdxc/i18n/ui";
 import { Dialog } from "@sdxc/ui";
-import { moveFocus, swipeDirection } from "@sdxc/ui/utils";
 import { css, on, ref } from "remix/component";
 
 import type { SceneDeclaration } from "../declarations.js";
-import type { CustomFrame, Ending, GameState, ReplayScope, Reply } from "../frames.js";
+import type { CustomFrame, GameState, ReplayScope, Reply } from "../frames.js";
 import type { Novel, StartOptions } from "../novel.js";
 
 import type { AudioMixer } from "./audio.js";
@@ -25,26 +24,20 @@ import type { NovelLabels, NovelSettings, PlayerAction, StoredSettings } from ".
 import { Backlog } from "./backlog.js";
 import { ChapterSelect, SceneReplay } from "./chapters.js";
 import { ChoiceMenu } from "./choice-menu.js";
+import { INTERACTIVE, perform } from "./controls.js";
 import { Director } from "./director.js";
 import { EndingsList } from "./endings.js";
+import { NovelEndingEvent, NovelSaveEvent, NovelSettingsEvent } from "./events.js";
 import { Gallery } from "./gallery.js";
-import { gamepadActions } from "./input.js";
 import { Memories } from "./memories.js";
 import { Message } from "./message.js";
 import { MusicRoom } from "./music-room.js";
 import { QuickMenu } from "./quick-menu.js";
 import { QUICK_SLOT, SaveScreen } from "./saves.js";
 import { SettingsScreen } from "./settings-screen.js";
-import { DEFAULT_LABELS, KEYMAP, resolveSettings } from "./settings.js";
+import { DEFAULT_LABELS, resolveSettings } from "./settings.js";
 import { Stage } from "./stage.js";
 import { Captions, Textbox } from "./textbox.js";
-
-/** Milliseconds between two wheel actions, so one flick of a trackpad rolls back one stop. */
-const WHEEL_INTERVAL_MS = 300;
-
-/** Elements whose clicks belong to themselves rather than advancing the story. */
-const INTERACTIVE =
-	"button, a, input, select, textarea, label, dialog, [data-novel-ui], [data-novel-interaction]";
 
 /** A typeface stack with dyslexia-friendly faces first; the app loads the web font it prefers. */
 const DYSLEXIA_FONT = '"OpenDyslexic", "Atkinson Hyperlegible", "Lexend", Verdana, sans-serif';
@@ -59,6 +52,59 @@ export namespace NovelPlayer {
 
 	/** A component that renders a custom frame, written by the app. */
 	export type Interaction = (handle: Handle<InteractionProps>) => () => RemixNode;
+
+	/** A dialog the player opens by name: one of its screens or a library screen. */
+	export type Screen =
+		| "backlog"
+		| "save"
+		| "load"
+		| "settings"
+		| "memories"
+		| "gallery"
+		| "music"
+		| "endings"
+		| "chapters"
+		| "scenes";
+
+	/**
+	 * What `handle.context.get(NovelPlayer)` answers: the play's state, read live, and the actions
+	 * that drive it. It is one object for the player's whole life, so a mixin reads it once.
+	 */
+	export interface Context {
+		/** The player's root element, once it is in the document. */
+		readonly element: HTMLElement | undefined;
+		/** The dialog open in the player, which takes keys and the gamepad while it is open. */
+		readonly dialog: HTMLDialogElement | null;
+		/** True while the reader has hidden the interface to look at the stage. */
+		readonly hidden: boolean;
+		/** True while the play is a replay, which never saves. */
+		readonly replaying: boolean;
+		readonly mixer: AudioMixer;
+		/** Advances a line or pause, finishing a running transition or typewriter first. */
+		advance(): void;
+		/** Returns to the previous stop, shown at once. */
+		rollback(): Promise<void>;
+		/**
+		 * Saves the play into `slot` and dispatches `novel:save`.
+		 *
+		 * @returns The play as JSON, or `undefined` before the play starts and during a replay.
+		 */
+		save(slot: string): GameState | undefined;
+		/** Resumes the play saved in `slot`, when it holds one. */
+		load(slot: string): Promise<void>;
+		toggleAuto(): void;
+		toggleSkip(): void;
+		/** Skips while `held` is true, the way held Control does. */
+		holdSkip(held: boolean): void;
+		/** Hides the interface, shows it with `false`, or toggles it without an argument. */
+		hide(hidden?: boolean): void;
+		/** Enters or leaves full screen with the player as the full-screen element. */
+		toggleFullscreen(): void;
+		/** Ends a replay, resuming the play it interrupted. */
+		endReplay(): Promise<void>;
+		/** Opens one of the player's dialogs, when it is rendered. */
+		open(screen: Screen): void;
+	}
 
 	/** Props of the library screens' dialogs. */
 	export interface LibraryProps {
@@ -91,15 +137,8 @@ export namespace NovelPlayer {
 		start?: StartOptions;
 		/** The settings the app stored; missing fields take their defaults. */
 		settings?: StoredSettings;
-		/** Called with the whole settings object whenever the reader changes one. */
-		onSettingsChange?: (settings: NovelSettings) => void;
 		/** The saves the app stored, by slot name. */
 		saves?: Readonly<Record<string, GameState>>;
-		/**
-		 * Called when the reader saves, with the slot and the play as JSON, for the app to store; the
-		 * save also reaches the novel's `save` event, so an app listening there can leave this out.
-		 */
-		onSave?: (slot: string, state: GameState) => void;
 		/**
 		 * How many numbered save slots the save and load screens show, beside the quick slot.
 		 *
@@ -114,8 +153,6 @@ export namespace NovelPlayer {
 		focus?: boolean;
 		/** Renders custom frames; without it a custom frame shows the stage and waits. */
 		renderInteraction?: Interaction;
-		/** Called when the play reaches an ending or runs out of story. */
-		onEnding?: (ending: Ending) => void;
 		/** Replaces any of the interface's English labels. */
 		labels?: Partial<NovelLabels>;
 		/**
@@ -140,12 +177,13 @@ export namespace NovelPlayer {
 }
 
 /**
- * Plays a novel. It reads its translator from `IntlProvider` (or `setIntl`), and since a novel
- * holds functions it renders inside the app's own client entry rather than as one.
+ * Plays a novel and provides {@link NovelPlayer.Context} to what it holds. It reads its translator
+ * from `IntlProvider`, renders inside the app's own client entry since a novel holds functions,
+ * and reads `start` once, at mount: a new play needs a remount, done by changing its `key`.
  *
- * @example <NovelPlayer novel={novel} settings={stored} onSettingsChange={store} saves={saves} onSave={write} />
+ * @example <NovelPlayer novel={novel} settings={stored} saves={saves} mix={[keyboardControls(), touchControls(), on("novel:save", store)]} />
  */
-export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
+export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Context>) {
 	let root: HTMLElement | undefined;
 	let stage: HTMLElement | undefined;
 	let seenSettings: StoredSettings | undefined;
@@ -154,24 +192,25 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 	let seenSaves: NovelPlayer.Props["saves"];
 	let saves: Record<string, GameState> = {};
 	let hidden = false;
-	let lastWheel = 0;
-	let touch: { x: number; y: number } | undefined;
-	let suppressClick = 0;
-	let pads = new Map<number, boolean[]>();
-	let polling = false;
-	let ids = {
+	let ids: Record<NovelPlayer.Screen, string> = {
 		backlog: `${handle.id}-backlog`.replace(/[^\w-]/g, "-"),
 		save: `${handle.id}-save`.replace(/[^\w-]/g, "-"),
 		load: `${handle.id}-load`.replace(/[^\w-]/g, "-"),
 		settings: `${handle.id}-settings`.replace(/[^\w-]/g, "-"),
-	};
-	let extras = {
 		memories: `${handle.id}-memories`.replace(/[^\w-]/g, "-"),
 		gallery: `${handle.id}-gallery`.replace(/[^\w-]/g, "-"),
 		music: `${handle.id}-music`.replace(/[^\w-]/g, "-"),
 		endings: `${handle.id}-endings`.replace(/[^\w-]/g, "-"),
 		chapters: `${handle.id}-chapters`.replace(/[^\w-]/g, "-"),
 		scenes: `${handle.id}-scenes`.replace(/[^\w-]/g, "-"),
+	};
+	let extras = {
+		memories: ids.memories,
+		gallery: ids.gallery,
+		music: ids.music,
+		endings: ids.endings,
+		chapters: ids.chapters,
+		scenes: ids.scenes,
 	};
 	/** The library screen open now, and the persistent data it reads, taken as it opened. */
 	let screen: { id: string; persistent: unknown } | undefined;
@@ -186,7 +225,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 		text: () =>
 			root?.querySelector("[data-novel-textbox], [data-novel-choices]")?.textContent?.trim() ?? "",
 		settings: () => settings,
-		onEnding: (ending) => handle.props.onEnding?.(ending),
+		onEnding: (ending) => root?.dispatchEvent(new NovelEndingEvent(ending)),
 		prefetch: () => handle.props.prefetch ?? 1,
 	});
 
@@ -194,11 +233,6 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 	handle.queueTask(() => {
 		if (handle.signal.aborted) return;
 		void director.begin(handle.props.start);
-		document.addEventListener("keydown", keydown, { signal: handle.signal });
-		document.addEventListener("keyup", keyup, { signal: handle.signal });
-		window.addEventListener("blur", () => director.holdSkip(false), { signal: handle.signal });
-		window.addEventListener("gamepadconnected", startPolling, { signal: handle.signal });
-		if (navigator.getGamepads?.().some((pad) => pad !== null)) startPolling();
 	});
 
 	/** The dialog open in the player, which takes keys and the gamepad while it is open. */
@@ -213,18 +247,19 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 	}
 
 	/** Saves the play into `slot`, keeping the save locally so the screens show it at once. */
-	function save(slot: string): void {
+	function save(slot: string): GameState | undefined {
 		let state = director.save(slot);
-		if (state === undefined) return;
+		if (state === undefined) return undefined;
 		saves = { ...saves, [slot]: state };
-		handle.props.onSave?.(slot, state);
+		root?.dispatchEvent(new NovelSaveEvent(slot, state));
 		void handle.update();
+		return state;
 	}
 
 	/** Resumes the play saved in `slot`. */
-	function load(slot: string): void {
+	async function load(slot: string): Promise<void> {
 		let state = saves[slot];
-		if (state !== undefined) void director.load(state);
+		if (state !== undefined) await director.load(state);
 	}
 
 	/**
@@ -255,13 +290,14 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 		settings = next;
 		director.mixer.setVolume(next.volume);
 		if (!next.selfVoicing && typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
-		handle.props.onSettingsChange?.(next);
+		root?.dispatchEvent(new NovelSettingsEvent(next));
 		void handle.update();
 	}
 
 	/** Shows or hides the interface; a hidden interface comes back on the next click or key. */
-	function toggleHidden(): void {
-		hidden = !hidden;
+	function hide(next = !hidden): void {
+		if (next === hidden) return;
+		hidden = next;
 		void handle.update();
 	}
 
@@ -274,119 +310,50 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 		void root?.requestFullscreen().catch(() => undefined);
 	}
 
-	/** Runs one of the player's actions, from a key, the quick menu or the gamepad. */
+	/** Runs one of the quick menu's actions through the same path as the inputs. */
 	function run(action: PlayerAction): void {
-		if (hidden && action !== "hide" && action !== "fullscreen") {
-			toggleHidden();
-			return;
-		}
-		if (director.replaying && (action === "save" || action === "quickSave")) return;
-		if (action === "advance") director.advance();
-		else if (action === "auto") director.toggleAuto();
-		else if (action === "skip") director.toggleSkip();
-		else if (action === "rollback") void director.rollback();
-		else if (action === "hide") toggleHidden();
-		else if (action === "fullscreen") toggleFullscreen();
-		else if (action === "quickSave") save(QUICK_SLOT);
-		else if (action === "quickLoad") load(QUICK_SLOT);
-		else if (action === "backlog") show(ids.backlog);
-		else if (action === "save") show(ids.save);
-		else if (action === "load") show(ids.load);
-		else if (action === "endReplay") void director.endReplay();
-		else show(ids.settings);
+		perform(context, action);
 	}
 
-	/** Maps a key to its action while the player has the page's attention. */
-	function keydown(event: KeyboardEvent): void {
-		if (root === undefined || !root.isConnected) return;
-		let active = document.activeElement;
-		if (active !== null && active !== document.body && !root.contains(active)) return;
-		void director.mixer.resume();
-		if (event.key === "Control") {
-			director.holdSkip(true);
-			return;
-		}
-		if (openDialog() !== null || event.ctrlKey || event.metaKey || event.altKey) return;
-		let target = event.target as Element | null;
-		if (target?.closest("input, select, textarea, [contenteditable]") !== null && target !== null)
-			return;
-		let onButton = target?.closest("button") !== null && target !== null;
-		if (onButton && (event.key === " " || event.key === "Enter")) return;
-		let action = KEYMAP[event.key] ?? KEYMAP[event.key.toLowerCase()];
-		if (action === undefined) return;
-		event.preventDefault();
-		run(action);
-	}
-
-	/** Stops skipping when Control is released. */
-	function keyup(event: KeyboardEvent): void {
-		if (event.key === "Control") director.holdSkip(false);
-	}
-
-	/** Polls connected gamepads once per frame while any is connected. */
-	function startPolling(): void {
-		if (polling) return;
-		polling = true;
-		let poll = () => {
-			if (handle.signal.aborted) return;
-			let connected = (navigator.getGamepads?.() ?? []).filter((pad) => pad !== null);
-			for (let pad of connected) {
-				let buttons = pad.buttons.map((button) => button.pressed);
-				for (let action of gamepadActions(pads.get(pad.index) ?? [], buttons)) gamepad(action);
-				pads.set(pad.index, buttons);
-			}
-			if (connected.length === 0) {
-				polling = false;
-				return;
-			}
-			requestAnimationFrame(poll);
-		};
-		requestAnimationFrame(poll);
-	}
-
-	/** Runs a gamepad action: focus moves through controls, A presses the focused one or advances. */
-	function gamepad(action: ReturnType<typeof gamepadActions>[number]): void {
-		if (root === undefined) return;
-		void director.mixer.resume();
-		let dialog = openDialog();
-		if (action === "focus-next" || action === "focus-previous") {
-			moveFocus(dialog ?? root, action === "focus-next" ? 1 : -1);
-			return;
-		}
-		if (action === "activate") {
-			let focused = document.activeElement;
-			if (
-				focused instanceof HTMLElement &&
-				root.contains(focused) &&
-				focused.matches(INTERACTIVE)
-			) {
-				focused.click();
-			} else run("advance");
-			return;
-		}
-		if (action === "back") {
-			if (dialog === null) toggleHidden();
-			else dialog.close();
-			return;
-		}
-		if (dialog !== null) return;
-		if (action === "rollback") run("rollback");
-		else if (action === "skip") run("skip");
-		else run("settings");
-	}
+	let context: NovelPlayer.Context = {
+		get element() {
+			return root;
+		},
+		get dialog() {
+			return openDialog();
+		},
+		get hidden() {
+			return hidden;
+		},
+		get replaying() {
+			return director.replaying;
+		},
+		get mixer() {
+			return director.mixer;
+		},
+		advance: () => director.advance(),
+		rollback: () => director.rollback(),
+		save,
+		load,
+		toggleAuto: () => director.toggleAuto(),
+		toggleSkip: () => director.toggleSkip(),
+		holdSkip: (held) => director.holdSkip(held),
+		hide,
+		toggleFullscreen,
+		endReplay: () => director.endReplay(),
+		open: (screen) => show(ids[screen]),
+	};
+	handle.context.set(context);
 
 	return () => {
 		let {
 			novel: _novel,
 			start: _start,
 			settings: stored,
-			onSettingsChange: _onSettingsChange,
 			saves: storedSaves,
-			onSave: _onSave,
 			slots = 6,
 			focus = true,
 			renderInteraction,
-			onEnding: _onEnding,
 			labels: labelOverrides,
 			markup,
 			extras: showExtras = true,
@@ -438,12 +405,6 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 						},
 					}),
 					on("pointerdown", () => void director.mixer.resume()),
-					on("wheel", (event) => {
-						if (openDialog() !== null || event.deltaY === 0) return;
-						if (event.timeStamp - lastWheel < WHEEL_INTERVAL_MS) return;
-						lastWheel = event.timeStamp;
-						run(event.deltaY < 0 ? "rollback" : "advance");
-					}),
 					mix,
 				]}
 			>
@@ -456,26 +417,11 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props>) {
 						ref((node) => {
 							stage = node;
 						}),
-						css({ touchAction: "none", cursor: "pointer", userSelect: "none" }),
-						on("pointerdown", (event) => {
-							touch =
-								event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : undefined;
-						}),
-						on("pointerup", (event) => {
-							let start = touch;
-							touch = undefined;
-							if (start === undefined) return;
-							let direction = swipeDirection(event.clientX - start.x, event.clientY - start.y);
-							if (direction === null) return;
-							suppressClick = event.timeStamp;
-							if (direction === "down") run("backlog");
-							else if (direction === "up") run("rollback");
-						}),
+						css({ cursor: "pointer", userSelect: "none" }),
 						on("click", (event) => {
-							if (suppressClick !== 0 && event.timeStamp - suppressClick < 500) return;
 							if ((event.target as Element).closest(INTERACTIVE) !== null) return;
 							if (hidden) {
-								toggleHidden();
+								hide(false);
 								return;
 							}
 							director.advance();

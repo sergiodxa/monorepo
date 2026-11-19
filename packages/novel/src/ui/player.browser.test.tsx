@@ -34,6 +34,8 @@ import {
 	scenes,
 } from "../index.js";
 
+import { gamepadControls, keyboardControls, touchControls } from "./controls.js";
+import { NovelSaveEvent } from "./events.js";
 import { NovelPlayer } from "./player.js";
 
 /** An SVG image as a data URL, so images decode without a server. */
@@ -194,8 +196,12 @@ afterEach(async () => {
 	vi.restoreAllMocks();
 });
 
-/** Mounts a player in a 960×540 box with instant text unless the props say otherwise. */
+/**
+ * Mounts a player with every control in a 960×540 box with instant text unless the props say
+ * otherwise, catching its events on an ancestor.
+ */
 function mount(props: Partial<NovelPlayer.Props> = {}) {
+	let events = { save: vi.fn(), settings: vi.fn(), ending: vi.fn() };
 	let container = document.createElement("div");
 	container.style.width = "960px";
 	container.style.height = "540px";
@@ -203,19 +209,30 @@ function mount(props: Partial<NovelPlayer.Props> = {}) {
 	let intl = createI18n({ locale: "en", fallbackLanguage: "en", resources: { en: MESSAGES } });
 	mounted = render(
 		<IntlProvider intl={intl}>
-			<NovelPlayer
-				novel={fixture()}
-				start={{ seed: "player" }}
-				settings={{ textSpeed: 0 }}
-				renderInteraction={Fishing}
-				{...props}
-			/>
+			<div
+				mix={[
+					css({ display: "contents" }),
+					on("novel:save", (event) => events.save(event.slot, event.state)),
+					on("novel:settings", (event) => events.settings(event.settings)),
+					on("novel:ending", (event) => events.ending(event.ending)),
+				]}
+			>
+				<NovelPlayer
+					novel={fixture()}
+					start={{ seed: "player" }}
+					settings={{ textSpeed: 0 }}
+					renderInteraction={Fishing}
+					mix={[keyboardControls(), touchControls(), gamepadControls()]}
+					{...props}
+				/>
+			</div>
 		</IntlProvider>,
 		{ container },
 	);
 	let result = mounted;
 	return {
 		result,
+		events,
 		root: () => result.$("[data-novel-player]")!,
 		surface: () => result.$("[data-novel-surface]")!,
 		line: () => result.$("[data-novel-line]")?.textContent ?? null,
@@ -314,9 +331,9 @@ describe("NovelPlayer", () => {
 		expect(player.result.$("[data-novel-captions] li")!.textContent).toBe("A door creaks.");
 	});
 
-	test("renders a custom frame through renderInteraction and reaches the ending", async () => {
-		let ended = vi.fn();
-		let player = mount({ onEnding: ended });
+	test("renders a custom frame through renderInteraction and dispatches novel:ending", async () => {
+		let player = mount();
+		let ended = player.events.ending;
 		await toMenu(player);
 		player.result.$('[data-option="cafe.stay"]')!.click();
 		await vi.waitFor(() => expect(player.result.$("[data-fish]")).not.toBeNull(), {
@@ -380,7 +397,7 @@ describe("NovelPlayer", () => {
 		await shows(player, "Together!");
 		await userEvent.keyboard("{ArrowUp}");
 		await shows(player, "Hello, Ada!");
-		player.root().dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true }));
+		player.surface().dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true }));
 		await shows(player, "Welcome to the café.");
 		let backlog = (player.result.$("[data-novel-backlog]") as HTMLDialogElement)!;
 		expect([...backlog.querySelectorAll("li")].map((item) => item.dataset["key"])).toEqual([
@@ -407,14 +424,15 @@ describe("NovelPlayer", () => {
 		expect(player.line()).toBe("Hello, Ada!");
 	});
 
-	test("quick saves through onSave and quick loads the saved line", async () => {
-		let saved: Record<string, GameState> = {};
-		let player = mount({ onSave: (slot, state) => (saved[slot] = state) });
+	test("quick saves through novel:save and quick loads the saved line", async () => {
+		let player = mount();
 		await shows(player, "Welcome to the café.");
 		clickStage(player);
 		await shows(player, "Hello, Ada!");
 		await userEvent.keyboard("q");
-		expect(saved["quick"]?.position).toEqual({ scene: "prologue.opening", line: "opening.hello" });
+		let [slot, state] = player.events.save.mock.lastCall as [string, GameState];
+		expect(slot).toBe("quick");
+		expect(state.position).toEqual({ scene: "prologue.opening", line: "opening.hello" });
 		clickStage(player);
 		await shows(player, "Together!");
 		await userEvent.keyboard("w");
@@ -422,8 +440,8 @@ describe("NovelPlayer", () => {
 	});
 
 	test("saves into a slot from the save screen and draws its thumbnail on the load screen", async () => {
-		let onSave = vi.fn();
-		let player = mount({ onSave, slots: 2 });
+		let player = mount({ slots: 2 });
+		let onSave = player.events.save;
 		await shows(player, "Welcome to the café.");
 		await userEvent.keyboard("s");
 		let screen = (player.result.$('[data-novel-saves="save"]') as HTMLDialogElement)!;
@@ -446,7 +464,7 @@ describe("NovelPlayer", () => {
 	});
 
 	test("resumes the saves the app passes in", async () => {
-		let first = mount({ onSave: () => undefined });
+		let first = mount();
 		await shows(first, "Welcome to the café.");
 		clickStage(first);
 		await shows(first, "Hello, Ada!");
@@ -456,12 +474,12 @@ describe("NovelPlayer", () => {
 		) as HTMLButtonElement;
 		expect(state!.disabled).toBe(false);
 		mounted?.cleanup();
-		let saves: Record<string, GameState> = {};
-		let second = mount({ onSave: (slot, game) => (saves[slot] = game) });
+		let second = mount();
 		await shows(second, "Welcome to the café.");
 		clickStage(second);
 		await shows(second, "Hello, Ada!");
 		await userEvent.keyboard("q");
+		let saves = Object.fromEntries(second.events.save.mock.calls) as Record<string, GameState>;
 		mounted?.cleanup();
 		let third = mount({ saves });
 		await shows(third, "Welcome to the café.");
@@ -470,8 +488,8 @@ describe("NovelPlayer", () => {
 	});
 
 	test("reports changed settings and applies text size and the dyslexia-friendly font", async () => {
-		let changed = vi.fn();
-		let player = mount({ onSettingsChange: changed, settings: { textSpeed: 0, fontSize: 1.5 } });
+		let player = mount({ settings: { textSpeed: 0, fontSize: 1.5 } });
+		let changed = player.events.settings;
 		await shows(player, "Welcome to the café.");
 		let line = player.result.$("[data-novel-line]")!;
 		let surfaceHeight = player.surface().getBoundingClientRect().height;
@@ -498,6 +516,36 @@ describe("NovelPlayer", () => {
 		expect(changed).toHaveBeenLastCalledWith(
 			expect.objectContaining({ volume: expect.objectContaining({ music: 0.2, master: 1 }) }),
 		);
+	});
+
+	test("dispatches typed, bubbling events an ancestor catches through on()", async () => {
+		let player = mount({ settings: { textSpeed: 0, skip: "all" } });
+		await shows(player, "Welcome to the café.");
+		let saved = new Promise<NovelSaveEvent>((resolve) =>
+			document.body.addEventListener("novel:save", resolve, { once: true }),
+		);
+		await userEvent.keyboard("q");
+		let event = await saved;
+		expect(event).toBeInstanceOf(NovelSaveEvent);
+		expect(event.bubbles).toBe(true);
+		expect(event.target).toBe(player.root());
+		expect(event.slot).toBe("quick");
+		expect(event.state.position).toEqual({ scene: "prologue.opening", line: "opening.welcome" });
+		expect(player.events.save).toHaveBeenCalledWith("quick", event.state);
+	});
+
+	test("takes no keys, wheel or gamepad input when its control mixins are left out", async () => {
+		let player = mount({ mix: [] });
+		await shows(player, "Welcome to the café.");
+		await userEvent.keyboard(" ");
+		await userEvent.keyboard("l");
+		player.surface().dispatchEvent(new WheelEvent("wheel", { deltaY: 100, bubbles: true }));
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(player.line()).toBe("Welcome to the café.");
+		expect((player.result.$("[data-novel-backlog]") as HTMLDialogElement).open).toBe(false);
+		expect(getComputedStyle(player.root()).touchAction).toBe("auto");
+		clickStage(player);
+		await shows(player, "Hello, Ada!");
 	});
 
 	test("hides the interface and brings it back on the next click without advancing", async () => {
