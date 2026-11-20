@@ -95,7 +95,7 @@ describe("ReelFeed under a finger", () => {
 		await waitForActive(mounted, 5);
 		let scroller = scrollerOf(mounted);
 
-		await swipe(scroller, 480, 180, 16);
+		await swipe(scroller, 540, 120, 16);
 
 		await waitForActive(mounted, 0);
 		await vi.waitFor(() => expect(scroller.scrollTop).toBe(0), { timeout: 4000 });
