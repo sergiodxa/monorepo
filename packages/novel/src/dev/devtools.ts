@@ -24,7 +24,6 @@ import { check } from "../check.js";
 import { isSceneDeclaration } from "../declarations.js";
 import { NovelError } from "../errors.js";
 import { INTERNALS } from "../novel.js";
-import { validate } from "../state.js";
 
 import type { MissingMessage, SceneGraph } from "./graph.js";
 
@@ -185,7 +184,7 @@ export class DevTools {
 
 	/**
 	 * Starts a play at the top of `scene` with `state`, after checking it against the novel's
-	 * state schema, keeping the followed play's persistent data.
+	 * state schema and its extensions' slices, keeping the followed play's persistent data.
 	 *
 	 * @param scene - A mapped scene's name.
 	 * @param state - The story state, as parsed from the editor; missing fields take their defaults.
@@ -199,7 +198,7 @@ export class DevTools {
 				new NovelError("unmapped-scene", `Scene "${scene}" has no module.`, { subject: scene }),
 			);
 		}
-		let parsed = validate(this.#internals.options.state, state);
+		let parsed = this.#internals.state(state);
 		if (parsed.status === "failure") {
 			return failure(
 				new NovelError("invalid-state", `The state is invalid: ${parsed.error.message}`),

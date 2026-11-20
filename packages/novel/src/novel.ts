@@ -24,13 +24,14 @@ import type {
 import type { SceneModule } from "./directives.js";
 import type { Cursor, Live, NovelRuntime } from "./engine.js";
 import type { Emit, NovelEventName, NovelListener, NovelPlugin } from "./events.js";
+import type { AnyExtension, ExtensionMethods } from "./extensions.js";
 import type { Ending, Frame, GameState, ReplayScope, Reply, StopFrame } from "./frames.js";
 import type { Lazy } from "./lazy.js";
 import type { NovelLink, ReachedScene, ReachOptions } from "./links.js";
 import type { Persistent } from "./persistent.js";
 import type { Audio, Fraction, Position, PositionAlias, Stage } from "./stage.js";
 import type { SavedGame } from "./state.js";
-import type { DeepPartial, NovelState, StateRecord } from "./types.js";
+import type { DeclaredState, DeepPartial, NovelState, StateRecord } from "./types.js";
 
 import { indexScene } from "./anchors.js";
 import {
@@ -39,9 +40,11 @@ import {
 	isCharacterDeclaration,
 	isSceneDeclaration,
 } from "./declarations.js";
+import { extensionContext, isBuiltinDirective } from "./directives.js";
 import { drawCharacter, PlayEngine } from "./engine.js";
 import { NovelError } from "./errors.js";
 import { Listeners } from "./events.js";
+import { parseState, resolveScene } from "./extensions.js";
 import { isLazy } from "./lazy.js";
 import { reach, toLinks } from "./links.js";
 import { readPersistent } from "./persistent.js";
@@ -99,7 +102,13 @@ export interface NovelOptions {
 	/** The `interactions()` map. */
 	interactions?: object;
 	/** The schema of the story state; it types every callback and validates loaded saves. */
-	state: StandardSchemaV1<unknown, NovelState>;
+	state: StandardSchemaV1<unknown, DeclaredState>;
+	/**
+	 * Story extensions: each adds a slice of state saved with the play, directives scenes call
+	 * as `ctx.<name>`, and listeners. Each name is unique, holds no dot, and differs from every
+	 * built-in directive.
+	 */
+	extensions?: readonly AnyExtension[];
 	/** The scene a new play starts in. */
 	initial: SceneDeclaration;
 	/**
@@ -184,6 +193,11 @@ export interface NovelInternals {
 	 */
 	replace(scene: string, module: SceneModule): void;
 	start(options: StartOptions, sink: PlaySink): Result<Play, NovelError>;
+	/**
+	 * Parses a story state as a play would start from it: extension slices by their schemas
+	 * (their `initial` value when absent), everything else by the novel's state schema.
+	 */
+	state(input: unknown): Result<StateRecord, Error>;
 }
 
 /**
@@ -222,14 +236,31 @@ export class Novel {
 	#characters: Map<string, CharacterDeclaration>;
 	#assets: Map<string, AssetDeclaration>;
 	#listeners = new Listeners();
+	#extensions: readonly AnyExtension[];
+	#methods = new Map<string, ExtensionMethods>();
 
 	/**
 	 * Creates the novel; {@link createNovel} is the usual way to call it.
 	 *
 	 * @param options - The declarations, state schema and story options.
+	 * @throws When two extensions share a name, or one is named like a built-in directive or
+	 * holds a dot.
 	 */
 	constructor(options: NovelOptions) {
 		this.#options = options;
+		this.#extensions = options.extensions ?? [];
+		for (let entry of this.#extensions) {
+			if (entry.name === "" || entry.name.includes(".") || isBuiltinDirective(entry.name)) {
+				throw new Error(`Extension name "${entry.name}" is not a free scene context key`);
+			}
+			if (this.#methods.has(entry.name)) {
+				throw new Error(`Extension "${entry.name}" is passed more than once`);
+			}
+			this.#methods.set(entry.name, entry.directives(extensionContext(entry.name) as never));
+			for (let [name, listener] of Object.entries(entry.on)) {
+				this.#listeners.on(name as NovelEventName, listener as NovelListener<NovelEventName>);
+			}
+		}
 		this.#scenes = byKey(collect(options.scenes, isSceneDeclaration), (scene) => scene.name);
 		this.#characters = byKey(
 			collect(options.cast ?? {}, isCharacterDeclaration),
@@ -358,6 +389,7 @@ export class Novel {
 				this.#bind(scene, module);
 			},
 			start: (options, sink) => this.#start(options, sink),
+			state: (input) => parseState(this.#options.state, this.#extensions, input),
 		};
 	}
 
@@ -399,7 +431,7 @@ export class Novel {
 
 	/** A new play's starting point. */
 	#fresh(options: StartOptions): Result<{ live: Live; playTime: number }, NovelError> {
-		let state = validate(this.#options.state, options.state ?? {});
+		let state = parseState(this.#options.state, this.#extensions, options.state ?? {});
 		if (isFailure(state)) {
 			return failure(
 				new NovelError("invalid-state", `The starting state is invalid: ${state.error.message}`),
@@ -411,7 +443,7 @@ export class Novel {
 			stack: [],
 			stage: emptyStage(),
 			audio: silence(),
-			state: state.data as StateRecord,
+			state: state.data,
 			random: createRandom(options.seed ?? systemSeed()).state(),
 			taken: [],
 		};
@@ -435,7 +467,7 @@ export class Novel {
 				new NovelError("invalid-state", `The save stands in unknown scene "${unknown.scene}".`),
 			);
 		}
-		let state = validate(this.#options.state, game.state);
+		let state = parseState(this.#options.state, this.#extensions, game.state);
 		if (isFailure(state)) {
 			return failure(
 				new NovelError("invalid-state", `The saved state is invalid: ${state.error.message}`),
@@ -446,7 +478,7 @@ export class Novel {
 			stack: game.stack.map((entry) => anchored(entry, true)),
 			stage: this.#stage(game.stage),
 			audio: this.#audio(game.audio),
-			state: state.data as StateRecord,
+			state: state.data,
 			random: game.random,
 			taken: game.taken,
 		};
@@ -593,7 +625,16 @@ export class Novel {
 				),
 			);
 		}
-		let index = indexScene(loaded);
+		let resolved = resolveScene(loaded, this.#methods);
+		if (isFailure(resolved)) {
+			return failure(
+				new NovelError("load-failed", `Scene "${name}" failed to load: ${resolved.error.message}`, {
+					cause: resolved.error,
+					subject: name,
+				}),
+			);
+		}
+		let index = indexScene(resolved.data);
 		this.#indexes.set(name, index);
 		return success(index);
 	}
@@ -709,7 +750,7 @@ function createPlay(engine: PlayEngine): Play {
  *
  * @param options - The declarations, state schema, initial scene and story options.
  * @returns The novel.
- * @example export const novel = createNovel({ scenes, cast, assets, interactions, state: STATE, initial: scenes.prologue.opening });
+ * @example export const novel = createNovel({ scenes, cast, assets, interactions, extensions: [affection], state: STATE, initial: scenes.prologue.opening });
  */
 export function createNovel(options: NovelOptions): Novel {
 	return new Novel(options);

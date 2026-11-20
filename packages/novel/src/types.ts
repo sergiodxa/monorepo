@@ -1,6 +1,6 @@
 /**
- * The types an app declares once through `NovelTypes` (its state, its message bundle and its
- * interactions) and everything derived from them: message keys and values, state paths, and
+ * The types an app declares once through `NovelTypes` (its state, messages, interactions and
+ * extensions) and everything derived from them: message keys and values, state paths, and
  * the callbacks scenes pass to `when`, `set` and message values.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,14 +11,15 @@ import type { MessageKey, MessageValues, Messages } from "@sdxc/i18n";
 import type { Random } from "@sdxc/random";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import type { ExtensionState } from "./extensions.js";
 import type { Persistent } from "./persistent.js";
 
 /**
- * Augmented by an app to type every scene from its state, its message bundle and its
- * interactions. Without it, state is any record, any key reads as a line, and an interaction
- * frame carries unknown input.
+ * Augmented by an app to type every scene from its state, its message bundle, its interactions
+ * and its extensions (the list passed to `createNovel`). Without it, state is any record, any
+ * key reads as a line, and an interaction frame carries unknown input.
  *
- * @example declare module "@sdxc/novel" { interface NovelTypes { state: State; messages: typeof en; interactions: typeof interactions } }
+ * @example declare module "@sdxc/novel" { interface NovelTypes { state: State; messages: typeof en; interactions: typeof interactions; extensions: typeof extensions } }
  */
 // oxlint-disable-next-line typescript/no-empty-object-type -- the seam apps augment
 export interface NovelTypes {}
@@ -29,7 +30,13 @@ export interface StateRecord {
 }
 
 /** The state the app declared through {@link NovelTypes}, or any record until it does. */
-export type NovelState = NovelTypes extends { state: infer State } ? State : StateRecord;
+export type DeclaredState = NovelTypes extends { state: infer State } ? State : StateRecord;
+
+/**
+ * The story state callbacks read and `set` writes: the app's declared state, with each
+ * declared extension's slice under the extension's name.
+ */
+export type NovelState = DeclaredState & ExtensionState;
 
 /** The message bundle the app declared through {@link NovelTypes}, or untyped messages. */
 export type NovelMessages = NovelTypes extends { messages: infer Bundle } ? Bundle : Messages;
@@ -50,23 +57,33 @@ export interface PlayTools {
  * state goes through `set`, so rollback and saves see every change.
  *
  * @template Value - What the callback answers.
+ * @template State - The state it reads; an extension's directives read the declared state.
  */
-export type StateCallback<Value> = (state: Readonly<NovelState>, tools: PlayTools) => Value;
+export type StateCallback<Value, State = NovelState> = (
+	state: Readonly<State>,
+	tools: PlayTools,
+) => Value;
 
-/** Message values written inline, or computed from state when the line is shown. */
-export type ValuesInput<Values> = Values | StateCallback<Values>;
+/**
+ * Message values written inline, or computed from state when the line is shown.
+ *
+ * @template Values - The message's values.
+ * @template State - The state a callback reads.
+ */
+export type ValuesInput<Values, State = NovelState> = Values | StateCallback<Values, State>;
 
 /**
  * The values argument for the message at `Key`: required when its text declares variables,
  * optional when it declares none, and in either case an object or a callback answering one.
  *
  * @template Key - The line's message key.
+ * @template State - The state a callback reads.
  */
-export type LineValues<Key extends string> =
+export type LineValues<Key extends string, State = NovelState> =
 	MessageValues<NovelMessages, Key> extends [values: infer Values]
-		? [values: ValuesInput<Values>]
+		? [values: ValuesInput<Values, State>]
 		: MessageValues<NovelMessages, Key> extends [values?: infer Values]
-			? [values?: ValuesInput<NonNullable<Values>>]
+			? [values?: ValuesInput<NonNullable<Values>, State>]
 			: never;
 
 /**

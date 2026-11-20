@@ -1,7 +1,8 @@
 /**
- * The package entrypoint: declarations for scenes, the cast, assets and interactions, scene
- * modules built from directives, and the novel that maps scenes, plays them as an async generator
- * of frames and emits typed events. Test helpers and checks live in `@sdxc/novel/test`.
+ * The package entrypoint: declarations for scenes, the cast, assets, interactions and story
+ * extensions, scene modules built from directives, and the novel that maps scenes, plays them
+ * as an async generator of frames and emits typed events. Test helpers and checks live in
+ * `@sdxc/novel/test`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,6 +47,7 @@ export type {
 	EnterDirective,
 	EnterOptions,
 	ExitDirective,
+	ExtensionDirective,
 	ExpressDirective,
 	ExpressOptions,
 	GotoDirective,
@@ -56,6 +58,7 @@ export type {
 	PlayDirective,
 	SayDirective,
 	SceneContext,
+	SceneDirectives,
 	SceneModule,
 	SetDirective,
 	ShowDirective,
@@ -66,6 +69,17 @@ export type {
 	WhenDirective,
 } from "./directives.js";
 export type { NovelErrorCode, NovelErrorOptions } from "./errors.js";
+export type {
+	AnyExtension,
+	Extension,
+	ExtensionCalls,
+	ExtensionContext,
+	ExtensionListeners,
+	ExtensionMethods,
+	ExtensionOptions,
+	ExtensionScope,
+	ExtensionState,
+} from "./extensions.js";
 export type {
 	ChapterEvent,
 	ChoiceEvent,
@@ -124,6 +138,7 @@ export type {
 	StageScenery,
 } from "./stage.js";
 export type {
+	DeclaredState,
 	DeepPartial,
 	LineKey,
 	LineValues,
@@ -153,5 +168,6 @@ export {
 } from "./declarations.js";
 export { createScene } from "./directives.js";
 export { NovelError } from "./errors.js";
+export { extension } from "./extensions.js";
 export { lazy } from "./lazy.js";
 export { createNovel, Novel } from "./novel.js";

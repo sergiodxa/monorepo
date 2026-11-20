@@ -17,6 +17,7 @@ import type {
 	SceneDeclaration,
 	SpriteImage,
 } from "./declarations.js";
+import type { ExtensionCalls, ExtensionContext } from "./extensions.js";
 import type { CharacterTransition, Position, SceneryTransition } from "./stage.js";
 import type {
 	LineKey,
@@ -191,6 +192,18 @@ export interface EndingDirective {
 	key: string;
 }
 
+/**
+ * A call to a story extension's method, as a scene records it. The novel replaces it with the
+ * directives the method answers when it loads the scene, so a play never runs one.
+ */
+export interface ExtensionDirective {
+	type: "extension";
+	/** The extension's name. */
+	extension: string;
+	method: string;
+	args: unknown[];
+}
+
 /** Every directive a scene can hold. */
 export type Directive =
 	| ShowDirective
@@ -211,7 +224,8 @@ export type Directive =
 	| PlayDirective
 	| StopDirective
 	| CustomDirective
-	| EndingDirective;
+	| EndingDirective
+	| ExtensionDirective;
 
 /** A character that can stand on stage: one drawn from sprites or layers. */
 // oxlint-disable-next-line typescript/no-explicit-any -- matches every sprite and layer set
@@ -258,10 +272,14 @@ export type ExpressOptions<Character> =
 			? { layers: Partial<LayerChoice<ImageOf<Character>>>; transition?: CharacterTransition }
 			: never;
 
-/** An option of a menu that needs more than its directives. */
-export interface ChoiceOption {
+/**
+ * An option of a menu that needs more than its directives.
+ *
+ * @template State - The state `when` reads.
+ */
+export interface ChoiceOption<State = NovelState> {
 	/** Offers the option only while this holds. */
-	when?: (state: Readonly<NovelState>, tools: PlayTools) => boolean;
+	when?: (state: Readonly<State>, tools: PlayTools) => boolean;
 	/** What a failed `when` looks like: removed (the default) or shown locked with `reason`. */
 	visibility?: "hidden" | "disabled";
 	/** The message key a disabled option shows. */
@@ -274,8 +292,14 @@ export interface ChoiceOption {
 	do: Directive[];
 }
 
-/** A menu's options keyed by label: a list of directives, or an option object. */
-export type ChoiceOptions = { readonly [Key in LineKey]?: Directive[] | ChoiceOption };
+/**
+ * A menu's options keyed by label: a list of directives, or an option object.
+ *
+ * @template State - The state an option's `when` reads.
+ */
+export type ChoiceOptions<State = NovelState> = {
+	readonly [Key in LineKey]?: Directive[] | ChoiceOption<State>;
+};
 
 /**
  * How a menu behaves beyond its options.
@@ -293,8 +317,13 @@ export interface MenuOptions<Options> {
 	default?: keyof Options & string;
 }
 
-/** What a scene's builder receives: every directive, as functions that return plain data. */
-export interface SceneContext {
+/**
+ * Every built-in directive, as functions that return plain data.
+ *
+ * @template State - The state callbacks read and `set` writes: the novel's whole state in a
+ * scene, the declared state and the extension's own slice in an extension.
+ */
+export interface SceneDirectives<State = NovelState> {
 	/** Sets the background, or shows a full-screen image over it. */
 	show(
 		asset: AssetDeclaration<"background" | "image">,
@@ -326,31 +355,31 @@ export interface SceneContext {
 	say<Key extends LineKey>(
 		speaker: CharacterDeclaration | readonly CharacterDeclaration[],
 		key: Key,
-		...values: LineValues<Key>
+		...values: LineValues<Key, State>
 	): SayDirective;
 	/** A line with no speaker; the play stops for the player. */
-	narrate<Key extends LineKey>(key: Key, ...values: LineValues<Key>): NarrateDirective;
+	narrate<Key extends LineKey>(key: Key, ...values: LineValues<Key, State>): NarrateDirective;
 	/** A menu; the play stops for the player's choice. */
-	choose<const Options extends ChoiceOptions>(
+	choose<const Options extends ChoiceOptions<State>>(
 		options: Options,
 		menu?: MenuOptions<Options>,
 	): ChooseDirective;
 	/** Runs `directives` when the condition holds, and `otherwise` when it does not. */
 	when(
-		condition: (state: Readonly<NovelState>, tools: PlayTools) => boolean,
+		condition: (state: Readonly<State>, tools: PlayTools) => boolean,
 		directives: Directive[],
 		otherwise?: Directive[],
 	): WhenDirective;
 	/** Sets state at a path, to a value or to what a function makes of the current one. */
-	set<Path extends StatePath<NovelState>>(
+	set<Path extends StatePath<State>>(
 		path: Path,
 		update:
-			| PathValue<NovelState, Path>
+			| PathValue<State, Path>
 			| ((
-					value: PathValue<NovelState, Path>,
-					state: Readonly<NovelState>,
+					value: PathValue<State, Path>,
+					state: Readonly<State>,
 					tools: PlayTools,
-			  ) => PathValue<NovelState, Path>),
+			  ) => PathValue<State, Path>),
 	): SetDirective;
 	/** Continues in another scene. */
 	goto(scene: SceneDeclaration): GotoDirective;
@@ -375,7 +404,7 @@ export interface SceneContext {
 		interaction: Interaction,
 		options: {
 			input: SchemaInput<Interaction["input"]>;
-			into?: PathAccepting<NovelState, StandardSchemaV1.InferOutput<Interaction["output"]>>;
+			into?: PathAccepting<State, StandardSchemaV1.InferOutput<Interaction["output"]>>;
 		},
 	): CustomDirective;
 	/** Records an ending and finishes the play. */
@@ -391,7 +420,10 @@ function withTransition<Value extends object>(
 }
 
 /** Normalizes one menu option to its object form. */
-function normalizeOption(key: string, option: Directive[] | ChoiceOption): ChoiceOptionDirective {
+function normalizeOption(
+	key: string,
+	option: Directive[] | ChoiceOption<StateRecord>,
+): ChoiceOptionDirective {
 	if (Array.isArray(option)) {
 		return { key, visibility: "hidden", once: false, done: false, do: option };
 	}
@@ -408,10 +440,16 @@ function normalizeOption(key: string, option: Directive[] | ChoiceOption): Choic
 }
 
 /**
- * The directive builders every scene receives. They read no state and keep none, so one
- * object serves every scene.
+ * What a scene's builder receives: every built-in directive, and each declared extension's
+ * methods under its name.
  */
-const sceneContext: SceneContext = {
+export type SceneContext = SceneDirectives & ExtensionCalls;
+
+/**
+ * The built-in directive builders. They read no state and keep none, so one object serves
+ * every scene and every extension.
+ */
+const builders: SceneDirectives = {
 	show(asset, options = {}) {
 		return withTransition({ type: "show", asset }, options.transition);
 	},
@@ -461,7 +499,9 @@ const sceneContext: SceneContext = {
 		return directive;
 	},
 	choose(options, menu = {}) {
-		let entries = Object.entries(options as Record<string, Directive[] | ChoiceOption>);
+		let entries = Object.entries(
+			options as Record<string, Directive[] | ChoiceOption<StateRecord>>,
+		);
 		let directive: ChooseDirective = {
 			type: "choose",
 			options: entries.map(([key, option]) => normalizeOption(key, option)),
@@ -518,6 +558,62 @@ const sceneContext: SceneContext = {
 		return { type: "ending", key };
 	},
 };
+
+/**
+ * The context scenes are built with: the built-in builders, and for any other name the methods
+ * of the extension so named, each recording its call as an {@link ExtensionDirective}.
+ */
+const sceneContext = new Proxy(builders, {
+	get(target, key, receiver) {
+		if (typeof key !== "string" || key in target) return Reflect.get(target, key, receiver);
+		return extensionCalls(key);
+	},
+}) as SceneContext;
+
+/** The methods of the extension named `extension`, each recording the call it receives. */
+function extensionCalls(extension: string): Record<string, (...args: unknown[]) => Directive> {
+	return new Proxy(
+		{},
+		{
+			get(_target, method) {
+				if (typeof method !== "string") return undefined;
+				return (...args: unknown[]): ExtensionDirective => ({
+					type: "extension",
+					extension,
+					method,
+					args,
+				});
+			},
+		},
+	);
+}
+
+/**
+ * Reports whether `name` is a built-in directive, which an extension cannot be named after
+ * since the scene context would never reach it.
+ *
+ * @param name - A candidate extension name.
+ * @returns `true` when the scene context already has a builder by that name.
+ */
+export function isBuiltinDirective(name: string): boolean {
+	return name in builders;
+}
+
+/**
+ * The context an extension's methods are written with: the built-in builders, and `update` for
+ * the slice at `name`.
+ *
+ * @param name - The extension's name, which is its slice's key in the state.
+ * @returns The context its `directives` builder receives.
+ */
+export function extensionContext(name: string): ExtensionContext<string, unknown> {
+	return {
+		...builders,
+		update(update) {
+			return { type: "set", path: name, update };
+		},
+	};
+}
 
 /**
  * A scene's module as `createScene()` builds it: the scene it was written for and its
