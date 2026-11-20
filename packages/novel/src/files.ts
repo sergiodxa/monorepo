@@ -19,7 +19,13 @@ export function copyKeepingFiles<Value>(value: Value): Value {
 	return restoreFiles(value, structuredClone(value), new Set()) as Value;
 }
 
-/** Puts each Blob of `original` back where `copy` holds its clone, through arrays and plain objects. */
+/** Keys that reach an object's prototype when written; saved state is untrusted, so they are never written. */
+const PROTOTYPE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+/**
+ * Puts each Blob of `original` back where `copy` holds its clone, through arrays and plain
+ * objects. Values under `PROTOTYPE_KEYS` stay as `structuredClone` copied them.
+ */
 function restoreFiles(original: unknown, copy: unknown, seen: Set<object>): unknown {
 	if (original instanceof Blob) return original;
 	if (typeof original !== "object" || original === null || seen.has(original)) return copy;
@@ -28,6 +34,7 @@ function restoreFiles(original: unknown, copy: unknown, seen: Set<object>): unkn
 	seen.add(original);
 	let target = copy as Record<string, unknown>;
 	for (let [key, item] of Object.entries(original)) {
+		if (PROTOTYPE_KEYS.has(key)) continue;
 		target[key] = restoreFiles(item, target[key], seen);
 	}
 	return copy;

@@ -23,6 +23,19 @@ const STATE = s.object({
 });
 
 describe(copyKeepingFiles, () => {
+	test("copies a saved state with prototype keys without touching any prototype", () => {
+		let saved: unknown = JSON.parse(
+			'{"__proto__": {"polluted": true}, "stage": {"constructor": {"prototype": {"polluted": true}}}}',
+		);
+
+		let copy = copyKeepingFiles(saved) as Record<string, unknown>;
+
+		expect(Object.getPrototypeOf(copy)).toBe(Object.prototype);
+		expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+		expect(Object.prototype.hasOwnProperty.call(copy, "__proto__")).toBe(true);
+		expect(JSON.stringify(copy)).toBe(JSON.stringify(saved));
+	});
+
 	test("copies the state and keeps each Blob", () => {
 		let file = new Blob(["cafe"]);
 		let state = { stage: { background: { id: "backgrounds.cafe", src: file } }, list: [file, 1] };
