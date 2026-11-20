@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Typeset } from "@sdxc/ui";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 
@@ -47,5 +48,35 @@ describe("ComponentPreview", () => {
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
 		expect(host.scrollWidth).toBeLessThanOrEqual(width);
 		expect(demo.left).toBeGreaterThanOrEqual(host.getBoundingClientRect().left);
+	});
+
+	test("sits one flow step below the paragraph before it in a guide, and flush outside one", () => {
+		let host = document.createElement("div");
+		document.body.appendChild(host);
+		let { cleanup } = render(
+			<>
+				<Typeset preset="docs">
+					<p data-before>Here is the demo, live:</p>
+					<ComponentPreview>
+						<span />
+					</ComponentPreview>
+				</Typeset>
+				<div data-bare>
+					<ComponentPreview>
+						<span />
+					</ComponentPreview>
+				</div>
+			</>,
+			{ container: host },
+		);
+		cleanups.push(cleanup);
+
+		let paragraph = host.querySelector("[data-before]")!;
+		let framed = paragraph.nextElementSibling!;
+		let bare = host.querySelector("[data-bare] > *")!;
+		let gap = framed.getBoundingClientRect().top - paragraph.getBoundingClientRect().bottom;
+
+		expect(gap).toBeGreaterThan(0);
+		expect(getComputedStyle(bare).marginBlockStart).toBe("0px");
 	});
 });

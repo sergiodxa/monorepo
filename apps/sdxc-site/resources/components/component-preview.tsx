@@ -53,8 +53,9 @@ namespace ComponentPreview {
 
 /**
  * Renders one preview and its source. The surface opts out of a guide's prose styles, so a
- * demo framed into an article draws exactly as it does on its component page. A demo wider
- * than the surface, positioned parts included, starts at its left edge and scrolls inside it.
+ * demo framed into an article draws exactly as it does on its component page, spaced from
+ * the paragraph above by the article's own flow. A demo wider than the surface starts at its
+ * left edge and scrolls inside it.
  */
 export default function ComponentPreview(handle: Handle<ComponentPreview.Props>) {
 	return () => {
@@ -63,7 +64,11 @@ export default function ComponentPreview(handle: Handle<ComponentPreview.Props>)
 		return (
 			<div
 				data-not-typeset
-				mix={[vstack({ gap: 3, align: "stretch" }), container(PREVIEW_CONTAINER)]}
+				mix={[
+					vstack({ gap: 3, align: "stretch" }),
+					container(PREVIEW_CONTAINER),
+					raw({ marginBlockStart: "var(--ui-typeset-flow, 0)" }),
+				]}
 			>
 				<div
 					mix={[
