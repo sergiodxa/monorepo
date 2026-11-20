@@ -14,6 +14,8 @@ import { css, on } from "remix/component";
 
 import type { GameState } from "../frames.js";
 
+import type { NovelLabels } from "./settings.js";
+
 import { QUICK_SLOT, SaveSlots } from "./behaviors/save-slots.js";
 import { stillStage } from "./layout.js";
 import { Message } from "./message.js";
@@ -48,14 +50,16 @@ interface SlotDialogProps {
 /**
  * The save and load screens: two modal dialogs over the player's `saves` model, opened by the
  * quick menu or the `s` and `o` keys. Saving writes the current play into the slot picked;
- * loading resumes a filled one, and an empty slot is disabled there.
+ * loading resumes a filled one. The autosave slot comes first and is load-only.
  *
  * @example <NovelPlayer.Saves slots={3} />
  */
 export function SaveScreen(handle: Handle<SaveScreen.Props>) {
+	let player = handle.context.get(NovelPlayer);
 	return () => {
 		let { slots = 6, mix, ...rest } = handle.props;
 		let names = SaveSlots.names(slots);
+		if (!names.includes(player.autosave.slot)) names.unshift(player.autosave.slot);
 		return (
 			<div {...rest} data-novel-save-screens="" mix={[css({ display: "contents" }), mix]}>
 				<SlotDialog mode="save" slots={names} />
@@ -65,7 +69,10 @@ export function SaveScreen(handle: Handle<SaveScreen.Props>) {
 	};
 }
 
-/** One of the slot dialogs, listing every slot with its thumbnail, scene and time. */
+/**
+ * One of the slot dialogs, listing every slot with its thumbnail, scene and time. An empty slot
+ * is disabled when loading, and the autosave slot when saving, since only autosave writes it.
+ */
 function SlotDialog(handle: Handle<SlotDialogProps>) {
 	let player = handle.context.get(NovelPlayer);
 	player.saves.addEventListener("change", () => void handle.update(), { signal: handle.signal });
@@ -104,7 +111,8 @@ function SlotDialog(handle: Handle<SlotDialogProps>) {
 								<button
 									type="button"
 									data-slot-name={slot}
-									disabled={mode === "load" && saved === undefined}
+									data-autosave={slot === player.autosave.slot ? "" : undefined}
+									disabled={mode === "load" ? saved === undefined : slot === player.autosave.slot}
 									commandfor={id}
 									command="close"
 									mix={[
@@ -139,9 +147,7 @@ function SlotDialog(handle: Handle<SlotDialogProps>) {
 									>
 										{saved === undefined ? null : <SlotThumbnail state={saved} locale={locale} />}
 									</span>
-									<strong>
-										{slot === QUICK_SLOT ? labels.quickSave : `${labels.slot} ${slot}`}
-									</strong>
+									<strong>{slotName(slot, player.autosave.slot, labels)}</strong>
 									{saved === undefined ? (
 										<span>{labels.emptySlot}</span>
 									) : (
@@ -162,6 +168,13 @@ function SlotDialog(handle: Handle<SlotDialogProps>) {
 			</Dialog>
 		);
 	};
+}
+
+/** The name a slot shows: the autosave and quick slots by label, the rest numbered. */
+function slotName(slot: string, autosave: string, labels: NovelLabels): string {
+	if (slot === autosave) return labels.autosave;
+	if (slot === QUICK_SLOT) return labels.quickSave;
+	return `${labels.slot} ${slot}`;
 }
 
 /**

@@ -108,6 +108,18 @@ export const NOVEL_THEME_VARIABLES = {
 	"--novel-ending-background": "rgb(0 0 0 / 0.55)",
 	"--novel-ending-size": "6cqh",
 	"--novel-error-background": "rgb(120 20 30 / 0.9)",
+	"--novel-read-color": "inherit",
+	"--novel-notification-inset": "1rem 1rem auto auto",
+	"--novel-notification-gap": "0.5rem",
+	"--novel-notification-background": "rgb(10 10 20 / 0.88)",
+	"--novel-notification-color": "#fff",
+	"--novel-notification-border": "1px solid var(--novel-accent, #f4c95d)",
+	"--novel-notification-radius": "0.5rem",
+	"--novel-notification-padding": "0.6rem 1rem",
+	"--novel-notification-font": "var(--ui-font-sans, inherit)",
+	"--novel-notification-font-size": "0.95rem",
+	"--novel-notification-shadow": "0 0.25rem 1rem rgb(0 0 0 / 0.4)",
+	"--novel-notification-animation": "novel-notification-in 250ms ease-out",
 } as const;
 
 /** The name of one of the player's theme variables. */

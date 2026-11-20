@@ -82,7 +82,7 @@ function stub(frames: StopFrame[]): Novel {
 		state: undefined,
 		persistent: undefined,
 	};
-	return { start: () => success(started) } as unknown as Novel;
+	return { start: () => success(started), on: () => () => undefined } as unknown as Novel;
 }
 
 /** Plays `frames` in a player holding a stage with the textbox and the choice menu. */

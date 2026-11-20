@@ -397,14 +397,16 @@ describe("NovelPlayer extras", () => {
 		expect(view.root().dataset["replay"]).toBe("true");
 		expect(view.result.$('[data-action="save"]')).toBeNull();
 		expect(view.result.$('[data-action="quickSave"]')).toBeNull();
+		let before = onSave.mock.calls.length;
 		await userEvent.keyboard("q");
-		expect(onSave).not.toHaveBeenCalled();
+		expect(onSave).toHaveBeenCalledTimes(before);
 
 		(view.result.$('[data-action="endReplay"]') as HTMLButtonElement).click();
 		await shows(view, "Hello, Ada!");
 		expect(view.root().dataset["replay"]).toBe("false");
 		await userEvent.keyboard("q");
-		expect(onSave).toHaveBeenCalledTimes(1);
+		expect(onSave).toHaveBeenCalledTimes(before + 1);
+		expect(onSave.mock.lastCall?.[0].slot).toBe("quick");
 	});
 
 	test("ends a chapter replay at its ending and resumes the interrupted play", async () => {

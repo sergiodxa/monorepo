@@ -1,7 +1,7 @@
 /**
  * `NovelPlayer`: the provider every visual novel renders. It owns the play, the reader's
- * behaviors (reveal, auto, skip, backlog, saves, settings, countdown), the mixer and prefetch,
- * and publishes them with the actions that drive the play to the parts composed inside it.
+ * behaviors (reveal, auto, skip, backlog, saves, settings, countdown, autosave, notifications,
+ * read lines), the mixer and prefetch, and publishes them with the actions to its parts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,8 +24,11 @@ import { readPersistent } from "../persistent.js";
 
 import type { AudioMixer } from "./audio.js";
 import type { AutoBehavior } from "./behaviors/auto.js";
+import type { AutosaveBehavior } from "./behaviors/autosave.js";
 import type { BacklogBehavior } from "./behaviors/backlog.js";
 import type { CountdownBehavior } from "./behaviors/countdown.js";
+import type { NotificationsBehavior } from "./behaviors/notifications.js";
+import type { ReadBehavior } from "./behaviors/read.js";
 import type { RevealBehavior } from "./behaviors/reveal.js";
 import type { SavesBehavior } from "./behaviors/save-slots.js";
 import type { SettingsBehavior } from "./behaviors/settings.js";
@@ -36,8 +39,11 @@ import type { NovelLabels, NovelSettings, StoredSettings } from "./settings.js";
 
 import { Backlog } from "./backlog.js";
 import { AutoModel } from "./behaviors/auto.js";
+import { AutosaveModel } from "./behaviors/autosave.js";
 import { BacklogModel } from "./behaviors/backlog.js";
 import { CountdownModel } from "./behaviors/countdown.js";
+import { NotificationsModel } from "./behaviors/notifications.js";
+import { ReadModel } from "./behaviors/read.js";
 import { RevealModel } from "./behaviors/reveal.js";
 import { SaveSlots } from "./behaviors/save-slots.js";
 import { SettingsModel } from "./behaviors/settings.js";
@@ -51,8 +57,10 @@ import { NovelEndingEvent, NovelSaveEvent, NovelSettingsEvent } from "./events.j
 import { Extras } from "./extras.js";
 import { Gallery } from "./gallery.js";
 import { Interaction } from "./interaction.js";
+import { readLibrary } from "./library.js";
 import { Memories } from "./memories.js";
 import { MusicRoom } from "./music-room.js";
+import { Notifications } from "./notifications.js";
 import { QuickMenu } from "./quick-menu.js";
 import { SaveScreen } from "./saves.js";
 import { SettingsScreen } from "./settings-screen.js";
@@ -100,6 +108,12 @@ export namespace NovelPlayer {
 		settings?: SettingsBehavior;
 		/** A timed menu's countdown; `CountdownModel` by default. */
 		countdown?: CountdownBehavior;
+		/** When the play saves itself; `AutosaveModel` by default. */
+		autosave?: AutosaveBehavior;
+		/** The toasts queue; `NotificationsModel` by default. */
+		notifications?: NotificationsBehavior;
+		/** Which shown lines had been read before; `ReadModel` by default. */
+		read?: ReadBehavior;
 	}
 
 	/** Events the player's context dispatches, for a behavior built inside the player to follow it. */
@@ -166,6 +180,12 @@ export namespace NovelPlayer {
 		readonly settings: SettingsBehavior;
 		/** A timed menu's countdown; it answers the menu with its default when it expires. */
 		readonly countdown: CountdownBehavior;
+		/** Saves the play into its `slot` when it asks, through `save()`. */
+		readonly autosave: AutosaveBehavior;
+		/** The toasts `NovelPlayer.Notifications` shows; `push()` adds a game's own. */
+		readonly notifications: NotificationsBehavior;
+		/** Whether the current line and each backlog line had been read before. */
+		readonly read: ReadBehavior;
 		readonly mixer: AudioMixer;
 		readonly prefetcher: Prefetcher;
 		/** Answers the current frame with a reply built by one of its methods. */
@@ -252,9 +272,9 @@ export namespace NovelPlayer {
  * Plays a novel and provides {@link NovelPlayer.Context} to the parts and mixins inside it; it
  * renders nothing of its own but a root element. It reads its translator from `IntlProvider`,
  * renders inside the app's own client entry since a novel holds functions, and reads `start`
- * and `behaviors` once, at mount. Saves, settings and endings leave as `novel:save`, `novel:settings` and
- * `novel:ending`. Every visual decision of the parts is a `--novel-*` variable set on it:
- * `NOVEL_THEME_VARIABLES` lists them with their defaults.
+ * and `behaviors` once, at mount. Saves (autosaves included), settings and endings leave as
+ * `novel:save`, `novel:settings` and `novel:ending`. Every visual decision of the parts is a
+ * `--novel-*` variable set on it: `NOVEL_THEME_VARIABLES` lists them with their defaults.
  *
  * @example <NovelPlayer novel={novel} mix={[keyboardControls(), on("novel:save", store)]}><NovelPlayer.Stage><NovelPlayer.Textbox /></NovelPlayer.Stage></NovelPlayer>
  * @example <NovelPlayer.Default novel={novel} settings={stored} saves={saves} />
@@ -271,6 +291,11 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 	let settings = behaviors.settings ?? new SettingsModel();
 	let saves = behaviors.saves ?? new SaveSlots();
 	let countdown = behaviors.countdown ?? new CountdownModel();
+	let autosave = behaviors.autosave ?? new AutosaveModel();
+	let notifications = behaviors.notifications ?? new NotificationsModel();
+	let read = behaviors.read ?? new ReadModel();
+	/** True when autosave asked mid-step, so the save waits for the stop the step reaches. */
+	let autosaveDue = false;
 	if (seenSettings !== undefined) settings.replace(seenSettings);
 	if (seenSaves !== undefined) saves.replace(seenSaves);
 	let ids = Object.fromEntries(
@@ -335,6 +360,16 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		},
 		{ signal: handle.signal },
 	);
+	autosave.addEventListener(
+		"save",
+		() => {
+			if (director.replaying) return;
+			if (director.phase === "replying" || director.frame === undefined) autosaveDue = true;
+			else save(autosave.slot);
+		},
+		{ signal: handle.signal },
+	);
+	listenToNovel();
 	handle.signal.addEventListener("abort", () => {
 		director.dispose();
 		countdown.cancel();
@@ -343,6 +378,49 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		if (handle.signal.aborted) return;
 		void director.begin(handle.props.start);
 	});
+
+	/**
+	 * Feeds autosave and notifications from the novel's events for this player's own play,
+	 * outside replays, until the player leaves the page.
+	 */
+	function listenToNovel(): void {
+		let novel = handle.props.novel;
+		let ours = (play: unknown) => play === director.play && !director.replaying;
+		let stops = [
+			novel.on("chapter", (_event, play) => {
+				if (ours(play)) autosave.chapter();
+			}),
+			novel.on("line", (_event, play) => {
+				if (ours(play)) autosave.line();
+			}),
+			novel.on("unlock", (event, play) => {
+				if (!ours(play)) return;
+				let text = event.kind === "image" ? labels.imageUnlocked : labels.musicUnlocked;
+				notifications.push({ text, kind: event.kind });
+			}),
+			novel.on("notify", (event, play) => {
+				if (ours(play))
+					notifications.push({ key: event.key, values: event.values, kind: "notify" });
+			}),
+			novel.on("ending", (event, play) => {
+				if (ours(play) && event.key !== null) void notifyEnding(play.persistent);
+			}),
+		];
+		handle.signal.addEventListener("abort", () => {
+			for (let stop of stops) stop();
+		});
+	}
+
+	/** Pushes "Ending 3/5": the endings reached in any playthrough out of every ending the scenes hold. */
+	async function notifyEnding(record: Persistent): Promise<void> {
+		let library = await readLibrary(handle.props.novel, record, intl(handle).locale);
+		if (handle.signal.aborted) return;
+		let reached = library.endings.filter((ending) => ending.reached).length;
+		notifications.push({
+			text: `${labels.endingReached} ${reached}/${library.endings.length}`,
+			kind: "ending",
+		});
+	}
 
 	/** The dialog open in the player. */
 	function openDialog(): HTMLDialogElement | null {
@@ -445,6 +523,9 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		saves,
 		settings,
 		countdown,
+		autosave,
+		notifications,
+		read,
 		get mixer() {
 			return director.mixer;
 		},
@@ -478,6 +559,18 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		Object.getOwnPropertyDescriptors(members),
 	) as NovelPlayer.Context;
 	handle.context.set(context);
+	context.addEventListener(
+		"frame",
+		() => {
+			let frame = director.frame;
+			if (frame === undefined) return;
+			read.record(frame);
+			if (!autosaveDue) return;
+			autosaveDue = false;
+			save(autosave.slot);
+		},
+		{ signal: handle.signal },
+	);
 
 	return () => {
 		let {
@@ -561,10 +654,11 @@ NovelPlayer.Backlog = Backlog;
 NovelPlayer.Saves = SaveScreen;
 NovelPlayer.Settings = SettingsScreen;
 NovelPlayer.Extras = Extras;
+NovelPlayer.Notifications = Notifications;
 
 /**
  * The whole player as one component: every part in the classic layout, the six library screens
- * in the extras menu, and keyboard, touch and gamepad controls. Its children are drawn on the
+ * in the extras menu, the notifications, and keyboard, touch and gamepad controls. Its children are drawn on the
  * stage, which is where a game's `NovelPlayer.Interaction` part goes.
  *
  * @example <NovelPlayer.Default novel={novel} settings={stored}><NovelPlayer.Interaction interactions={INTERACTIONS}>{(frame) => <Fishing input={frame.input} />}</NovelPlayer.Interaction></NovelPlayer.Default>
@@ -593,6 +687,7 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 				<Backlog />
 				<SaveScreen />
 				<SettingsScreen />
+				<Notifications />
 			</NovelPlayer>
 		);
 	};

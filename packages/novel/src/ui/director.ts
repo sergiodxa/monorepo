@@ -166,6 +166,11 @@ export class Director {
 		return this.skip.active;
 	}
 
+	/** The running play, which a novel listener compares against to hear only this player's play. */
+	get play(): Play | undefined {
+		return this.#play;
+	}
+
 	/** The play as JSON at the current stop, or `undefined` before it starts. */
 	get state(): GameState | undefined {
 		return this.#play?.state;

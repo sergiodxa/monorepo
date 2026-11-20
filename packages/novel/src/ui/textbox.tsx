@@ -42,12 +42,13 @@ export namespace Textbox {
 /**
  * The box a line frame shows in. It renders while the play shows a line and the interface is
  * neither hidden nor past an ending, and is a polite live region, so a screen reader reads the
- * whole line at once while the reveal only changes what is painted.
+ * whole line at once. It carries `data-novel-read` while the line was read before.
  *
  * @example <NovelPlayer.Textbox mix={css({ "--novel-textbox-background": "url(/box.png)" })} />
  */
 export function Textbox(handle: Handle<Textbox.Props>) {
 	let player = handle.context.get(NovelPlayer);
+	player.read.addEventListener("change", () => void handle.update(), { signal: handle.signal });
 	return () => {
 		let { children, mix, ...rest } = handle.props;
 		if (player.hidden || player.ending !== undefined || player.frame?.type !== "line") return null;
@@ -55,6 +56,7 @@ export function Textbox(handle: Handle<Textbox.Props>) {
 			<section
 				{...rest}
 				data-novel-textbox=""
+				data-novel-read={player.read.current ? "" : undefined}
 				aria-live="polite"
 				mix={[
 					css({
@@ -141,8 +143,8 @@ export function NamePlate(handle: Handle<Textbox.PartProps>) {
 
 /**
  * The current line, rendered through `Trans` with the player's markup and revealed by the
- * player's `reveal` behavior: it types while the behavior says `"typing"`, shows the rest at once
- * when it says `complete`, and reports the whole line visible through `reveal()`.
+ * player's `reveal` behavior, reporting the whole line visible through `reveal()`. A line read
+ * before carries `data-novel-read` and takes `--novel-read-color`.
  *
  * @example <NovelPlayer.Line mix={css({ textAlign: "center" })} />
  */
@@ -157,6 +159,7 @@ export function Line(handle: Handle<Textbox.PartProps>) {
 	player.reveal.addEventListener("change", () => void handle.update(), {
 		signal: handle.signal,
 	});
+	player.read.addEventListener("change", () => void handle.update(), { signal: handle.signal });
 
 	/** Keeps the DOM typewriter in step with the reveal model after each commit. */
 	function sync(): void {
@@ -190,6 +193,7 @@ export function Line(handle: Handle<Textbox.PartProps>) {
 				{...rest}
 				data-novel-line=""
 				data-frame={frame.id}
+				data-novel-read={player.read.current ? "" : undefined}
 				mix={[
 					ref((node) => {
 						element = node;
@@ -200,6 +204,9 @@ export function Line(handle: Handle<Textbox.PartProps>) {
 						textWrap: "pretty",
 						color: themeVar("--novel-text-color"),
 						textShadow: themeVar("--novel-text-shadow"),
+						"&[data-novel-read]": {
+							color: `var(--novel-read-color, ${themeVar("--novel-text-color")})`,
+						},
 					}),
 					typewriterText(),
 					mix,

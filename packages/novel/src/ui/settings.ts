@@ -108,6 +108,16 @@ export interface NovelLabels {
 	play: string;
 	stop: string;
 	endReplay: string;
+	/** The autosave slot's name on the save screens. */
+	autosave: string;
+	/** The notifications region's accessible name. */
+	notifications: string;
+	/** The toast shown when an image is shown for the first time in any playthrough. */
+	imageUnlocked: string;
+	/** The toast shown when a track plays for the first time in any playthrough. */
+	musicUnlocked: string;
+	/** The toast shown on reaching an ending, followed by how many of all endings were reached. */
+	endingReached: string;
 }
 
 /** English labels, each replaced by the matching key of the player's `labels` prop. */
@@ -156,6 +166,11 @@ export const DEFAULT_LABELS: NovelLabels = {
 	play: "Play",
 	stop: "Stop",
 	endReplay: "End replay",
+	autosave: "Autosave",
+	notifications: "Notifications",
+	imageUnlocked: "CG unlocked",
+	musicUnlocked: "Track unlocked",
+	endingReached: "Ending",
 };
 
 /** What a key does in the player. */

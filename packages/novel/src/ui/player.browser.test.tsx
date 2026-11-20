@@ -606,7 +606,7 @@ describe("NovelPlayer", () => {
 		await vi.waitFor(() => expect(screen.open).toBe(true));
 		expect(
 			[...screen.querySelectorAll("[data-slot-name]")].map((slot) => slot.textContent),
-		).toEqual(["Quick saveEmpty", "Slot 1Empty", "Slot 2Empty"]);
+		).toEqual(["AutosaveEmpty", "Quick saveEmpty", "Slot 1Empty", "Slot 2Empty"]);
 		screen.querySelector<HTMLButtonElement>('[data-slot-name="2"]')!.click();
 		expect(onSave).toHaveBeenCalledWith(
 			"2",

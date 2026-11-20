@@ -16,7 +16,7 @@ import { css, on, ref } from "remix/component";
 
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
-import { dialogSurface } from "./theme.js";
+import { dialogSurface, themeVar } from "./theme.js";
 
 export namespace Backlog {
 	/** Props {@link Backlog} accepts. */
@@ -25,13 +25,15 @@ export namespace Backlog {
 
 /**
  * Lists the player's backlog, oldest first, in a modal dialog the quick menu, the `l` key or a
- * downward swipe opens; a voiced line offers its voice again through the player's mixer.
+ * downward swipe opens; a voiced line offers its voice again through the player's mixer, and a
+ * line read in an earlier playthrough carries `data-novel-read` and takes `--novel-read-color`.
  *
  * @example <NovelPlayer.Backlog mix={css({ "--novel-dialog-background": "#111" })} />
  */
 export function Backlog(handle: Handle<Backlog.Props>) {
 	let player = handle.context.get(NovelPlayer);
 	let list: HTMLElement | undefined;
+	player.read.addEventListener("change", () => void handle.update(), { signal: handle.signal });
 	return () => {
 		let { mix, ...rest } = handle.props;
 		let { labels } = player;
@@ -79,7 +81,13 @@ export function Backlog(handle: Handle<Backlog.Props>) {
 						<li
 							key={entry.id}
 							data-key={entry.key}
-							mix={css({ display: "flex", gap: "0.75rem", alignItems: "start" })}
+							data-novel-read={player.read.isRead(entry.id) ? "" : undefined}
+							mix={css({
+								display: "flex",
+								gap: "0.75rem",
+								alignItems: "start",
+								"&[data-novel-read]": { color: themeVar("--novel-read-color") },
+							})}
 						>
 							<div mix={css({ flex: 1 })}>
 								{entry.speakers.length === 0 ? null : (
