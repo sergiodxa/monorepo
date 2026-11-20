@@ -150,6 +150,7 @@ const CAFE = createScene(SCENES.prologue.cafe, (ctx) => [
 	ctx.show(ASSETS.backgrounds.street, { transition: "dissolve" }),
 	ctx.custom(INTERACTIONS.fishing, { input: { difficulty: 2 }, into: "lastCatch" }),
 	ctx.say(CAST.mika, "cafe.impressed", (state) => ({ caught: state.lastCatch?.caught ?? 0 })),
+	ctx.exit(CAST.mika, { transition: "fade" }),
 	ctx.ending("endings.good"),
 ]);
 
@@ -499,6 +500,31 @@ describe("NovelPlayer", () => {
 			expect(ended).toHaveBeenCalledWith({ key: "endings.good", scene: "prologue.cafe" }),
 		);
 		expect(player.result.$("[data-novel-ending]")!.textContent).toBe("Good ending");
+	});
+
+	test("fades out who left after the last line under the ending, toasts it inside the player, and plays again", async () => {
+		let player = mount();
+		await toMenu(player);
+		player.result.$('[data-option="cafe.stay"]')!.click();
+		await vi.waitFor(() => expect(player.result.$("[data-fish]")).not.toBeNull(), {
+			timeout: 5000,
+		});
+		(player.result.$("[data-fish]") as HTMLButtonElement)!.click();
+		await shows(player, "Wow, 4 fish!");
+		clickStage(player);
+		await vi.waitFor(() => expect(player.result.$("[data-novel-ending]")).not.toBeNull());
+
+		let mika = player.result.$('[data-novel-stage] [data-novel-character][data-id="mika"]')!;
+		expect(mika.dataset["exiting"]).toBe("true");
+		let toast = player.result.$("[data-novel-notification]")!.getBoundingClientRect();
+		let box = player.root().getBoundingClientRect();
+		expect(toast.right).toBeLessThanOrEqual(box.right);
+		expect(toast.top).toBeGreaterThanOrEqual(box.top);
+
+		(player.result.$("[data-novel-play-again]") as HTMLButtonElement).click();
+		await shows(player, "Welcome to the café.");
+		expect(player.result.$("[data-novel-outcome]")).toBeNull();
+		expect(player.result.$("[data-novel-read]")).not.toBeNull();
 	});
 
 	test("auto mode advances each line after its voice and delay", async () => {

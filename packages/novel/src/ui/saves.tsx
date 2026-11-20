@@ -20,6 +20,7 @@ import { QUICK_SLOT, SaveSlots } from "./behaviors/save-slots.js";
 import { stillStage } from "./layout.js";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
+import { listenerSignal } from "./signal.js";
 import { Stage } from "./stage.js";
 import { dialogSurface } from "./theme.js";
 
@@ -75,7 +76,9 @@ export function SaveScreen(handle: Handle<SaveScreen.Props>) {
  */
 function SlotDialog(handle: Handle<SlotDialogProps>) {
 	let player = handle.context.get(NovelPlayer);
-	player.saves.addEventListener("change", () => void handle.update(), { signal: handle.signal });
+	player.saves.addEventListener("change", () => void handle.update(), {
+		signal: listenerSignal(handle),
+	});
 	return () => {
 		let { mode, slots } = handle.props;
 		let { labels, locale } = player;

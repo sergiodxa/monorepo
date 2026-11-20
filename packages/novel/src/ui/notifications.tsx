@@ -13,6 +13,7 @@ import { css, ref } from "remix/component";
 
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
+import { listenerSignal } from "./signal.js";
 import { themeVar } from "./theme.js";
 
 /** Milliseconds a toast stays by default. */
@@ -33,7 +34,8 @@ export namespace Notifications {
 /**
  * Shows the player's `notifications` queue as toasts in a `popover="manual"` element, opened with
  * `showPopover()` while a toast is queued and hidden once the last one is dismissed. It is a
- * polite live region, so a screen reader announces each toast as it arrives.
+ * polite live region, and `--novel-notification-inset` places it within the player's box
+ * (the window's, where CSS anchor positioning is missing).
  *
  * @example <NovelPlayer.Notifications duration={6000} mix={css({ "--novel-notification-inset": "auto auto 1rem 1rem" })} />
  */
@@ -43,7 +45,9 @@ export function Notifications(handle: Handle<Notifications.Props>) {
 	let element: HTMLElement | undefined;
 	let timers = new Map<string, ReturnType<typeof setTimeout>>();
 
-	notifications.addEventListener("change", () => void handle.update(), { signal: handle.signal });
+	notifications.addEventListener("change", () => void handle.update(), {
+		signal: listenerSignal(handle),
+	});
 	handle.signal.addEventListener("abort", () => {
 		for (let timer of timers.values()) clearTimeout(timer);
 		timers.clear();
@@ -97,6 +101,8 @@ export function Notifications(handle: Handle<Notifications.Props>) {
 					css({
 						position: "fixed",
 						inset: themeVar("--novel-notification-inset"),
+						positionAnchor: player.anchor,
+						positionArea: "center",
 						margin: 0,
 						padding: 0,
 						border: "none",

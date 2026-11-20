@@ -789,6 +789,28 @@ describe("exits", () => {
 	});
 });
 
+describe("the stage a play finishes on", () => {
+	test("holds the staging after the last stop, with whoever left on the way as an exit", async () => {
+		let play = createTestPlay(
+			oneScene((ctx) => [
+				ctx.enter(CAST.mika, { at: "left", expression: "smile" }),
+				ctx.narrate("opening.welcome"),
+				ctx.exit(CAST.mika, { transition: "fade" }),
+				ctx.ending("endings.good"),
+			]),
+		);
+		let welcome = await play.advance();
+		expect(play.play.stage).toEqual(welcome?.stage);
+
+		await play.advance();
+		expect(play.ending?.key).toBe("endings.good");
+		expect(play.play.stage.characters).toEqual([]);
+		expect(play.play.stage.exits?.map((entry) => [entry.id, entry.transition])).toEqual([
+			["mika", "fade"],
+		]);
+	});
+});
+
 describe("replay", () => {
 	test("ends a scene replay at a jump out of the scene, playing calls through", async () => {
 		let play = createTestPlay(fixture(), {

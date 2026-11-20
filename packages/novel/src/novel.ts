@@ -29,7 +29,7 @@ import type { Ending, Frame, GameState, ReplayScope, Reply, StopFrame } from "./
 import type { Lazy } from "./lazy.js";
 import type { NovelLink, ReachedScene, ReachOptions } from "./links.js";
 import type { Persistent } from "./persistent.js";
-import type { Audio, Fraction, Position, PositionAlias, Stage } from "./stage.js";
+import type { Audio, Fraction, FrameStage, Position, PositionAlias, Stage } from "./stage.js";
 import type { SavedGame } from "./state.js";
 import type {
 	DeclaredState,
@@ -218,6 +218,11 @@ export interface NovelInternals {
 export interface Play extends AsyncGenerator<Frame, Ending, Reply | undefined> {
 	/** The play as JSON at the current stop, ready to save. */
 	readonly state: GameState;
+	/**
+	 * The stage as the play last left it: the current stop's, or after the end, the one the
+	 * story finished on, so the staging after the last stop (an `exit`, a new background) shows.
+	 */
+	readonly stage: FrameStage;
 	/** Persistent data as this play has updated it, the same value the last `persist` carried. */
 	readonly persistent: NovelPersistent;
 	/**
@@ -760,6 +765,7 @@ function createPlay(engine: PlayEngine): Play {
 	let play = run();
 	return Object.defineProperties(play, {
 		state: { get: () => engine.state },
+		stage: { get: () => engine.stage },
 		persistent: { get: () => engine.persistent as NovelPersistent },
 		rollback: { value: () => engine.rollback() },
 		save: { value: (slot: string) => engine.save(slot) },

@@ -359,7 +359,7 @@ One novel serves every play: it holds the declarations, the module mapped onto e
 
 `StartOptions` takes `from` (a stored `GameState`, migrated and validated before the play resumes), `scene` and `state` for a new play (missing fields take their schema defaults), `seed` for the random stream, `persistent` (stored `Persistent` data; anything the schema refuses starts empty), and `replay: "scene" | "chapter"`, which finishes the play when it leaves that scene or chapter, saves nothing, and records only the lines it shows.
 
-A `Play` is the generator itself, with `play.state` (the play as JSON at the current stop), `play.persistent`, `play.save(slot)` (emits `save` and answers the state) and `play.rollback()` (returns to the previous stop, restoring its state, stage and random draws, or answers `null`).
+A `Play` is the generator itself, with `play.state` (the play as JSON at the current stop), `play.stage` (the current stop's stage, or after the end the stage the story finished on, with anyone who left after the last stop in `exits`), `play.persistent`, `play.save(slot)` (emits `save` and answers the state) and `play.rollback()` (returns to the previous stop, restoring its state, stage and random draws, or answers `null`).
 
 #### `NovelError`
 
@@ -461,9 +461,9 @@ The whole player in one component: every part below, notifications included, the
 
 What `handle.context.get(NovelPlayer)` answers inside a player: one stable object whose getters always read the current play, so a part or mixin can keep it from setup. It is a `TypedEventTarget` that dispatches `frame`, `phase` and `ending` as soon as each changes; the events carry no data, so a listener reads the getters.
 
-- State: `novel`, `element` (the root), `dialog` (the open dialog, or `null`), `frame`, `phase`, `ending`, `state` (the story state at the current stop, extension slices included, one value per stop), `error`, `stalled`, `instant` (true while skipping or under reduced motion), `hidden`, `replaying`, `persistent`, `labels`, `locale`, `markup` and `ids` (each screen's dialog id)
+- State: `novel`, `element` (the root), `dialog` (the open dialog, or `null`), `frame`, `phase`, `ending`, `stage` (what the stage draws: the frame's, then the stage the story finished on), `state` (the story state at the current stop, extension slices included, one value per stop), `error`, `stalled`, `instant` (true while skipping or under reduced motion), `hidden`, `replaying`, `persistent`, `labels`, `locale`, `markup`, `ids` (each screen's dialog id) and `anchor` (the CSS anchor name on the root)
 - Behaviors, typed by their interfaces: `reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`, plus `mixer` (`AudioMixer`) and `prefetcher` (`Prefetcher`)
-- Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument), `toggleFullscreen()`, `replay(scene, scope)`, `endReplay()`, `open(screen)` and `retry()`
+- Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument), `toggleFullscreen()`, `replay(scene, scope)`, `endReplay()`, `open(screen)`, `retry()` and `restart()` (a new play from the first scene, keeping persistent data)
 
 ```tsx
 import type { Handle } from "remix/component";
@@ -538,7 +538,7 @@ Input as mixins on the player, so a game applies only the controls it wants. Eac
 
 Each part is a member of `NovelPlayer` and is also exported under its own name. Every one renders a real element that takes `mix`, and renders nothing while it has nothing to show.
 
-- `NovelPlayer.Stage` (`Stage`): The 16:9 stage, letterboxed inside any box, with its children above the characters; a click finishes a transition, then the line being typed, then advances. `focus` (default `true`) enlarges and raises the speaker and dims everyone else. Given a `stage` prop it draws that still stage instead of the play, which is how `SlotThumbnail` works
+- `NovelPlayer.Stage` (`Stage`): The 16:9 stage, letterboxed inside any box, with its children above the characters; a click finishes a transition, then the line being typed, then advances. `focus` (default `true`) enlarges and raises the speaker and dims everyone else. Given a `stage` prop it draws that still stage instead of the play, which is how `SlotThumbnail` works. Once the play finishes it shows the ending's name over the dimmed stage with a **Play again** button (`labels.playAgain`, `--novel-ending-button-*`) that calls `restart()`
 - `NovelPlayer.Textbox` (`Textbox`): The line's box, a live region holding the whole line from the start; without children it draws `NamePlate`, `Line` and `NextIndicator`, and with children it draws those. The box and its line carry `data-novel-read` on a line read in an earlier playthrough
 - `NovelPlayer.NamePlate` (`NamePlate`), `NovelPlayer.Line` (`Line`) and `NovelPlayer.NextIndicator` (`NextIndicator`): The speaker's name in their color, the typed line with its markup, and the sign that the line is complete
 - `NovelPlayer.Captions` (`Captions`): The captions of the frame's sounds
@@ -549,7 +549,7 @@ Each part is a member of `NovelPlayer` and is also exported under its own name. 
 - `NovelPlayer.Saves` (`SaveScreen`): The save and load dialogs, with the autosave slot first (load-only), then the quick one and `slots` numbered slots (default `6`); a replay offers no saving
 - `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting
 - `NovelPlayer.Extras` (`Extras`): An Extras menu offering the library screens given as its children, each in its own modal dialog
-- `NovelPlayer.Notifications` (`Notifications`): The `notifications` queue as toasts in a `popover="manual"` element, so they sit in the top layer over dialogs and full screen; a polite live region whose toasts each leave after `duration` milliseconds (default `4000`) and carry `data-kind`. Reduced motion drops their entrance
+- `NovelPlayer.Notifications` (`Notifications`): The `notifications` queue as toasts in a `popover="manual"` element, so they sit in the top layer over dialogs and full screen, anchored to the player so `--novel-notification-inset` measures from its edges; a polite live region whose toasts each leave after `duration` milliseconds (default `4000`) and carry `data-kind`. Reduced motion drops their entrance
 
 #### Theme: `NOVEL_THEME_VARIABLES`
 

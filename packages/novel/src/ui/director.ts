@@ -14,6 +14,7 @@ import type { NovelError } from "../errors.js";
 import type { Ending, GameState, ReplayScope, Reply, StopFrame } from "../frames.js";
 import type { Novel, Play, StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
+import type { FrameStage } from "../stage.js";
 
 import type { AutoBehavior } from "./behaviors/auto.js";
 import type { BacklogBehavior, BacklogEntry } from "./behaviors/backlog.js";
@@ -84,6 +85,7 @@ export class Director {
 	#frame: StopFrame | undefined;
 	#phase: Phase = "idle";
 	#ending: Ending | undefined;
+	#endStage: FrameStage | undefined;
 	/** The play a replay interrupted, resumed with its backlog when the replay ends. */
 	#resume: { state: GameState; backlog: readonly BacklogEntry[] } | undefined;
 	#host: DirectorHost;
@@ -121,6 +123,14 @@ export class Director {
 	/** The stop the play shows, or `undefined` before its first one. */
 	get frame(): StopFrame | undefined {
 		return this.#frame;
+	}
+
+	/**
+	 * What the stage draws: the current stop's, or once the play has finished, the stage its
+	 * last directives left, so an `exit` or a scene change before the ending shows under it.
+	 */
+	get stage(): FrameStage | undefined {
+		return this.#ending === undefined ? this.#frame?.stage : (this.#endStage ?? this.#frame?.stage);
 	}
 
 	set frame(frame: StopFrame | undefined) {
@@ -241,6 +251,15 @@ export class Director {
 	}
 
 	/**
+	 * Starts a new play from the novel's first scene, carrying the current play's persistent
+	 * data over so what earlier playthroughs read, chose and reached stays recorded.
+	 */
+	async restart(): Promise<void> {
+		let persistent = this.#play?.persistent;
+		await this.begin(persistent === undefined ? {} : { persistent });
+	}
+
+	/**
 	 * Resumes a saved play, carrying the current play's persistent data over so read lines and
 	 * chosen options stay marked.
 	 *
@@ -271,6 +290,7 @@ export class Director {
 		this.#play = started.data;
 		this.replaying = options.replay !== undefined;
 		this.backlog.replace(backlog);
+		this.#endStage = undefined;
 		this.ending = undefined;
 		this.error = undefined;
 		await this.#step(undefined);
@@ -375,6 +395,7 @@ export class Director {
 				return;
 			}
 			this.replaying = false;
+			this.#endStage = play.stage;
 			this.ending = result.value;
 			this.phase = "idle";
 			this.reveal.clear();

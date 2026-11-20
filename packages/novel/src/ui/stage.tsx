@@ -135,7 +135,7 @@ export function Stage(handle: Handle<Stage.Props>) {
 			...rest
 		} = handle.props;
 		let playing = still === undefined ? player : undefined;
-		let stage = still ?? playing?.frame?.stage ?? EMPTY_STAGE;
+		let stage = still ?? playing?.stage ?? EMPTY_STAGE;
 		let instant = instantProp ?? playing?.instant ?? false;
 		let focused =
 			focus &&
@@ -308,8 +308,9 @@ interface OutcomeProps {
 }
 
 /**
- * The ending's name over a dimmed stage once the play reaches a named ending, and an alert
- * with the play's error, offering a retry when the error stopped the play before its first stop.
+ * Once the play finishes, the ending's name (when it has one) over a dimmed stage with a button
+ * that plays again from the start; and an alert with the play's error, offering a retry when
+ * the error stopped the play before its first stop.
  */
 function Outcome(handle: Handle<OutcomeProps>) {
 	return () => {
@@ -318,22 +319,49 @@ function Outcome(handle: Handle<OutcomeProps>) {
 		let error = player.error;
 		return (
 			<>
-				{ending?.key === null || ending === undefined ? null : (
-					<p
-						data-novel-ending=""
+				{ending === undefined || player.replaying ? null : (
+					<div
+						data-novel-ui=""
+						data-novel-outcome=""
 						mix={css({
 							position: "absolute",
 							inset: 0,
-							margin: 0,
 							display: "grid",
-							placeItems: "center",
-							fontSize: themeVar("--novel-ending-size"),
+							placeContent: "center",
+							justifyItems: "center",
+							gap: "4cqh",
 							background: themeVar("--novel-ending-background"),
 							zIndex: 6,
 						})}
 					>
-						<Message i18nKey={ending.key} />
-					</p>
+						{ending.key === null ? null : (
+							<p
+								data-novel-ending=""
+								mix={css({ margin: 0, fontSize: themeVar("--novel-ending-size") })}
+							>
+								<Message i18nKey={ending.key} />
+							</p>
+						)}
+						<button
+							type="button"
+							data-novel-play-again=""
+							mix={[
+								css({
+									padding: "1cqh 3cqw",
+									font: "inherit",
+									fontSize: "2.6cqh",
+									color: themeVar("--novel-ending-button-color"),
+									background: themeVar("--novel-ending-button-background"),
+									border: themeVar("--novel-ending-button-border"),
+									borderRadius: "0.6cqh",
+									cursor: "pointer",
+								}),
+								on("click", () => void player.restart()),
+							]}
+						>
+							{player.labels.playAgain}
+						</button>
+					</div>
 				)}
 				{error === undefined ? null : (
 					<div

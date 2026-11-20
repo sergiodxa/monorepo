@@ -213,6 +213,15 @@ export class PlayEngine {
 		return state;
 	}
 
+	/**
+	 * The stage as the play last left it: the current stop's, or once the play has ended, the
+	 * one its last directives built, with the characters that left on the way in `exits`.
+	 */
+	get stage(): FrameStage {
+		let shown = this.#current?.frame.stage;
+		return shown === undefined ? frameStage(this.#live.stage, new Set()) : copyKeepingFiles(shown);
+	}
+
 	/** The play as JSON, at the current stop as it stood before the stop was shown. */
 	get state(): GameState {
 		let live = this.#current?.snapshot ?? this.#live;

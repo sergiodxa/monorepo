@@ -16,6 +16,7 @@ import { css, on, ref } from "remix/component";
 
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
+import { listenerSignal } from "./signal.js";
 import { dialogSurface, themeVar } from "./theme.js";
 
 export namespace Backlog {
@@ -33,7 +34,9 @@ export namespace Backlog {
 export function Backlog(handle: Handle<Backlog.Props>) {
 	let player = handle.context.get(NovelPlayer);
 	let list: HTMLElement | undefined;
-	player.read.addEventListener("change", () => void handle.update(), { signal: handle.signal });
+	player.read.addEventListener("change", () => void handle.update(), {
+		signal: listenerSignal(handle),
+	});
 	return () => {
 		let { mix, ...rest } = handle.props;
 		let { labels } = player;

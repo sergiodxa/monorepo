@@ -16,6 +16,7 @@ import { QUICK_SLOT } from "./behaviors/save-slots.js";
 import { gamepadActions } from "./input.js";
 import { NovelPlayer } from "./player.js";
 import { KEYMAP } from "./settings.js";
+import { listenerSignal } from "./signal.js";
 
 /** Milliseconds between two wheel actions, so one flick of a trackpad rolls back one stop. */
 const WHEEL_INTERVAL_MS = 300;
@@ -107,15 +108,17 @@ export const keyboardControls = createMixin<HTMLElement, [options?: keyboardCont
 
 		handle.addEventListener("insert", (event) => {
 			host = event.node;
-			document.addEventListener("keydown", keydown, { signal: handle.signal });
+			document.addEventListener("keydown", keydown, { signal: listenerSignal(handle) });
 			document.addEventListener(
 				"keyup",
 				(key) => {
 					if (key.key === "Control") player?.holdSkip(false);
 				},
-				{ signal: handle.signal },
+				{ signal: listenerSignal(handle) },
 			);
-			window.addEventListener("blur", () => player?.holdSkip(false), { signal: handle.signal });
+			window.addEventListener("blur", () => player?.holdSkip(false), {
+				signal: listenerSignal(handle),
+			});
 		});
 
 		return (options) => {
@@ -245,7 +248,7 @@ export const gamepadControls = createMixin<HTMLElement>(
 
 		handle.addEventListener("insert", (event) => {
 			host = event.node;
-			window.addEventListener("gamepadconnected", startPolling, { signal: handle.signal });
+			window.addEventListener("gamepadconnected", startPolling, { signal: listenerSignal(handle) });
 			if (navigator.getGamepads?.().some((pad) => pad !== null)) startPolling();
 		});
 

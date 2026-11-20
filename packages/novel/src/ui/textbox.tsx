@@ -17,6 +17,7 @@ import type { AudioSound } from "../stage.js";
 
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
+import { listenerSignal } from "./signal.js";
 import { themeVar } from "./theme.js";
 
 export namespace Textbox {
@@ -48,7 +49,9 @@ export namespace Textbox {
  */
 export function Textbox(handle: Handle<Textbox.Props>) {
 	let player = handle.context.get(NovelPlayer);
-	player.read.addEventListener("change", () => void handle.update(), { signal: handle.signal });
+	player.read.addEventListener("change", () => void handle.update(), {
+		signal: listenerSignal(handle),
+	});
 	return () => {
 		let { children, mix, ...rest } = handle.props;
 		if (player.hidden || player.ending !== undefined || player.frame?.type !== "line") return null;
@@ -157,9 +160,11 @@ export function Line(handle: Handle<Textbox.PartProps>) {
 
 	handle.signal.addEventListener("abort", () => writer?.dispose());
 	player.reveal.addEventListener("change", () => void handle.update(), {
-		signal: handle.signal,
+		signal: listenerSignal(handle),
 	});
-	player.read.addEventListener("change", () => void handle.update(), { signal: handle.signal });
+	player.read.addEventListener("change", () => void handle.update(), {
+		signal: listenerSignal(handle),
+	});
 
 	/** Keeps the DOM typewriter in step with the reveal model after each commit. */
 	function sync(): void {

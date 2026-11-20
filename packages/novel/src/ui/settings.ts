@@ -91,6 +91,7 @@ export interface NovelLabels {
 	dyslexiaFont: string;
 	selfVoicing: string;
 	retry: string;
+	playAgain: string;
 	timeLeft: string;
 	extras: string;
 	memories: string;
@@ -151,6 +152,7 @@ export const DEFAULT_LABELS: NovelLabels = {
 	dyslexiaFont: "Dyslexia-friendly font",
 	selfVoicing: "Read text aloud",
 	retry: "Try again",
+	playAgain: "Play again",
 	timeLeft: "Time left",
 	extras: "Extras",
 	memories: "Memories",

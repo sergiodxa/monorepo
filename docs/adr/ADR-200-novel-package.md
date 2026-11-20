@@ -1321,3 +1321,16 @@ and autosave, toasts and read-line marks to the player:
   carries from persistent data, the same flag skip's read-only mode follows, so a line marked read
   is exactly a line skip passes. The textbox and backlog mark read lines with `data-novel-read`,
   and `--novel-read-color` (`inherit` by default) tints them.
+- **The ending draws the stage the story finished on.** `Play.stage` answers the current stop's
+  stage, or after the end the one the last directives built, exits included, so an `exit` or a
+  scene change between the last line and `ending` shows under the ending's name.
+- **An ending offers to play again.** The ending screen's **Play again** button calls the
+  context's `restart()`, a new play from the novel's first scene that keeps persistent data, so a
+  reader reaches another ending without reloading the page.
+- **Toasts are anchored to the player.** The player's root carries a unique CSS `anchor-name`, and
+  the notifications popover positions over it with `position-area: center`, so
+  `--novel-notification-inset` measures from the player's edges even when it is embedded in a
+  page; without anchor positioning they fall back to the window's corner.
+- **Server listeners skip the render's stand-in signal.** A server render hands components a
+  stand-in for `handle.signal` that Cloudflare Workers refuse in `addEventListener`, so parts pass
+  `listenerSignal(handle)`, which is `undefined` there; a server render never disconnects.

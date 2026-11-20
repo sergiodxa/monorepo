@@ -18,6 +18,7 @@ import type { NovelError } from "../errors.js";
 import type { Ending, GameState, ReplayScope, Reply, StopFrame } from "../frames.js";
 import type { Novel, StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
+import type { FrameStage } from "../stage.js";
 import type { NovelState } from "../types.js";
 
 import { INTERNALS } from "../novel.js";
@@ -65,6 +66,7 @@ import { QuickMenu } from "./quick-menu.js";
 import { SaveScreen } from "./saves.js";
 import { SettingsScreen } from "./settings-screen.js";
 import { DEFAULT_LABELS } from "./settings.js";
+import { listenerSignal } from "./signal.js";
 import { Stage } from "./stage.js";
 import { Captions, Line, NamePlate, NextIndicator, Textbox } from "./textbox.js";
 import { themeVar } from "./theme.js";
@@ -132,7 +134,7 @@ export namespace NovelPlayer {
 	 * one object for the player's whole life, and its `frame`, `phase` and `ending` events let a
 	 * behavior a provider part builds follow the play.
 	 *
-	 * @example player.addEventListener("frame", () => pulse.beat(player.frame), { signal: handle.signal });
+	 * @example player.addEventListener("frame", () => pulse.beat(player.frame), { signal: listenerSignal(handle) });
 	 */
 	export interface Context extends TypedEventTarget<EventMap> {
 		readonly novel: Novel;
@@ -145,6 +147,11 @@ export namespace NovelPlayer {
 		readonly phase: Phase;
 		/** How the play finished, once it has. */
 		readonly ending: Ending | undefined;
+		/**
+		 * What the stage draws: the frame's stage, or once the play ends, the stage the story
+		 * finished on, with whoever left after the last line in `exits`.
+		 */
+		readonly stage: FrameStage | undefined;
 		/**
 		 * The story state at the current stop, as the play's `GameState.state` holds it, or
 		 * `undefined` before the play starts. It is one value per stop, so a part can key on it.
@@ -171,6 +178,11 @@ export namespace NovelPlayer {
 		readonly markup: Markup | undefined;
 		/** The id of each dialog, for a `commandfor` button to open it without script. */
 		readonly ids: Readonly<Record<Screen, string>>;
+		/**
+		 * The CSS anchor name on the player's root, unique per player, so a part in the top layer
+		 * (the toasts) positions itself over the player with `position-anchor`.
+		 */
+		readonly anchor: string;
 		/** The current line's reveal, which the textbox's line drives. */
 		readonly reveal: RevealBehavior;
 		readonly auto: AutoBehavior;
@@ -220,6 +232,11 @@ export namespace NovelPlayer {
 		open(screen: Screen): void;
 		/** Asks for the first stop again after an error stopped the play before it. */
 		retry(): void;
+		/**
+		 * Starts a new play from the novel's first scene, keeping what earlier playthroughs
+		 * read, chose and reached; the ending screen's button calls it.
+		 */
+		restart(): Promise<void>;
 	}
 
 	/** Props {@link NovelPlayer} accepts. */
@@ -314,6 +331,10 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			] as const
 		).map((screen) => [screen, `${handle.id}-${screen}`.replace(/[^\w-]/g, "-")]),
 	) as Record<NovelPlayer.Screen, string>;
+	let anchor = `--novel-${handle.id.replace(/[^\w-]/g, "-")}`;
+
+	/** Declared before the director, whose callbacks dispatch on it; its members are set below. */
+	let context = new TypedEventTarget<NovelPlayer.EventMap>() as NovelPlayer.Context;
 
 	let director = new Director(
 		{
@@ -351,14 +372,14 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			root?.dispatchEvent(new NovelSettingsEvent(next));
 			void handle.update();
 		},
-		{ signal: handle.signal },
+		{ signal: listenerSignal(handle) },
 	);
 	countdown.addEventListener(
 		"expire",
 		(event) => {
 			if (director.frame === event.frame) answer(event.frame.choose(event.option));
 		},
-		{ signal: handle.signal },
+		{ signal: listenerSignal(handle) },
 	);
 	autosave.addEventListener(
 		"save",
@@ -367,7 +388,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			if (director.phase === "replying" || director.frame === undefined) autosaveDue = true;
 			else save(autosave.slot);
 		},
-		{ signal: handle.signal },
+		{ signal: listenerSignal(handle) },
 	);
 	listenToNovel();
 	handle.signal.addEventListener("abort", () => {
@@ -483,6 +504,9 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		get ending() {
 			return director.ending;
 		},
+		get stage() {
+			return director.stage;
+		},
 		get state() {
 			story ??= { value: director.state?.state };
 			return story.value;
@@ -518,6 +542,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			return handle.props.markup;
 		},
 		ids,
+		anchor,
 		reveal: director.reveal,
 		auto: director.auto,
 		skip: director.skip,
@@ -555,11 +580,12 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			if (dialog !== null && dialog !== undefined && !dialog.open) dialog.showModal();
 		},
 		retry: () => director.retry(),
+		restart: async () => {
+			openDialog()?.close();
+			await director.restart();
+		},
 	};
-	let context = Object.defineProperties(
-		new TypedEventTarget<NovelPlayer.EventMap>(),
-		Object.getOwnPropertyDescriptors(members),
-	) as NovelPlayer.Context;
+	Object.defineProperties(context, Object.getOwnPropertyDescriptors(members));
 	handle.context.set(context);
 	context.addEventListener(
 		"frame",
@@ -571,7 +597,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			autosaveDue = false;
 			save(autosave.slot);
 		},
-		{ signal: handle.signal },
+		{ signal: listenerSignal(handle) },
 	);
 
 	return () => {
@@ -610,7 +636,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 				data-hidden={String(hidden)}
 				data-replay={String(director.replaying)}
 				data-dyslexia={String(current.dyslexiaFont)}
-				style={{ "--novel-font-scale": current.fontSize }}
+				style={{ "--novel-font-scale": current.fontSize, anchorName: anchor }}
 				mix={[
 					ref((node) => {
 						root = node;
