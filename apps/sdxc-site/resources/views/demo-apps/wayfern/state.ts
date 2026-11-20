@@ -13,12 +13,13 @@ import * as checks from "remix/data-schema/checks";
 import { demoAppCookiePath } from "~/resources/views/demo-apps";
 
 import type { CarExtra } from "./cars";
-import type { FareClass } from "./flights";
+import type { FareClass, FlightOption } from "./flights";
 
 import { carOffers, findCarOffer } from "./cars";
 import { SAVED_CARDS, SLUG, TRAVELLER, findCard, findStay } from "./data";
 import { addDays, readDay } from "./days";
-import { findFlight, flightsOn } from "./flights";
+import { findFlight, flightsOn, zonedInstant } from "./flights";
+import { COAST_ZONE } from "./itinerary";
 
 /** Every Wayfern cookie starts with this, which is how a request is known to be personal. */
 const COOKIE_PREFIX = "wayfern.";
@@ -37,6 +38,12 @@ const MAX_TRIPS = 10;
 
 /** The stays a new visitor finds already saved, so the wishlist is never empty on arrival. */
 const DEFAULT_SAVED = ["the-canopy", "stillwater-boathouse", "gullwing-cottage"];
+
+/** When the default trip's car is picked up, coast time; its overnight flight from the day before lands first. */
+const DEFAULT_PICKUP = "14:00";
+
+/** When the default trip's car is dropped off on the last day, coast time; its flight leaves after. */
+const DEFAULT_DROPOFF = "10:00";
 
 /** What every booking keeps, whatever was booked. */
 interface Booking {
@@ -102,8 +109,12 @@ export interface Traveller {
 export function defaultTrips(today: string): Trip[] {
 	let start = addDays(today, 24);
 	let end = addDays(today, 27);
-	let out = flightsOn("SRL", "MRW", start)[1];
-	let back = flightsOn("MRW", "SRL", end).at(-2);
+	let out = flightsOn("SRL", "MRW", addDays(start, -1))
+		.filter((option) => arrivalOf(option) <= coastTime(start, DEFAULT_PICKUP))
+		.at(-1);
+	let back = flightsOn("MRW", "SRL", end).find(
+		(option) => departureOf(option) >= coastTime(end, DEFAULT_DROPOFF),
+	);
 	let card = SAVED_CARDS[0]!.id;
 	let trips: Trip[] = [];
 	if (out !== undefined && back !== undefined) {
@@ -142,8 +153,8 @@ export function defaultTrips(today: string): Trip[] {
 			dropoff: "MRW",
 			offer: (carOffers("MRW").find((offer) => offer.car.id === "compact") ?? carOffers("MRW")[0]!)
 				.id,
-			pickupAt: `${start}T14:00`,
-			dropoffAt: `${end}T10:00`,
+			pickupAt: `${start}T${DEFAULT_PICKUP}`,
+			dropoffAt: `${end}T${DEFAULT_DROPOFF}`,
 			extras: [],
 		},
 		{
@@ -159,6 +170,22 @@ export function defaultTrips(today: string): Trip[] {
 		},
 	);
 	return trips;
+}
+
+/** A `HH:MM` time on `day` on the coast, as an instant. */
+function coastTime(day: string, time: string): number {
+	let [hours = 0, minutes = 0] = time.split(":").map(Number);
+	return zonedInstant(day, hours * 60 + minutes, COAST_ZONE);
+}
+
+/** When a flight option lands at its destination; an option without segments never lands. */
+function arrivalOf(option: FlightOption): number {
+	return option.segments.at(-1)?.arrives ?? Number.POSITIVE_INFINITY;
+}
+
+/** When a flight option leaves its origin; an option without segments never leaves. */
+function departureOf(option: FlightOption): number {
+	return option.segments[0]?.departs ?? Number.NEGATIVE_INFINITY;
 }
 
 /**

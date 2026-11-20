@@ -118,6 +118,16 @@ describe("Wayfern's itinerary", () => {
 		expect(upcoming.title).toBe("Furnas");
 	});
 
+	test("opens and closes the starting journey with its flights on every day of a year", () => {
+		for (let offset = 0; offset < 366; offset++) {
+			let day = addDays("2026-01-01", offset);
+			let upcoming = journeysOf(readTraveller(null, day)).at(-1)!;
+			expect(upcoming.id, day).toBe("WF-8F2TL");
+			expect(upcoming.items[0]?.kind, day).toBe("flight");
+			expect(upcoming.items.at(-1)?.kind, day).toBe("flight");
+		}
+	});
+
 	test("survives the trips cookie with every kind of booking", () => {
 		let traveller = readTraveller(null, today());
 		let cookie = tripsCookie(traveller.trips).split(";")[0]!;
