@@ -17,11 +17,11 @@ import type { DiagramSource } from "./source.js";
 import type { SvgElement, SvgNode } from "./tree.js";
 
 import { layoutCompound } from "./compound.js";
-import { backedLabel, connector, label, rect, svgRoot, translate } from "./draw.js";
+import { backedLabel, connector, label, rect, svgRoot, titleBand, translate } from "./draw.js";
 import { DiagramError } from "./errors.js";
 import { clip } from "./geometry.js";
 import { unquote } from "./source.js";
-import { BACKGROUND, STROKE, TINT } from "./style.js";
+import { GROUP_RADIUS, NODE_RADIUS, paint, roleOf, type Role } from "./style.js";
 import { blockSize, splitLines } from "./text.js";
 import { element, num } from "./tree.js";
 
@@ -46,6 +46,7 @@ interface FlowNode {
 	lines: string[];
 	shape: Shape;
 	parent?: string;
+	role?: Role;
 }
 
 interface FlowLink {
@@ -66,6 +67,7 @@ interface Subgraph {
 	lines: string[];
 	parent?: string;
 	direction?: Direction;
+	role?: Role;
 }
 
 /** Each opening bracket, and the closings it may pair with, longest first. */
@@ -115,11 +117,11 @@ const CLOSE_TEXT_LINK: Record<string, RegExp> = {
 	"-.": new RegExp(`\\.(-+)${TARGET_HEAD}`, "u"),
 };
 
-/** Statements that style or script a chart; the drawing takes the page's colors instead. */
+/** Statements that style or script a chart; unknown classes are ignored. */
 const STYLING = /^(classDef|class|style|linkStyle|click)\s/;
 
 /** Space around the whole drawing. */
-const MARGIN = 8;
+const MARGIN = 16;
 
 /**
  * Reads and draws a flowchart.
@@ -146,6 +148,7 @@ interface Chart {
 function parse(diagram: DiagramSource, direction: Direction): Chart {
 	let chart: Chart = { direction, nodes: new Map(), edges: [], subgraphs: new Map() };
 	let stack: { subgraph: Subgraph; index: number }[] = [];
+	let roles = new Map<string, Role>();
 
 	for (let line of diagram.body) {
 		for (let piece of splitStatements(line.text)) {
@@ -172,9 +175,15 @@ function parse(diagram: DiagramSource, direction: Direction): Chart {
 				else chart.direction = value;
 				continue;
 			}
+			if ((match = /^class\s+(.+?)\s+(accent|muted)\s*$/u.exec(text))) {
+				for (let id of (match[1] ?? "").split(/[,\s]+/).filter(Boolean)) {
+					roles.set(id, match[2] as Role);
+				}
+				continue;
+			}
 			if (STYLING.test(text)) continue;
 
-			readChain(diagram.source, text, index, chart, current?.id);
+			readChain(diagram.source, text, index, chart, current?.id, roles);
 		}
 	}
 
@@ -182,13 +191,35 @@ function parse(diagram: DiagramSource, direction: Direction): Chart {
 	if (unclosed) throw new DiagramError("Unclosed subgraph", diagram.source, unclosed.index);
 
 	for (let id of chart.subgraphs.keys()) chart.nodes.delete(id);
+	for (let [id, role] of roles) {
+		let node = chart.nodes.get(id);
+		if (node) node.role = role;
+		let subgraph = chart.subgraphs.get(id);
+		if (subgraph) subgraph.role = role;
+	}
 	return chart;
 }
 
-/** `subgraph id [title]`, `subgraph id`, or `subgraph Some title`, whose title is then its id. */
+/** `subgraph id [title]`, `subgraph id:::role [title]`, `subgraph id`, or a title used as its id. */
 function readSubgraph(rest: string, parent: string | undefined): Subgraph {
+	let titledRole = /^([\p{L}\p{N}_-]+):::([\w-]+)\s*\[(.*)\]$/u.exec(rest.trim());
+	if (titledRole) {
+		return {
+			id: titledRole[1] ?? "",
+			lines: splitLines(unquote(titledRole[3] ?? "")),
+			parent,
+			role: roleOf(titledRole[2]),
+		};
+	}
 	let titled = /^([\p{L}\p{N}_-]+)\s*\[(.*)\]$/u.exec(rest.trim());
-	if (titled) return { id: titled[1] ?? "", lines: splitLines(unquote(titled[2] ?? "")), parent };
+	if (titled) {
+		return { id: titled[1] ?? "", lines: splitLines(unquote(titled[2] ?? "")), parent };
+	}
+	let withRole = /^([\p{L}\p{N}_-]+):::([\w-]+)$/u.exec(rest.trim());
+	if (withRole) {
+		let id = withRole[1] ?? "";
+		return { id, lines: splitLines(id), parent, role: roleOf(withRole[2]) };
+	}
 	let title = unquote(rest);
 	return { id: rest.trim(), lines: splitLines(title), parent };
 }
@@ -204,6 +235,7 @@ function readChain(
 	base: number,
 	chart: Chart,
 	parent: string | undefined,
+	roles: Map<string, Role>,
 ): void {
 	let cursor = { at: 0 };
 	let fail = (reason: string, at = cursor.at): never => {
@@ -233,10 +265,14 @@ function readChain(
 		if (parent !== undefined) node.parent = parent;
 		chart.nodes.set(id, node);
 
-		let style = /:::[\w-]+/y;
+		let style = /:::([\w-]+)/y;
 		style.lastIndex = cursor.at;
 		let styled = style.exec(text);
-		if (styled) cursor.at += styled[0].length;
+		if (styled) {
+			cursor.at += styled[0].length;
+			let role = roleOf(styled[1]);
+			if (role) roles.set(id, role);
+		}
 		return id;
 	};
 
@@ -426,7 +462,7 @@ function draw(diagram: DiagramSource, chart: Chart): SvgElement {
 			id: subgraph.id,
 			parent: subgraph.parent,
 			direction: subgraph.direction,
-			header: { width: size.width + 16, height: size.height + 10 },
+			header: { width: size.width + 24, height: size.height + 16 },
 		};
 	});
 	let edges: GraphEdge[] = chart.edges.map((edge) => {
@@ -440,17 +476,30 @@ function draw(diagram: DiagramSource, chart: Chart): SvgElement {
 		nodes,
 		groups,
 		edges,
-		nodeGap: 30,
-		rankGap: 44,
+		nodeGap: 36,
+		rankGap: 52,
 	});
 
 	let back: SvgNode[] = [];
 	for (let [id, box] of layout.groups) {
 		let subgraph = chart.subgraphs.get(id);
 		let top = box.y - box.height / 2;
-		back.push(rect(box.x - box.width / 2, top, box.width, box.height, { style: TINT, radius: 4 }));
-		if (subgraph)
-			back.push(label(subgraph.lines, box.x, top + 6 + blockSize(subgraph.lines).height / 2));
+		let { fill, outline } = paint(subgraph?.role, "group");
+		back.push(
+			rect(box.x - box.width / 2, top, box.width, box.height, {
+				style: fill,
+				radius: GROUP_RADIUS,
+				outline,
+			}),
+		);
+		if (subgraph) {
+			back.push(
+				label(subgraph.lines, box.x, top + 10 + blockSize(subgraph.lines).height / 2, {
+					bold: true,
+					muted: true,
+				}),
+			);
+		}
 	}
 
 	let lines: SvgNode[] = [];
@@ -481,12 +530,17 @@ function draw(diagram: DiagramSource, chart: Chart): SvgElement {
 		if (box) shapes.push(...drawNode(node, box));
 	}
 
+	let width = layout.width + 2 * MARGIN;
+	let band = titleBand(diagram.title, width);
 	return svgRoot(
-		layout.width + 2 * MARGIN,
-		layout.height + 2 * MARGIN,
+		width,
+		layout.height + 2 * MARGIN + band.height,
 		diagram.title ?? "Flowchart",
 		diagram.description,
-		[translate(MARGIN, MARGIN, [...back, ...lines, ...shapes, ...labels])],
+		[
+			...band.nodes,
+			translate(MARGIN, MARGIN + band.height, [...back, ...lines, ...shapes, ...labels]),
+		],
 	);
 }
 
@@ -538,29 +592,41 @@ function drawNode(node: FlowNode, box: Box): SvgNode[] {
 	let right = box.x + box.width / 2;
 	let top = box.y - box.height / 2;
 	let bottom = box.y + box.height / 2;
+	let { fill, outline } = paint(node.role);
 	let text = label(node.lines, box.x, box.y);
 	let polygon = (points: [number, number][]): SvgElement =>
 		element("polygon", {
 			points: points.map(([x, y]) => `${num(x)},${num(y)}`).join(" "),
-			...STROKE,
+			...outline,
 			"stroke-linejoin": "round",
-			style: BACKGROUND,
+			style: fill,
 		});
 
 	switch (node.shape) {
 		case "round":
-			return [rect(left, top, box.width, box.height, { style: BACKGROUND, radius: 8 }), text];
+			return [
+				rect(left, top, box.width, box.height, {
+					style: fill,
+					radius: NODE_RADIUS + 2,
+					outline,
+				}),
+				text,
+			];
 		case "stadium":
 			return [
-				rect(left, top, box.width, box.height, { style: BACKGROUND, radius: box.height / 2 }),
+				rect(left, top, box.width, box.height, {
+					style: fill,
+					radius: box.height / 2,
+					outline,
+				}),
 				text,
 			];
 		case "subroutine":
 			return [
-				rect(left, top, box.width, box.height, { style: BACKGROUND }),
+				rect(left, top, box.width, box.height, { style: fill, radius: NODE_RADIUS, outline }),
 				element("path", {
 					d: `M${num(left + 8)} ${num(top)} V${num(bottom)} M${num(right - 8)} ${num(top)} V${num(bottom)}`,
-					...STROKE,
+					...outline,
 					fill: "none",
 				}),
 				text,
@@ -571,8 +637,8 @@ function drawNode(node: FlowNode, box: Box): SvgNode[] {
 			let rim = `M${num(left)} ${num(top + ry)} A${num(rx)} ${ry} 0 0 0 ${num(right)} ${num(top + ry)}`;
 			let body = `M${num(left)} ${num(top + ry)} V${num(bottom - ry)} A${num(rx)} ${ry} 0 0 0 ${num(right)} ${num(bottom - ry)} V${num(top + ry)} A${num(rx)} ${ry} 0 0 0 ${num(left)} ${num(top + ry)} Z`;
 			return [
-				element("path", { d: body, ...STROKE, style: BACKGROUND }),
-				element("path", { d: rim, ...STROKE, fill: "none" }),
+				element("path", { d: body, ...outline, style: fill }),
+				element("path", { d: rim, ...outline, fill: "none" }),
 				label(node.lines, box.x, box.y + ry / 2),
 			];
 		}
@@ -582,8 +648,8 @@ function drawNode(node: FlowNode, box: Box): SvgNode[] {
 					cx: num(box.x),
 					cy: num(box.y),
 					r: num(box.width / 2),
-					...STROKE,
-					style: BACKGROUND,
+					...outline,
+					style: fill,
 				}),
 				text,
 			];
@@ -593,14 +659,14 @@ function drawNode(node: FlowNode, box: Box): SvgNode[] {
 					cx: num(box.x),
 					cy: num(box.y),
 					r: num(box.width / 2),
-					...STROKE,
-					style: BACKGROUND,
+					...outline,
+					style: fill,
 				}),
 				element("circle", {
 					cx: num(box.x),
 					cy: num(box.y),
 					r: num(box.width / 2 - 5),
-					...STROKE,
+					...outline,
 					fill: "none",
 				}),
 				text,
@@ -676,6 +742,13 @@ function drawNode(node: FlowNode, box: Box): SvgNode[] {
 			];
 		}
 		default:
-			return [rect(left, top, box.width, box.height, { style: BACKGROUND, radius: 2 }), text];
+			return [
+				rect(left, top, box.width, box.height, {
+					style: fill,
+					radius: NODE_RADIUS,
+					outline,
+				}),
+				text,
+			];
 	}
 }

@@ -15,11 +15,11 @@ import type { DiagramSource, Statement } from "./source.js";
 import type { SvgElement, SvgNode } from "./tree.js";
 
 import { layoutCompound } from "./compound.js";
-import { backedLabel, connector, label, rect, svgRoot, translate } from "./draw.js";
+import { backedLabel, connector, label, rect, svgRoot, titleBand, translate } from "./draw.js";
 import { DiagramError } from "./errors.js";
 import { clip, distance } from "./geometry.js";
 import { unquote } from "./source.js";
-import { BACKGROUND, STROKE, TINT } from "./style.js";
+import { BACKGROUND, GROUP_RADIUS, NODE_RADIUS, STROKE, TINT } from "./style.js";
 import { LINE_HEIGHT, blockSize, splitLines, textWidth } from "./text.js";
 import { element, num } from "./tree.js";
 
@@ -76,7 +76,7 @@ const CLASS = new RegExp(
 const STYLING = /^(style|classDef|cssClass|click|link|callback)\s/;
 
 /** Space around the whole drawing. */
-const MARGIN = 8;
+const MARGIN = 16;
 
 /** Extra length a relation with cardinalities takes, so they clear its label. */
 const CARDINALITY_ROOM = 2 * LINE_HEIGHT;
@@ -358,8 +358,13 @@ function draw(diagram: DiagramSource, model: Model): SvgElement {
 	let back: SvgNode[] = [];
 	for (let [id, box] of layout.groups) {
 		let top = box.y - box.height / 2;
-		back.push(rect(box.x - box.width / 2, top, box.width, box.height, { style: TINT, radius: 4 }));
-		back.push(label([id], box.x, top + 5 + LINE_HEIGHT / 2, { bold: true }));
+		back.push(
+			rect(box.x - box.width / 2, top, box.width, box.height, {
+				style: TINT,
+				radius: GROUP_RADIUS,
+			}),
+		);
+		back.push(label([id], box.x, top + 8 + LINE_HEIGHT / 2, { bold: true, muted: true }));
 	}
 
 	let lines: SvgNode[] = [];
@@ -413,12 +418,17 @@ function draw(diagram: DiagramSource, model: Model): SvgElement {
 		shapes.push(label(note.lines, placed.x, placed.y));
 	}
 
+	let width = layout.width + 2 * MARGIN;
+	let band = titleBand(diagram.title, width);
 	return svgRoot(
-		layout.width + 2 * MARGIN,
-		layout.height + 2 * MARGIN,
+		width,
+		layout.height + 2 * MARGIN + band.height,
 		diagram.title ?? "Class diagram",
 		diagram.description,
-		[translate(MARGIN, MARGIN, [...back, ...lines, ...shapes, ...labels])],
+		[
+			...band.nodes,
+			translate(MARGIN, MARGIN + band.height, [...back, ...lines, ...shapes, ...labels]),
+		],
 	);
 }
 
@@ -426,7 +436,9 @@ function draw(diagram: DiagramSource, model: Model): SvgElement {
 function drawClass(box: ClassBox, size: Compartments, placed: Box): SvgElement {
 	let left = placed.x - placed.width / 2;
 	let top = placed.y - placed.height / 2;
-	let children: SvgNode[] = [rect(left, top, placed.width, placed.height, { style: BACKGROUND })];
+	let children: SvgNode[] = [
+		rect(left, top, placed.width, placed.height, { style: BACKGROUND, radius: NODE_RADIUS }),
+	];
 
 	let y = top + PADDING + LINE_HEIGHT / 2;
 	for (let [index, line] of size.header.entries()) {
