@@ -44,8 +44,11 @@ const REPEAT = new RegExp(
 	"gi",
 );
 
-/** What may follow a repeat: an end date, a month, or a number of times. */
-const UNTIL = /\s+(?:until|till|through)\s+/iy;
+/**
+ * What may follow a repeat: an end date, a month, or a number of times. `UNTIL` matches after the
+ * whitespace `pastSpace` skips, so a long run of blanks is read once instead of once per backtrack.
+ */
+const UNTIL = /(?:until|till|through)\s+/iy;
 const TIMES = new RegExp(`\\s+(?:for\\s+)?(${NUMBER})\\s+times\\b`, "iy");
 
 /** "all day", "all-day". */
@@ -107,6 +110,13 @@ function dateAt(text: string, index: number, today: string): { date: string; end
 	return null;
 }
 
+/** The index after the whitespace starting at `index`; `index` itself when none starts there. */
+function pastSpace(text: string, index: number): number {
+	let cursor = index;
+	while (cursor < text.length && /\s/.test(text.charAt(cursor))) cursor += 1;
+	return cursor;
+}
+
 /** Repeat phrases, with an "until …" or "N times" tail when one follows. */
 function repeats(text: string, today: string): Candidate[] {
 	let found: Candidate[] = [];
@@ -116,8 +126,8 @@ function repeats(text: string, today: string): Candidate[] {
 		if (!rule) continue;
 		let index = match.index;
 		let end = index + match[0].length;
-		UNTIL.lastIndex = end;
-		if (UNTIL.exec(text)) {
+		UNTIL.lastIndex = pastSpace(text, end);
+		if (UNTIL.lastIndex > end && UNTIL.exec(text)) {
 			let until = dateAt(text, UNTIL.lastIndex, today);
 			if (until) {
 				rule = { ...rule, until: `${until.date}T23:59:59` };

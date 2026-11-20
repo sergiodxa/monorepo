@@ -167,6 +167,13 @@ describe("repeats", () => {
 		expect(read("every week 6 times").repeat?.count).toBe(6);
 	});
 
+	test("reads a repeat followed by a long run of blanks in linear time", () => {
+		let started = performance.now();
+		expect(read(`every Tuesday${"\t".repeat(50_000)}x`).repeat?.byDay).toEqual([{ day: "tu" }]);
+		expect(read(`every Tuesday,${"\t,".repeat(50_000)}`).repeat?.byDay).toEqual([{ day: "tu" }]);
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
+
 	test("starts a weekday repeat on its first day, and keeps a stated date", () => {
 		expect(read("every Friday at 4pm").date).toBe("2026-11-20");
 		expect(read("every weekday at 9:30").date).toBe("2026-11-18");

@@ -28,8 +28,17 @@ describe("strip", () => {
 		["Design sync every other Tuesday until March at 3pm", "Design sync"],
 		["Standup 9:30-9:45, every weekday", "Standup"],
 		["Buy milk", "Buy milk"],
+		["Format review tomorrow", "Format review"],
+		["Onboarding call on Friday", "Onboarding call"],
 	])("leaves %s as %s", (text, title) => {
 		expect(rest(text)).toBe(title);
+	});
+
+	test("removes stranded words after a long run of blanks in linear time", () => {
+		let started = performance.now();
+		expect(strip(`a${"\t,".repeat(50_000)}x`, [])).toBe(`a${",".repeat(50_000)}x`);
+		expect(strip(`a${" ,".repeat(50_000)}`, [])).toBe("a");
+		expect(performance.now() - started).toBeLessThan(1000);
 	});
 
 	test("skips a range that overlaps one already removed", () => {

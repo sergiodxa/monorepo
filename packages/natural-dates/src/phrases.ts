@@ -257,7 +257,7 @@ export function repeatOf(
 	if (lower === "yearly" || lower === "annually" || lower.startsWith("year"))
 		return withInterval({ frequency: "yearly" });
 	let days = lower
-		.split(/\s*(?:,|&|\band\b)\s*/)
+		.split(/,|&|\band\b/)
 		.map((part) => part.trim())
 		.filter((part) => part !== "");
 	if (days.length === 0 || days.some((day) => weekdayIndex(day) === -1)) return null;
