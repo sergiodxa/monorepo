@@ -18,6 +18,7 @@ import type {
 	SpriteImage,
 } from "./declarations.js";
 import type { ExtensionCalls, ExtensionContext } from "./extensions.js";
+import type { Persistent } from "./persistent.js";
 import type { CharacterTransition, Position, SceneryTransition } from "./stage.js";
 import type {
 	LineKey,
@@ -35,7 +36,7 @@ import type {
  * A callback as a directive stores it. The builders type it from the app's state; the engine
  * calls it with whatever state the play holds.
  */
-export type StoredCallback<Value> = (state: StateRecord, tools: PlayTools) => Value;
+export type StoredCallback<Value> = (state: StateRecord, tools: PlayTools<Persistent>) => Value;
 
 /** Shows a background or a full-screen image. */
 export interface ShowDirective {
@@ -149,6 +150,17 @@ export interface SetDirective {
 	update: unknown;
 }
 
+/**
+ * Changes an extension's lasting slice, which outlives the playthrough: to `update`, or to what
+ * `update` makes of the current value when it is a function.
+ */
+export interface RememberDirective {
+	type: "remember";
+	/** The extension's name. */
+	extension: string;
+	update: unknown;
+}
+
 /** Continues in another scene. */
 export interface GotoDirective {
 	type: "goto";
@@ -168,7 +180,7 @@ export interface CallDirective {
 export type StoredWeight = (
 	scene: SceneDeclaration,
 	state: StateRecord,
-	tools: PlayTools,
+	tools: PlayTools<Persistent>,
 ) => number | boolean;
 
 /**
@@ -252,6 +264,7 @@ export type Directive =
 	| ChooseDirective
 	| WhenDirective
 	| SetDirective
+	| RememberDirective
 	| GotoDirective
 	| CallDirective
 	| PickDirective
@@ -312,10 +325,11 @@ export type ExpressOptions<Character> =
  * An option of a menu that needs more than its directives.
  *
  * @template State - The state `when` reads.
+ * @template Tools - The tools its callbacks receive.
  */
-export interface ChoiceOption<State = NovelState> {
+export interface ChoiceOption<State = NovelState, Tools = PlayTools> {
 	/** Offers the option only while this holds. */
-	when?: (state: Readonly<State>, tools: PlayTools) => boolean;
+	when?: (state: Readonly<State>, tools: Tools) => boolean;
 	/** What a failed `when` looks like: removed (the default) or shown locked with `reason`. */
 	visibility?: "hidden" | "disabled";
 	/** The message key a disabled option shows. */
@@ -332,9 +346,10 @@ export interface ChoiceOption<State = NovelState> {
  * A menu's options keyed by label: a list of directives, or an option object.
  *
  * @template State - The state an option's `when` reads.
+ * @template Tools - The tools its callbacks receive.
  */
-export type ChoiceOptions<State = NovelState> = {
-	readonly [Key in LineKey]?: Directive[] | ChoiceOption<State>;
+export type ChoiceOptions<State = NovelState, Tools = PlayTools> = {
+	readonly [Key in LineKey]?: Directive[] | ChoiceOption<State, Tools>;
 };
 
 /**
@@ -359,19 +374,21 @@ export interface MenuOptions<Options> {
  *
  * @template Scene - The candidates.
  * @template State - The state it reads.
+ * @template Tools - The tools its callbacks receive.
  */
-export type PickWeight<Scene extends SceneDeclaration, State = NovelState> = (
+export type PickWeight<Scene extends SceneDeclaration, State = NovelState, Tools = PlayTools> = (
 	scene: Scene,
 	state: Readonly<State>,
-	tools: PlayTools,
+	tools: Tools,
 ) => number | boolean;
 
 /**
  * `goto`: continues in a scene, or with `oneOf` in one drawn among candidates.
  *
  * @template State - The state a weight reads.
+ * @template Tools - The tools its callbacks receive.
  */
-export interface GotoBuilder<State = NovelState> {
+export interface GotoBuilder<State = NovelState, Tools = PlayTools> {
 	/** Continues in another scene. */
 	(scene: SceneDeclaration): GotoDirective;
 	/**
@@ -380,7 +397,7 @@ export interface GotoBuilder<State = NovelState> {
 	 */
 	oneOf<const Scenes extends readonly SceneDeclaration[]>(
 		scenes: Scenes,
-		weight?: PickWeight<Scenes[number], State>,
+		weight?: PickWeight<Scenes[number], State, Tools>,
 	): PickDirective;
 }
 
@@ -388,8 +405,9 @@ export interface GotoBuilder<State = NovelState> {
  * `call`: plays a scene and returns, or with `oneOf` one drawn among candidates.
  *
  * @template State - The state a weight reads.
+ * @template Tools - The tools its callbacks receive.
  */
-export interface CallBuilder<State = NovelState> {
+export interface CallBuilder<State = NovelState, Tools = PlayTools> {
 	/** Plays another scene, then continues with the next directive. */
 	(scene: SceneDeclaration): CallDirective;
 	/**
@@ -398,7 +416,7 @@ export interface CallBuilder<State = NovelState> {
 	 */
 	oneOf<const Scenes extends readonly SceneDeclaration[]>(
 		scenes: Scenes,
-		weight?: PickWeight<Scenes[number], State>,
+		weight?: PickWeight<Scenes[number], State, Tools>,
 	): PickDirective;
 }
 
@@ -407,8 +425,10 @@ export interface CallBuilder<State = NovelState> {
  *
  * @template State - The state callbacks read and `set` writes: the novel's whole state in a
  * scene, the declared state and the extension's own slice in an extension.
+ * @template Tools - The tools callbacks receive: the novel's whole persistent data in a scene, its
+ * own record and the extension's lasting slice in an extension.
  */
-export interface SceneDirectives<State = NovelState> {
+export interface SceneDirectives<State = NovelState, Tools = PlayTools> {
 	/** Sets the background, or shows a full-screen image over it. */
 	show(
 		asset: AssetDeclaration<"background" | "image">,
@@ -440,23 +460,26 @@ export interface SceneDirectives<State = NovelState> {
 	say<Key extends LineKey>(
 		speaker: CharacterDeclaration | readonly CharacterDeclaration[],
 		key: Key,
-		...values: LineValues<Key, State>
+		...values: LineValues<Key, State, Tools>
 	): SayDirective;
 	/** A line with no speaker; the play stops for the player. */
-	narrate<Key extends LineKey>(key: Key, ...values: LineValues<Key, State>): NarrateDirective;
+	narrate<Key extends LineKey>(
+		key: Key,
+		...values: LineValues<Key, State, Tools>
+	): NarrateDirective;
 	/**
 	 * Emits `notify` with a message and its values when the play passes it, without a stop; a
 	 * rollback or a load landing past it does not emit it again, and a replay never does.
 	 */
-	notify<Key extends LineKey>(key: Key, ...values: LineValues<Key, State>): NotifyDirective;
+	notify<Key extends LineKey>(key: Key, ...values: LineValues<Key, State, Tools>): NotifyDirective;
 	/** A menu; the play stops for the player's choice. */
-	choose<const Options extends ChoiceOptions<State>>(
+	choose<const Options extends ChoiceOptions<State, Tools>>(
 		options: Options,
 		menu?: MenuOptions<Options>,
 	): ChooseDirective;
 	/** Runs `directives` when the condition holds, and `otherwise` when it does not. */
 	when(
-		condition: (state: Readonly<State>, tools: PlayTools) => boolean,
+		condition: (state: Readonly<State>, tools: Tools) => boolean,
 		directives: Directive[],
 		otherwise?: Directive[],
 	): WhenDirective;
@@ -468,13 +491,13 @@ export interface SceneDirectives<State = NovelState> {
 			| ((
 					value: PathValue<State, Path>,
 					state: Readonly<State>,
-					tools: PlayTools,
+					tools: Tools,
 			  ) => PathValue<State, Path>),
 	): SetDirective;
 	/** Continues in another scene; `goto.oneOf` continues in one drawn at play time. */
-	goto: GotoBuilder<State>;
+	goto: GotoBuilder<State, Tools>;
 	/** Plays another scene and returns; `call.oneOf` plays one drawn at play time. */
-	call: CallBuilder<State>;
+	call: CallBuilder<State, Tools>;
 	/** Returns from a called scene before its end. */
 	back(): BackDirective;
 	/** A pause with no line, which the player advances after `duration` milliseconds. */
@@ -730,17 +753,20 @@ export function isBuiltinDirective(name: string): boolean {
 }
 
 /**
- * The context an extension's methods are written with: the built-in builders, and `update` for
- * the slice at `name`.
+ * The context an extension's methods are written with: the built-in builders, `update` for the
+ * slice at `name`, and `remember` for its lasting slice.
  *
  * @param name - The extension's name, which is its slice's key in the state.
  * @returns The context its `directives` builder receives.
  */
-export function extensionContext(name: string): ExtensionContext<string, unknown> {
+export function extensionContext(name: string): ExtensionContext<string, unknown, unknown> {
 	return {
 		...builders,
 		update(update) {
 			return { type: "set", path: name, update };
+		},
+		remember(update) {
+			return { type: "remember", extension: name, update };
 		},
 	};
 }

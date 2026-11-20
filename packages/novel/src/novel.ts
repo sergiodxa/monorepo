@@ -28,10 +28,15 @@ import type { AnyExtension, ExtensionMethods } from "./extensions.js";
 import type { Ending, Frame, GameState, ReplayScope, Reply, StopFrame } from "./frames.js";
 import type { Lazy } from "./lazy.js";
 import type { NovelLink, ReachedScene, ReachOptions } from "./links.js";
-import type { Persistent } from "./persistent.js";
 import type { Audio, Fraction, Position, PositionAlias, Stage } from "./stage.js";
 import type { SavedGame } from "./state.js";
-import type { DeclaredState, DeepPartial, NovelState, StateRecord } from "./types.js";
+import type {
+	DeclaredState,
+	DeepPartial,
+	NovelPersistent,
+	NovelState,
+	StateRecord,
+} from "./types.js";
 
 import { indexScene } from "./anchors.js";
 import {
@@ -47,7 +52,7 @@ import { Listeners } from "./events.js";
 import { parseState, resolveScene } from "./extensions.js";
 import { isLazy } from "./lazy.js";
 import { reach, toLinks } from "./links.js";
-import { readPersistent } from "./persistent.js";
+import { PERSISTENT_FIELDS, readPersistent } from "./persistent.js";
 import { DEFAULT_POSITIONS, emptyStage, silence } from "./stage.js";
 import { SAVED_GAME_SCHEMA, validate } from "./state.js";
 
@@ -213,7 +218,7 @@ export interface Play extends AsyncGenerator<Frame, Ending, Reply | undefined> {
 	/** The play as JSON at the current stop, ready to save. */
 	readonly state: GameState;
 	/** Persistent data as this play has updated it, the same value the last `persist` carried. */
-	readonly persistent: Persistent;
+	readonly persistent: NovelPersistent;
 	/**
 	 * Emits `save` with the play as it stands, for the app's listener to store under `slot`.
 	 *
@@ -249,7 +254,7 @@ export class Novel {
 	 *
 	 * @param options - The declarations, state schema and story options.
 	 * @throws When two extensions share a name, or one is named like a built-in directive or
-	 * holds a dot.
+	 * holds a dot, or keeps lasting data under the name of a field of the persistent record.
 	 */
 	constructor(options: NovelOptions) {
 		this.#options = options;
@@ -257,6 +262,11 @@ export class Novel {
 		for (let entry of this.#extensions) {
 			if (entry.name === "" || entry.name.includes(".") || isBuiltinDirective(entry.name)) {
 				throw new Error(`Extension name "${entry.name}" is not a free scene context key`);
+			}
+			if (entry.persistent !== undefined && PERSISTENT_FIELDS.has(entry.name)) {
+				throw new Error(
+					`Extension "${entry.name}" keeps lasting data under a persistent field's name`,
+				);
 			}
 			if (this.#methods.has(entry.name)) {
 				throw new Error(`Extension "${entry.name}" is passed more than once`);
@@ -427,7 +437,7 @@ export class Novel {
 			this.#runtime(emit, sink?.pick),
 			live.data.live,
 			live.data.playTime,
-			readPersistent(options.persistent),
+			readPersistent(options.persistent, this.#extensions),
 			options.replay,
 		);
 		play = createPlay(engine);
@@ -656,6 +666,8 @@ export class Novel {
 			position: (position) => this.#position(position),
 			voice: (speaker, key) => this.#voice(speaker, key),
 			missing: (declaration) => this.#missing(declaration),
+			lasting: (extension) =>
+				this.#extensions.find((entry) => entry.name === extension)?.persistent?.state,
 			untranslated: (key) =>
 				catalogs.filter(([, catalog]) => !hasMessage(catalog, key)).map(([locale]) => locale),
 			emit,
@@ -746,7 +758,7 @@ function createPlay(engine: PlayEngine): Play {
 	let play = run();
 	return Object.defineProperties(play, {
 		state: { get: () => engine.state },
-		persistent: { get: () => engine.persistent },
+		persistent: { get: () => engine.persistent as NovelPersistent },
 		rollback: { value: () => engine.rollback() },
 		save: { value: (slot: string) => engine.save(slot) },
 	}) as Play;

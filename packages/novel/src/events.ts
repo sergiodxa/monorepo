@@ -10,7 +10,7 @@
 import type { ChapterInfo } from "./declarations.js";
 import type { Ending, GameState } from "./frames.js";
 import type { Novel, Play } from "./novel.js";
-import type { Persistent } from "./persistent.js";
+import type { NovelPersistent } from "./types.js";
 
 import { NovelError } from "./errors.js";
 
@@ -79,7 +79,7 @@ export interface NovelEvents {
 	chapter: ChapterEvent;
 	save: SaveEvent;
 	/** Persistent data changed; the payload is the whole record, ready to store. */
-	persist: Persistent;
+	persist: NovelPersistent;
 	/** A story problem the play continued past, a jump it could not take, or a failed listener. */
 	error: NovelError;
 }

@@ -15,11 +15,13 @@ import { failure, isFailure, success } from "@sdxc/result";
 import type {
 	Directive,
 	ExtensionDirective,
+	RememberDirective,
 	SceneDirectives,
 	SceneModule,
 	SetDirective,
 } from "./directives.js";
 import type { NovelEventName, NovelListener } from "./events.js";
+import type { Persistent } from "./persistent.js";
 import type { DeclaredState, NovelTypes, PlayTools, SchemaInput, StateRecord } from "./types.js";
 
 import { validate } from "./state.js";
@@ -32,26 +34,47 @@ export interface ExtensionMethods {
 /** The listeners an extension registers on the novel it is passed to, one per event at most. */
 export type ExtensionListeners = { readonly [Name in NovelEventName]?: NovelListener<Name> };
 
-/**
- * The state an extension's directives read and write: the app's declared state and the
- * extension's own slice. Other extensions' slices stay out, so extensions never depend on
- * each other's types.
- *
- * @template Name - The extension's name.
- * @template Slice - The slice's parsed value.
- */
-export type ExtensionScope<Name extends string, Slice> = DeclaredState & { [Key in Name]: Slice };
+/** A schema's parsed value, or `never` for an extension that declares no such schema. */
+type OutputOf<Schema> = Schema extends StandardSchemaV1
+	? StandardSchemaV1.InferOutput<Schema>
+	: never;
 
 /**
- * What an extension's `directives` builder receives: every scene directive, plus `update` for
- * the extension's own slice of state.
+ * The state an extension's directives read and write: the app's declared state and the
+ * extension's own slice, when it has one. Other extensions' slices stay out, so extensions
+ * never depend on each other's types.
+ *
+ * @template Name - The extension's name.
+ * @template Slice - The slice's parsed value; `never` for an extension without one.
+ */
+export type ExtensionScope<Name extends string, Slice> = [Slice] extends [never]
+	? DeclaredState
+	: DeclaredState & { [Key in Name]: Slice };
+
+/**
+ * The persistent data an extension's directives read: the novel's own record and the
+ * extension's lasting slice, when it has one.
+ *
+ * @template Name - The extension's name.
+ * @template Lasting - The lasting slice's parsed value; `never` for an extension without one.
+ */
+export type ExtensionLasting<Name extends string, Lasting> = [Lasting] extends [never]
+	? Persistent
+	: Persistent & { [Key in Name]: Lasting };
+
+/**
+ * What an extension's `directives` builder receives: every scene directive, `update` for the
+ * extension's own slice of state, and `remember` for its lasting slice.
  *
  * @template Name - The extension's name.
  * @template Slice - The slice's parsed value.
+ * @template Lasting - The lasting slice's parsed value.
  */
-export interface ExtensionContext<Name extends string, Slice> extends SceneDirectives<
-	ExtensionScope<Name, Slice>
-> {
+export interface ExtensionContext<
+	Name extends string,
+	Slice,
+	Lasting = never,
+> extends SceneDirectives<ExtensionScope<Name, Slice>, ExtensionTools<Name, Lasting>> {
 	/**
 	 * Sets the extension's slice to a value or to what a function makes of the current one; the
 	 * change goes through the play like `set`, so saves and rollback see it.
@@ -59,85 +82,188 @@ export interface ExtensionContext<Name extends string, Slice> extends SceneDirec
 	update(
 		update:
 			| Slice
-			| ((value: Slice, state: Readonly<ExtensionScope<Name, Slice>>, tools: PlayTools) => Slice),
+			| ((
+					value: Slice,
+					state: Readonly<ExtensionScope<Name, Slice>>,
+					tools: ExtensionTools<Name, Lasting>,
+			  ) => Slice),
 	): SetDirective;
+	/**
+	 * Sets the extension's lasting slice to a value or to what a function makes of the current
+	 * one. It outlives the playthrough: the play emits `persist` with it, a rollback keeps it, and
+	 * a replay leaves it as it was. A value its schema refuses is reported on `error` and dropped.
+	 */
+	remember(
+		update:
+			| Lasting
+			| ((
+					value: Lasting,
+					state: Readonly<ExtensionScope<Name, Slice>>,
+					tools: ExtensionTools<Name, Lasting>,
+			  ) => Lasting),
+	): RememberDirective;
+}
+
+/** The tools an extension's callbacks receive: draws, and the persistent data it reads. */
+type ExtensionTools<Name extends string, Lasting> = PlayTools<ExtensionLasting<Name, Lasting>>;
+
+/**
+ * Lasting data an extension keeps across every playthrough, beside the novel's own persistent
+ * record, such as achievements.
+ *
+ * @template Schema - The lasting slice's Standard Schema.
+ */
+export interface LastingOptions<Schema extends StandardSchemaV1> {
+	/** Validates the lasting slice whenever a play reads stored persistent data. */
+	state: Schema;
+	/** The lasting slice of a first playthrough, and of a record stored before the extension had one. */
+	initial: SchemaInput<Schema>;
 }
 
 /**
- * What `extension()` takes: the slice's schema and starting value, the directives scenes reach
- * through `ctx.<name>`, and listeners registered with the novel.
+ * What every `extension()` takes: lasting data, the directives scenes reach through
+ * `ctx.<name>`, and listeners registered with the novel.
  *
  * @template Name - The extension's name.
- * @template Schema - The slice's Standard Schema.
+ * @template Slice - The per-play slice's parsed value; `never` without one.
  * @template Methods - The directive builders.
+ * @template Lasting - The lasting slice's Standard Schema; `never` without one.
  */
-export interface ExtensionOptions<
+export interface ExtensionBaseOptions<
 	Name extends string,
-	Schema extends StandardSchemaV1,
+	Slice,
 	Methods extends ExtensionMethods,
+	Lasting extends StandardSchemaV1,
 > {
-	/** Validates the slice whenever a play starts or loads a save, like the novel's own state. */
-	state: Schema;
-	/** The slice of a new play, and of a save made before the extension existed. */
-	initial: SchemaInput<Schema>;
+	/** Data kept across playthroughs, which `ctx.remember` writes and `tools.persistent.<name>` reads. */
+	persistent?: LastingOptions<Lasting>;
 	/** Builds the methods scenes call as `ctx.<name>.<method>(…)`; each answers directives. */
-	directives?: (ctx: ExtensionContext<Name, StandardSchemaV1.InferOutput<Schema>>) => Methods;
+	directives?: (ctx: ExtensionContext<Name, Slice, OutputOf<Lasting>>) => Methods;
 	/** Listeners for the novel's events; side effects only, as with `novel.on()`. */
 	on?: ExtensionListeners;
 }
 
 /**
- * A story extension, passed to `createNovel({ extensions })` and declared in `NovelTypes` so
- * `ctx.<name>` and `state.<name>` are typed.
+ * What `extension()` takes for an extension with a slice of per-play state.
  *
- * @template Name - The key of its slice and of its directives on the scene context.
+ * @template Name - The extension's name.
  * @template Schema - The slice's Standard Schema.
  * @template Methods - The directive builders.
+ * @template Lasting - The lasting slice's Standard Schema; `never` without one.
+ */
+export interface ExtensionOptions<
+	Name extends string,
+	Schema extends StandardSchemaV1,
+	Methods extends ExtensionMethods,
+	Lasting extends StandardSchemaV1 = never,
+> extends ExtensionBaseOptions<Name, StandardSchemaV1.InferOutput<Schema>, Methods, Lasting> {
+	/** Validates the slice whenever a play starts or loads a save, like the novel's own state. */
+	state: Schema;
+	/** The slice of a new play, and of a save made before the extension existed. */
+	initial: SchemaInput<Schema>;
+}
+
+/**
+ * What `extension()` takes for an extension with no per-play state, such as one that keeps only
+ * lasting data; its plays and saves carry no slice for it.
+ *
+ * @template Name - The extension's name.
+ * @template Methods - The directive builders.
+ * @template Lasting - The lasting slice's Standard Schema; `never` without one.
+ */
+export interface StatelessExtensionOptions<
+	Name extends string,
+	Methods extends ExtensionMethods,
+	Lasting extends StandardSchemaV1 = never,
+> extends ExtensionBaseOptions<Name, never, Methods, Lasting> {
+	state?: undefined;
+	initial?: undefined;
+}
+
+/** A lasting schema as an extension carries it: `undefined` for one that declared none. */
+type LastingOf<Lasting> = [Lasting] extends [never] ? undefined : Lasting;
+
+/**
+ * A story extension, passed to `createNovel({ extensions })` and declared in `NovelTypes` so
+ * `ctx.<name>`, `state.<name>` and `persistent.<name>` are typed.
+ *
+ * @template Name - The key of its slices and of its directives on the scene context.
+ * @template Schema - The per-play slice's Standard Schema, or `undefined` for none.
+ * @template Methods - The directive builders.
+ * @template Lasting - The lasting slice's Standard Schema, or `undefined` for none.
  */
 export interface Extension<
 	Name extends string = string,
-	Schema extends StandardSchemaV1 = StandardSchemaV1,
+	Schema extends StandardSchemaV1 | undefined = StandardSchemaV1 | undefined,
 	Methods extends ExtensionMethods = ExtensionMethods,
+	Lasting extends StandardSchemaV1 | undefined = StandardSchemaV1 | undefined,
 > {
 	readonly name: Name;
 	readonly state: Schema;
 	/** The slice a new play starts from, and a save without the slice loads with. */
 	readonly initial: unknown;
+	/** The lasting slice's schema and the value a record without it reads as. */
+	readonly persistent: Lasting extends StandardSchemaV1
+		? { readonly state: Lasting; readonly initial: unknown }
+		: undefined;
 	/** Builds the extension's methods from the context its directives are written with. */
-	directives(ctx: ExtensionContext<Name, StandardSchemaV1.InferOutput<Schema>>): Methods;
+	directives(ctx: ExtensionContext<Name, OutputOf<Schema>, OutputOf<Lasting>>): Methods;
 	readonly on: ExtensionListeners;
 }
 
-/** Any extension, as `createNovel({ extensions })` accepts it whatever its slice and methods. */
+/** Any extension, as `createNovel({ extensions })` accepts it whatever its slices and methods. */
 export interface AnyExtension {
 	readonly name: string;
-	readonly state: StandardSchemaV1;
+	readonly state: StandardSchemaV1 | undefined;
 	readonly initial: unknown;
-	/** Builds the extension's methods; the novel hands it the context bound to its slice. */
+	readonly persistent: { readonly state: StandardSchemaV1; readonly initial: unknown } | undefined;
+	/** Builds the extension's methods; the novel hands it the context bound to its slices. */
 	directives(ctx: never): ExtensionMethods;
 	readonly on: ExtensionListeners;
 }
 
 /**
- * Declares a story extension: a slice of state saved with the play, and directives scenes call
- * as `ctx.<name>.<method>(…)`. Pass it to `createNovel({ extensions })`.
+ * Declares a story extension: a slice of state saved with the play, lasting data kept across
+ * playthroughs, or both, and directives scenes call as `ctx.<name>.<method>(…)`. Pass it to
+ * `createNovel({ extensions })`.
  *
- * @param name - The slice's key in the state and the methods' key on the scene context.
- * @param options - The slice's schema and initial value, its directives and its listeners.
+ * @param name - The slices' key in the state and persistent data, and the methods' key on the scene context.
+ * @param options - The slices' schemas and initial values, its directives and its listeners.
  * @returns The extension.
  * @example export let affection = extension("affection", { state: s.record(s.string(), s.number()), initial: {}, directives: (ctx) => ({ increase: (who: CharacterDeclaration, by: number) => ctx.update((value) => ({ ...value, [who.id]: (value[who.id] ?? 0) + by })) }) });
+ * @example export let achievements = extension("achievements", { persistent: { state: s.array(s.string()), initial: [] }, directives: (ctx) => ({ unlock: (id: string) => ctx.remember((all) => (all.includes(id) ? all : [...all, id])) }) });
  */
 export function extension<
 	const Name extends string,
 	Schema extends StandardSchemaV1,
 	Methods extends ExtensionMethods = Record<never, never>,
->(name: Name, options: ExtensionOptions<Name, Schema, Methods>): Extension<Name, Schema, Methods> {
+	Lasting extends StandardSchemaV1 = never,
+>(
+	name: Name,
+	options: ExtensionOptions<Name, Schema, Methods, Lasting>,
+): Extension<Name, Schema, Methods, LastingOf<Lasting>>;
+export function extension<
+	const Name extends string,
+	Methods extends ExtensionMethods = Record<never, never>,
+	Lasting extends StandardSchemaV1 = never,
+>(
+	name: Name,
+	options: StatelessExtensionOptions<Name, Methods, Lasting>,
+): Extension<Name, undefined, Methods, LastingOf<Lasting>>;
+export function extension(
+	name: string,
+	options: ExtensionBaseOptions<string, unknown, ExtensionMethods, StandardSchemaV1> & {
+		state?: StandardSchemaV1;
+		initial?: unknown;
+	},
+): AnyExtension {
 	let build = options.directives;
 	return {
 		name,
 		state: options.state,
 		initial: options.initial,
-		directives: (ctx) => (build === undefined ? ({} as Methods) : build(ctx)),
+		persistent: options.persistent,
+		directives: (ctx: never) => (build === undefined ? {} : build(ctx)),
 		on: options.on ?? {},
 	};
 }
@@ -153,15 +279,30 @@ type NovelExtension = NovelTypes extends { extensions: infer List }
 type ExtensionNamed<Name> = Extract<NovelExtension, { name: Name }>;
 
 /** The methods an extension's builder answers. */
-type MethodsOf<Declared> =
-	Declared extends Extension<string, StandardSchemaV1, infer Methods> ? Methods : never;
+type MethodsOf<Declared> = Declared extends { directives(ctx: never): infer Methods }
+	? Methods
+	: never;
 
 /**
  * Each declared extension's slice under its name, which the novel's state includes; empty until
- * the app declares extensions.
+ * the app declares extensions, and without the extensions that keep no per-play state.
  */
 export type ExtensionState = {
-	[Name in NovelExtension["name"]]: StandardSchemaV1.InferOutput<ExtensionNamed<Name>["state"]>;
+	[
+		Each in NovelExtension as Each extends { state: StandardSchemaV1 } ? Each["name"] : never
+	]: OutputOf<Each["state"]>;
+};
+
+/**
+ * Each declared extension's lasting slice under its name, which `tools.persistent` and the
+ * `persist` payload include; empty until the app declares extensions that keep lasting data.
+ */
+export type ExtensionPersistent = {
+	[
+		Each in NovelExtension as Each extends { persistent: { state: StandardSchemaV1 } }
+			? Each["name"]
+			: never
+	]: OutputOf<NonNullable<Each["persistent"]>["state"]>;
 };
 
 /**
@@ -197,20 +338,22 @@ export function parseState(
 	let rest: unknown = input;
 	if (record !== undefined && extensions.length > 0) {
 		let copy = { ...record };
-		for (let entry of extensions) delete copy[entry.name];
+		for (let entry of extensions) if (entry.state !== undefined) delete copy[entry.name];
 		rest = copy;
 	}
 	let parsed = validate(schema, rest);
 	if (isFailure(parsed)) return parsed;
 	let state = parsed.data as StateRecord;
 	for (let entry of extensions) {
+		if (entry.state === undefined) continue;
 		if (Object.hasOwn(state, entry.name)) {
 			return failure(
 				new Error(`The state schema declares "${entry.name}", the key of an extension's slice.`),
 			);
 		}
 		let given = record?.[entry.name];
-		let slice = validate(entry.state, given === undefined ? structuredClone(entry.initial) : given);
+		let schema = entry.state;
+		let slice = validate(schema, given === undefined ? structuredClone(entry.initial) : given);
 		if (isFailure(slice)) return failure(new Error(`${entry.name}: ${slice.error.message}`));
 		state[entry.name] = slice.data;
 	}

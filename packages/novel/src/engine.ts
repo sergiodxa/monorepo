@@ -8,6 +8,7 @@
  */
 
 import type { Result } from "@sdxc/result";
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { restoreRandom } from "@sdxc/random";
 import { failure, isFailure, success } from "@sdxc/result";
@@ -45,7 +46,7 @@ import type {
 	StageCharacter,
 	StageScenery,
 } from "./stage.js";
-import type { NovelState, PlayTools, StateRecord } from "./types.js";
+import type { NovelPersistent, NovelState, PlayTools, StateRecord } from "./types.js";
 
 import { directiveAt, enterOption, menuAnchor, nextPath, optionOf } from "./anchors.js";
 import { NovelError } from "./errors.js";
@@ -53,6 +54,9 @@ import { copyKeepingFiles } from "./files.js";
 import { REPLY } from "./frames.js";
 import { recordKey } from "./persistent.js";
 import { getPath, setPath, validate } from "./state.js";
+
+/** The tools a callback receives, as the engine builds them over its own persistent record. */
+type Tools = PlayTools<Persistent>;
 
 /** Directives a play may run between two stops before it is reported as an endless loop. */
 const MAX_STEPS = 10_000;
@@ -74,6 +78,8 @@ export interface NovelRuntime {
 	voice(speaker: string, key: string): AssetSource | null;
 	/** Reports whether the novel lacks an asset or a character a scene uses. */
 	missing(declaration: AssetDeclaration | CharacterDeclaration): boolean;
+	/** The schema of an extension's lasting slice, or `undefined` when it keeps none. */
+	lasting(extension: string): StandardSchemaV1 | undefined;
 	/** The locales whose catalog lacks a message key. */
 	untranslated(key: string): string[];
 	/** Sends an event to the novel's listeners, bound to this play. */
@@ -130,6 +136,7 @@ type Effect =
 	| { type: "unlock"; kind: "image" | "music"; id: string }
 	| { type: "line"; line: LineEvent }
 	| { type: "notify"; notify: NotifyEvent }
+	| { type: "remember"; extension: string; value: unknown }
 	| { type: "choice"; choice: ChoiceEvent }
 	| { type: "ending"; ending: Ending }
 	| { type: "error"; error: NovelError };
@@ -306,7 +313,8 @@ export class PlayEngine {
 			if (effect.type === "error") this.#report(effect.error);
 			else changed = this.#record(effect) || changed;
 		}
-		if (changed) this.#runtime.emit("persist", structuredClone(this.#persistent));
+		if (changed)
+			this.#runtime.emit("persist", structuredClone(this.#persistent) as NovelPersistent);
 	}
 
 	/** Records one effect in persistent data and emits its event; answers whether data changed. */
@@ -339,6 +347,12 @@ export class PlayEngine {
 			case "notify":
 				this.#runtime.emit("notify", effect.notify);
 				return false;
+			case "remember": {
+				let slices = persistent as unknown as Record<string, unknown>;
+				let before = JSON.stringify(slices[effect.extension]);
+				slices[effect.extension] = structuredClone(effect.value);
+				return before !== JSON.stringify(effect.value);
+			}
 			case "choice": {
 				let added = addOnce(
 					persistent.chosen,
@@ -453,7 +467,7 @@ export class PlayEngine {
 	/** Runs directives from the cursor until one stops for the player or the play ends. */
 	async #run(work: Live): Promise<Result<Reached, NovelError>> {
 		let random = restoreRandom(work.random);
-		let tools: PlayTools = { random, persistent: this.#persistent };
+		let tools: Tools = { random, persistent: { ...this.#persistent } };
 		let from = this.#scene;
 		for (let steps = 0; steps < MAX_STEPS; steps++) {
 			let index = await this.#resolve(work.cursor, from);
@@ -555,7 +569,7 @@ export class PlayEngine {
 	}
 
 	/** Runs one directive that does not stop, answering the ending when it finishes the play. */
-	#apply(directive: Directive, work: Live, tools: PlayTools): Ending | null {
+	#apply(directive: Directive, work: Live, tools: Tools): Ending | null {
 		let path = work.cursor.path as Path;
 		work.cursor.path = nextPath(path);
 		switch (directive.type) {
@@ -567,13 +581,11 @@ export class PlayEngine {
 			case "set": {
 				let update =
 					typeof directive.update === "function"
-						? (
-								directive.update as (
-									value: unknown,
-									state: StateRecord,
-									tools: PlayTools,
-								) => unknown
-							)(getPath(work.state, directive.path), work.state, tools)
+						? (directive.update as (value: unknown, state: StateRecord, tools: Tools) => unknown)(
+								getPath(work.state, directive.path),
+								work.state,
+								tools,
+							)
 						: directive.update;
 				setPath(work.state, directive.path, structuredClone(update));
 				return null;
@@ -587,6 +599,9 @@ export class PlayEngine {
 			}
 			case "back":
 				return this.#return(work);
+			case "remember":
+				this.#remember(directive.extension, directive.update, work.state, tools);
+				return null;
 			case "notify": {
 				let values =
 					typeof directive.values === "function"
@@ -622,6 +637,40 @@ export class PlayEngine {
 	}
 
 	/**
+	 * Validates an extension's new lasting slice and makes it what the rest of the run reads; the
+	 * play keeps it once the run reaches its stop. A value the schema refuses is reported and
+	 * dropped, leaving the slice as it was.
+	 */
+	#remember(extension: string, update: unknown, state: StateRecord, tools: Tools): void {
+		let slices = tools.persistent as unknown as Record<string, unknown>;
+		let schema = this.#runtime.lasting(extension);
+		let next =
+			typeof update === "function"
+				? (update as (value: unknown, state: StateRecord, tools: Tools) => unknown)(
+						structuredClone(slices[extension]),
+						state,
+						tools,
+					)
+				: update;
+		let parsed =
+			schema === undefined
+				? failure(new Error("the extension keeps no lasting data"))
+				: validate(schema, structuredClone(next));
+		if (isFailure(parsed)) {
+			this.#problem(
+				new NovelError(
+					"invalid-state",
+					`Extension "${extension}" remembered a value it cannot keep: ${parsed.error.message}`,
+					{ subject: extension },
+				),
+			);
+			return;
+		}
+		slices[extension] = parsed.data;
+		this.#pending.push({ type: "remember", extension, value: parsed.data });
+	}
+
+	/**
 	 * Continues in `scene`, or calls it with a return to the directive after `path`; a `goto`
 	 * past a replay's bound finishes the replay.
 	 */
@@ -640,7 +689,7 @@ export class PlayEngine {
 	 *
 	 * @returns The scene's name, or `null` when no candidate qualifies.
 	 */
-	#pick(directive: PickDirective, state: StateRecord, tools: PlayTools): string | null {
+	#pick(directive: PickDirective, state: StateRecord, tools: Tools): string | null {
 		let weights = new Map<string, number>();
 		for (let scene of directive.scenes) {
 			let weight = weighOf(directive, scene, state, tools);
@@ -759,7 +808,7 @@ export class PlayEngine {
 	}
 
 	/** Builds the frame for a stop, or `null` for a menu with no option to take. */
-	#frame(directive: Directive, work: Live, tools: PlayTools): StopFrame | null {
+	#frame(directive: Directive, work: Live, tools: Tools): StopFrame | null {
 		this.#frames += 1;
 		let id = `${this.#id}:${this.#frames}`;
 		let scene = work.cursor.scene;
@@ -858,7 +907,7 @@ export class PlayEngine {
 	}
 
 	/** The options a menu offers now: hidden ones removed, locked ones marked, taken `once` ones gone. */
-	#options(menu: ChooseDirective, work: Live, tools: PlayTools): FrameOption[] {
+	#options(menu: ChooseDirective, work: Live, tools: Tools): FrameOption[] {
 		let scene = work.cursor.scene;
 		let offered: FrameOption[] = [];
 		for (let option of menu.options) {
@@ -920,7 +969,7 @@ function weighOf(
 	directive: PickDirective,
 	scene: PickDirective["scenes"][number],
 	state: StateRecord,
-	tools: PlayTools,
+	tools: Tools,
 ): number {
 	if (directive.weight === undefined) return 1;
 	let weight = directive.weight(scene, state, tools);
@@ -929,7 +978,7 @@ function weighOf(
 }
 
 /** Calls a stored callback with the play's state. */
-function call<Value>(callback: StoredCallback<Value>, state: StateRecord, tools: PlayTools): Value {
+function call<Value>(callback: StoredCallback<Value>, state: StateRecord, tools: Tools): Value {
 	return callback(state, tools);
 }
 

@@ -11,7 +11,7 @@ import type { MessageKey, MessageValues, Messages } from "@sdxc/i18n";
 import type { Random } from "@sdxc/random";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import type { ExtensionState } from "./extensions.js";
+import type { ExtensionPersistent, ExtensionState } from "./extensions.js";
 import type { Persistent } from "./persistent.js";
 
 /**
@@ -44,12 +44,26 @@ export type NovelMessages = NovelTypes extends { messages: infer Bundle } ? Bund
 /** Every message key of the app's bundle: lines, names, labels, titles and captions. */
 export type LineKey = MessageKey<NovelMessages>;
 
-/** What a callback receives beside the state: draws and what earlier playthroughs left. */
-export interface PlayTools {
+/**
+ * What outlives a playthrough as callbacks read it: the novel's own record, with each declared
+ * extension's lasting slice under the extension's name.
+ */
+export type NovelPersistent = Persistent & ExtensionPersistent;
+
+/**
+ * What a callback receives beside the state: draws and what earlier playthroughs left.
+ *
+ * @template Lasting - The persistent data it reads; an extension's directives read the novel's
+ * own record and the extension's lasting slice.
+ */
+export interface PlayTools<Lasting = NovelPersistent> {
 	/** The play's seeded stream; its position is saved with the play, so a reload draws the same. */
 	random: Random;
-	/** Lines, options, endings and unlocks from every playthrough; rollback leaves it as it is. */
-	persistent: Readonly<Persistent>;
+	/**
+	 * Lines, options, endings, unlocks and extensions' lasting data from every playthrough;
+	 * rollback leaves it as it is.
+	 */
+	persistent: Readonly<Lasting>;
 }
 
 /**
@@ -58,10 +72,11 @@ export interface PlayTools {
  *
  * @template Value - What the callback answers.
  * @template State - The state it reads; an extension's directives read the declared state.
+ * @template Tools - The tools it receives.
  */
-export type StateCallback<Value, State = NovelState> = (
+export type StateCallback<Value, State = NovelState, Tools = PlayTools> = (
 	state: Readonly<State>,
-	tools: PlayTools,
+	tools: Tools,
 ) => Value;
 
 /**
@@ -69,8 +84,11 @@ export type StateCallback<Value, State = NovelState> = (
  *
  * @template Values - The message's values.
  * @template State - The state a callback reads.
+ * @template Tools - The tools a callback receives.
  */
-export type ValuesInput<Values, State = NovelState> = Values | StateCallback<Values, State>;
+export type ValuesInput<Values, State = NovelState, Tools = PlayTools> =
+	| Values
+	| StateCallback<Values, State, Tools>;
 
 /**
  * The values argument for the message at `Key`: required when its text declares variables,
@@ -78,12 +96,13 @@ export type ValuesInput<Values, State = NovelState> = Values | StateCallback<Val
  *
  * @template Key - The line's message key.
  * @template State - The state a callback reads.
+ * @template Tools - The tools a callback receives.
  */
-export type LineValues<Key extends string, State = NovelState> =
+export type LineValues<Key extends string, State = NovelState, Tools = PlayTools> =
 	MessageValues<NovelMessages, Key> extends [values: infer Values]
-		? [values: ValuesInput<Values, State>]
+		? [values: ValuesInput<Values, State, Tools>]
 		: MessageValues<NovelMessages, Key> extends [values?: infer Values]
-			? [values?: ValuesInput<NonNullable<Values>, State>]
+			? [values?: ValuesInput<NonNullable<Values>, State, Tools>]
 			: never;
 
 /**

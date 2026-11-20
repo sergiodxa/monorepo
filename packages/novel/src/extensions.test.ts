@@ -19,6 +19,7 @@ import type {
 	Directive,
 	ExtensionDirective,
 	GameState,
+	NovelPersistent,
 	NovelState,
 	Play,
 	SceneDeclaration,
@@ -67,8 +68,36 @@ const FLAGS = extension("flags", {
 	initial: [],
 });
 
+/**
+ * Achievements unlocked in any playthrough: lasting data and no per-play slice. A condition
+ * reads the lasting list through the tools.
+ */
+const ACHIEVEMENTS = extension("achievements", {
+	persistent: { state: s.array(s.string()), initial: [] },
+	directives: (ctx) => ({
+		unlock: (id: string) => [
+			ctx.remember((all) => (all.includes(id) ? all : [...all, id])),
+			ctx.notify("opening.lucky"),
+		],
+		ifUnlocked: (id: string, directives: Directive[]) =>
+			ctx.when((_state, tools) => tools.persistent.achievements.includes(id), directives),
+		forget: () => ctx.remember([]),
+	}),
+});
+
+/** A counter kept across playthroughs beside a per-play slice, whose schema refuses a negative. */
+const VISITS = extension("visits", {
+	state: s.number(),
+	initial: 0,
+	persistent: { state: s.number().refine((total) => total >= 0, "a count"), initial: 0 },
+	directives: (ctx) => ({
+		count: () => [ctx.update((value) => value + 1), ctx.remember((total) => total + 1)],
+		break: () => ctx.remember(-1),
+	}),
+});
+
 /** The extensions the fixture novel passes and `NovelTypes` declares. */
-const EXTENSIONS = [BOND, FLAGS] as const;
+const EXTENSIONS = [BOND, FLAGS, ACHIEVEMENTS, VISITS] as const;
 
 declare module "./types.js" {
 	interface NovelTypes {
@@ -76,7 +105,13 @@ declare module "./types.js" {
 	}
 }
 
-const SCENES = scenes({ opening: scene(), cafe: scene(), stray: scene(), outing: scene() });
+const SCENES = scenes({
+	opening: scene(),
+	cafe: scene(),
+	stray: scene(),
+	outing: scene(),
+	gallery: scene(),
+});
 
 const CAST = cast({ mika: character({ name: "cast.mika" }) });
 
@@ -108,6 +143,16 @@ const OUTING = createScene(SCENES.outing, (ctx) => [
 	ctx.narrate("opening.thinking"),
 ]);
 
+const GALLERY = createScene(SCENES.gallery, (ctx) => [
+	ctx.achievements.ifUnlocked("first", [ctx.narrate("opening.lucky")]),
+	ctx.achievements.unlock("first"),
+	ctx.visits.count(),
+	ctx.achievements.ifUnlocked("first", [ctx.narrate("opening.thinking")]),
+	ctx.narrate("opening.done"),
+	ctx.visits.break(),
+	ctx.narrate("opening.welcome"),
+]);
+
 const STRAY = createScene(SCENES.stray, (ctx) => [
 	// @ts-expect-error -- no extension is named "missing"
 	ctx.missing.call(),
@@ -129,6 +174,7 @@ function fixture(
 	novel.map(SCENES.cafe, CAFE);
 	novel.map(SCENES.stray, STRAY);
 	novel.map(SCENES.outing, OUTING);
+	novel.map(SCENES.gallery, GALLERY);
 	return novel;
 }
 
@@ -219,6 +265,7 @@ describe("state", () => {
 			affection: { mika: 0 },
 			bond: {},
 			flags: [],
+			visits: 0,
 		});
 		let given = unwrap(fixture().start({ state: { bond: { mika: 7 } } }));
 		expect(given.state.state.bond).toEqual({ mika: 7 });
@@ -261,6 +308,83 @@ describe("state", () => {
 		expect(play.state.state.bond).toEqual({ mika: 10 });
 		await play.rollback();
 		expect(play.state.state.bond).toEqual({});
+	});
+});
+
+describe("lasting data", () => {
+	test("starts from each extension's initial lasting value and keeps no per-play slice without a state", () => {
+		let play = unwrap(fixture().start());
+		expect(play.persistent).toMatchObject({ achievements: [], visits: 0 });
+		expect(play.state.state).not.toHaveProperty("achievements");
+		expect(play.state.state).toMatchObject({ visits: 0 });
+	});
+
+	test("remembers through the play, emits persist, and reads it in later conditions of the same run", async () => {
+		let play = createTestPlay(fixture(), { scene: SCENES.gallery });
+		await play.advance();
+		expect(play.frame).toMatchObject({ type: "line", key: "opening.thinking" });
+		expect(play.persistent).toMatchObject({ achievements: ["first"], visits: 1 });
+		let persisted = play.events.filter((event) => event.type === "persist").at(-1);
+		expect(persisted?.payload).toMatchObject({ achievements: ["first"], visits: 1 });
+		expect(play.state).toMatchObject({ visits: 1 });
+	});
+
+	test("carries lasting data into the next playthrough, filling a slice an older record lacks", async () => {
+		let first = createTestPlay(fixture(), { scene: SCENES.gallery });
+		await first.advance();
+		let stored = JSON.parse(JSON.stringify(first.persistent)) as unknown;
+
+		let second = createTestPlay(fixture(), { scene: SCENES.gallery, persistent: stored });
+		await second.advance();
+		expect(second.frame).toMatchObject({ key: "opening.lucky" });
+		await second.advance();
+		expect(second.persistent).toMatchObject({ achievements: ["first"], visits: 2 });
+
+		let { visits: _visits, ...older } = stored as Record<string, unknown>;
+		let resumed = createTestPlay(fixture(), { persistent: { ...older, achievements: "broken" } });
+		expect(resumed.persistent).toMatchObject({ achievements: [], visits: 0, endings: [] });
+	});
+
+	test("keeps lasting data through a rollback and refuses a value its schema rejects", async () => {
+		let play = unwrap(fixture().start({ scene: SCENES.gallery }));
+		let thinking = await play.next();
+		if (thinking.done || thinking.value.type !== "line") throw new Error("Expected a line");
+		let done = await play.next(thinking.value.advance());
+		if (done.done || done.value.type !== "line") throw new Error("Expected a line");
+		await play.rollback();
+		expect(play.persistent).toMatchObject({ achievements: ["first"], visits: 1 });
+
+		let errors: unknown[] = [];
+		let novel = fixture();
+		novel.on("error", (error) => errors.push(error));
+		let broken = createTestPlay(novel, { scene: SCENES.gallery });
+		await broken.advance();
+		await broken.advance();
+		await broken.advance();
+		expect(broken.frame).toMatchObject({ key: "opening.welcome" });
+		expect(broken.persistent).toMatchObject({ visits: 1 });
+		expect(errors).toEqual([expect.objectContaining({ code: "invalid-state", subject: "visits" })]);
+	});
+
+	test("explore starts every path from the given lasting data", async () => {
+		let report = await explore(fixture(), {
+			scene: SCENES.gallery,
+			persistent: { achievements: ["first"] },
+		});
+		expect(report.endings).toEqual([
+			expect.objectContaining({ key: null, scene: "gallery", steps: [] }),
+		]);
+		let play = createTestPlay(fixture(), {
+			scene: SCENES.gallery,
+			persistent: { achievements: ["first"] },
+		});
+		await play.advance();
+		expect(play.frame).toMatchObject({ key: "opening.lucky" });
+	});
+
+	test("refuses an extension with lasting data named like a field of the persistent record", () => {
+		let clashing = extension("endings", { persistent: { state: s.number(), initial: 0 } });
+		expect(() => fixture([clashing])).toThrow('"endings"');
 	});
 });
 
@@ -325,6 +449,9 @@ describe("types", () => {
 		});
 		expectTypeOf<NovelState["bond"]>().toEqualTypeOf<Record<string, number>>();
 		expectTypeOf<NovelState["flags"]>().toEqualTypeOf<string[]>();
+		expectTypeOf<NovelPersistent["achievements"]>().toEqualTypeOf<string[]>();
+		expectTypeOf<NovelPersistent["visits"]>().toEqualTypeOf<number>();
+		expectTypeOf<NovelState>().not.toHaveProperty("achievements");
 		expect(isSuccess(fixture().start())).toBe(true);
 	});
 });

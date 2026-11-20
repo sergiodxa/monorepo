@@ -16,8 +16,7 @@ import type { NovelEventName, NovelEvents } from "./events.js";
 import type { ExploreStep } from "./explore.js";
 import type { Ending, Frame, GameState, InteractionFrame, StopFrame } from "./frames.js";
 import type { Novel, Play, StartOptions } from "./novel.js";
-import type { Persistent } from "./persistent.js";
-import type { NovelState, SchemaInput } from "./types.js";
+import type { NovelPersistent, NovelState, SchemaInput } from "./types.js";
 
 import { INTERNALS } from "./novel.js";
 
@@ -74,7 +73,7 @@ export interface TestPlay {
 	/** Every event the play emitted, in order; the novel's own listeners receive them too. */
 	readonly events: readonly TestEvent[];
 	/** Persistent data as the play has updated it. */
-	readonly persistent: Persistent;
+	readonly persistent: NovelPersistent;
 	/** Emits `save` for `slot` and answers the saved state. */
 	save(slot: string): GameState;
 	/**
