@@ -323,6 +323,7 @@ import { clientEntry, css, on } from "remix/component";
 import { novel } from "~/app/initializers/novel";
 import en from "~/resources/locales/en";
 import { LatteArt } from "~/resources/components/latte-art";
+import { INTERACTIONS } from "~/resources/novel/declarations";
 import { readStored, storeSettings } from "~/resources/novel/storage";
 
 const RESOURCES = { en };
@@ -355,10 +356,18 @@ export const Game = clientEntry(
 									storeSettings(event.settings),
 								)}
 							>
-								<NovelPlayer.Interaction
-									name="latteArt"
-									component={LatteArt}
-								/>
+								<NovelPlayer.Interaction interactions={INTERACTIONS}>
+									{(frame) => {
+										switch (frame.interaction) {
+											case "latteArt":
+												return (
+													<LatteArt
+														pattern={frame.input.pattern}
+													/>
+												);
+										}
+									}}
+								</NovelPlayer.Interaction>
 							</NovelPlayer.Default>
 						</IntlProvider>
 					)}
@@ -397,8 +406,12 @@ you apply to it, so a game composes only what it uses:
 ```
 
 A part of your own reads the same state and actions with `handle.context.get(NovelPlayer)`:
-`player.frame`, `player.answer(reply)`, `player.advance()`, and the reveal, auto, skip, backlog,
-saves and settings models a built-in part uses. Every color, image and size the parts draw is a
+`player.frame`, `player.state`, `player.answer(reply)`, `player.advance()`, and the reveal, auto,
+skip, backlog, saves and settings behaviors a built-in part uses. The context also dispatches
+`frame`, `phase` and `ending` events as each changes, for a class of your own to follow the play.
+Each behavior is an interface with a built-in default, and the `behaviors` prop replaces any of
+them, such as `behaviors={{ auto: new SlowAuto() }}` for a subclass of `AutoModel` that overrides
+`delay(line)`. Every color, image and size the parts draw is a
 `--novel-*` variable, listed in `NOVEL_THEME_VARIABLES`, so restyling the textbox is a `css()`
 mixin on the player:
 
@@ -599,31 +612,37 @@ export default createScene(SCENES.prologue.counter, (ctx) => [
 ]);
 ```
 
-The player renders the frame with your component through
-`<NovelPlayer.Interaction name="latteArt" component={LatteArt} />`, as the `Game` entry above
-does, and the component answers through `respond(frame.complete(output))`. `name` is typed from
-your declared interactions, and so is the frame the component receives:
+The `Game` entry above draws it with one `NovelPlayer.Interaction` over `INTERACTIONS`. Its
+children function receives the frame narrowed by `frame.interaction`, and must return something
+for every interaction, so a `switch` that misses one fails to compile. The component finishes by
+dispatching an `InteractionCompleteEvent`, which bubbles to the part and is typed by the
+interaction's output schema:
 
 ```tsx {% title="resources/components/latte-art.tsx" %}
-import type { Interaction } from "@sdxc/novel/ui";
 import type { Handle } from "remix/component";
 
+import { InteractionCompleteEvent } from "@sdxc/novel/ui";
 import { on } from "remix/component";
 
-export function LatteArt(handle: Handle<Interaction.ComponentProps<"latteArt">>) {
-	return () => {
-		let { frame, respond } = handle.props;
-		return (
-			<button
-				type="button"
-				mix={on("click", () => respond(frame.complete({ score: 3 })))}
-			>
-				{frame.input.pattern}
-			</button>
-		);
-	};
+import { INTERACTIONS } from "~/resources/novel/declarations";
+
+export function LatteArt(handle: Handle<{ pattern: string }>) {
+	return () => (
+		<button
+			type="button"
+			mix={on("click", (event) =>
+				event.currentTarget.dispatchEvent(
+					new InteractionCompleteEvent(INTERACTIONS.latteArt, { score: 3 }),
+				),
+			)}
+		>
+			{handle.props.pattern}
+		</button>
+	);
 }
 ```
+
+An ancestor that also needs the result listens with `on("novel:complete", …)`.
 
 `explore()` needs outputs to try for each interaction, and reports any it has none for under
 `unexplored`:
@@ -633,6 +652,45 @@ let report = await explore(novel, {
 	interactions: { latteArt: () => [{ score: 0 }, { score: 3 }] },
 });
 ```
+
+## Extend the story
+
+Interactions and the player's behaviors change how the reader experiences the play. A story
+extension changes what the story itself can do: it adds directives every scene can call and a
+slice of state saved with the play. Declare it with `extension()`, pass it to `createNovel`, and
+add it to `NovelTypes`:
+
+```typescript {% title="resources/novel/extensions.ts" %}
+import type { CharacterDeclaration } from "@sdxc/novel";
+
+import { extension } from "@sdxc/novel";
+import * as s from "remix/data-schema";
+
+export const affection = extension("affection", {
+	state: s.record(s.string(), s.number()),
+	initial: {},
+	directives: (ctx) => ({
+		increase: (character: CharacterDeclaration, amount: number) =>
+			ctx.update((value) => ({
+				...value,
+				[character.id]: (value[character.id] ?? 0) + amount,
+			})),
+	}),
+});
+
+export const EXTENSIONS = [affection] as const;
+
+declare module "@sdxc/novel" {
+	interface NovelTypes {
+		extensions: typeof EXTENSIONS;
+	}
+}
+```
+
+With `createNovel({ …, extensions: EXTENSIONS })`, a scene calls
+`ctx.affection.increase(CAST.mika, 10)` and reads `state.affection.mika` in its conditions. The
+slice lives at `state.affection`, so it is saved, rolled back, explored and tested like the rest
+of the state, and a save made before the extension existed loads with its `initial` value.
 
 ## Show the extras on a title screen
 
