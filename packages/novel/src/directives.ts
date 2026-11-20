@@ -100,6 +100,16 @@ export interface NarrateDirective {
 	values?: object | StoredCallback<object>;
 }
 
+/**
+ * A notification, such as an achievement toast: the play passes it without a stop and emits
+ * `notify` with the message key and its values, leaving the state as it was.
+ */
+export interface NotifyDirective {
+	type: "notify";
+	key: string;
+	values?: object | StoredCallback<object>;
+}
+
 /** One option of a menu, normalized to its object form. */
 export interface ChoiceOptionDirective {
 	/** The label's message key, which is also the option's id. */
@@ -149,6 +159,30 @@ export interface GotoDirective {
 export interface CallDirective {
 	type: "call";
 	scene: SceneDeclaration;
+}
+
+/**
+ * How a pick weighs one candidate when the play reaches it: a positive number, or `true` for 1;
+ * `false`, `0` and any other number leave the candidate out.
+ */
+export type StoredWeight = (
+	scene: SceneDeclaration,
+	state: StateRecord,
+	tools: PlayTools,
+) => number | boolean;
+
+/**
+ * Continues in, or calls, one of several scenes drawn at play time from the play's seeded
+ * stream, so a reload or rollback draws the same scene. Every candidate is listed up front,
+ * which is how tools follow each one; when none qualifies the play runs the next directive.
+ */
+export interface PickDirective {
+	type: "pick";
+	/** `goto` continues in the picked scene; `call` plays it and returns to the next directive. */
+	via: "goto" | "call";
+	scenes: SceneDeclaration[];
+	/** Without it every candidate weighs 1. */
+	weight?: StoredWeight;
 }
 
 /** Returns from a called scene. */
@@ -214,11 +248,13 @@ export type Directive =
 	| MoveDirective
 	| SayDirective
 	| NarrateDirective
+	| NotifyDirective
 	| ChooseDirective
 	| WhenDirective
 	| SetDirective
 	| GotoDirective
 	| CallDirective
+	| PickDirective
 	| BackDirective
 	| WaitDirective
 	| PlayDirective
@@ -318,6 +354,55 @@ export interface MenuOptions<Options> {
 }
 
 /**
+ * How a pick weighs a candidate: a positive number, `true` for 1, or `false` or `0` to leave it
+ * out. It runs when the play reaches the pick, with the state and the play's seeded stream.
+ *
+ * @template Scene - The candidates.
+ * @template State - The state it reads.
+ */
+export type PickWeight<Scene extends SceneDeclaration, State = NovelState> = (
+	scene: Scene,
+	state: Readonly<State>,
+	tools: PlayTools,
+) => number | boolean;
+
+/**
+ * `goto`: continues in a scene, or with `oneOf` in one drawn among candidates.
+ *
+ * @template State - The state a weight reads.
+ */
+export interface GotoBuilder<State = NovelState> {
+	/** Continues in another scene. */
+	(scene: SceneDeclaration): GotoDirective;
+	/**
+	 * Continues in one of `scenes`, drawn by `weight` (1 each without it) from the play's seeded
+	 * stream; when none qualifies the play runs the next directive instead.
+	 */
+	oneOf<const Scenes extends readonly SceneDeclaration[]>(
+		scenes: Scenes,
+		weight?: PickWeight<Scenes[number], State>,
+	): PickDirective;
+}
+
+/**
+ * `call`: plays a scene and returns, or with `oneOf` one drawn among candidates.
+ *
+ * @template State - The state a weight reads.
+ */
+export interface CallBuilder<State = NovelState> {
+	/** Plays another scene, then continues with the next directive. */
+	(scene: SceneDeclaration): CallDirective;
+	/**
+	 * Plays one of `scenes`, drawn like `goto.oneOf`, then continues with the next directive,
+	 * which is also where the play goes when no candidate qualifies.
+	 */
+	oneOf<const Scenes extends readonly SceneDeclaration[]>(
+		scenes: Scenes,
+		weight?: PickWeight<Scenes[number], State>,
+	): PickDirective;
+}
+
+/**
  * Every built-in directive, as functions that return plain data.
  *
  * @template State - The state callbacks read and `set` writes: the novel's whole state in a
@@ -359,6 +444,11 @@ export interface SceneDirectives<State = NovelState> {
 	): SayDirective;
 	/** A line with no speaker; the play stops for the player. */
 	narrate<Key extends LineKey>(key: Key, ...values: LineValues<Key, State>): NarrateDirective;
+	/**
+	 * Emits `notify` with a message and its values when the play passes it, without a stop; a
+	 * rollback or a load landing past it does not emit it again, and a replay never does.
+	 */
+	notify<Key extends LineKey>(key: Key, ...values: LineValues<Key, State>): NotifyDirective;
 	/** A menu; the play stops for the player's choice. */
 	choose<const Options extends ChoiceOptions<State>>(
 		options: Options,
@@ -381,10 +471,10 @@ export interface SceneDirectives<State = NovelState> {
 					tools: PlayTools,
 			  ) => PathValue<State, Path>),
 	): SetDirective;
-	/** Continues in another scene. */
-	goto(scene: SceneDeclaration): GotoDirective;
-	/** Plays another scene, then continues with the next directive. */
-	call(scene: SceneDeclaration): CallDirective;
+	/** Continues in another scene; `goto.oneOf` continues in one drawn at play time. */
+	goto: GotoBuilder<State>;
+	/** Plays another scene and returns; `call.oneOf` plays one drawn at play time. */
+	call: CallBuilder<State>;
 	/** Returns from a called scene before its end. */
 	back(): BackDirective;
 	/** A pause with no line, which the player advances after `duration` milliseconds. */
@@ -437,6 +527,35 @@ function normalizeOption(
 	if (option.when !== undefined) normalized.when = option.when as StoredCallback<boolean>;
 	if (option.reason !== undefined) normalized.reason = option.reason;
 	return normalized;
+}
+
+/**
+ * Builds the `oneOf` of `goto` or `call`. The candidates are copied, so a list the scene keeps
+ * changing afterwards leaves the directive as written.
+ */
+function pickBuilder(via: PickDirective["via"]) {
+	return (scenes: readonly SceneDeclaration[], weight?: PickWeight<SceneDeclaration, never>) => {
+		let directive: PickDirective = { type: "pick", via, scenes: [...scenes] };
+		if (weight !== undefined) directive.weight = weight as StoredWeight;
+		return directive;
+	};
+}
+
+/**
+ * The scenes a directive can continue in or call, with how it gets there, for tools that follow
+ * every path a play may take.
+ *
+ * @param directive - Any directive.
+ * @returns The jump's targets, every candidate of a pick included, or `undefined` for a directive that does not jump.
+ */
+export function jumpOf(
+	directive: Directive,
+): { via: "goto" | "call"; scenes: readonly SceneDeclaration[] } | undefined {
+	if (directive.type === "goto" || directive.type === "call") {
+		return { via: directive.type, scenes: [directive.scene] };
+	}
+	if (directive.type === "pick") return { via: directive.via, scenes: directive.scenes };
+	return undefined;
 }
 
 /**
@@ -498,6 +617,11 @@ const builders: SceneDirectives = {
 		if (values[0] !== undefined) directive.values = values[0] as NarrateDirective["values"];
 		return directive;
 	},
+	notify(key, ...values) {
+		let directive: NotifyDirective = { type: "notify", key };
+		if (values[0] !== undefined) directive.values = values[0] as NotifyDirective["values"];
+		return directive;
+	},
 	choose(options, menu = {}) {
 		let entries = Object.entries(
 			options as Record<string, Directive[] | ChoiceOption<StateRecord>>,
@@ -523,12 +647,18 @@ const builders: SceneDirectives = {
 	set(path, update) {
 		return { type: "set", path, update };
 	},
-	goto(target) {
-		return { type: "goto", scene: target };
-	},
-	call(target) {
-		return { type: "call", scene: target };
-	},
+	goto: Object.assign(
+		(target: SceneDeclaration): GotoDirective => ({ type: "goto", scene: target }),
+		{
+			oneOf: pickBuilder("goto"),
+		},
+	),
+	call: Object.assign(
+		(target: SceneDeclaration): CallDirective => ({ type: "call", scene: target }),
+		{
+			oneOf: pickBuilder("call"),
+		},
+	),
 	back() {
 		return { type: "back" };
 	},

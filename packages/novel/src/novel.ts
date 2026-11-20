@@ -171,6 +171,11 @@ export interface PlaySink {
 	emit: Emit;
 	/** Keeps the play's events from the novel's own listeners. */
 	quiet?: boolean;
+	/**
+	 * Settles each pick with more than one candidate, given the scene the play drew; the play
+	 * takes the answer when it is one of `candidates`, and the drawn scene otherwise.
+	 */
+	pick?: (candidates: readonly string[], drawn: string) => string;
 }
 
 /** What `check()` and `explore()` read from a novel. */
@@ -419,7 +424,7 @@ export class Novel {
 			if (sink?.quiet !== true) this.#listeners.emit(name, payload, play as Play);
 		};
 		let engine = new PlayEngine(
-			this.#runtime(emit),
+			this.#runtime(emit, sink?.pick),
 			live.data.live,
 			live.data.playTime,
 			readPersistent(options.persistent),
@@ -640,9 +645,9 @@ export class Novel {
 	}
 
 	/** What a play's engine reads from this novel, with its events sent through `emit`. */
-	#runtime(emit: Emit): NovelRuntime {
+	#runtime(emit: Emit, pick: NovelRuntime["pick"]): NovelRuntime {
 		let catalogs = Object.entries(this.#options.messages ?? {});
-		return {
+		let runtime: NovelRuntime = {
 			rollback: this.#options.rollback ?? DEFAULT_ROLLBACK,
 			version: this.#options.version ?? 1,
 			load: (scene) => this.#load(scene),
@@ -655,6 +660,8 @@ export class Novel {
 				catalogs.filter(([, catalog]) => !hasMessage(catalog, key)).map(([locale]) => locale),
 			emit,
 		};
+		if (pick !== undefined) runtime.pick = pick;
+		return runtime;
 	}
 }
 

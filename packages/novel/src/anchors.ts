@@ -37,8 +37,8 @@ interface AnchorWalk {
 
 /**
  * Indexes a scene's anchors. A line is anchored on its key and a menu on its prompt key (its
- * first option's key without one); a pause, interaction or call is anchored on the key before
- * it in document order and its count since that key (`opening.hello+1`).
+ * first option's key without one); a pause, interaction or call (a picked one included) is
+ * anchored on the key before it in document order and its count since that key (`opening.hello+1`).
  *
  * @param module - The scene's module.
  * @returns The scene with its anchors indexed; a repeated anchor keeps its first path.
@@ -67,7 +67,8 @@ function walkList(list: readonly Directive[], prefix: Path, walk: AnchorWalk): v
 		} else if (
 			directive.type === "wait" ||
 			directive.type === "custom" ||
-			directive.type === "call"
+			directive.type === "call" ||
+			(directive.type === "pick" && directive.via === "call")
 		) {
 			walk.count += 1;
 			let anchor = `${walk.previous}+${walk.count}`;

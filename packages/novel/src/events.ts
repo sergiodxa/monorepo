@@ -28,6 +28,17 @@ export interface LineEvent {
 	values: Record<string, unknown> | undefined;
 }
 
+/**
+ * The play passed a `notify`, with the values it was passed with. A rollback or a load that
+ * lands past it does not send it again, and a replay never sends it.
+ */
+export interface NotifyEvent {
+	scene: string;
+	/** The notification's message key, which the app translates with `values`. */
+	key: string;
+	values: Record<string, unknown> | undefined;
+}
+
 /** The player took an option, and the engine accepted it. */
 export interface ChoiceEvent {
 	scene: string;
@@ -60,6 +71,7 @@ export interface SaveEvent {
 export interface NovelEvents {
 	scene: SceneEvent;
 	line: LineEvent;
+	notify: NotifyEvent;
 	choice: ChoiceEvent;
 	/** An ending was reached, or the story ran out (`key: null`). */
 	ending: Ending;

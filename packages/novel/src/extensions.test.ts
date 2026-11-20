@@ -21,6 +21,7 @@ import type {
 	GameState,
 	NovelState,
 	Play,
+	SceneDeclaration,
 } from "./index.js";
 
 import { cast, character, createNovel, createScene, extension, scene, scenes } from "./index.js";
@@ -46,6 +47,12 @@ const BOND = extension("bond", {
 		reset: () => [ctx.update({}), ctx.set("charm", 0)],
 		whenClose: (character: CharacterDeclaration, directives: Directive[]) =>
 			ctx.when((state) => (state.bond[character.id] ?? 0) >= 30, directives),
+		cheer: (character: CharacterDeclaration) => [
+			ctx.update((value) => ({ ...value, [character.id]: (value[character.id] ?? 0) + 1 })),
+			ctx.notify("opening.lucky"),
+		],
+		date: (...candidates: SceneDeclaration[]) =>
+			ctx.goto.oneOf(candidates, (_candidate, state) => (state.bond.mika ?? 0) >= 10),
 	}),
 	on: {
 		choice(event) {
@@ -69,7 +76,7 @@ declare module "./types.js" {
 	}
 }
 
-const SCENES = scenes({ opening: scene(), cafe: scene(), stray: scene() });
+const SCENES = scenes({ opening: scene(), cafe: scene(), stray: scene(), outing: scene() });
 
 const CAST = cast({ mika: character({ name: "cast.mika" }) });
 
@@ -95,6 +102,12 @@ const CAFE = createScene(SCENES.cafe, (ctx) => [
 	ctx.ending("endings.bad"),
 ]);
 
+const OUTING = createScene(SCENES.outing, (ctx) => [
+	ctx.bond.cheer(CAST.mika),
+	ctx.bond.date(SCENES.cafe),
+	ctx.narrate("opening.thinking"),
+]);
+
 const STRAY = createScene(SCENES.stray, (ctx) => [
 	// @ts-expect-error -- no extension is named "missing"
 	ctx.missing.call(),
@@ -115,6 +128,7 @@ function fixture(
 	novel.map(SCENES.opening, OPENING);
 	novel.map(SCENES.cafe, CAFE);
 	novel.map(SCENES.stray, STRAY);
+	novel.map(SCENES.outing, OUTING);
 	return novel;
 }
 
@@ -156,6 +170,26 @@ describe("scenes", () => {
 		);
 		expect(play.ending?.key).toBe("endings.bad");
 		expect(play.state).toMatchObject({ charm: 0, bond: {} });
+	});
+
+	test("pick a scene at runtime from what a method answers", async () => {
+		let close = createTestPlay(fixture(), { scene: SCENES.outing, state: { bond: { mika: 9 } } });
+		await close.advance();
+		expect(close.scene).toBe(SCENES.cafe);
+
+		let distant = createTestPlay(fixture(), { scene: SCENES.outing });
+		await distant.advance();
+		expect(distant.scene).toBe(SCENES.outing);
+		expect(distant.frame).toMatchObject({ type: "line", key: "opening.thinking" });
+	});
+
+	test("notify from a method beside the change to the slice", async () => {
+		let play = createTestPlay(fixture(), { scene: SCENES.outing });
+		await play.advance();
+		expect(play.state.bond).toEqual({ mika: 1 });
+		expect(play.events.filter((event) => event.type === "notify")).toEqual([
+			{ type: "notify", payload: { scene: "outing", key: "opening.lucky", values: undefined } },
+		]);
 	});
 
 	test("fail to load a scene that calls an extension the novel lacks", async () => {

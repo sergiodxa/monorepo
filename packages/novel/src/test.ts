@@ -79,7 +79,8 @@ export interface TestPlay {
 	save(slot: string): GameState;
 	/**
 	 * Replays a path `explore()` reported: advances to each menu or interaction and answers it,
-	 * then advances to the next menu or interaction, or to the end.
+	 * then advances to the next menu or interaction, or to the end. Its pick steps settle the
+	 * play's picks with more than one candidate, in order, instead of the seeded draw.
 	 */
 	follow(steps: readonly ExploreStep[]): Promise<StopFrame | undefined>;
 	/** Starts the play, or answers the current line or pause; resolves to the next frame. */
@@ -106,9 +107,14 @@ export interface TestPlay {
  */
 export function createTestPlay(novel: Novel, options: StartOptions = {}): TestPlay {
 	let events: TestEvent[] = [];
+	/** The scenes `follow()` was told the play's picks take, in the order the play reaches them. */
+	let picks: string[] = [];
 	let started = novel[INTERNALS]().start(options, {
 		emit(name, payload) {
 			events.push({ type: name, payload } as TestEvent);
+		},
+		pick(_candidates, drawn) {
+			return picks.shift() ?? drawn;
 		},
 	});
 	if (isFailure(started)) throw started.error;
@@ -189,7 +195,9 @@ export function createTestPlay(novel: Novel, options: StartOptions = {}): TestPl
 			return play.save(slot);
 		},
 		async follow(steps) {
+			for (let step of steps) if (step.type === "pick") picks.push(step.scene);
 			for (let step of steps) {
+				if (step.type === "pick") continue;
 				await settle();
 				if (step.type === "choice") await testPlay.choose(step.option);
 				else await testPlay.complete(step.output as CompleteOutput);

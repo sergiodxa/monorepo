@@ -11,6 +11,7 @@ import type { ChapterInfo } from "../declarations.js";
 import type { Directive } from "../directives.js";
 import type { NovelInternals } from "../novel.js";
 
+import { jumpOf } from "../directives.js";
 import { hasMessage } from "../novel.js";
 
 /** A scene in the graph. */
@@ -24,7 +25,7 @@ export interface GraphScene {
 	endings: string[];
 }
 
-/** A jump from one scene to another. */
+/** A jump from one scene to another; a pick draws one edge per candidate. */
 export interface GraphEdge {
 	from: string;
 	to: string;
@@ -73,11 +74,14 @@ export async function readGraph(internals: NovelInternals): Promise<SceneGraph> 
 			if (directive.type === "ending" && !entry.endings.includes(directive.key)) {
 				entry.endings.push(directive.key);
 			}
-			if (directive.type !== "goto" && directive.type !== "call") return;
-			let id = `${declaration.name}>${directive.type}>${directive.scene.name}`;
-			if (listed.has(id)) return;
-			listed.add(id);
-			edges.push({ from: declaration.name, to: directive.scene.name, kind: directive.type });
+			let jump = jumpOf(directive);
+			if (jump === undefined) return;
+			for (let target of jump.scenes) {
+				let id = `${declaration.name}>${jump.via}>${target.name}`;
+				if (listed.has(id)) continue;
+				listed.add(id);
+				edges.push({ from: declaration.name, to: target.name, kind: jump.via });
+			}
 		});
 	}
 	return { scenes, edges };
@@ -134,9 +138,9 @@ function node(ids: ReadonlyMap<string, string>, scene: GraphScene): string {
 }
 
 /**
- * Lists the message keys a catalog lacks, per locale: every line, menu prompt, option label,
- * locked-option reason and ending of every mapped scene, then scene and chapter titles,
- * character names and sound captions.
+ * Lists the message keys a catalog lacks, per locale: every line, notification, menu prompt,
+ * option label, locked-option reason and ending of every mapped scene, then scene and chapter
+ * titles, character names and sound captions.
  *
  * @param internals - The novel, whose `messages` option holds the catalogs.
  * @returns Every missing key once per locale and scene; empty when the novel has no catalogs.
@@ -159,7 +163,12 @@ export async function missingMessages(internals: NovelInternals): Promise<Missin
 		let index = await internals.load(scene);
 		if (index.status === "failure") continue;
 		eachDirective(index.data.module.directives, (directive) => {
-			if (directive.type === "say" || directive.type === "narrate" || directive.type === "ending") {
+			if (
+				directive.type === "say" ||
+				directive.type === "narrate" ||
+				directive.type === "notify" ||
+				directive.type === "ending"
+			) {
 				report(directive.key, scene);
 			}
 			if (directive.type !== "choose") return;

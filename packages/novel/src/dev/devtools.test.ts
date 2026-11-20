@@ -128,6 +128,23 @@ describe("following a play", () => {
 		expect(devtools.events.map((event) => event.id)).toEqual([1, 2, 3, 4, 5, 6, 7]);
 	});
 
+	test("logs a notification the play passes", async () => {
+		let { novel, devtools } = fixture();
+		novel.map(
+			SCENES.orphan,
+			createScene(SCENES.orphan, (ctx) => [
+				ctx.notify("opening.lucky"),
+				ctx.narrate("opening.done"),
+			]),
+		);
+		await linesInto(unwrap(novel.start({ scene: SCENES.orphan })), 1);
+		expect(devtools.events.find((event) => event.type === "notify")?.payload).toEqual({
+			scene: "orphan",
+			key: "opening.lucky",
+			values: undefined,
+		});
+	});
+
 	test("keeps only the newest events past its limit, and clears on request", async () => {
 		let { novel } = fixture();
 		let devtools = createDevTools(novel, { restart: () => undefined, limit: 2 });

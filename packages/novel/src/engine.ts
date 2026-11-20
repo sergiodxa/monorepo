@@ -22,8 +22,8 @@ import type {
 	InteractionDeclaration,
 	SceneDeclaration,
 } from "./declarations.js";
-import type { ChooseDirective, Directive, StoredCallback } from "./directives.js";
-import type { ChoiceEvent, Emit, LineEvent } from "./events.js";
+import type { ChooseDirective, Directive, PickDirective, StoredCallback } from "./directives.js";
+import type { ChoiceEvent, Emit, LineEvent, NotifyEvent } from "./events.js";
 import type {
 	Ending,
 	Frame,
@@ -78,6 +78,12 @@ export interface NovelRuntime {
 	untranslated(key: string): string[];
 	/** Sends an event to the novel's listeners, bound to this play. */
 	emit: Emit;
+	/**
+	 * Settles a pick with more than one candidate: answers the scene to take among `candidates`,
+	 * given the one the play drew. Tools use it to follow every candidate; a play without it
+	 * takes the drawn one.
+	 */
+	pick?(candidates: readonly string[], drawn: string): string;
 	/** How many earlier stops `rollback()` can return to. */
 	readonly rollback: number;
 	/** The novel's version, which `GameState` carries. */
@@ -123,6 +129,7 @@ type Effect =
 	| { type: "chapter"; chapter: ChapterInfo; scene: string }
 	| { type: "unlock"; kind: "image" | "music"; id: string }
 	| { type: "line"; line: LineEvent }
+	| { type: "notify"; notify: NotifyEvent }
 	| { type: "choice"; choice: ChoiceEvent }
 	| { type: "ending"; ending: Ending }
 	| { type: "error"; error: NovelError };
@@ -329,6 +336,9 @@ export class PlayEngine {
 				this.#runtime.emit("line", effect.line);
 				return before === undefined || JSON.stringify(before) !== JSON.stringify(values);
 			}
+			case "notify":
+				this.#runtime.emit("notify", effect.notify);
+				return false;
 			case "choice": {
 				let added = addOnce(
 					persistent.chosen,
@@ -569,15 +579,28 @@ export class PlayEngine {
 				return null;
 			}
 			case "goto":
-				if (this.#outside(directive.scene.name)) return { key: null, scene: work.cursor.scene };
-				work.cursor = { scene: directive.scene.name, path: null, anchor: null, after: false };
-				return null;
 			case "call":
-				work.stack.push({ scene: work.cursor.scene, path, anchor: null, after: false });
-				work.cursor = { scene: directive.scene.name, path: null, anchor: null, after: false };
-				return null;
+				return this.#jump(directive.type, directive.scene.name, work, path);
+			case "pick": {
+				let scene = this.#pick(directive, work.state, tools);
+				return scene === null ? null : this.#jump(directive.via, scene, work, path);
+			}
 			case "back":
 				return this.#return(work);
+			case "notify": {
+				let values =
+					typeof directive.values === "function"
+						? call(directive.values as StoredCallback<object>, work.state, tools)
+						: directive.values;
+				this.#translated([directive.key]);
+				let shown =
+					values === undefined ? undefined : (structuredClone(values) as Record<string, unknown>);
+				this.#pending.push({
+					type: "notify",
+					notify: { scene: work.cursor.scene, key: directive.key, values: shown },
+				});
+				return null;
+			}
 			case "ending":
 				return { key: directive.key, scene: work.cursor.scene };
 			case "play":
@@ -596,6 +619,48 @@ export class PlayEngine {
 				this.#stage(directive, work.stage);
 				return null;
 		}
+	}
+
+	/**
+	 * Continues in `scene`, or calls it with a return to the directive after `path`; a `goto`
+	 * past a replay's bound finishes the replay.
+	 */
+	#jump(via: "goto" | "call", scene: string, work: Live, path: Path): Ending | null {
+		if (via === "goto" && this.#outside(scene)) return { key: null, scene: work.cursor.scene };
+		if (via === "call")
+			work.stack.push({ scene: work.cursor.scene, path, anchor: null, after: false });
+		work.cursor = { scene, path: null, anchor: null, after: false };
+		return null;
+	}
+
+	/**
+	 * Draws a pick's scene among the candidates that weigh more than nothing, in proportion to
+	 * their weights. Any qualifying candidate costs exactly one draw, also when the runtime
+	 * settles the pick itself, so the stream after a pick is the same whichever scene it took.
+	 *
+	 * @returns The scene's name, or `null` when no candidate qualifies.
+	 */
+	#pick(directive: PickDirective, state: StateRecord, tools: PlayTools): string | null {
+		let weights = new Map<string, number>();
+		for (let scene of directive.scenes) {
+			let weight = weighOf(directive, scene, state, tools);
+			if (weight > 0) weights.set(scene.name, (weights.get(scene.name) ?? 0) + weight);
+		}
+		let candidates = [...weights.keys()];
+		if (candidates.length === 0) return null;
+		let total = [...weights.values()].reduce((sum, weight) => sum + weight, 0);
+		let point = tools.random.next() * total;
+		let drawn = candidates.at(-1) as string;
+		for (let [scene, weight] of weights) {
+			point -= weight;
+			if (point < 0) {
+				drawn = scene;
+				break;
+			}
+		}
+		if (candidates.length === 1 || this.#runtime.pick === undefined) return drawn;
+		let settled = this.#runtime.pick(candidates, drawn);
+		return weights.has(settled) ? settled : drawn;
 	}
 
 	/** Reports whether a jump to `scene` leaves the bound of the replay this play is. */
@@ -845,6 +910,22 @@ function isStop(directive: Directive): boolean {
 		directive.type === "wait" ||
 		directive.type === "custom"
 	);
+}
+
+/**
+ * A candidate's weight as a number: `true` is 1, and `false` or a number that is not positive
+ * and finite is 0.
+ */
+function weighOf(
+	directive: PickDirective,
+	scene: PickDirective["scenes"][number],
+	state: StateRecord,
+	tools: PlayTools,
+): number {
+	if (directive.weight === undefined) return 1;
+	let weight = directive.weight(scene, state, tools);
+	if (typeof weight === "boolean") return weight ? 1 : 0;
+	return Number.isFinite(weight) && weight > 0 ? weight : 0;
 }
 
 /** Calls a stored callback with the play's state. */

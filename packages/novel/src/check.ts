@@ -9,15 +9,16 @@
 
 import type { AssetDeclaration, CharacterDeclaration } from "./declarations.js";
 import type { ChooseDirective, Directive } from "./directives.js";
-import type { Novel, NovelInternals } from "./novel.js";
+import type { MessageCatalog, Novel, NovelInternals } from "./novel.js";
 import type { Fraction } from "./stage.js";
 
 import { menuAnchor } from "./anchors.js";
-import { INTERNALS } from "./novel.js";
+import { jumpOf } from "./directives.js";
+import { hasMessage, INTERNALS } from "./novel.js";
 
 /**
  * One finding. `error`s break a play or a save (a duplicate anchor, a jump with no module, an
- * undeclared asset, a module that fails to load); `warning`s may be intended (characters sharing
+ * undeclared asset, a notification a catalog lacks, a module that fails to load); `warning`s may be intended (characters sharing
  * a column, a menu that may offer nothing, a scene nothing reaches).
  */
 export type CheckProblem =
@@ -25,6 +26,7 @@ export type CheckProblem =
 	| { code: "unmapped-scene"; severity: "error"; scene: string; target: string }
 	| { code: "missing-asset"; severity: "error"; scene: string; asset: string }
 	| { code: "load-failed"; severity: "error"; scene: string; message: string }
+	| { code: "missing-message"; severity: "error"; scene: string; key: string; locale: string }
 	| {
 			code: "shared-slot";
 			severity: "warning";
@@ -54,11 +56,14 @@ interface SceneWalk {
 	targets: Set<string>;
 	/** Assets and characters already reported, so each is named once per scene. */
 	reported: Set<string>;
+	/** The novel's catalogs, by locale. */
+	catalogs: [string, MessageCatalog][];
 }
 
 /**
  * Checks every mapped scene: message keys used twice in a scene (which saves cannot tell
- * apart), `goto` and `call` to scenes with no module, assets and characters the novel does not
+ * apart), `goto` and `call` (every candidate of a pick) to scenes with no module, notification
+ * keys a catalog lacks, assets and characters the novel does not
  * declare, two characters in one column at once, menus whose every option is conditional, and
  * declared scenes the initial scene never reaches.
  *
@@ -70,6 +75,7 @@ export async function check(novel: Novel): Promise<CheckReport> {
 	let internals = novel[INTERNALS]();
 	let problems: CheckProblem[] = [];
 	let edges = new Map<string, Set<string>>();
+	let catalogs = Object.entries(internals.options.messages ?? {});
 	for (let scene of internals.mapped) {
 		let index = await internals.load(scene);
 		if (index.status === "failure") {
@@ -88,6 +94,7 @@ export async function check(novel: Novel): Promise<CheckReport> {
 			keys: new Map(),
 			targets: new Set(),
 			reported: new Set(),
+			catalogs,
 		};
 		walkList(index.data.module.directives, walk, new Map());
 		for (let [key, count] of walk.keys) {
@@ -117,6 +124,9 @@ function walkList(list: readonly Directive[], walk: SceneWalk, slots: Map<string
 			case "narrate":
 				count(walk, directive.key);
 				break;
+			case "notify":
+				translated(walk, directive.key);
+				break;
 			case "choose":
 				menu(directive, walk, slots);
 				break;
@@ -126,7 +136,8 @@ function walkList(list: readonly Directive[], walk: SceneWalk, slots: Map<string
 				break;
 			case "goto":
 			case "call":
-				jump(walk, directive.scene.name);
+			case "pick":
+				for (let target of jumpOf(directive)?.scenes ?? []) jump(walk, target.name);
 				break;
 			case "show":
 			case "hide":
@@ -182,6 +193,25 @@ function jump(walk: SceneWalk, target: string): void {
 	if (walk.reported.has(id)) return;
 	walk.reported.add(id);
 	walk.problems.push({ code: "unmapped-scene", severity: "error", scene: walk.scene, target });
+}
+
+/**
+ * Reports a notification key a catalog lacks, once per scene and locale. A notification shows
+ * in no frame, so this is where a missing one is caught before a player passes it.
+ */
+function translated(walk: SceneWalk, key: string): void {
+	for (let [locale, catalog] of walk.catalogs) {
+		let id = `message:${locale}:${key}`;
+		if (hasMessage(catalog, key) || walk.reported.has(id)) continue;
+		walk.reported.add(id);
+		walk.problems.push({
+			code: "missing-message",
+			severity: "error",
+			scene: walk.scene,
+			key,
+			locale,
+		});
+	}
 }
 
 /** Reports an asset or a character the novel does not declare, once per scene. */

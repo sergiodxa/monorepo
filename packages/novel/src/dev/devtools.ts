@@ -33,6 +33,7 @@ import { missingMessages, readGraph } from "./graph.js";
 const EVENT_NAMES: readonly NovelEventName[] = [
 	"scene",
 	"line",
+	"notify",
 	"choice",
 	"ending",
 	"unlock",

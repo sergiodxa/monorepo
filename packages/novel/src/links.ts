@@ -17,10 +17,12 @@ import type {
 import type { Directive } from "./directives.js";
 import type { NovelInternals } from "./novel.js";
 
+import { jumpOf } from "./directives.js";
+
 /** How far {@link reach} walks, and which file of a localized asset it lists. */
 export interface ReachOptions {
 	/**
-	 * How many jumps (`goto` or `call`) away from the starting scene to follow; `0` lists the
+	 * How many jumps (`goto` or `call`, every candidate of a pick) away from the starting scene to follow; `0` lists the
 	 * starting scene alone.
 	 *
 	 * @default 1
@@ -172,7 +174,8 @@ function walkList(list: readonly Directive[], walk: AssetWalk): void {
 				break;
 			case "goto":
 			case "call":
-				walk.targets.push(directive.scene.name);
+			case "pick":
+				for (let target of jumpOf(directive)?.scenes ?? []) walk.targets.push(target.name);
 				break;
 			default:
 				break;

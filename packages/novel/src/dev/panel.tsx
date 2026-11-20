@@ -369,6 +369,7 @@ export function describeEvent(event: DevEvent): string {
 		case "scene":
 			return event.payload.scene;
 		case "line":
+		case "notify":
 			return `${event.payload.scene}:${event.payload.key}`;
 		case "choice":
 			return `${event.payload.scene}:${event.payload.option}`;

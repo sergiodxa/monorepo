@@ -12,7 +12,7 @@ import type { Seed } from "@sdxc/random";
 import type { CheckProblem } from "./check.js";
 import type { SceneDeclaration } from "./declarations.js";
 import type { NovelErrorCode } from "./errors.js";
-import type { CustomFrame, Frame, GameState, StopFrame } from "./frames.js";
+import type { CustomFrame, Ending, Frame, GameState, StopFrame } from "./frames.js";
 import type {
 	MessageCatalog,
 	Novel,
@@ -35,10 +35,14 @@ const DEFAULT_MAX_PATHS = 1000;
 /** Lines and pauses one path may pass between two choices before it counts as too deep. */
 const MAX_STOPS_BETWEEN_CHOICES = 10_000;
 
-/** One reply a path takes: an option on a menu, or an interaction's output. */
+/**
+ * One reply a path takes: an option on a menu, an interaction's output, or the scene a pick with
+ * more than one candidate took, listed after the reply whose run reached the pick.
+ */
 export type ExploreStep =
 	| { type: "choice"; option: string }
-	| { type: "custom"; interaction: string; output: unknown };
+	| { type: "custom"; interaction: string; output: unknown }
+	| { type: "pick"; scene: string };
 
 /** A path from the starting point: replay it with `createTestPlay(novel, { seed }).follow(steps)`. */
 export interface ExplorePath {
@@ -155,7 +159,7 @@ interface Walk {
 
 /**
  * Explores a novel: every enabled option of every menu, every output `interactions` answers for
- * each interaction, from each seed, until every path ends or a cap is hit. Every reported path
+ * each interaction, every candidate a pick can take, from each seed, until every path ends or a cap is hit. Every reported path
  * replays exactly in `createTestPlay`.
  *
  * @param novel - The novel, with its scenes mapped.
@@ -189,13 +193,7 @@ export async function explore(novel: Novel, options: ExploreOptions = {}): Promi
 		let start: StartOptions = { seed, persistent: options.persistent };
 		if (options.scene !== undefined) start.scene = options.scene;
 		if (options.state !== undefined) start.state = options.state;
-		let path: ExplorePath = { seed, steps: [] };
-		let started = internals.start(start, sink(walk, path));
-		if (started.status === "failure") {
-			end(walk, () => fail(walk, path, started.error.code, started.error.message));
-			continue;
-		}
-		await follow(walk, started.data, undefined, path);
+		await follow(walk, { start, run: (play) => play.next() }, { seed, steps: [] }, []);
 	}
 	return finish(walk);
 }
@@ -216,12 +214,40 @@ function emptyReport(problems: CheckProblem[]): ExploreReport {
 	};
 }
 
-/** Routes a play's events into the report, attributing them to the path the play is on. */
-function sink(walk: Walk, path: ExplorePath): PlaySink {
+/** The picks one play settled, and the scenes it is told to take at its next picks. */
+interface Picker {
+	/** Scenes to take, in order, at the next picks with more than one candidate. */
+	forced: string[];
+	/** The picks settled since the path last read them. */
+	made: { candidates: readonly string[]; scene: string; forced: boolean }[];
+}
+
+/**
+ * How a path's next run starts: the options a fresh play starts from, and the call that runs it
+ * to its next stop. Starting it again with other picks forced is how a pick branches.
+ */
+interface Origin {
+	start: StartOptions;
+	/** Runs the fresh play; `null` when it no longer reaches the stop the run answered. */
+	run(play: Play): Promise<IteratorResult<Frame, Ending> | null>;
+}
+
+/**
+ * Routes a play's events into the report, attributing them to the path the play is on, and
+ * settles its picks: a forced scene first, the drawn one otherwise.
+ */
+function sink(walk: Walk, path: ExplorePath, picker: Picker): PlaySink {
 	return {
 		quiet: true,
+		pick(candidates, drawn) {
+			let forced = picker.forced.shift();
+			let scene = forced ?? drawn;
+			picker.made.push({ candidates, scene, forced: forced !== undefined });
+			return scene;
+		},
 		emit(name, payload) {
 			if (name === "scene") enter(walk, (payload as { scene: string }).scene);
+			if (name === "notify") translated(walk, [(payload as { key: string }).key]);
 			if (name !== "error") return;
 			let error = payload as { code: NovelErrorCode; subject?: string };
 			if (error.code === "missing-asset" && error.subject !== undefined) {
@@ -245,45 +271,119 @@ function enter(walk: Walk, scene: string): void {
 }
 
 /**
- * Plays from `reply` until the path ends or branches. At a menu or an interaction the play is
- * saved, and each option or output continues in a play resumed from that save.
+ * Starts a play from `origin` with `forced` picks and plays it until the path ends or branches.
+ * At a menu or an interaction the play is saved, and each option or output continues in a play
+ * resumed from that save; every candidate a run's picks did not take continues in a play started
+ * again from the run's origin with that candidate forced.
  */
 async function follow(
 	walk: Walk,
-	play: Play,
-	reply: Parameters<Play["next"]>[0],
+	origin: Origin,
 	path: ExplorePath,
+	forced: readonly string[],
 ): Promise<void> {
-	let step = await play.next(reply);
+	let picker: Picker = { forced: [...forced], made: [] };
+	let started = walk.internals.start(origin.start, sink(walk, path, picker));
+	if (started.status === "failure") {
+		let { error } = started;
+		end(walk, () => fail(walk, path, error.code, error.message));
+		return;
+	}
+	let play = started.data;
+	let forks: Fork[] = [];
+	let step = await origin.run(play);
+	if (step === null) return;
+	forks.push(...picked(origin, path, picker));
 	let stops = 0;
 	while (!step.done) {
 		let frame: Frame = step.value;
 		if (frame.type === "error") {
 			let { error } = frame;
 			end(walk, () => fail(walk, path, error.code, error.message));
-			return;
+			break;
 		}
 		translated(walk, frameKeys(frame));
 		if (frame.type === "line" || frame.type === "pause") {
 			stops += 1;
 			if (stops > MAX_STOPS_BETWEEN_CHOICES) {
 				walk.report.capped.depth = true;
-				return;
+				break;
 			}
+			let advanced = advancing(play, frame);
 			step = await play.next(frame.advance());
+			forks.push(...picked(advanced, path, picker));
 			continue;
 		}
 		await branch(walk, play, frame, path);
-		return;
+		break;
 	}
-	let ending = step.value;
-	end(walk, () =>
-		shortest(
-			walk.report.endings,
-			(entry) => entry.key === ending.key && entry.scene === ending.scene,
-			{ ...copy(path), key: ending.key, scene: ending.scene },
-		),
-	);
+	if (step.done) {
+		let ending = step.value;
+		end(walk, () =>
+			shortest(
+				walk.report.endings,
+				(entry) => entry.key === ending.key && entry.scene === ending.scene,
+				{ ...copy(path), key: ending.key, scene: ending.scene },
+			),
+		);
+	}
+	for (let fork of forks) {
+		if (walk.report.paths >= walk.maxPaths) {
+			walk.report.capped.paths = true;
+			return;
+		}
+		await follow(walk, fork.origin, fork.path, fork.forced);
+	}
+}
+
+/** A candidate a run's pick did not take, to follow from the run's origin. */
+interface Fork {
+	origin: Origin;
+	path: ExplorePath;
+	forced: string[];
+}
+
+/**
+ * Reads the picks the last run settled: appends each to the path as a step, and answers a fork
+ * for every candidate an unforced pick left, forcing the picks before it as they were taken; the
+ * fork's own run records its picks.
+ */
+function picked(origin: Origin, path: ExplorePath, picker: Picker): Fork[] {
+	let made = picker.made;
+	picker.made = [];
+	let before = [...path.steps];
+	let forks: Fork[] = [];
+	for (let [index, pick] of made.entries()) {
+		if (pick.forced) continue;
+		let taken = made.slice(0, index).map((entry) => entry.scene);
+		for (let scene of pick.candidates) {
+			if (scene === pick.scene) continue;
+			forks.push({
+				origin,
+				path: { seed: path.seed, steps: [...before] },
+				forced: [...taken, scene],
+			});
+		}
+	}
+	path.steps.push(...made.map((entry) => pickStep(entry.scene)));
+	return forks;
+}
+
+/** The step a path records for a settled pick. */
+function pickStep(scene: string): ExploreStep {
+	return { type: "pick", scene };
+}
+
+/** The origin of the run that advancing `frame` starts: a play resumed at it, then advanced. */
+function advancing(play: Play, frame: Extract<StopFrame, { type: "line" | "pause" }>): Origin {
+	return {
+		start: { from: play.state, persistent: play.persistent },
+		async run(resumed) {
+			let first = await resumed.next();
+			if (first.done || first.value.type !== frame.type) return null;
+			return resumed.next((first.value as typeof frame).advance());
+		},
+	};
 }
 
 /** Tries every enabled option of a menu, or every output for an interaction, from a save. */
@@ -321,21 +421,29 @@ async function branch(
 			return;
 		}
 		let next: ExplorePath = { seed: path.seed, steps: [...path.steps, step] };
-		let resumed = walk.internals.start({ from: game, persistent }, sink(walk, next));
-		if (resumed.status === "failure") {
-			let { error } = resumed;
-			end(walk, () => fail(walk, next, error.code, error.message));
-			continue;
-		}
-		let first = await resumed.data.next();
-		if (first.done || first.value.type !== frame.type) continue;
-		let stop = first.value;
-		let reply =
-			stop.type === "choice" && step.type === "choice"
-				? stop.choose(step.option)
-				: (stop as CustomFrame).complete((step as { output: unknown }).output as never);
-		await follow(walk, resumed.data, reply, next);
+		await follow(walk, answering({ from: game, persistent }, frame, step), next, []);
 	}
+}
+
+/** The origin of the run that answering `frame` with `step` starts, from a save at the frame. */
+function answering(
+	start: StartOptions,
+	frame: Exclude<StopFrame, { type: "line" | "pause" }>,
+	step: ExploreStep,
+): Origin {
+	return {
+		start,
+		async run(resumed) {
+			let first = await resumed.next();
+			if (first.done || first.value.type !== frame.type) return null;
+			let stop = first.value;
+			let reply =
+				stop.type === "choice" && step.type === "choice"
+					? stop.choose(step.option)
+					: (stop as CustomFrame).complete((step as { output: unknown }).output as never);
+			return resumed.next(reply);
+		},
+	};
 }
 
 /** The steps a branching stop offers: its enabled options, or the outputs to try. */
