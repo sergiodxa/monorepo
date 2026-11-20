@@ -312,7 +312,7 @@ describe("TimeGrid editing", () => {
 
 describe("short events", () => {
 	/** A 45-minute run with a place, and a 15-minute standup right before a long block. */
-	const SHORT: TimeGridTypes.Event[] = [
+	let shortEvents: TimeGridTypes.Event[] = [
 		{
 			id: "run",
 			date: "2026-11-18",
@@ -348,7 +348,7 @@ describe("short events", () => {
 	}
 
 	test("shows only the lines that fit, each whole, inside its block", async () => {
-		let grid = mount({ events: SHORT, scrollTo: 420 });
+		let grid = mount({ events: shortEvents, scrollTo: 420 });
 		await expect
 			.poll(() => getComputedStyle(block(grid, "run")).containerName)
 			.toBe("ui-time-grid-event");
@@ -366,7 +366,7 @@ describe("short events", () => {
 	});
 
 	test("sets a 15-minute event beside the one right after it", () => {
-		let grid = mount({ events: SHORT });
+		let grid = mount({ events: shortEvents });
 		let standup = block(grid, "standup").getBoundingClientRect();
 		let focus = block(grid, "focus").getBoundingClientRect();
 		expect(standup.right <= focus.left || standup.bottom <= focus.top).toBe(true);

@@ -90,11 +90,97 @@ const PROBE_PROPS = {
 	children: "probe",
 };
 
+/** The two ends and length every flight component draws its route from. */
+const PROBE_ROUTE = {
+	departure: { time: "a", code: "AAA" },
+	arrival: { time: "a", code: "BBB" },
+	duration: "a",
+	airline: "a",
+};
+
 /**
  * Props a component reads under a name another component's probe already claims with a
  * different shape, keyed by the component's export name and spread over {@link PROBE_PROPS}.
+ * A compound's members render with their root's entry, so it carries their props too.
  */
 const PROBE_OVERRIDES: Record<string, Record<string, unknown>> = {
+	RatingInput: { legend: "a", labels: ["a", "b"] },
+	GeoMap: {
+		id: "a",
+		label: "a",
+		center: [0, 0],
+		zoom: 3,
+		at: [0, 0],
+		path: [
+			[0, 0],
+			[1, 1],
+		],
+		form: "a",
+		labels: {
+			zoomIn: "a",
+			zoomOut: "a",
+			reset: "a",
+			locate: "a",
+			fullscreen: "a",
+			cluster: "a",
+			gestureHint: "a",
+		},
+	},
+	BoardingPass: {
+		label: "a",
+		airline: { name: "a" },
+		passenger: "a",
+		from: { code: "AAA", city: "a", time: "a" },
+		to: { code: "BBB", city: "a", time: "a" },
+		flight: "a",
+		date: "a",
+		gate: "a",
+		boards: "a",
+		seat: "a",
+		zone: "a",
+		cabin: "a",
+		confirmation: "a",
+		code: "a",
+		labels: {
+			passenger: "a",
+			flight: "a",
+			date: "a",
+			gate: "a",
+			boards: "a",
+			seat: "a",
+			zone: "a",
+			cabin: "a",
+			confirmation: "a",
+			code: "a",
+		},
+	},
+	FareCalendar: {
+		month: "2026-03",
+		fares: {},
+		href: () => "/a",
+		locale: "en-US",
+		label: "a",
+		labels: { previous: "a", next: "a", cheapest: "a", noFlights: "a" },
+	},
+	FlightItinerary: { ...PROBE_ROUTE, toggleLabel: "a" },
+	FlightOption: { ...PROBE_ROUTE, price: "a" },
+	FlightRoute: PROBE_ROUTE,
+	FlightSegment: PROBE_ROUTE,
+	SeatMap: {
+		rows: [{ number: 1, seats: [{ id: "1A", status: "available" }] }],
+		layout: "A",
+		label: "a",
+		labels: { taken: "a" },
+	},
+	ReelFeed: { offset: 0, sources: [{ src: "/a.mp4", type: "video/mp4" }], labels: { pause: "a" } },
+	StoryViewer: {
+		closeHref: "/a",
+		durations: [1],
+		current: 0,
+		previousHref: "/a",
+		nextHref: "/a",
+		labels: { close: "a", pause: "a", previous: "a", next: "a" },
+	},
 	Amount: { value: 1299, currency: "EUR" },
 	Autocomplete: { id: "a", label: "a", options: [{ value: "a", label: "a", description: "a" }] },
 	Lightbox: { id: "a", label: "a", photos: [{ alt: "a" }], lightbox: "a" },

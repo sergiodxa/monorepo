@@ -130,7 +130,7 @@ export function SectionBar(handle: Handle<SectionBar.Props>) {
 										"&:hover",
 										raw({
 											color: "var(--ui-neutral-fg-emphasis)",
-											backgroundColor: "var(--ui-neutral-bg-subtle)",
+											backgroundColor: "var(--ui-neutral-bg-tint)",
 										}),
 									),
 									when(
