@@ -578,8 +578,9 @@ ctx.custom(interactions.fishing, { input: { difficulty: 2 }, into: "lastCatch" }
 ctx.when((state) => state.lastCatch.caught >= 3, [ctx.say(cast.mika, "lake.impressed")]),
 ```
 
-The app renders the `custom` frame with its own component and replies with
-`frame.complete({ caught: 4 })`, which the engine validates against the declared output schema.
+The app renders the `custom` frame with its own component, which finishes by dispatching
+`new InteractionCompleteEvent(interactions.fishing, { caught: 4 })`; the player answers the frame
+with that output, and the engine validates it against the declared output schema.
 
 ### Rendering a page with the player
 
@@ -605,7 +606,14 @@ export const Game = clientEntry(import.meta.url, function Game(handle: Handle) {
 			<NovelPlayer.Stage>
 				<NovelPlayer.Textbox />
 				<NovelPlayer.Choices />
-				<NovelPlayer.Interaction name="fishing" component={Fishing} />
+				<NovelPlayer.Interaction interactions={interactions}>
+					{(frame) => {
+						switch (frame.interaction) {
+							case "fishing":
+								return <Fishing input={frame.input} />;
+						}
+					}}
+				</NovelPlayer.Interaction>
 				<NovelPlayer.QuickMenu />
 			</NovelPlayer.Stage>
 			<NovelPlayer.Backlog />
@@ -1175,3 +1183,56 @@ Made while building Phases 5 and 6, without a review, where this ADR left the de
   scope and nothing under a scope a package worker could claim, so the worker's wiring is covered by
   its pure parts: the policy as unit tests and `OfflineCache` against Chromium's own Cache Storage,
   with MSW as the network.
+
+### Story extensions and player behaviors decisions
+
+Made while opening the engine and the player to a game's own code:
+
+- **Two extension points, split by where they live.** Player behaviors are how a reader
+  experiences the play: reveal, auto, skip, the backlog, saves, settings and the menu countdown.
+  They run in the browser and never enter game state, so swapping one changes no save. Story
+  extensions are what the story can do: they act only through the play, so they are
+  deterministic, saved, rolled back and explored like the rest of the story. The two meet in UI
+  parts, which read the story through `player.state` and the reader's behaviors through the
+  context. Novel listeners react to the story; player behaviors react to the screen.
+- **Extensions are registered at creation.** `createNovel({ extensions })` takes the list, and the
+  app declares it in `NovelTypes` (`extensions: typeof extensions`) to type `ctx.<name>` and
+  `state.<name>`. A novel's directives and state shape are then fixed for every play, which is
+  what `check()`, `explore()` and saves rely on. A duplicate name, a name with a dot, or one that
+  matches a built-in directive throws at creation.
+- **An extension's slice lives at `state.<name>`.** It is validated by its own schema whenever a
+  play starts or loads, so `set("affection.mika", 0)`, `createTestPlay`'s `state` and the
+  developer tools reach it like any field. A save made before the extension existed loads with
+  its `initial` value, without a migration. An extension's directives read the declared state and
+  its own slice, never another extension's, so extensions never depend on each other's types.
+- **Scenes record extension calls as data.** `ctx.affection.increase(cast.mika, 10)` records an
+  `extension` directive; the novel replaces it with the directives the method answers when it
+  loads the scene, so the engine, saves, checks and tools read only plain directives. A call to
+  an extension or method the novel lacks fails the scene's load with `load-failed`. Writes go
+  through `ctx.update()`, a `set` on the slice, so every change passes through the play.
+- **Extension listeners** are registered on the novel with the extension, for side effects only,
+  like `novel.on()`.
+- **Behaviors are interfaces with defaults.** Each slot has an exported interface naming only
+  what the player relies on (`RevealBehavior`, `AutoBehavior`, `SkipBehavior`,
+  `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`); the built-in
+  models implement them and stay the defaults. `NovelPlayer` takes replacements through
+  `behaviors`, read once at mount like `start`, and the context is typed by the interfaces, so
+  code that needs a member beyond one keeps its own instance. The `settings` and `saves` props
+  reach whichever behavior is in use through `replace()`. `player.typewriter` became
+  `player.reveal`, naming the slot rather than the built-in effect.
+- **The context is a `TypedEventTarget`** that dispatches `frame`, `phase` and `ending` as soon as
+  each changes, before the parts render. The events carry no data: a listener reads the context's
+  getters, which always answer the current value, so one source of truth serves both. A behavior
+  a game builds inside the player is a class created by a provider part of its own, which
+  subscribes with the part's `handle.signal` and publishes the instance on its own context.
+- **Interactions are typed from the passed map.** One `NovelPlayer.Interaction` over the app's
+  `interactions()` map renders a children function of the current frame, narrowed by
+  `frame.interaction`. The function must return something for every interaction, so a switch
+  that misses one fails to compile. The map passed to the part, rather than the global
+  `NovelTypes`, picks the frames drawn, so a game can split interactions across parts.
+- **Completion is an event.** A component finishes by dispatching
+  `new InteractionCompleteEvent(declaration, output)` (`novel:complete`, bubbling), with the output
+  typed by the declaration's schema; the part answers the frame once, and the engine validates
+  the output. Components take no callback props: a caller that needs the completion listens with
+  `on("novel:complete", …)`. `name`, `component`, `respond`, `Interaction.ComponentProps` and
+  `InteractionName` were removed.
