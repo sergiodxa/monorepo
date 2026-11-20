@@ -706,16 +706,22 @@ Each screen is also a component from `@sdxc/novel/ui` that a title screen places
 	<ChapterSelect
 		novel={novel}
 		persistent={stored.persistent}
-		onSelect={(scene) =>
-			play({ scene, replay: "chapter", persistent: stored.persistent })
-		}
+		mix={on("novel:replay", (event) =>
+			play({
+				scene: event.scene,
+				replay: event.scope,
+				persistent: stored.persistent,
+			}),
+		)}
 	/>
 </>
 ```
 
-`play` is your own function that mounts `NovelPlayer` with those options as `start`. A replay
-plays the chapter (or with `replay: "scene"`, the scene) and finishes when the story leaves it,
-saving nothing and recording only the lines it shows.
+Picking a chapter dispatches a bubbling `novel:replay` event with the `scene` to start and its
+`scope`, which you hear with `on()` from `remix/component`. `play` is your own function that
+mounts `NovelPlayer` with those options as `start`. A replay plays the chapter (or with
+`replay: "scene"`, the scene) and finishes when the story leaves it, saving nothing and recording
+only the lines it shows.
 
 ## Edit scenes with the dev tools
 
