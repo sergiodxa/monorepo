@@ -14,7 +14,7 @@ import type { RenderResult } from "remix/component/test";
 import { createI18n } from "@sdxc/i18n";
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { TYPEWRITER_HIGHLIGHT } from "@sdxc/ui/utils";
-import { css, on } from "remix/component";
+import { css, on, TypedEventTarget } from "remix/component";
 import { render } from "remix/component/test";
 import * as s from "remix/data-schema";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -34,10 +34,11 @@ import {
 	scenes,
 } from "../index.js";
 
-import type { Interaction } from "./interaction.js";
+import type { AutoBehavior } from "./behaviors/auto.js";
 
+import { SettingsModel } from "./behaviors/settings.js";
 import { keyboardControls } from "./controls.js";
-import { NovelSaveEvent } from "./events.js";
+import { InteractionCompleteEvent, NovelSaveEvent } from "./events.js";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 
@@ -171,22 +172,33 @@ function fixture() {
 	return novel;
 }
 
-/** Catches a fish of the size its input asks for. */
-function Fishing(handle: Handle<Interaction.ComponentProps<"fishing">>) {
+/** Catches a fish of the size its input asks for, completing the interaction with a DOM event. */
+function Fishing(handle: Handle<{ input: { difficulty: number } }>) {
 	return () => (
 		<button
 			type="button"
 			data-fish=""
 			mix={[
 				css({ position: "absolute", inset: "40%" }),
-				on("click", () => {
-					let { frame } = handle.props;
-					handle.props.respond(frame.complete({ caught: frame.input.difficulty * 2 }));
+				on("click", (event) => {
+					let caught = handle.props.input.difficulty * 2;
+					event.currentTarget.dispatchEvent(
+						new InteractionCompleteEvent(INTERACTIONS.fishing, { caught }),
+					);
 				}),
 			]}
 		>
 			Fish
 		</button>
+	);
+}
+
+/** The fixture's interactions, drawn through one `NovelPlayer.Interaction` part. */
+function Games() {
+	return () => (
+		<NovelPlayer.Interaction interactions={INTERACTIONS}>
+			{(frame) => <Fishing input={frame.input} />}
+		</NovelPlayer.Interaction>
 	);
 }
 
@@ -215,12 +227,12 @@ function PlainChoices(handle: Handle) {
 }
 
 /**
- * A textbox built only on the player's `typewriter` model: it shows each line whole and reports
+ * A textbox built only on the player's `reveal` behavior: it shows each line whole and reports
  * it revealed 50ms after typing starts, or at once when the reader asks for the rest.
  */
 function InstantText(handle: Handle) {
 	let player = handle.context.get(NovelPlayer);
-	let reveal = player.typewriter;
+	let reveal = player.reveal;
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	reveal.addEventListener(
 		"change",
@@ -243,6 +255,76 @@ function InstantText(handle: Handle) {
 	};
 }
 
+/**
+ * A custom player behavior: it counts the frames the play shows and keeps the phases and endings
+ * it saw, following the player's context events alone.
+ */
+class Pulse extends TypedEventTarget<{ change: Event }> {
+	beats = 0;
+	phases: string[] = [];
+	endings: Array<string | null> = [];
+
+	constructor(player: NovelPlayer.Context, signal: AbortSignal) {
+		super();
+		player.addEventListener(
+			"frame",
+			() => {
+				this.beats++;
+				this.dispatchEvent(new Event("change"));
+			},
+			{ signal },
+		);
+		player.addEventListener("phase", () => this.phases.push(player.phase), { signal });
+		player.addEventListener("ending", () => this.endings.push(player.ending?.key ?? null), {
+			signal,
+		});
+	}
+}
+
+/** Every pulse a test built, newest last, for the test to read what it followed. */
+const PULSES: Pulse[] = [];
+
+/** Provides a {@link Pulse} built over the player to the parts inside it. */
+function PulseProvider(handle: Handle<{ children?: RemixNode }, Pulse>) {
+	let pulse = new Pulse(handle.context.get(NovelPlayer), handle.signal);
+	PULSES.push(pulse);
+	handle.context.set(pulse);
+	return () => handle.props.children;
+}
+
+/** A part reading the pulse and the play's story state. */
+function PulseMeter(handle: Handle) {
+	let pulse = handle.context.get(PulseProvider);
+	let player = handle.context.get(NovelPlayer);
+	pulse.addEventListener("change", () => void handle.update(), { signal: handle.signal });
+	return () => (
+		<output data-pulse={String(pulse.beats)} data-gold={String(player.state?.["gold"])} />
+	);
+}
+
+/** An auto mode that starts on and advances every line after 10ms, whatever the settings say. */
+class EagerAuto extends TypedEventTarget<AutoBehavior.EventMap> implements AutoBehavior {
+	enabled = true;
+	waits = 0;
+	#timer: ReturnType<typeof setTimeout> | undefined;
+
+	toggle(): void {
+		this.enabled = !this.enabled;
+		this.dispatchEvent(new Event("change"));
+	}
+
+	wait(_line: AutoBehavior.Line, advance: () => void): void {
+		this.cancel();
+		if (!this.enabled) return;
+		this.waits++;
+		this.#timer = setTimeout(advance, 10);
+	}
+
+	cancel(): void {
+		clearTimeout(this.#timer);
+	}
+}
+
 let mounted: RenderResult | undefined;
 
 afterEach(async () => {
@@ -257,7 +339,7 @@ afterEach(async () => {
  * otherwise, catching its events on an ancestor; `parts` composes the player instead.
  */
 function mount(props: Partial<NovelPlayer.Props> = {}, parts?: RemixNode) {
-	let events = { save: vi.fn(), settings: vi.fn(), ending: vi.fn() };
+	let events = { save: vi.fn(), settings: vi.fn(), ending: vi.fn(), complete: vi.fn() };
 	let container = document.createElement("div");
 	container.style.width = "960px";
 	container.style.height = "540px";
@@ -271,6 +353,7 @@ function mount(props: Partial<NovelPlayer.Props> = {}, parts?: RemixNode) {
 					on("novel:save", (event) => events.save(event.slot, event.state)),
 					on("novel:settings", (event) => events.settings(event.settings)),
 					on("novel:ending", (event) => events.ending(event.ending)),
+					on("novel:complete", (event) => events.complete(event.interaction, event.output)),
 				]}
 			>
 				{parts === undefined ? (
@@ -280,7 +363,7 @@ function mount(props: Partial<NovelPlayer.Props> = {}, parts?: RemixNode) {
 						settings={{ textSpeed: 0 }}
 						{...props}
 					>
-						<NovelPlayer.Interaction name="fishing" component={Fishing} />
+						<Games />
 					</NovelPlayer.Default>
 				) : (
 					<NovelPlayer
@@ -408,6 +491,7 @@ describe("NovelPlayer", () => {
 		});
 		(player.result.$("[data-fish]") as HTMLButtonElement)!.click();
 		await shows(player, "Wow, 4 fish!");
+		expect(player.events.complete).toHaveBeenCalledExactlyOnceWith("fishing", { caught: 4 });
 		clickStage(player);
 		await vi.waitFor(() =>
 			expect(ended).toHaveBeenCalledWith({ key: "endings.good", scene: "prologue.cafe" }),
@@ -630,7 +714,7 @@ describe("NovelPlayer", () => {
 			<NovelPlayer.Stage key="stage">
 				<NovelPlayer.Textbox />
 				<PlainChoices />
-				<NovelPlayer.Interaction name="fishing" component={Fishing} />
+				<Games />
 			</NovelPlayer.Stage>,
 		]);
 		await shows(player, "Welcome to the café.");
@@ -649,7 +733,7 @@ describe("NovelPlayer", () => {
 		});
 	});
 
-	test("drives the reveal of a custom textbox through the typewriter model alone", async () => {
+	test("drives the reveal of a custom textbox through the reveal behavior alone", async () => {
 		let player = mount({}, [
 			<NovelPlayer.Stage key="stage">
 				<InstantText />
@@ -751,5 +835,76 @@ describe("NovelPlayer", () => {
 		await shows(player, "Welcome to the café.");
 		await vi.waitFor(() => expect(speak).toHaveBeenCalled());
 		expect(speak.mock.calls.at(-1)?.[0].text).toBe("Welcome to the café.");
+	});
+
+	test("ignores a completion for an interaction other than the current frame's", async () => {
+		let player = mount();
+		await toMenu(player);
+		player.result.$('[data-option="cafe.stay"]')!.click();
+		await vi.waitFor(() => expect(player.result.$("[data-fish]")).not.toBeNull(), {
+			timeout: 5000,
+		});
+		let other = interactions({
+			lockpick: interaction({ input: s.object({}), output: s.object({ opened: s.boolean() }) }),
+		});
+		player.result
+			.$("[data-fish]")!
+			.dispatchEvent(new InteractionCompleteEvent(other.lockpick, { opened: true }));
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(player.result.$("[data-fish]")).not.toBeNull();
+	});
+
+	test("lets a provider part build a behavior that follows the player's events", async () => {
+		let player = mount({}, [
+			<PulseProvider key="pulse">
+				<NovelPlayer.Stage>
+					<NovelPlayer.Textbox />
+					<NovelPlayer.Choices />
+					<PulseMeter />
+				</NovelPlayer.Stage>
+			</PulseProvider>,
+		]);
+		let meter = () => player.result.$("[data-pulse]")!;
+		await shows(player, "Welcome to the café.");
+		expect(meter().dataset["pulse"]).toBe("1");
+		expect(meter().dataset["gold"]).toBe("10");
+		clickStage(player);
+		await shows(player, "Hello, Ada!");
+		expect(meter().dataset["pulse"]).toBe("2");
+		for (let next of ["Together!", "I should say something."]) {
+			clickStage(player);
+			await shows(player, next);
+		}
+		clickStage(player);
+		await vi.waitFor(() => expect(player.result.$("[data-novel-choices]")).not.toBeNull(), {
+			timeout: 5000,
+		});
+		player.result.$('[data-option="cafe.leave"]')!.click();
+		await vi.waitFor(() => expect(player.events.ending).toHaveBeenCalled(), { timeout: 5000 });
+		let pulse = PULSES.at(-1)!;
+		expect(pulse.endings).toEqual(["endings.bad"]);
+		expect(pulse.phases.slice(0, 4)).toEqual(["replying", "staging", "typing", "waiting"]);
+		expect(pulse.beats).toBeGreaterThanOrEqual(5);
+	});
+
+	test("runs a custom auto behavior passed through the behaviors prop", async () => {
+		let auto = new EagerAuto();
+		let player = mount({ settings: { textSpeed: 0, autoDelay: 60_000 }, behaviors: { auto } });
+		await vi.waitFor(() => expect(player.result.$("[data-novel-choices]")).not.toBeNull(), {
+			timeout: 5000,
+		});
+		expect(auto.waits).toBeGreaterThanOrEqual(4);
+		expect(player.root().dataset["auto"]).toBe("true");
+	});
+
+	test("seeds a custom settings behavior from the settings prop and reports its changes", async () => {
+		let settings = new SettingsModel({ autoDelay: 5 });
+		let player = mount({ settings: { textSpeed: 0, autoDelay: 123 }, behaviors: { settings } });
+		await shows(player, "Welcome to the café.");
+		expect(settings.value.autoDelay).toBe(123);
+		settings.update({ fontSize: 1.5 });
+		expect(player.events.settings).toHaveBeenCalledWith(
+			expect.objectContaining({ fontSize: 1.5, autoDelay: 123 }),
+		);
 	});
 });

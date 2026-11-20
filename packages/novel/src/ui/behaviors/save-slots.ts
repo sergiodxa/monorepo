@@ -15,12 +15,31 @@ import type { GameState } from "../../frames.js";
 /** The slot quick save writes and quick load reads. */
 export const QUICK_SLOT = "quick";
 
-export namespace SaveSlots {
-	/** Events {@link SaveSlots} dispatches. */
+/**
+ * What the player and the save screens need from save slots, which `NovelPlayer`'s
+ * `behaviors.saves` replaces: what a slot holds, a slot written as the reader saves, and the
+ * saves the app stored adopted through the `saves` prop.
+ */
+export interface SavesBehavior extends TypedEventTarget<SavesBehavior.EventMap> {
+	/** What `slot` holds, or `undefined` for an empty slot. */
+	get(slot: string): GameState | undefined;
+	/** Writes `state` into `slot` as the reader saves; its `change` redraws the save screens. */
+	put(slot: string, state: GameState): void;
+	/** Adopts the saves the app passes in the `saves` prop, without a `change`. */
+	replace(stored: Readonly<Record<string, GameState>> | undefined): void;
+}
+
+export namespace SavesBehavior {
+	/** Events a {@link SavesBehavior} dispatches. */
 	export interface EventMap {
 		/** Dispatched after a slot is written. */
 		change: Event;
 	}
+}
+
+export namespace SaveSlots {
+	/** Events {@link SaveSlots} dispatches. */
+	export interface EventMap extends SavesBehavior.EventMap {}
 }
 
 /**
@@ -28,7 +47,7 @@ export namespace SaveSlots {
  *
  * @example let slots = new SaveSlots(stored); slots.put(QUICK_SLOT, play.save(QUICK_SLOT));
  */
-export class SaveSlots extends TypedEventTarget<SaveSlots.EventMap> {
+export class SaveSlots extends TypedEventTarget<SaveSlots.EventMap> implements SavesBehavior {
 	#saves: Record<string, GameState>;
 
 	/** @param stored - The saves the app stored, by slot name. */

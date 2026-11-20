@@ -141,7 +141,7 @@ export function NamePlate(handle: Handle<Textbox.PartProps>) {
 
 /**
  * The current line, rendered through `Trans` with the player's markup and revealed by the
- * player's `typewriter` model: it types while the model says `"typing"`, shows the rest at once
+ * player's `reveal` behavior: it types while the behavior says `"typing"`, shows the rest at once
  * when it says `complete`, and reports the whole line visible through `reveal()`.
  *
  * @example <NovelPlayer.Line mix={css({ textAlign: "center" })} />
@@ -154,14 +154,14 @@ export function Line(handle: Handle<Textbox.PartProps>) {
 	let started = false;
 
 	handle.signal.addEventListener("abort", () => writer?.dispose());
-	player.typewriter.addEventListener("change", () => void handle.update(), {
+	player.reveal.addEventListener("change", () => void handle.update(), {
 		signal: handle.signal,
 	});
 
 	/** Keeps the DOM typewriter in step with the reveal model after each commit. */
 	function sync(): void {
 		let frame = player.frame;
-		let reveal = player.typewriter;
+		let reveal = player.reveal;
 		if (element === undefined || frame?.type !== "line") return;
 		if (writerFrame !== frame.id || writer === undefined) {
 			writer?.dispose();

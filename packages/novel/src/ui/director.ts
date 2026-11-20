@@ -15,10 +15,10 @@ import type { Ending, GameState, ReplayScope, Reply, StopFrame } from "../frames
 import type { Novel, Play, StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 
-import type { AutoModel } from "./behaviors/auto.js";
-import type { BacklogEntry, BacklogModel } from "./behaviors/backlog.js";
-import type { RevealModel } from "./behaviors/reveal.js";
-import type { SkipModel } from "./behaviors/skip.js";
+import type { AutoBehavior } from "./behaviors/auto.js";
+import type { BacklogBehavior, BacklogEntry } from "./behaviors/backlog.js";
+import type { RevealBehavior } from "./behaviors/reveal.js";
+import type { SkipBehavior } from "./behaviors/skip.js";
 import type { NovelSettings } from "./settings.js";
 import type { RunningTransition } from "./transitions.js";
 
@@ -51,16 +51,18 @@ export interface DirectorHost {
 	text(): string;
 	settings(): NovelSettings;
 	onEnding(ending: Ending): void;
+	/** Called as soon as `frame`, `phase` or `ending` takes a new value, before the next render. */
+	changed(what: "frame" | "phase" | "ending"): void;
 	/** How many jumps ahead to prefetch on entering a scene, or `false` to prefetch nothing. */
 	prefetch(): number | false;
 }
 
 /** The behaviors a director sequences a play through, each usable on its own. */
 export interface DirectorBehaviors {
-	reveal: RevealModel;
-	auto: AutoModel;
-	skip: SkipModel;
-	backlog: BacklogModel;
+	reveal: RevealBehavior;
+	auto: AutoBehavior;
+	skip: SkipBehavior;
+	backlog: BacklogBehavior;
 }
 
 /**
@@ -68,20 +70,20 @@ export interface DirectorBehaviors {
  * and lets the reveal, auto, skip and backlog models hold the rest, reacting to their changes.
  */
 export class Director {
-	frame: StopFrame | undefined;
 	error: NovelError | undefined;
-	ending: Ending | undefined;
-	phase: Phase = "idle";
 	/** Ends this frame's transitions at once. */
 	instant = false;
 	/** True when an error stopped the play before its first stop, which {@link Director.retry} retries. */
 	stalled = false;
 	/** True while the play is a replay, which never saves. */
 	replaying = false;
-	readonly reveal: RevealModel;
-	readonly auto: AutoModel;
-	readonly skip: SkipModel;
-	readonly backlog: BacklogModel;
+	readonly reveal: RevealBehavior;
+	readonly auto: AutoBehavior;
+	readonly skip: SkipBehavior;
+	readonly backlog: BacklogBehavior;
+	#frame: StopFrame | undefined;
+	#phase: Phase = "idle";
+	#ending: Ending | undefined;
 	/** The play a replay interrupted, resumed with its backlog when the replay ends. */
 	#resume: { state: GameState; backlog: readonly BacklogEntry[] } | undefined;
 	#host: DirectorHost;
@@ -114,6 +116,38 @@ export class Director {
 		this.reveal.addEventListener("change", () => this.#revealChanged(), { signal });
 		this.auto.addEventListener("change", () => this.#autoChanged(), { signal });
 		this.skip.addEventListener("change", () => this.#skipChanged(), { signal });
+	}
+
+	/** The stop the play shows, or `undefined` before its first one. */
+	get frame(): StopFrame | undefined {
+		return this.#frame;
+	}
+
+	set frame(frame: StopFrame | undefined) {
+		if (frame === this.#frame) return;
+		this.#frame = frame;
+		this.#host.changed("frame");
+	}
+
+	get phase(): Phase {
+		return this.#phase;
+	}
+
+	set phase(phase: Phase) {
+		if (phase === this.#phase) return;
+		this.#phase = phase;
+		this.#host.changed("phase");
+	}
+
+	/** How the play finished, once it has; a new play clears it. */
+	get ending(): Ending | undefined {
+		return this.#ending;
+	}
+
+	set ending(ending: Ending | undefined) {
+		if (ending === this.#ending) return;
+		this.#ending = ending;
+		this.#host.changed("ending");
 	}
 
 	/** The prefetcher warming the scenes within reach, for a test to read what it started. */

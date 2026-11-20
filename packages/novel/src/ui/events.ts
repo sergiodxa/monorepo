@@ -1,13 +1,15 @@
 /**
- * The DOM events `NovelPlayer` dispatches from its root element: a save, a settings change and
- * an ending. They bubble, so an app listens with `on()` on the player or any ancestor and stores
- * what they carry, which keeps storage the app's.
+ * The DOM events of a player: a save, a settings change and an ending from its root, which an
+ * app listens to with `on()` and stores, and an interaction's completion, which an app's
+ * component dispatches for `NovelPlayer.Interaction` to answer the frame with. They all bubble.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { InteractionDeclaration } from "../declarations.js";
 import type { Ending, GameState } from "../frames.js";
+import type { SchemaInput } from "../types.js";
 
 import type { NovelSettings } from "./settings.js";
 
@@ -16,6 +18,7 @@ declare global {
 		"novel:save": NovelSaveEvent;
 		"novel:settings": NovelSettingsEvent;
 		"novel:ending": NovelEndingEvent;
+		"novel:complete": InteractionCompleteEvent;
 	}
 }
 
@@ -69,5 +72,31 @@ export class NovelEndingEvent extends Event {
 	constructor(ending: Ending) {
 		super("novel:ending", { bubbles: true });
 		this.ending = ending;
+	}
+}
+
+/**
+ * Dispatched as `novel:complete` by an interaction's component when it is done, with the output
+ * typed by the declaration's output schema. `NovelPlayer.Interaction` answers the current frame
+ * with it when the frame is that interaction; the engine validates the output.
+ *
+ * @template Declaration - The interaction it completes.
+ * @example root.dispatchEvent(new InteractionCompleteEvent(INTERACTIONS.fishing, { caught: 3 }))
+ */
+export class InteractionCompleteEvent<
+	Declaration extends InteractionDeclaration = InteractionDeclaration,
+> extends Event {
+	/** The name of the interaction it completes, which a custom frame carries. */
+	readonly interaction: Declaration["name"];
+	readonly output: SchemaInput<Declaration["output"]>;
+
+	/**
+	 * @param declaration - The interaction, from the app's `interactions()` map.
+	 * @param output - What it hands back to the scene.
+	 */
+	constructor(declaration: Declaration, output: SchemaInput<Declaration["output"]>) {
+		super("novel:complete", { bubbles: true });
+		this.interaction = declaration.name;
+		this.output = output;
 	}
 }

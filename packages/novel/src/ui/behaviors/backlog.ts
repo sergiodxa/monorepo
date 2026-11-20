@@ -29,12 +29,33 @@ export interface BacklogEntry {
 	voice: string | null;
 }
 
-export namespace BacklogModel {
-	/** Events {@link BacklogModel} dispatches. */
+/**
+ * What the player and the backlog screen need from the backlog, which `NovelPlayer`'s
+ * `behaviors.backlog` replaces: the lines in reading order, a line recorded as it shows, the
+ * last one dropped by a rollback, and a fresh list when a play starts or resumes.
+ */
+export interface BacklogBehavior extends TypedEventTarget<BacklogBehavior.EventMap> {
+	/** The lines shown, oldest first; a replay that ends resumes with them. */
+	readonly entries: readonly BacklogEntry[];
+	/** Adds a line as it takes the stage, which shows again after a rollback. */
+	record(frame: LineFrame, locale: string): void;
+	/** Drops the last entry when it is `frame`'s line, as a rollback away from it does. */
+	leave(frame: LineFrame): void;
+	/** Starts over from `entries`, as a new play or a resumed one does. */
+	replace(entries: readonly BacklogEntry[]): void;
+}
+
+export namespace BacklogBehavior {
+	/** Events a {@link BacklogBehavior} dispatches. */
 	export interface EventMap {
 		/** Dispatched after the entries change. */
 		change: Event;
 	}
+}
+
+export namespace BacklogModel {
+	/** Events {@link BacklogModel} dispatches. */
+	export interface EventMap extends BacklogBehavior.EventMap {}
 }
 
 /**
@@ -42,7 +63,10 @@ export namespace BacklogModel {
  *
  * @example let backlog = new BacklogModel(); backlog.record(frame, "en");
  */
-export class BacklogModel extends TypedEventTarget<BacklogModel.EventMap> {
+export class BacklogModel
+	extends TypedEventTarget<BacklogModel.EventMap>
+	implements BacklogBehavior
+{
 	#entries: BacklogEntry[] = [];
 	#size: number;
 

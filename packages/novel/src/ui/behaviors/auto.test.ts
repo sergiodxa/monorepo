@@ -71,4 +71,21 @@ describe(AutoModel, () => {
 		expect(first).not.toHaveBeenCalled();
 		expect(second).toHaveBeenCalledOnce();
 	});
+
+	test("waits as long as a subclass's delay() says", async () => {
+		/** Holds every line for twice the reader's delay. */
+		class SlowAuto extends AutoModel {
+			override delay(line: AutoModel.Line): number {
+				return line.delay * 2;
+			}
+		}
+		let auto = new SlowAuto();
+		let advance = vi.fn();
+		auto.set(true);
+		auto.wait({ length: 0, voiced: true, delay: 100 }, advance);
+		await vi.advanceTimersByTimeAsync(199);
+		expect(advance).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(1);
+		expect(advance).toHaveBeenCalledOnce();
+	});
 });

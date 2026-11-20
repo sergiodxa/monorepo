@@ -1,7 +1,7 @@
 /**
- * Draws the app's own component for a custom frame: one `Interaction` part per declared
- * interaction, each rendering only while the current frame is that interaction, so the frame
- * its component receives is typed by the interaction's declared input and output.
+ * Draws the app's own components for custom frames: one `Interaction` part over the app's
+ * `interactions()` map renders a function of the current frame, narrowed by its name, and
+ * answers the frame when a component inside it dispatches `novel:complete`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,59 +9,96 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { css } from "remix/component";
+import { css, on } from "remix/component";
 
-import type { CustomFrame, Reply } from "../frames.js";
+import type { InteractionDeclaration } from "../declarations.js";
+import type { CustomFrame, InteractionFrame } from "../frames.js";
 
 import { NovelPlayer } from "./player.js";
 
-/** The name of an interaction the app declared through `NovelTypes["interactions"]`. */
-export type InteractionName = CustomFrame["interaction"];
-
 export namespace Interaction {
-	/** Props an interaction component receives. */
-	export interface ComponentProps<Name extends InteractionName = InteractionName> {
-		frame: Extract<CustomFrame, { interaction: Name }>;
-		/** Answers the frame; pass `frame.complete(output)`. */
-		respond: (reply: Reply) => void;
-	}
+	/** The interactions an app declares with `interactions()`, by name. */
+	export type Map = Readonly<Record<string, InteractionDeclaration>>;
 
-	/** Props {@link Interaction} accepts. */
-	export interface Props<Name extends InteractionName = InteractionName> extends Omit<
-		TagProps<"div">,
-		"children"
-	> {
-		/** The interaction this part draws. */
-		name: Name;
-		/** The app's component for it. */
-		component: (handle: Handle<ComponentProps<Name>>) => () => RemixNode;
+	/**
+	 * The custom frame of each interaction in `Declarations`, so `frame.interaction` narrows
+	 * `frame.input` and `frame.complete()` to that interaction's schemas.
+	 *
+	 * @template Declarations - The app's `interactions()` map.
+	 */
+	export type Frame<Declarations extends Map> = {
+		[Name in keyof Declarations]: Declarations[Name] extends InteractionDeclaration<
+			infer Key,
+			infer Input,
+			infer Output
+		>
+			? InteractionFrame<Key, Input, Output>
+			: never;
+	}[keyof Declarations];
+
+	/**
+	 * What the children function returns for a frame: something to draw, never `null` or
+	 * `undefined`, so a `switch` that misses an interaction fails to compile.
+	 */
+	export type Rendered = Exclude<RemixNode, null | undefined>;
+
+	/**
+	 * Props {@link Interaction} accepts.
+	 *
+	 * @template Declarations - The app's `interactions()` map.
+	 */
+	export interface Props<Declarations extends Map> extends Omit<TagProps<"div">, "children"> {
+		/** The app's `interactions()` map, which types the frame and picks the frames drawn. */
+		interactions: Declarations;
+		/** Draws the current custom frame, called on every render while the play stops at it. */
+		children: (frame: Frame<Declarations>) => Rendered;
 	}
 }
 
 /**
- * Renders `component` over the stage while the play stops at the interaction `name`, once the
- * stage has settled; clicks inside it never advance the story.
+ * Renders its children function over the stage while the play stops at an interaction in
+ * `interactions`, once the stage has settled; clicks inside it never advance the story. A
+ * `novel:complete` from inside answers the frame it names through `frame.complete(output)`, once.
  *
- * @example <NovelPlayer.Interaction name="fishing" component={Fishing} />
+ * @example <NovelPlayer.Interaction interactions={INTERACTIONS}>{(frame) => { switch (frame.interaction) { case "fishing": return <Fishing input={frame.input} />; } }}</NovelPlayer.Interaction>
  */
-export function Interaction<Name extends InteractionName>(handle: Handle<Interaction.Props<Name>>) {
+export function Interaction<Declarations extends Interaction.Map>(
+	handle: Handle<Interaction.Props<Declarations>>,
+) {
 	let player = handle.context.get(NovelPlayer);
+	let answered: unknown;
+
 	return () => {
-		let { name, component: Component, mix, ...rest } = handle.props;
+		let { interactions, children, mix, ...rest } = handle.props;
 		let frame = player.frame;
-		if (frame?.type !== "custom" || frame.interaction !== name) return null;
+		if (frame?.type !== "custom" || !Object.hasOwn(interactions, frame.interaction)) return null;
 		if (player.phase === "staging") return null;
+		let current = untyped(frame);
 		return (
 			<div
 				{...rest}
-				data-novel-interaction={name}
-				mix={[css({ position: "absolute", inset: 0, zIndex: 4 }), mix]}
+				data-novel-interaction={current.interaction}
+				mix={[
+					css({ position: "absolute", inset: 0, zIndex: 4 }),
+					on("novel:complete", (event) => {
+						if (player.frame !== current || answered === current) return;
+						if (event.interaction !== current.interaction) return;
+						answered = current;
+						player.answer(current.complete(event.output));
+					}),
+					mix,
+				]}
 			>
-				<Component
-					frame={frame as Extract<CustomFrame, { interaction: Name }>}
-					respond={(reply) => player.answer(reply)}
-				/>
+				{children(current as Interaction.Frame<Declarations>)}
 			</div>
 		);
 	};
+}
+
+/**
+ * A custom frame by the declaration-free shape the part works with, whatever the app declared
+ * globally; the frame's own `complete()` validates the output against its schema.
+ */
+function untyped(frame: CustomFrame): InteractionFrame {
+	return frame as unknown as InteractionFrame;
 }

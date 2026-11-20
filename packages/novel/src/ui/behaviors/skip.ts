@@ -16,12 +16,33 @@ import type { SkipMode } from "../settings.js";
 /** Milliseconds skip mode shows each line for. */
 export const SKIP_STEP_MS = 40;
 
-export namespace SkipModel {
-	/** Events {@link SkipModel} dispatches. */
+/**
+ * What the player needs from skip, which `NovelPlayer`'s `behaviors.skip` replaces: whether it is
+ * on, toggling and holding it, stopping it where it must not pass, and the rule for what it passes.
+ */
+export interface SkipBehavior extends TypedEventTarget<SkipBehavior.EventMap> {
+	/** True while skip is on; the player hurries every frame while it is. */
+	readonly active: boolean;
+	toggle(): void;
+	/** Skips for as long as `held` stays true, the way held Control does. */
+	hold(held: boolean): void;
+	/** Switches toggled skip off; the player calls it at a menu, an interaction or an unread line. */
+	stop(): void;
+	/** Whether skip goes past `frame` under the reader's skip setting. */
+	passes(frame: StopFrame, mode: SkipMode): boolean;
+}
+
+export namespace SkipBehavior {
+	/** Events a {@link SkipBehavior} dispatches. */
 	export interface EventMap {
 		/** Dispatched after skip starts or stops. */
 		change: Event;
 	}
+}
+
+export namespace SkipModel {
+	/** Events {@link SkipModel} dispatches. */
+	export interface EventMap extends SkipBehavior.EventMap {}
 }
 
 /**
@@ -30,7 +51,7 @@ export namespace SkipModel {
  *
  * @example if (skip.active && !skip.passes(frame, settings.skip)) skip.stop();
  */
-export class SkipModel extends TypedEventTarget<SkipModel.EventMap> {
+export class SkipModel extends TypedEventTarget<SkipModel.EventMap> implements SkipBehavior {
 	#toggled = false;
 	#held = false;
 

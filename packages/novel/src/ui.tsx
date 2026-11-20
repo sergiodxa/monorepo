@@ -8,8 +8,13 @@
  */
 
 export type { MixerSnapshot } from "./ui/audio.js";
-export type { BacklogEntry } from "./ui/behaviors/backlog.js";
-export type { RevealStatus } from "./ui/behaviors/reveal.js";
+export type { AutoBehavior } from "./ui/behaviors/auto.js";
+export type { BacklogBehavior, BacklogEntry } from "./ui/behaviors/backlog.js";
+export type { CountdownBehavior } from "./ui/behaviors/countdown.js";
+export type { RevealBehavior, RevealStatus } from "./ui/behaviors/reveal.js";
+export type { SavesBehavior } from "./ui/behaviors/save-slots.js";
+export type { SettingsBehavior } from "./ui/behaviors/settings.js";
+export type { SkipBehavior } from "./ui/behaviors/skip.js";
 export type { Column } from "./ui/layout.js";
 export type { GamepadAction } from "./ui/input.js";
 export type {
@@ -30,7 +35,6 @@ export type {
 	SkipMode,
 	StoredSettings,
 } from "./ui/settings.js";
-export type { InteractionName } from "./ui/interaction.js";
 export type { NovelThemeVariable } from "./ui/theme.js";
 export type { RunningTransition } from "./ui/transitions.js";
 
@@ -47,7 +51,12 @@ export { ChapterSelect, SceneReplay } from "./ui/chapters.js";
 export { ChoiceMenu } from "./ui/choice-menu.js";
 export { gamepadControls, keyboardControls, touchControls } from "./ui/controls.js";
 export { EndingsList } from "./ui/endings.js";
-export { NovelEndingEvent, NovelSaveEvent, NovelSettingsEvent } from "./ui/events.js";
+export {
+	InteractionCompleteEvent,
+	NovelEndingEvent,
+	NovelSaveEvent,
+	NovelSettingsEvent,
+} from "./ui/events.js";
 export { Extras } from "./ui/extras.js";
 export { Gallery } from "./ui/gallery.js";
 export { gamepadActions } from "./ui/input.js";

@@ -13,12 +13,42 @@ import { TypedEventTarget } from "remix/component";
 /** Where a line is in its reveal. */
 export type RevealStatus = "idle" | "waiting" | "typing" | "revealed";
 
-export namespace RevealModel {
-	/** Events {@link RevealModel} dispatches. */
+/**
+ * What the player and its line need from a line's reveal, which `NovelPlayer`'s
+ * `behaviors.reveal` replaces: the player moves it through `begin`, `start` and `clear`, and
+ * whatever paints the text types while `status` is `"typing"` and reports `reveal()`.
+ */
+export interface RevealBehavior extends TypedEventTarget<RevealBehavior.EventMap> {
+	/** The id of the line frame being revealed, or `undefined` between lines. */
+	readonly line: string | undefined;
+	readonly status: RevealStatus;
+	/** True once the rest of the line should show at once: a click, skip or a restored frame. */
+	readonly complete: boolean;
+	/** Characters per second; the player sets the reader's text speed as each line starts. */
+	speed: number;
+	/** Takes a new line, waiting for `start()`; `complete` shows it whole once it starts. */
+	begin(line: string, complete?: boolean): void;
+	/** Starts typing the line, once the stage has settled. */
+	start(): void;
+	/** Asks for the rest of the line at once. */
+	finish(): void;
+	/** Reports the whole line visible; its `change` to `"revealed"` lets the play wait. */
+	reveal(): void;
+	/** Leaves the line, as a menu, a pause or the end of the play does. */
+	clear(): void;
+}
+
+export namespace RevealBehavior {
+	/** Events a {@link RevealBehavior} dispatches. */
 	export interface EventMap {
 		/** Dispatched after the line, its status, `complete` or the speed changes. */
 		change: Event;
 	}
+}
+
+export namespace RevealModel {
+	/** Events {@link RevealModel} dispatches. */
+	export interface EventMap extends RevealBehavior.EventMap {}
 }
 
 /**
@@ -28,7 +58,7 @@ export namespace RevealModel {
  *
  * @example reveal.addEventListener("change", () => { if (reveal.status === "typing") reveal.reveal(); });
  */
-export class RevealModel extends TypedEventTarget<RevealModel.EventMap> {
+export class RevealModel extends TypedEventTarget<RevealModel.EventMap> implements RevealBehavior {
 	#line: string | undefined;
 	#status: RevealStatus = "idle";
 	#complete = false;

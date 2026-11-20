@@ -36,13 +36,31 @@ export class CountdownExpireEvent extends Event {
 	}
 }
 
-export namespace CountdownModel {
-	/** Events {@link CountdownModel} dispatches. */
+/**
+ * What the player and the menu need from a timed menu's countdown, which `NovelPlayer`'s
+ * `behaviors.countdown` replaces: the menu starts it, an answer cancels it, and its `expire`
+ * answers the menu with the option it carries.
+ */
+export interface CountdownBehavior extends TypedEventTarget<CountdownBehavior.EventMap> {
+	/** Starts `frame`'s countdown as the menu shows, which a menu without `timeout` ignores. */
+	start(frame: ChoiceFrame): void;
+	/** Stops the running countdown, as answering the menu does. */
+	cancel(): void;
+}
+
+export namespace CountdownBehavior {
+	/** Events a {@link CountdownBehavior} dispatches. */
 	export interface EventMap {
 		/** Dispatched after a countdown starts or stops. */
 		change: Event;
+		/** Answers the menu it carries, when that menu is still the current frame. */
 		expire: CountdownExpireEvent;
 	}
+}
+
+export namespace CountdownModel {
+	/** Events {@link CountdownModel} dispatches. */
+	export interface EventMap extends CountdownBehavior.EventMap {}
 }
 
 /**
@@ -50,7 +68,10 @@ export namespace CountdownModel {
  *
  * @example countdown.addEventListener("expire", (event) => player.answer(event.frame.choose(event.option)));
  */
-export class CountdownModel extends TypedEventTarget<CountdownModel.EventMap> {
+export class CountdownModel
+	extends TypedEventTarget<CountdownModel.EventMap>
+	implements CountdownBehavior
+{
 	#frame: ChoiceFrame | undefined;
 	#endsAt: number | undefined;
 	#timer: ReturnType<typeof setTimeout> | undefined;

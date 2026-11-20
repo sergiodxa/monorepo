@@ -11,17 +11,25 @@ import type { Trans } from "@sdxc/i18n/ui";
 import type { Handle, Props as TagProps, RemixElement, RemixNode } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
-import { css, on, ref } from "remix/component";
+import { css, on, ref, TypedEventTarget } from "remix/component";
 
 import type { SceneDeclaration } from "../declarations.js";
 import type { NovelError } from "../errors.js";
 import type { Ending, GameState, ReplayScope, Reply, StopFrame } from "../frames.js";
 import type { Novel, StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
+import type { NovelState } from "../types.js";
 
 import { readPersistent } from "../persistent.js";
 
 import type { AudioMixer } from "./audio.js";
+import type { AutoBehavior } from "./behaviors/auto.js";
+import type { BacklogBehavior } from "./behaviors/backlog.js";
+import type { CountdownBehavior } from "./behaviors/countdown.js";
+import type { RevealBehavior } from "./behaviors/reveal.js";
+import type { SavesBehavior } from "./behaviors/save-slots.js";
+import type { SettingsBehavior } from "./behaviors/settings.js";
+import type { SkipBehavior } from "./behaviors/skip.js";
 import type { Phase } from "./director.js";
 import type { Prefetcher } from "./prefetch.js";
 import type { NovelLabels, NovelSettings, StoredSettings } from "./settings.js";
@@ -74,11 +82,45 @@ export namespace NovelPlayer {
 	export type Markup = Record<string, RemixElement | Trans.MarkupComponent>;
 
 	/**
-	 * What `handle.context.get(NovelPlayer)` answers to every part and mixin inside a player: the
-	 * play's state, read live, the reader's behaviors as models a custom part reuses, and the
-	 * actions that drive the play. It is one object for the player's whole life.
+	 * The reader's behaviors a player runs on, each one replaceable through the `behaviors` prop by
+	 * any object implementing its interface; a slot left out takes the built-in model.
 	 */
-	export interface Context {
+	export interface Behaviors {
+		/** The current line's reveal; `RevealModel` by default. */
+		reveal?: RevealBehavior;
+		/** Auto mode; `AutoModel` by default. */
+		auto?: AutoBehavior;
+		/** Skip mode; `SkipModel` by default. */
+		skip?: SkipBehavior;
+		/** The lines shown so far; `BacklogModel` by default. */
+		backlog?: BacklogBehavior;
+		/** The save slots; `SaveSlots` by default. */
+		saves?: SavesBehavior;
+		/** The reader's settings; `SettingsModel` by default. */
+		settings?: SettingsBehavior;
+		/** A timed menu's countdown; `CountdownModel` by default. */
+		countdown?: CountdownBehavior;
+	}
+
+	/** Events the player's context dispatches, for a behavior built inside the player to follow it. */
+	export interface EventMap {
+		/** Dispatched as soon as `frame` changes, before the parts render it. */
+		frame: Event;
+		/** Dispatched as soon as `phase` changes. */
+		phase: Event;
+		/** Dispatched as soon as `ending` changes: the play finished, or a new one started. */
+		ending: Event;
+	}
+
+	/**
+	 * What `handle.context.get(NovelPlayer)` answers to every part and mixin inside a player: the
+	 * play's state, read live, the reader's behaviors, and the actions that drive the play. It is
+	 * one object for the player's whole life, and its `frame`, `phase` and `ending` events let a
+	 * behavior a provider part builds follow the play.
+	 *
+	 * @example player.addEventListener("frame", () => pulse.beat(player.frame), { signal: handle.signal });
+	 */
+	export interface Context extends TypedEventTarget<EventMap> {
 		readonly novel: Novel;
 		/** The player's root element, once it is in the document. */
 		readonly element: HTMLElement | undefined;
@@ -89,6 +131,11 @@ export namespace NovelPlayer {
 		readonly phase: Phase;
 		/** How the play finished, once it has. */
 		readonly ending: Ending | undefined;
+		/**
+		 * The story state at the current stop, as the play's `GameState.state` holds it, or
+		 * `undefined` before the play starts. It is one value per stop, so a part can key on it.
+		 */
+		readonly state: NovelState | undefined;
 		/** The error the play reported at the current stop. */
 		readonly error: NovelError | undefined;
 		/** True when an error stopped the play before its first stop; `retry()` tries again. */
@@ -111,14 +158,14 @@ export namespace NovelPlayer {
 		/** The id of each dialog, for a `commandfor` button to open it without script. */
 		readonly ids: Readonly<Record<Screen, string>>;
 		/** The current line's reveal, which the textbox's line drives. */
-		readonly typewriter: RevealModel;
-		readonly auto: AutoModel;
-		readonly skip: SkipModel;
-		readonly backlog: BacklogModel;
-		readonly saves: SaveSlots;
-		readonly settings: SettingsModel;
+		readonly reveal: RevealBehavior;
+		readonly auto: AutoBehavior;
+		readonly skip: SkipBehavior;
+		readonly backlog: BacklogBehavior;
+		readonly saves: SavesBehavior;
+		readonly settings: SettingsBehavior;
 		/** A timed menu's countdown; it answers the menu with its default when it expires. */
-		readonly countdown: CountdownModel;
+		readonly countdown: CountdownBehavior;
 		readonly mixer: AudioMixer;
 		readonly prefetcher: Prefetcher;
 		/** Answers the current frame with a reply built by one of its methods. */
@@ -163,10 +210,23 @@ export namespace NovelPlayer {
 		 * data. It is read once, at mount; a new play needs a remount, done by changing `key`.
 		 */
 		start?: StartOptions;
-		/** The settings the app stored; missing fields take their defaults. */
+		/**
+		 * The settings the app stored; missing fields take their defaults. They reach the settings
+		 * behavior through `replace()`, a custom one included, whenever the prop is given or changes.
+		 */
 		settings?: StoredSettings;
-		/** The saves the app stored, by slot name. */
+		/**
+		 * The saves the app stored, by slot name. They reach the saves behavior through `replace()`,
+		 * a custom one included, whenever the prop is given or changes.
+		 */
 		saves?: Readonly<Record<string, GameState>>;
+		/**
+		 * Replaces any of the reader's behaviors with the app's own implementation; the rest are
+		 * the built-in models. It is read once, at mount, like `start`.
+		 *
+		 * @example behaviors={{ auto: new VoiceAwareAuto(), backlog: new SyncedBacklog(api) }}
+		 */
+		behaviors?: Behaviors;
 		/** Replaces any of the interface's English labels. */
 		labels?: Partial<NovelLabels>;
 		markup?: Markup;
@@ -183,7 +243,7 @@ export namespace NovelPlayer {
 
 	/** Props {@link NovelPlayer.Default} accepts. */
 	export interface DefaultProps extends Omit<Props, "children"> {
-		/** Drawn on the stage with the built-in parts, such as `NovelPlayer.Interaction` parts. */
+		/** Drawn on the stage with the built-in parts, such as a `NovelPlayer.Interaction` part. */
 		children?: RemixNode;
 	}
 }
@@ -192,7 +252,7 @@ export namespace NovelPlayer {
  * Plays a novel and provides {@link NovelPlayer.Context} to the parts and mixins inside it; it
  * renders nothing of its own but a root element. It reads its translator from `IntlProvider`,
  * renders inside the app's own client entry since a novel holds functions, and reads `start`
- * once, at mount. Saves, settings and endings leave as `novel:save`, `novel:settings` and
+ * and `behaviors` once, at mount. Saves, settings and endings leave as `novel:save`, `novel:settings` and
  * `novel:ending`. Every visual decision of the parts is a `--novel-*` variable set on it:
  * `NOVEL_THEME_VARIABLES` lists them with their defaults.
  *
@@ -206,9 +266,13 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 	let hidden = false;
 	let labels: NovelLabels = { ...DEFAULT_LABELS, ...handle.props.labels };
 	let persistent: { value: Persistent | undefined } | undefined;
-	let settings = new SettingsModel(handle.props.settings);
-	let saves = new SaveSlots(handle.props.saves);
-	let countdown = new CountdownModel();
+	let story: { value: NovelState | undefined } | undefined;
+	let behaviors = handle.props.behaviors ?? {};
+	let settings = behaviors.settings ?? new SettingsModel();
+	let saves = behaviors.saves ?? new SaveSlots();
+	let countdown = behaviors.countdown ?? new CountdownModel();
+	if (seenSettings !== undefined) settings.replace(seenSettings);
+	if (seenSaves !== undefined) saves.replace(seenSaves);
 	let ids = Object.fromEntries(
 		(
 			[
@@ -239,13 +303,17 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 				"",
 			settings: () => settings.value,
 			onEnding: (ending) => root?.dispatchEvent(new NovelEndingEvent(ending)),
+			changed: (what) => {
+				story = undefined;
+				context.dispatchEvent(new Event(what));
+			},
 			prefetch: () => handle.props.prefetch ?? 1,
 		},
 		{
-			reveal: new RevealModel(settings.value.textSpeed),
-			auto: new AutoModel(),
-			skip: new SkipModel(),
-			backlog: new BacklogModel(),
+			reveal: behaviors.reveal ?? new RevealModel(settings.value.textSpeed),
+			auto: behaviors.auto ?? new AutoModel(),
+			skip: behaviors.skip ?? new SkipModel(),
+			backlog: behaviors.backlog ?? new BacklogModel(),
 		},
 	);
 
@@ -318,7 +386,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		void root?.requestFullscreen().catch(() => undefined);
 	}
 
-	let context: NovelPlayer.Context = {
+	let members: Omit<NovelPlayer.Context, keyof EventTarget> = {
 		get novel() {
 			return handle.props.novel;
 		},
@@ -336,6 +404,10 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		},
 		get ending() {
 			return director.ending;
+		},
+		get state() {
+			story ??= { value: director.state?.state };
+			return story.value;
 		},
 		get error() {
 			return director.error;
@@ -366,7 +438,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			return handle.props.markup;
 		},
 		ids,
-		typewriter: director.reveal,
+		reveal: director.reveal,
 		auto: director.auto,
 		skip: director.skip,
 		backlog: director.backlog,
@@ -401,6 +473,10 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		},
 		retry: () => director.retry(),
 	};
+	let context = Object.defineProperties(
+		new TypedEventTarget<NovelPlayer.EventMap>(),
+		Object.getOwnPropertyDescriptors(members),
+	) as NovelPlayer.Context;
 	handle.context.set(context);
 
 	return () => {
@@ -412,6 +488,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			labels: labelOverrides,
 			markup: _markup,
 			prefetch: _prefetch,
+			behaviors: _behaviors,
 			children,
 			mix,
 			...rest
@@ -426,6 +503,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		}
 		labels = { ...DEFAULT_LABELS, ...labelOverrides };
 		persistent = undefined;
+		story = undefined;
 		let current = settings.value;
 		return (
 			<div
@@ -487,9 +565,9 @@ NovelPlayer.Extras = Extras;
 /**
  * The whole player as one component: every part in the classic layout, the six library screens
  * in the extras menu, and keyboard, touch and gamepad controls. Its children are drawn on the
- * stage, which is where a game's `NovelPlayer.Interaction` parts go.
+ * stage, which is where a game's `NovelPlayer.Interaction` part goes.
  *
- * @example <NovelPlayer.Default novel={novel} settings={stored}><NovelPlayer.Interaction name="fishing" component={Fishing} /></NovelPlayer.Default>
+ * @example <NovelPlayer.Default novel={novel} settings={stored}><NovelPlayer.Interaction interactions={INTERACTIONS}>{(frame) => <Fishing input={frame.input} />}</NovelPlayer.Interaction></NovelPlayer.Default>
  */
 NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.DefaultProps>) {
 	return () => {
