@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/component";
+import type { CSSMixinDescriptor, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { css, on } from "remix/component";
 
@@ -28,7 +28,7 @@ export namespace QuickMenu {
  *
  * @example <button type="button" mix={quickMenuButton()}>Extras</button>
  */
-export function quickMenuButton() {
+export function quickMenuButton(): CSSMixinDescriptor {
 	return css({
 		padding: "0.4cqh 0.8cqw",
 		border: 0,
