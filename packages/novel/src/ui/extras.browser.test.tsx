@@ -171,7 +171,14 @@ async function loaded(result: RenderResult, selector: string): Promise<HTMLEleme
 describe("Memories", () => {
 	test("lists the read lines of reached scenes with their values, speakers and voices", async () => {
 		let replayed = vi.fn();
-		let result = mount(<Memories novel={fixture()} persistent={STORED} onReplayVoice={replayed} />);
+		let result = mount(
+			<Memories
+				novel={fixture()}
+				persistent={STORED}
+				voices
+				mix={on("novel:replay-voice", (event) => replayed(event.line))}
+			/>,
+		);
 		expect(result.$("[data-novel-memories]")!.textContent).toBe("Loading…");
 		let screen = await loaded(result, "[data-novel-memories]");
 		expect(screen.querySelector("h3")!.textContent).toBe("Prologue");
@@ -183,6 +190,13 @@ describe("Memories", () => {
 		expect(replayed).toHaveBeenCalledWith(
 			expect.objectContaining({ key: "opening.hello", voice: "/voice/opening.hello.ogg" }),
 		);
+	});
+
+	test("offers no voice outside a player unless asked to", async () => {
+		let result = mount(<Memories novel={fixture()} persistent={STORED} />);
+		let screen = await loaded(result, "[data-novel-memories]");
+		expect(screen.querySelectorAll("li")).toHaveLength(2);
+		expect(screen.querySelector("button")).toBeNull();
 	});
 
 	test("says there is nothing to remember on a first playthrough", async () => {
@@ -245,22 +259,22 @@ describe("EndingsList", () => {
 
 describe("ChapterSelect and SceneReplay", () => {
 	test("offers reached chapters and scenes, and locks the rest", async () => {
-		let chosen = vi.fn();
+		let chosen = vi.fn<(scene: unknown, scope: string) => void>();
 		let result = mount(
-			<div>
-				<ChapterSelect novel={fixture()} persistent={STORED} onSelect={chosen} />
-				<SceneReplay novel={fixture()} persistent={STORED} onSelect={chosen} />
+			<div mix={on("novel:replay", (event) => chosen(event.scene, event.scope))}>
+				<ChapterSelect novel={fixture()} persistent={STORED} />
+				<SceneReplay novel={fixture()} persistent={STORED} />
 			</div>,
 		);
 		let chapters = await loaded(result, "[data-novel-chapters]");
 		let scenesList = await loaded(result, "[data-novel-scenes]");
 		chapters.querySelector<HTMLButtonElement>('[data-name="prologue"] button')!.click();
-		expect(chosen).toHaveBeenLastCalledWith(SCENES.prologue.opening);
+		expect(chosen).toHaveBeenLastCalledWith(SCENES.prologue.opening, "chapter");
 		let cafe = scenesList.querySelector<HTMLButtonElement>('[data-name="prologue.cafe"] button')!;
 		expect(cafe.disabled).toBe(true);
 		expect(cafe.textContent).toBe("Locked");
 		scenesList.querySelector<HTMLButtonElement>('[data-name="prologue.opening"] button')!.click();
-		expect(chosen).toHaveBeenLastCalledWith(SCENES.prologue.opening);
+		expect(chosen).toHaveBeenLastCalledWith(SCENES.prologue.opening, "scene");
 	});
 });
 
@@ -403,5 +417,60 @@ describe("NovelPlayer extras", () => {
 		await shows(view, "Welcome.");
 		expect(view.root().dataset["replay"]).toBe("false");
 		expect(ended).not.toHaveBeenCalled();
+	});
+
+	test("leaves a replay to a listener that prevents the pick's default", async () => {
+		let picked = vi.fn<(scene: unknown, scope: string) => void>();
+		let view = player({
+			mix: [
+				on("novel:replay", (event) => {
+					event.preventDefault();
+					picked(event.scene, event.scope);
+				}),
+			],
+		});
+		await shows(view, "Welcome.");
+		let dialog = await openScreen(view, "chapters");
+		let prologue = await vi.waitFor(() => {
+			let button = dialog.querySelector<HTMLButtonElement>('[data-name="prologue"] button');
+			expect(button?.disabled).toBe(false);
+			return button!;
+		});
+		prologue.click();
+		expect(picked).toHaveBeenCalledWith(SCENES.prologue.opening, "chapter");
+		expect(dialog.open).toBe(true);
+		expect(view.root().dataset["replay"]).toBe("false");
+	});
+
+	test("plays a remembered voice through the mixer unless a listener prevents it", async () => {
+		let played = vi.spyOn(AudioMixer.prototype, "playVoice").mockResolvedValue(undefined);
+		let prevent = false;
+		let heard = vi.fn();
+		let view = player({
+			mix: [
+				on("novel:replay-voice", (event) => {
+					heard(event.line.voice);
+					if (prevent) event.preventDefault();
+				}),
+			],
+		});
+		await shows(view, "Welcome.");
+		view.next();
+		await shows(view, "Hello, Ada!");
+		let dialog = await openScreen(view, "memories");
+		let voice = await vi.waitFor(() => {
+			let button = dialog.querySelector<HTMLButtonElement>('[data-key="opening.hello"] button');
+			expect(button).not.toBeNull();
+			return button!;
+		});
+		played.mockClear();
+		voice.click();
+		expect(heard).toHaveBeenLastCalledWith("/voice/opening.hello.ogg");
+		expect(played).toHaveBeenCalledWith("/voice/opening.hello.ogg");
+		prevent = true;
+		played.mockClear();
+		voice.click();
+		expect(heard).toHaveBeenCalledTimes(2);
+		expect(played).not.toHaveBeenCalled();
 	});
 });

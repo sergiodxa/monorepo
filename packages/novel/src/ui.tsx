@@ -54,6 +54,8 @@ export { EndingsList } from "./ui/endings.js";
 export {
 	InteractionCompleteEvent,
 	NovelEndingEvent,
+	NovelReplayEvent,
+	NovelReplayVoiceEvent,
 	NovelSaveEvent,
 	NovelSettingsEvent,
 } from "./ui/events.js";

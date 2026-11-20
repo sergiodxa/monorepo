@@ -1,7 +1,8 @@
 /**
  * Memories: every scene the reader has reached, grouped by chapter, with the lines read in it in
  * the order the scene declares them, each shown with the values it was read with, its speakers,
- * and its voice to play again. Lines never read stay hidden, so the screen spoils nothing.
+ * and its voice to play again as a `novel:replay-voice` event. Lines never read stay hidden, so
+ * the screen spoils nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,6 +20,7 @@ import type { Novel } from "../novel.js";
 import type { MemoryLine } from "./library.js";
 import type { NovelLabels } from "./settings.js";
 
+import { NovelReplayVoiceEvent } from "./events.js";
 import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
@@ -35,10 +37,13 @@ export namespace Memories {
 		 */
 		persistent?: unknown;
 		/**
-		 * Plays a line's voice again; inside a player it plays through the player's mixer, and
-		 * elsewhere without it no line offers its voice.
+		 * Whether a voiced line offers its voice again, which dispatches `novel:replay-voice`.
+		 * Inside a player the mixer plays it unless a listener prevents that; outside one, set
+		 * it and play the voice from the listener.
+		 *
+		 * @default true inside a player, false elsewhere
 		 */
-		onReplayVoice?: (line: MemoryLine) => void;
+		voices?: boolean;
 		labels?: Partial<Pick<NovelLabels, "loading" | "noMemories" | "replayVoice">>;
 	}
 }
@@ -47,15 +52,16 @@ export namespace Memories {
  * Lists what the reader has read, scene by scene. Lazily mapped scenes load as the screen
  * opens, and it says so until they have.
  *
- * @example <Memories novel={novel} persistent={stored} onReplayVoice={(line) => play(line.voice)} />
+ * @example <Memories novel={novel} persistent={stored} voices mix={on("novel:replay-voice", (event) => play(event.line.voice))} />
  */
 export function Memories(handle: Handle<Memories.Props>) {
 	let read = libraryReader(handle);
 	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 
-	/** Plays a line's voice through the player's mixer. */
-	function playVoice(line: MemoryLine): void {
-		if (line.voice === null || player === undefined) return;
+	/** Reports a voice replay from `button`, then plays it through the player's mixer unless prevented. */
+	function replayVoice(button: EventTarget, line: MemoryLine): void {
+		let proceed = button.dispatchEvent(new NovelReplayVoiceEvent(line));
+		if (!proceed || line.voice === null || player === undefined) return;
 		void player.mixer.resume();
 		void player.mixer.playVoice(line.voice);
 	}
@@ -64,7 +70,7 @@ export function Memories(handle: Handle<Memories.Props>) {
 		let {
 			novel: _novel,
 			persistent: _persistent,
-			onReplayVoice = player === undefined ? undefined : playVoice,
+			voices = player !== undefined,
 			labels: overrides,
 			mix,
 			...rest
@@ -138,12 +144,12 @@ export function Memories(handle: Handle<Memories.Props>) {
 												)}
 												<Message i18nKey={line.key} values={line.values} />
 											</div>
-											{line.voice === null || onReplayVoice === undefined ? null : (
+											{line.voice === null || !voices ? null : (
 												<Button
 													size="sm"
 													variant="ghost"
 													aria-label={labels.replayVoice}
-													mix={on("click", () => onReplayVoice(line))}
+													mix={on("click", (event) => replayVoice(event.currentTarget, line))}
 												>
 													<Volume2Icon size={16} />
 												</Button>

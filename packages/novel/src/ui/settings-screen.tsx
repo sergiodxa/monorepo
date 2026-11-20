@@ -21,15 +21,14 @@ export namespace SettingsScreen {
 	/** Props {@link SettingsScreen} accepts. */
 	export interface Props extends Omit<Dialog.Props, "id" | "children"> {}
 
-	/** Props {@link RangeSetting} accepts. */
-	export interface RangeProps {
+	/** Props {@link RangeSetting} accepts; `mix` lands on the slider's root. */
+	export interface RangeProps extends Pick<Slider.Props, "mix"> {
 		label: string;
 		name: string;
 		value: number;
 		min: number;
 		max: number;
 		step: number;
-		onInput: (value: number) => void;
 	}
 }
 
@@ -84,7 +83,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 						min={0}
 						max={120}
 						step={5}
-						onInput={(value) => change({ textSpeed: value })}
+						mix={rangeInput((value) => change({ textSpeed: value }))}
 					/>
 					<RangeSetting
 						label={labels.autoDelay}
@@ -93,7 +92,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 						min={0}
 						max={5000}
 						step={250}
-						onInput={(value) => change({ autoDelay: value })}
+						mix={rangeInput((value) => change({ autoDelay: value }))}
 					/>
 					<label mix={css({ display: "grid", gap: "0.35rem" })}>
 						<span>{labels.skipMode}</span>
@@ -120,7 +119,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 							min={0}
 							max={100}
 							step={5}
-							onInput={(value) => volume(channel, value / 100)}
+							mix={rangeInput((value) => volume(channel, value / 100))}
 						/>
 					))}
 					<RangeSetting
@@ -130,7 +129,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 						min={75}
 						max={150}
 						step={5}
-						onInput={(value) => change({ fontSize: value / 100 })}
+						mix={rangeInput((value) => change({ fontSize: value / 100 }))}
 					/>
 					<Switch
 						name="dyslexiaFont"
@@ -154,23 +153,31 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 }
 
 /**
- * One labeled slider, reporting every value as the reader drags.
+ * Reads a range's value from the native `input` event its `<input>` fires as the reader drags,
+ * which bubbles to a `RangeSetting`'s root.
  *
- * @example <RangeSetting label="Text speed" name="textSpeed" value={40} min={0} max={120} step={5} onInput={set} />
+ * @param set - Receives every value.
+ */
+function rangeInput(set: (value: number) => void) {
+	return on<HTMLDivElement, "input">("input", (event) => {
+		if (event.target instanceof HTMLInputElement) set(event.target.valueAsNumber);
+	});
+}
+
+/**
+ * One labeled slider; its `<input>` fires a native `input` event on every value as the reader
+ * drags, which bubbles to the root where `mix` lands.
+ *
+ * @example <RangeSetting label="Text speed" name="textSpeed" value={40} min={0} max={120} step={5} mix={on("input", read)} />
  */
 export function RangeSetting(handle: Handle<SettingsScreen.RangeProps>) {
 	return () => {
-		let { label, name, value, min, max, step, onInput } = handle.props;
+		let { label, name, value, min, max, step, mix } = handle.props;
 		return (
-			<Slider min={min} max={max} value={value} mix={css({ gap: "0.35rem" })}>
+			<Slider min={min} max={max} value={value} mix={[css({ gap: "0.35rem" }), mix]}>
 				<span>{label}</span>
 				<Slider.Track>
-					<Slider.Thumb
-						name={name}
-						step={step}
-						aria-label={label}
-						mix={on("input", (event) => onInput(Number(event.currentTarget.value)))}
-					/>
+					<Slider.Thumb name={name} step={step} aria-label={label} />
 				</Slider.Track>
 			</Slider>
 		);

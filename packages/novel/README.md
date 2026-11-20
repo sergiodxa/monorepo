@@ -466,14 +466,16 @@ function PhoneChoices(handle: Handle) {
 }
 ```
 
-#### Events: `NovelSaveEvent`, `NovelSettingsEvent`, `NovelEndingEvent` and `InteractionCompleteEvent`
+#### Events: `NovelSaveEvent`, `NovelSettingsEvent`, `NovelEndingEvent`, `InteractionCompleteEvent`, `NovelReplayEvent` and `NovelReplayVoiceEvent`
 
-The player dispatches the first three from its root, and an interaction's component dispatches the last; they all bubble, so `on()` on the player or any ancestor hears them with typed fields:
+The player dispatches the first three from its root, an interaction's component dispatches `novel:complete`, and the library screens dispatch the last two; they all bubble, so `on()` on the component or any ancestor hears them with typed fields. No component takes a callback prop:
 
 - `novel:save` (`slot`, `state`): The reader saved; the save also reaches the novel's `save` event
 - `novel:settings` (`settings`): The reader changed a setting; the event carries the whole `NovelSettings`
 - `novel:ending` (`ending`): The play reached an ending or ran out of story
 - `novel:complete` (`interaction`, `output`): `new InteractionCompleteEvent(declaration, output)` finishes an interaction, with `output` typed by its schema; `NovelPlayer.Interaction` answers the frame with it once
+- `novel:replay` (`scene`, `scope`): The reader picked a chapter or scene in `ChapterSelect` or `SceneReplay`; inside a player the replay starts unless a listener calls `preventDefault()`
+- `novel:replay-voice` (`line`): The reader replayed a line's voice in `Memories`; inside a player the mixer plays it unless a listener calls `preventDefault()`
 
 ```tsx
 <NovelPlayer.Default
@@ -559,15 +561,15 @@ How the reader experiences the play, kept in the browser and never in the game s
 
 #### `SlotThumbnail` and `RangeSetting`
 
-`<SlotThumbnail state locale>` draws a saved stage as a miniature, and `<RangeSetting label name value min max step onInput>` one labeled slider that reports as the reader drags.
+`<SlotThumbnail state locale>` draws a saved stage as a miniature, and `<RangeSetting label name value min max step>` one labeled slider whose `<input>` fires a native `input` event as the reader drags, heard with `on("input", …)` in its `mix`.
 
 #### `Memories`, `Gallery`, `MusicRoom` and `EndingsList`
 
-The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, and replays a line's voice; `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens.
+The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, and replays a line's voice (outside a player, pass `voices` and play `novel:replay-voice`'s `line.voice` yourself); `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens.
 
 #### `ChapterSelect` and `SceneReplay`
 
-`ChapterSelect` lists the titled chapters and `SceneReplay` the titled scenes under their chapters. Inside a player, picking one starts a `"chapter"` or `"scene"` replay; outside one, `onSelect` reports the scene, to start with `replay: "chapter"` or `"scene"`.
+`ChapterSelect` lists the titled chapters and `SceneReplay` the titled scenes under their chapters. Picking one dispatches `novel:replay` with the `scene` to start from and its `scope`, `"chapter"` or `"scene"`. Inside a player the replay starts unless a listener prevents it; outside one, start it with `replay: event.scope`.
 
 #### `AudioMixer`
 
@@ -1033,6 +1035,7 @@ import type { StartOptions } from "@sdxc/novel";
 import type { Handle } from "remix/component";
 
 import { ChapterSelect, NovelPlayer } from "@sdxc/novel/ui";
+import { on } from "remix/component";
 
 import { novel } from "./novel.js";
 
@@ -1044,10 +1047,10 @@ function Title(handle: Handle<{ persistent: unknown }>) {
 			<ChapterSelect
 				novel={novel}
 				persistent={handle.props.persistent}
-				onSelect={(scene) => {
-					start = { scene, replay: "chapter", persistent: handle.props.persistent };
+				mix={on("novel:replay", (event) => {
+					start = { scene: event.scene, replay: event.scope, persistent: handle.props.persistent };
 					void handle.update();
-				}}
+				})}
 			/>
 		);
 	};

@@ -1,16 +1,17 @@
 /**
  * The DOM events of a player: a save, a settings change and an ending from its root, which an
- * app listens to with `on()` and stores, and an interaction's completion, which an app's
- * component dispatches for `NovelPlayer.Interaction` to answer the frame with. They all bubble.
+ * app stores; an interaction's completion, which `NovelPlayer.Interaction` answers the frame
+ * with; and the library screens' picks, whose default a listener may prevent. They all bubble.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { InteractionDeclaration } from "../declarations.js";
-import type { Ending, GameState } from "../frames.js";
+import type { InteractionDeclaration, SceneDeclaration } from "../declarations.js";
+import type { Ending, GameState, ReplayScope } from "../frames.js";
 import type { SchemaInput } from "../types.js";
 
+import type { MemoryLine } from "./library.js";
 import type { NovelSettings } from "./settings.js";
 
 declare global {
@@ -19,6 +20,8 @@ declare global {
 		"novel:settings": NovelSettingsEvent;
 		"novel:ending": NovelEndingEvent;
 		"novel:complete": InteractionCompleteEvent;
+		"novel:replay": NovelReplayEvent;
+		"novel:replay-voice": NovelReplayVoiceEvent;
 	}
 }
 
@@ -98,5 +101,47 @@ export class InteractionCompleteEvent<
 		super("novel:complete", { bubbles: true });
 		this.interaction = declaration.name;
 		this.output = output;
+	}
+}
+
+/**
+ * Dispatched as `novel:replay` by `ChapterSelect` and `SceneReplay` when the reader picks a
+ * reached entry. Inside a player the screen then starts the replay itself, unless a listener
+ * calls `preventDefault()`; outside one the listener starts it.
+ *
+ * @example on("novel:replay", (event) => play({ scene: event.scene, replay: event.scope }))
+ */
+export class NovelReplayEvent extends Event {
+	/** A chapter's first mapped scene, or the scene picked. */
+	readonly scene: SceneDeclaration;
+	/** `"chapter"` from `ChapterSelect`, `"scene"` from `SceneReplay`: where the replay ends. */
+	readonly scope: ReplayScope;
+
+	/**
+	 * @param scene - The scene to start from.
+	 * @param scope - How much of the story the replay plays.
+	 */
+	constructor(scene: SceneDeclaration, scope: ReplayScope) {
+		super("novel:replay", { bubbles: true, cancelable: true });
+		this.scene = scene;
+		this.scope = scope;
+	}
+}
+
+/**
+ * Dispatched as `novel:replay-voice` by `Memories` when the reader replays a line's voice.
+ * Inside a player the screen then plays it through the player's mixer, unless a listener calls
+ * `preventDefault()`; outside one the listener plays it.
+ *
+ * @example on("novel:replay-voice", (event) => play(event.line.voice))
+ */
+export class NovelReplayVoiceEvent extends Event {
+	/** The line, whose `voice` is the URL to play. */
+	readonly line: MemoryLine;
+
+	/** @param line - The remembered line whose voice the reader asked for. */
+	constructor(line: MemoryLine) {
+		super("novel:replay-voice", { bubbles: true, cancelable: true });
+		this.line = line;
 	}
 }

@@ -1,7 +1,7 @@
 /**
  * Chapter select and scene replay: the novel's titled chapters and titled scenes in declaration
- * order, the ones the reader has reached offered to play again and the rest shown locked. Each
- * reports the scene to start from; the player starts it as a replay.
+ * order, the ones the reader has reached offered to play again and the rest shown locked. A pick
+ * leaves as a cancelable `novel:replay` event, which a player starts as a replay by default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,6 +18,7 @@ import type { Novel } from "../novel.js";
 
 import type { NovelLabels } from "./settings.js";
 
+import { NovelReplayEvent } from "./events.js";
 import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
@@ -33,11 +34,6 @@ export namespace ChapterSelect {
 		 * while the screen shows, since a new value reads the library again.
 		 */
 		persistent?: unknown;
-		/**
-		 * Called with the scene to start: a chapter's first mapped scene, or the scene picked.
-		 * Inside a player it defaults to starting that scene as a replay.
-		 */
-		onSelect?: (scene: SceneDeclaration) => void;
 		labels?: Partial<Pick<NovelLabels, "loading" | "locked">>;
 	}
 }
@@ -47,26 +43,34 @@ export namespace SceneReplay {
 	export type Props = ChapterSelect.Props;
 }
 
-/** Starts a picked scene as a replay of `scope` in the player, or does nothing outside one. */
-function replayIn(
-	player: NovelPlayer.Context | undefined,
-	scope: ReplayScope,
-): (scene: SceneDeclaration) => void {
-	return (scene) => void player?.replay(scene, scope);
+/** Props of one row of a chapter or scene list. */
+interface EntryProps {
+	title: string;
+	name: string;
+	reached: boolean;
+	lockedLabel: string;
+	/** The scene a pick starts from, and how much the replay plays. */
+	scene: SceneDeclaration;
+	scope: ReplayScope;
 }
 
-/** One row of a chapter or scene list: its title, and a button while it is reached. */
-function Entry(
-	handle: Handle<{
-		title: string;
-		name: string;
-		reached: boolean;
-		lockedLabel: string;
-		onSelect: () => void;
-	}>,
-) {
+/**
+ * One row of a chapter or scene list: its title, and a button while it is reached. A pick
+ * dispatches `novel:replay`, then starts the replay in the enclosing player unless a listener
+ * prevented it; outside a player the listener alone acts.
+ */
+function Entry(handle: Handle<EntryProps>) {
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
+
+	/** Reports the pick from `button` and runs the player's default unless a listener prevented it. */
+	function select(button: HTMLButtonElement): void {
+		let { scene, scope } = handle.props;
+		let proceed = button.dispatchEvent(new NovelReplayEvent(scene, scope));
+		if (proceed) void player?.replay(scene, scope);
+	}
+
 	return () => {
-		let { title, name, reached, lockedLabel, onSelect } = handle.props;
+		let { title, name, reached, lockedLabel } = handle.props;
 		return (
 			<li data-name={name} data-reached={String(reached)}>
 				<button
@@ -86,7 +90,7 @@ function Entry(
 							cursor: "pointer",
 							"&:disabled": { opacity: 0.5, cursor: "not-allowed" },
 						}),
-						on("click", onSelect),
+						on("click", (event) => select(event.currentTarget)),
 					]}
 				>
 					{reached ? <Message i18nKey={title} /> : lockedLabel}
@@ -97,22 +101,16 @@ function Entry(
 }
 
 /**
- * Lists the titled chapters; picking a reached one reports its first mapped scene.
+ * Lists the titled chapters; picking a reached one dispatches `novel:replay` with its first
+ * mapped scene and the `"chapter"` scope.
  *
- * @example <ChapterSelect novel={novel} persistent={stored} onSelect={(scene) => start({ scene, replay: "chapter" })} />
+ * @example <ChapterSelect novel={novel} persistent={stored} mix={on("novel:replay", (event) => start(event.scene))} />
  */
 export function ChapterSelect(handle: Handle<ChapterSelect.Props>) {
 	let read = libraryReader(handle);
 	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 	return () => {
-		let {
-			novel: _novel,
-			persistent: _persistent,
-			onSelect = replayIn(player, "chapter"),
-			labels: overrides,
-			mix,
-			...rest
-		} = handle.props;
+		let { novel: _novel, persistent: _persistent, labels: overrides, mix, ...rest } = handle.props;
 		let source = librarySource(player, handle.props);
 		if (source === undefined) return null;
 		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
@@ -140,7 +138,8 @@ export function ChapterSelect(handle: Handle<ChapterSelect.Props>) {
 							name={chapter.name}
 							reached={chapter.reached}
 							lockedLabel={labels.locked}
-							onSelect={() => onSelect(chapter.scene)}
+							scene={chapter.scene}
+							scope="chapter"
 						/>
 					))}
 				</ol>
@@ -150,22 +149,16 @@ export function ChapterSelect(handle: Handle<ChapterSelect.Props>) {
 }
 
 /**
- * Lists the titled scenes under their chapters; picking a reached one reports it.
+ * Lists the titled scenes under their chapters; picking a reached one dispatches `novel:replay`
+ * with it and the `"scene"` scope.
  *
- * @example <SceneReplay novel={novel} persistent={stored} onSelect={(scene) => start({ scene, replay: "scene" })} />
+ * @example <SceneReplay novel={novel} persistent={stored} mix={on("novel:replay", (event) => start(event.scene))} />
  */
 export function SceneReplay(handle: Handle<SceneReplay.Props>) {
 	let read = libraryReader(handle);
 	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 	return () => {
-		let {
-			novel: _novel,
-			persistent: _persistent,
-			onSelect = replayIn(player, "scene"),
-			labels: overrides,
-			mix,
-			...rest
-		} = handle.props;
+		let { novel: _novel, persistent: _persistent, labels: overrides, mix, ...rest } = handle.props;
 		let source = librarySource(player, handle.props);
 		if (source === undefined) return null;
 		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
@@ -207,7 +200,8 @@ export function SceneReplay(handle: Handle<SceneReplay.Props>) {
 									name={entry.scene.name}
 									reached={entry.reached}
 									lockedLabel={labels.locked}
-									onSelect={() => onSelect(entry.scene)}
+									scene={entry.scene}
+									scope="scene"
 								/>
 							))}
 						</ol>

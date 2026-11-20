@@ -41,14 +41,13 @@ export namespace Extras {
 	}
 }
 
-/** Props of one screen's dialog. */
-interface ScreenDialogProps {
+/** Props of one screen's dialog; `mix` lands on the `<dialog>`, whose `toggle` reports it opening. */
+interface ScreenDialogProps extends Pick<Dialog.Props, "mix"> {
 	id: string;
 	title: string;
 	closeLabel: string;
 	/** True while the dialog is open, which is when its content renders and loads. */
 	open: boolean;
-	onToggle: (open: boolean) => void;
 	children?: RemixNode;
 }
 
@@ -139,7 +138,9 @@ export function Extras(handle: Handle<Extras.Props>) {
 						title={labels[label]}
 						closeLabel={labels.close}
 						open={open === screen}
-						onToggle={(shown) => toggle(screen, shown)}
+						mix={on("toggle", (event) =>
+							toggle(screen, (event as ToggleEvent).newState === "open"),
+						)}
 					>
 						{element}
 					</ScreenDialog>
@@ -155,7 +156,7 @@ export function Extras(handle: Handle<Extras.Props>) {
  */
 function ScreenDialog(handle: Handle<ScreenDialogProps>) {
 	return () => {
-		let { id, title, closeLabel, open, onToggle, children } = handle.props;
+		let { id, title, closeLabel, open, mix, children } = handle.props;
 		return (
 			<Dialog
 				id={id}
@@ -170,7 +171,7 @@ function ScreenDialog(handle: Handle<ScreenDialogProps>) {
 						userSelect: "text",
 						textAlign: "start",
 					}),
-					on("toggle", (event) => onToggle((event as ToggleEvent).newState === "open")),
+					mix,
 				]}
 			>
 				<Dialog.Header>

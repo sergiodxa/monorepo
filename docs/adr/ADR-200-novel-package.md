@@ -1236,3 +1236,12 @@ Made while opening the engine and the player to a game's own code:
   the output. Components take no callback props: a caller that needs the completion listens with
   `on("novel:complete", …)`. `name`, `component`, `respond`, `Interaction.ComponentProps` and
   `InteractionName` were removed.
+- **Library screens report picks as cancelable events.** `ChapterSelect` and `SceneReplay` dispatch
+  `novel:replay` (`NovelReplayEvent`: `scene`, `scope`) and `Memories` dispatches
+  `novel:replay-voice` (`NovelReplayVoiceEvent`: `line`), bubbling from the picked button. The
+  screens keep their defaults inside a player: once the event is dispatched, a replay starts or the
+  voice plays through the player's mixer, unless a listener called `preventDefault()`. Outside a
+  player there is no default, so the listener acts; `Memories` offers voices there only with
+  `voices`, since it cannot tell whether anyone listens. `onSelect` and `onReplayVoice` were
+  removed, and internal parts use native events (`toggle` on a screen's `<dialog>`, `input`
+  bubbling from `RangeSetting`'s slider) through `mix` instead of `onToggle` and `onInput`.
