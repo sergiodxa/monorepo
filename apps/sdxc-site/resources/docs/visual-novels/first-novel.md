@@ -18,6 +18,14 @@ assets are typed declarations, each scene is a module mapped onto its declaratio
 `NovelPlayer` plays the result with a textbox, menus, a backlog, saves, settings and extras. The
 rest of this section builds on the café.
 
+Here is the café, live. Click the stage or press Space to read on, and pick a different order
+to reach the other ending:
+
+<frame src="/frames/guides/first-novel/cafe">
+The café novel playing in a 16:9 stage: Mika behind the counter of a café on a rainy night,
+with the textbox, a menu of three orders and the player's controls.
+</frame>
+
 ```bash
 npm add @sdxc/i18n @sdxc/novel @sdxc/ui remix
 ```

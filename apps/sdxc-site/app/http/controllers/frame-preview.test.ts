@@ -104,6 +104,15 @@ describe("GET /frames/guides/:guide/:demo", () => {
 		expect(body).not.toContain("View code");
 	});
 
+	test("draws the café novel's player, which starts the play once it hydrates", async () => {
+		let response = await fetchApp("/frames/guides/first-novel/cafe");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("data-novel-player");
+		expect(body).toContain("data-novel-stage");
+	});
+
 	test("draws the demo itself in the page its stage frames", async () => {
 		let response = await fetchApp("/frames/guides/landing-pages/faq", {
 			headers: { "Sec-Fetch-Dest": "iframe" },
