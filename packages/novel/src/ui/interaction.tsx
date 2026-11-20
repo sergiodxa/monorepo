@@ -1,7 +1,7 @@
 /**
  * Draws the app's own components for custom frames: one `Interaction` part over the app's
  * `interactions()` map renders a function of the current frame, narrowed by its name, and
- * answers the frame when a component inside it dispatches `novel:complete`.
+ * answers the frame when a component inside it dispatches `novel:interaction:complete`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +58,7 @@ export namespace Interaction {
 /**
  * Renders its children function over the stage while the play stops at an interaction in
  * `interactions`, once the stage has settled; clicks inside it never advance the story. A
- * `novel:complete` from inside answers the frame it names through `frame.complete(output)`, once.
+ * `novel:interaction:complete` from inside answers the frame it names, once.
  *
  * @example <NovelPlayer.Interaction interactions={INTERACTIONS}>{(frame) => { switch (frame.interaction) { case "fishing": return <Fishing input={frame.input} />; } }}</NovelPlayer.Interaction>
  */
@@ -80,7 +80,7 @@ export function Interaction<Declarations extends Interaction.Map>(
 				data-novel-interaction={current.interaction}
 				mix={[
 					css({ position: "absolute", inset: 0, zIndex: 4 }),
-					on("novel:complete", (event) => {
+					on("novel:interaction:complete", (event) => {
 						if (player.frame !== current || answered === current) return;
 						if (event.interaction !== current.interaction) return;
 						answered = current;

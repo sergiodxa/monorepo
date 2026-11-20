@@ -19,7 +19,7 @@ declare global {
 		"novel:save": NovelSaveEvent;
 		"novel:settings": NovelSettingsEvent;
 		"novel:ending": NovelEndingEvent;
-		"novel:complete": InteractionCompleteEvent;
+		"novel:interaction:complete": InteractionCompleteEvent;
 		"novel:replay": NovelReplayEvent;
 		"novel:replay-voice": NovelReplayVoiceEvent;
 	}
@@ -79,9 +79,9 @@ export class NovelEndingEvent extends Event {
 }
 
 /**
- * Dispatched as `novel:complete` by an interaction's component when it is done, with the output
- * typed by the declaration's output schema. `NovelPlayer.Interaction` answers the current frame
- * with it when the frame is that interaction; the engine validates the output.
+ * Dispatched as `novel:interaction:complete` by an interaction's component when it is done,
+ * with the output typed by the declaration's output schema. `NovelPlayer.Interaction` answers
+ * the current frame with it when the frame is that interaction; the engine validates the output.
  *
  * @template Declaration - The interaction it completes.
  * @example root.dispatchEvent(new InteractionCompleteEvent(INTERACTIONS.fishing, { caught: 3 }))
@@ -98,7 +98,7 @@ export class InteractionCompleteEvent<
 	 * @param output - What it hands back to the scene.
 	 */
 	constructor(declaration: Declaration, output: SchemaInput<Declaration["output"]>) {
-		super("novel:complete", { bubbles: true });
+		super("novel:interaction:complete", { bubbles: true });
 		this.interaction = declaration.name;
 		this.output = output;
 	}

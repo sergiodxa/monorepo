@@ -353,7 +353,9 @@ function mount(props: Partial<NovelPlayer.Props> = {}, parts?: RemixNode) {
 					on("novel:save", (event) => events.save(event.slot, event.state)),
 					on("novel:settings", (event) => events.settings(event.settings)),
 					on("novel:ending", (event) => events.ending(event.ending)),
-					on("novel:complete", (event) => events.complete(event.interaction, event.output)),
+					on("novel:interaction:complete", (event) =>
+						events.complete(event.interaction, event.output),
+					),
 				]}
 			>
 				{parts === undefined ? (

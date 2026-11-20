@@ -53,13 +53,13 @@ describe(Interaction, () => {
 		expect(true).toBe(true);
 	});
 
-	test("types a completion's output by its declaration and bubbles it as novel:complete", () => {
+	test("types a completion's output by its declaration and bubbles it as novel:interaction:complete", () => {
 		let event = new InteractionCompleteEvent(INTERACTIONS.fishing, { caught: 3 });
 		expectTypeOf(event.interaction).toEqualTypeOf<"fishing">();
 		expectTypeOf(event.output).toEqualTypeOf<{ caught: number }>();
 		// @ts-expect-error -- fishing's output has no `opened`
 		void new InteractionCompleteEvent(INTERACTIONS.fishing, { opened: true });
-		expect(event.type).toBe("novel:complete");
+		expect(event.type).toBe("novel:interaction:complete");
 		expect(event.bubbles).toBe(true);
 		expect(event.interaction).toBe("fishing");
 		expect(event.output).toEqual({ caught: 3 });
