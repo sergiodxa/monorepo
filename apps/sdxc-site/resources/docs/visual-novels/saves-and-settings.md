@@ -140,9 +140,10 @@ select all read it, so storing `persist` is what fills them.
 
 ## Upgrade older saves
 
-When saved state changes shape in a way schema defaults cannot fill, raise the novel's
-`version` and add a step from the version before. Each step answers a `Result`, so a save no
-step can upgrade fails with `migration-failed` instead of loading half-converted:
+When saved state changes shape in a way schema defaults cannot fill, append a step to
+`migrate`. Saves are stamped with one more than the number of steps, and an older save runs
+every step after its version, in order. Each step answers a `Result`, so a save a step fails on
+answers `migration-failed` instead of loading half-converted:
 
 ```typescript {% title="app/initializers/novel.ts" %}
 import { createNovel } from "@sdxc/novel";
@@ -154,11 +155,11 @@ export const novel = createNovel({
 	scenes: SCENES,
 	state: STATE,
 	initial: SCENES.prologue.opening,
-	version: 2,
-	migrate: {
-		1: (save) =>
+	migrate: [
+		/** Version 1 to 2: adds warmth. */
+		(save) =>
 			success({ ...save, state: { ...(save.state as object), warmth: 0 } }),
-	},
+	],
 });
 ```
 
