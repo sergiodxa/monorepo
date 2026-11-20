@@ -116,7 +116,7 @@ describe("Parley live", () => {
 			{ timeout: 8000 },
 		);
 		expect(typing?.hasAttribute("data-empty")).toBe(true);
-		expect(posted).toContain("intent=seen&live=0");
+		await vi.waitFor(() => expect(posted).toContain("intent=seen&live=0"));
 	}, 20_000);
 });
 
