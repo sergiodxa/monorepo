@@ -19,7 +19,7 @@ import type { Novel } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 
 import { INTERNALS } from "../novel.js";
-import { readPersistent, recordKey } from "../persistent.js";
+import { recordKey } from "../persistent.js";
 
 import { resolveSource } from "./source.js";
 
@@ -158,7 +158,7 @@ export async function readLibrary(
 	locale: string,
 ): Promise<NovelLibrary> {
 	let internals = novel[INTERNALS]();
-	let record = readPersistent(persistent);
+	let record = internals.persistent(persistent);
 	let mapped = new Set(internals.mapped);
 	let declared = [...internals.scenes.values()].filter((scene) => mapped.has(scene.name));
 	let loaded = await Promise.all(

@@ -28,6 +28,7 @@ import type { AnyExtension, ExtensionMethods } from "./extensions.js";
 import type { Ending, Frame, GameState, ReplayScope, Reply, StopFrame } from "./frames.js";
 import type { Lazy } from "./lazy.js";
 import type { NovelLink, ReachedScene, ReachOptions } from "./links.js";
+import type { Persistent } from "./persistent.js";
 import type { Audio, Fraction, Position, PositionAlias, Stage } from "./stage.js";
 import type { SavedGame } from "./state.js";
 import type {
@@ -208,6 +209,8 @@ export interface NovelInternals {
 	 * (their `initial` value when absent), everything else by the novel's state schema.
 	 */
 	state(input: unknown): Result<StateRecord, Error>;
+	/** Reads stored persistent data with every extension's lasting slice, as a play would. */
+	persistent(input: unknown): Persistent;
 }
 
 /**
@@ -405,6 +408,7 @@ export class Novel {
 			},
 			start: (options, sink) => this.#start(options, sink),
 			state: (input) => parseState(this.#options.state, this.#extensions, input),
+			persistent: (input) => readPersistent(input, this.#extensions),
 		};
 	}
 

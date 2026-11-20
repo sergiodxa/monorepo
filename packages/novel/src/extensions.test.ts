@@ -11,6 +11,7 @@ import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import { INTERNALS } from "./novel.js";
 import { createTestPlay, explore } from "./test.js";
 
 import type {
@@ -385,6 +386,13 @@ describe("lasting data", () => {
 	test("refuses an extension with lasting data named like a field of the persistent record", () => {
 		let clashing = extension("endings", { persistent: { state: s.number(), initial: 0 } });
 		expect(() => fixture([clashing])).toThrow('"endings"');
+	});
+
+	test("reads stored persistent data with every lasting slice before a play starts", () => {
+		let read = fixture()
+			[INTERNALS]()
+			.persistent({ achievements: ["first"] });
+		expect(read).toMatchObject({ achievements: ["first"], visits: 0 });
 	});
 });
 

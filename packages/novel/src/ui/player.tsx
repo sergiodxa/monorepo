@@ -20,7 +20,7 @@ import type { Novel, StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 import type { NovelState } from "../types.js";
 
-import { readPersistent } from "../persistent.js";
+import { INTERNALS } from "../novel.js";
 
 import type { AudioMixer } from "./audio.js";
 import type { AutoBehavior } from "./behaviors/auto.js";
@@ -503,7 +503,9 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			return director.replaying;
 		},
 		get persistent() {
-			persistent ??= { value: director.persistent ?? storedPersistent(handle.props.start) };
+			persistent ??= {
+				value: director.persistent ?? storedPersistent(handle.props.novel, handle.props.start),
+			};
 			return persistent.value;
 		},
 		get labels() {
@@ -637,8 +639,10 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 }
 
 /** The persistent data a play passes in `start`, read once a screen asks, before the play runs. */
-function storedPersistent(start: StartOptions | undefined): Persistent | undefined {
-	return start?.persistent === undefined ? undefined : readPersistent(start.persistent);
+function storedPersistent(novel: Novel, start: StartOptions | undefined): Persistent | undefined {
+	return start?.persistent === undefined
+		? undefined
+		: novel[INTERNALS]().persistent(start.persistent);
 }
 
 NovelPlayer.Stage = Stage;
