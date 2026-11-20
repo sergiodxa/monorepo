@@ -1238,10 +1238,11 @@ Made while opening the engine and the player to a game's own code:
   `InteractionName` were removed.
 - **Library screens report picks as cancelable events.** `ChapterSelect` and `SceneReplay` dispatch
   `novel:replay` (`NovelReplayEvent`: `scene`, `scope`) and `Memories` dispatches
-  `novel:replay-voice` (`NovelReplayVoiceEvent`: `line`), bubbling from the picked button. The
-  screens keep their defaults inside a player: once the event is dispatched, a replay starts or the
-  voice plays through the player's mixer, unless a listener called `preventDefault()`. Outside a
-  player there is no default, so the listener acts; `Memories` offers voices there only with
-  `voices`, since it cannot tell whether anyone listens. `onSelect` and `onReplayVoice` were
+  `novel:replay-voice` (`NovelReplayVoiceEvent`: `line`), bubbling from the picked button. Once
+  the event is dispatched the screen runs its default unless a listener called `preventDefault()`:
+  inside a player a replay starts, or the voice plays through the player's mixer. Outside a player
+  chapter select and scene replay have no default, so the listener starts the replay, and Memories
+  plays the voice through a mixer of its own, made on first use like the music room's. A voiced
+  line always offers its voice; no prop switches a piece of a screen on or off. `onSelect` and `onReplayVoice` were
   removed, and internal parts use native events (`toggle` on a screen's `<dialog>`, `input`
   bubbling from `RangeSetting`'s slider) through `mix` instead of `onToggle` and `onInput`.

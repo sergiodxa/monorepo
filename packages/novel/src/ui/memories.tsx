@@ -20,11 +20,12 @@ import type { Novel } from "../novel.js";
 import type { MemoryLine } from "./library.js";
 import type { NovelLabels } from "./settings.js";
 
+import { AudioMixer } from "./audio.js";
 import { NovelReplayVoiceEvent } from "./events.js";
 import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
-import { DEFAULT_LABELS } from "./settings.js";
+import { DEFAULT_LABELS, DEFAULT_SETTINGS } from "./settings.js";
 
 export namespace Memories {
 	/** Props {@link Memories} accepts. */
@@ -36,14 +37,6 @@ export namespace Memories {
 		 * while the screen shows, since a new value reads the library again.
 		 */
 		persistent?: unknown;
-		/**
-		 * Whether a voiced line offers its voice again, which dispatches `novel:replay-voice`.
-		 * Inside a player the mixer plays it unless a listener prevents that; outside one, set
-		 * it and play the voice from the listener.
-		 *
-		 * @default true inside a player, false elsewhere
-		 */
-		voices?: boolean;
 		labels?: Partial<Pick<NovelLabels, "loading" | "noMemories" | "replayVoice">>;
 	}
 }
@@ -52,29 +45,37 @@ export namespace Memories {
  * Lists what the reader has read, scene by scene. Lazily mapped scenes load as the screen
  * opens, and it says so until they have.
  *
- * @example <Memories novel={novel} persistent={stored} voices mix={on("novel:replay-voice", (event) => play(event.line.voice))} />
+ * @example <Memories novel={novel} persistent={stored} mix={on("novel:replay-voice", (event) => play(event.line.voice))} />
  */
 export function Memories(handle: Handle<Memories.Props>) {
 	let read = libraryReader(handle);
 	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 
-	/** Reports a voice replay from `button`, then plays it through the player's mixer unless prevented. */
+	let own: AudioMixer | undefined;
+
+	handle.signal.addEventListener("abort", () => own?.dispose());
+
+	/** The player's mixer, or outside one the screen's own, made on first use. */
+	function mixer(): AudioMixer {
+		if (player !== undefined) return player.mixer;
+		own ??= new AudioMixer(DEFAULT_SETTINGS.volume);
+		return own;
+	}
+
+	/**
+	 * Reports a voice replay from `button`, then plays it through {@link mixer} unless a listener
+	 * prevented it.
+	 */
 	function replayVoice(button: EventTarget, line: MemoryLine): void {
 		let proceed = button.dispatchEvent(new NovelReplayVoiceEvent(line));
-		if (!proceed || line.voice === null || player === undefined) return;
-		void player.mixer.resume();
-		void player.mixer.playVoice(line.voice);
+		if (!proceed || line.voice === null) return;
+		let target = mixer();
+		void target.resume();
+		void target.playVoice(line.voice);
 	}
 
 	return () => {
-		let {
-			novel: _novel,
-			persistent: _persistent,
-			voices = player !== undefined,
-			labels: overrides,
-			mix,
-			...rest
-		} = handle.props;
+		let { novel: _novel, persistent: _persistent, labels: overrides, mix, ...rest } = handle.props;
 		let source = librarySource(player, handle.props);
 		if (source === undefined) return null;
 		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
@@ -144,7 +145,7 @@ export function Memories(handle: Handle<Memories.Props>) {
 												)}
 												<Message i18nKey={line.key} values={line.values} />
 											</div>
-											{line.voice === null || !voices ? null : (
+											{line.voice === null ? null : (
 												<Button
 													size="sm"
 													variant="ghost"

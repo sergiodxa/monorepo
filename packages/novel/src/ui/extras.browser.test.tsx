@@ -175,8 +175,10 @@ describe("Memories", () => {
 			<Memories
 				novel={fixture()}
 				persistent={STORED}
-				voices
-				mix={on("novel:replay-voice", (event) => replayed(event.line))}
+				mix={on("novel:replay-voice", (event) => {
+					event.preventDefault();
+					replayed(event.line);
+				})}
 			/>,
 		);
 		expect(result.$("[data-novel-memories]")!.textContent).toBe("Loading…");
@@ -192,11 +194,26 @@ describe("Memories", () => {
 		);
 	});
 
-	test("offers no voice outside a player unless asked to", async () => {
-		let result = mount(<Memories novel={fixture()} persistent={STORED} />);
+	test("plays a voice through its own mixer outside a player unless a listener prevents it", async () => {
+		let played = vi.spyOn(AudioMixer.prototype, "playVoice").mockResolvedValue(undefined);
+		let prevent = false;
+		let result = mount(
+			<Memories
+				novel={fixture()}
+				persistent={STORED}
+				mix={on("novel:replay-voice", (event) => {
+					if (prevent) event.preventDefault();
+				})}
+			/>,
+		);
 		let screen = await loaded(result, "[data-novel-memories]");
-		expect(screen.querySelectorAll("li")).toHaveLength(2);
-		expect(screen.querySelector("button")).toBeNull();
+		let voice = screen.querySelector<HTMLButtonElement>('[data-key="opening.hello"] button')!;
+		voice.click();
+		expect(played).toHaveBeenCalledWith("/voice/opening.hello.ogg");
+		prevent = true;
+		played.mockClear();
+		voice.click();
+		expect(played).not.toHaveBeenCalled();
 	});
 
 	test("says there is nothing to remember on a first playthrough", async () => {
