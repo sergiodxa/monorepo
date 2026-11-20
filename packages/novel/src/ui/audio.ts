@@ -1,7 +1,8 @@
 /**
  * The player's Web Audio mixer: one `AudioContext`, a gain per channel under a master gain,
  * music and ambience streamed through media elements, and sounds and voices played from
- * decoded buffers. It reconciles against each frame's audio, so it never replays a sound.
+ * decoded buffers. It reconciles against each frame's audio, so it never replays a sound. A Blob
+ * file streams through its object URL and decodes straight from its bytes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +12,7 @@ import type { Audio, AudioTrack } from "../stage.js";
 
 import type { AudioChannel, NovelSettings } from "./settings.js";
 
-import { resolveSource } from "./source.js";
+import { objectUrl, pickSource, resolveSource } from "./source.js";
 
 /** How long a changed music track crossfades, unless the track sets its own `fade`. */
 const DEFAULT_CROSSFADE_MS = 1000;
@@ -55,7 +56,7 @@ export class AudioMixer {
 	#music: Stream | null = null;
 	#ambience = new Map<string, Stream>();
 	#played = new Set<string>();
-	#buffers = new Map<string, Promise<AudioBuffer | null>>();
+	#buffers = new Map<string | Blob, Promise<AudioBuffer | null>>();
 	#voice: { url: string; source: AudioBufferSourceNode } | null = null;
 	#volume: NovelSettings["volume"];
 
@@ -153,19 +154,20 @@ export class AudioMixer {
 			if (this.#played.has(sound.occurrence)) continue;
 			this.#played.add(sound.occurrence);
 			if (silent) continue;
-			void this.#playBuffer(resolveSource(sound.src, locale), "sound", sound.volume ?? 1);
+			void this.#playBuffer(pickSource(sound.src, locale), "sound", sound.volume ?? 1);
 		}
 	}
 
 	/**
 	 * Plays a line's voice, stopping the previous one and lowering the music while it speaks.
 	 *
-	 * @param url - The voice file.
+	 * @param file - The voice file's URL, or the file itself.
 	 * @returns Once the voice ends, is stopped, or fails to load.
 	 */
-	async playVoice(url: string): Promise<void> {
+	async playVoice(file: string | Blob): Promise<void> {
 		this.stopVoice();
-		let buffer = await this.#buffer(url);
+		let url = typeof file === "string" ? file : objectUrl(file);
+		let buffer = await this.#buffer(file);
 		if (buffer === null) return;
 		let source = this.context.createBufferSource();
 		source.buffer = buffer;
@@ -186,11 +188,11 @@ export class AudioMixer {
 	/**
 	 * Fetches and decodes a sound or voice ahead of its line, so playing it later starts at once.
 	 *
-	 * @param url - The file.
+	 * @param file - The file's URL, or the file itself.
 	 * @returns Once the file is decoded, or failed to load.
 	 */
-	async preload(url: string): Promise<void> {
-		await this.#buffer(url);
+	async preload(file: string | Blob): Promise<void> {
+		await this.#buffer(file);
 	}
 
 	/** Stops the voice, which advancing past its line does. */
@@ -269,8 +271,8 @@ export class AudioMixer {
 	}
 
 	/** Plays a one-shot from its decoded buffer. */
-	async #playBuffer(url: string, channel: AudioChannel, volume: number): Promise<void> {
-		let buffer = await this.#buffer(url);
+	async #playBuffer(file: string | Blob, channel: AudioChannel, volume: number): Promise<void> {
+		let buffer = await this.#buffer(file);
 		if (buffer === null) return;
 		let source = this.context.createBufferSource();
 		source.buffer = buffer;
@@ -281,15 +283,21 @@ export class AudioMixer {
 		source.start();
 	}
 
-	/** Fetches and decodes a file once, answering `null` when it cannot be played. */
-	#buffer(url: string): Promise<AudioBuffer | null> {
-		let cached = this.#buffers.get(url);
+	/**
+	 * Decodes a file once, fetching a URL or reading a Blob's bytes, and answers `null` when it
+	 * cannot be played.
+	 */
+	#buffer(file: string | Blob): Promise<AudioBuffer | null> {
+		let cached = this.#buffers.get(file);
 		if (cached !== undefined) return cached;
-		let loading = fetch(url)
-			.then((response) => (response.ok ? response.arrayBuffer() : null))
+		let bytes: Promise<ArrayBuffer | null> =
+			typeof file === "string"
+				? fetch(file).then((response) => (response.ok ? response.arrayBuffer() : null))
+				: file.arrayBuffer();
+		let loading = bytes
 			.then((data) => (data === null ? null : this.context.decodeAudioData(data)))
 			.catch(() => null);
-		this.#buffers.set(url, loading);
+		this.#buffers.set(file, loading);
 		return loading;
 	}
 }

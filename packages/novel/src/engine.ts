@@ -49,6 +49,7 @@ import type { NovelState, PlayTools, StateRecord } from "./types.js";
 
 import { directiveAt, enterOption, menuAnchor, nextPath, optionOf } from "./anchors.js";
 import { NovelError } from "./errors.js";
+import { copyKeepingFiles } from "./files.js";
 import { REPLY } from "./frames.js";
 import { recordKey } from "./persistent.js";
 import { getPath, setPath, validate } from "./state.js";
@@ -227,7 +228,7 @@ export class PlayEngine {
 	 * @returns The next frame, an error frame for a refused reply, or the ending.
 	 */
 	async step(reply: Reply | undefined): Promise<Outcome> {
-		if (this.#current === null) return this.#reach(structuredClone(this.#live), []);
+		if (this.#current === null) return this.#reach(copyKeepingFiles(this.#live), []);
 		let work = this.#answer(this.#current, reply);
 		if (isFailure(work)) return this.#refuse(work.error);
 		let body = reply?.[REPLY];
@@ -247,7 +248,7 @@ export class PlayEngine {
 		if (this.#ended || this.#history.length < 2) return null;
 		this.#history.pop();
 		let previous = this.#history.pop() as Stop;
-		let outcome = await this.#reach(structuredClone(previous.snapshot), []);
+		let outcome = await this.#reach(copyKeepingFiles(previous.snapshot), []);
 		return outcome.kind === "frame" && outcome.frame.type !== "error" ? outcome.frame : null;
 	}
 
@@ -390,7 +391,7 @@ export class PlayEngine {
 		if (body.frame !== current.frame.id) {
 			return failure(new NovelError("stale-reply", `Frame ${body.frame} is no longer current.`));
 		}
-		let work = structuredClone(this.#live);
+		let work = copyKeepingFiles(this.#live);
 		let path = work.cursor.path as Path;
 		let frame = current.frame;
 		if (body.kind === "advance") {
@@ -458,7 +459,7 @@ export class PlayEngine {
 			}
 			if (isStop(directive)) {
 				work.random = random.state();
-				let snapshot = structuredClone(work);
+				let snapshot = copyKeepingFiles(work);
 				let frame = this.#frame(directive, work, tools);
 				if (frame === null) {
 					work.cursor.path = nextPath(path);
@@ -697,7 +698,7 @@ export class PlayEngine {
 		this.#frames += 1;
 		let id = `${this.#id}:${this.#frames}`;
 		let scene = work.cursor.scene;
-		let base = { id, scene, audio: structuredClone({ ...work.audio, voice: null }) };
+		let base = { id, scene, audio: copyKeepingFiles({ ...work.audio, voice: null }) };
 		switch (directive.type) {
 			case "say":
 			case "narrate": {
@@ -731,7 +732,7 @@ export class PlayEngine {
 					...base,
 					type: "line",
 					stage: frameStage(work.stage, ids),
-					audio: structuredClone({ ...work.audio, voice }),
+					audio: copyKeepingFiles({ ...work.audio, voice }),
 					speakers: speakers.map((speaker) =>
 						withDefined({ id: speaker.id, name: speaker.name }, { color: speaker.color }),
 					),
@@ -885,7 +886,7 @@ function frameStage(stage: Stage, speakers: Set<string>): FrameStage {
 			speaking: speakers.has(character.id),
 		})),
 	};
-	if (stage.exits !== undefined) shown.exits = structuredClone(stage.exits);
+	if (stage.exits !== undefined) shown.exits = copyKeepingFiles(stage.exits);
 	return shown;
 }
 

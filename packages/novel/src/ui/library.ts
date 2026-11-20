@@ -233,7 +233,7 @@ function voiceOf(novel: Novel, speaker: string, key: string, locale: string): st
 	let voice = options.voice;
 	if (voice === undefined) return null;
 	let locales = options.locales ?? Object.keys(options.messages ?? {});
-	let files: Record<string, string> = {};
+	let files: Record<string, string | Blob> = {};
 	if (locales.length === 0) {
 		let found = voice({ speaker, key });
 		if (found === undefined) return null;
@@ -241,7 +241,7 @@ function voiceOf(novel: Novel, speaker: string, key: string, locale: string): st
 	}
 	for (let declared of locales) {
 		let found = voice({ speaker, key, locale: declared });
-		let file = typeof found === "string" ? found : found?.[declared];
+		let file = typeof found === "string" || found instanceof Blob ? found : found?.[declared];
 		if (file !== undefined) files[declared] = file;
 	}
 	return Object.keys(files).length === 0 ? null : resolveSource(files, locale);

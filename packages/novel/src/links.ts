@@ -229,18 +229,23 @@ function push(walk: AssetWalk, kind: SceneAsset["kind"], id: string, source: Ass
 
 /**
  * The URLs of a file: the one URL, the locale's from a map (then its language's, then the
- * first), or every locale's when no locale is given.
+ * first), or every locale's when no locale is given. A Blob is already in memory, so it lists none.
  *
- * @param source - A URL or a map of locale to URL.
+ * @param source - A URL or a Blob, or a map of locale to either.
  * @param locale - The reader's locale, when known.
  * @returns The URLs to fetch.
  */
 export function urlsOf(source: AssetSource, locale?: string): string[] {
-	if (typeof source === "string") return [source];
-	if (locale === undefined) return Object.values(source);
+	if (typeof source === "string" || source instanceof Blob) return onlyUrls([source]);
+	if (locale === undefined) return onlyUrls(Object.values(source));
 	let language = locale.split("-")[0] ?? locale;
 	let picked = source[locale] ?? source[language] ?? Object.values(source)[0];
-	return picked === undefined ? [] : [picked];
+	return picked === undefined ? [] : onlyUrls([picked]);
+}
+
+/** The URLs among some files, leaving out the Blobs. */
+function onlyUrls(files: (string | Blob)[]): string[] {
+	return files.filter((file): file is string => typeof file === "string");
 }
 
 /** Drops repeated URLs, keeping each file's first use. */

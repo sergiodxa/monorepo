@@ -366,7 +366,8 @@ function Outcome(handle: Handle<OutcomeProps>) {
 
 /**
  * A background or full-screen image layer. It stays mounted while empty so a View Transition
- * can animate the scenery in and out; a custom transition's name is the image's class.
+ * can animate the scenery in and out; a custom transition's name is the image's class. A Blob
+ * file renders without `src` on a server, and hydration sets its object URL.
  */
 export function Scenery(handle: Handle<Stage.SceneryProps>) {
 	return () => {
@@ -394,7 +395,7 @@ export function Scenery(handle: Handle<Stage.SceneryProps>) {
 					<img
 						key={scenery.id}
 						alt=""
-						src={resolveSource(scenery.src, locale)}
+						src={resolveSource(scenery.src, locale) || undefined}
 						class={custom}
 						data-id={scenery.id}
 						data-transition={scenery.transition}
@@ -488,13 +489,13 @@ export function CharacterSprite(handle: Handle<Stage.CharacterProps>) {
 					}),
 				]}
 			>
-				{character.images.map((source) => {
+				{character.images.map((source, index) => {
 					let url = resolveSource(source, locale);
 					return (
 						<img
-							key={url}
+							key={url || `file-${index}`}
 							alt=""
-							src={url}
+							src={url || undefined}
 							mix={[
 								fadeOnRemove(),
 								css({

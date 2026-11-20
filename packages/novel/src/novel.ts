@@ -540,10 +540,10 @@ export class Novel {
 		if (voice === undefined) return null;
 		let locales = this.#locales();
 		if (locales.length === 0) return voice({ speaker, key }) ?? null;
-		let files: Record<string, string> = {};
+		let files: Record<string, string | Blob> = {};
 		for (let locale of locales) {
 			let found = voice({ speaker, key, locale });
-			let file = typeof found === "string" ? found : found?.[locale];
+			let file = typeof found === "string" || found instanceof Blob ? found : found?.[locale];
 			if (file !== undefined) files[locale] = file;
 		}
 		return Object.keys(files).length === 0 ? null : files;
@@ -675,8 +675,9 @@ export function hasMessage(catalog: MessageCatalog, key: string): boolean {
 	return typeof value === "string";
 }
 
-/** Reports whether a declared file has no URL to load: an empty one, or an empty locale map. */
+/** Reports whether a declared file has nothing to load: an empty URL, or an empty locale map. */
 function isEmptySource(source: AssetSource): boolean {
+	if (source instanceof Blob) return false;
 	return typeof source === "string" ? source === "" : Object.keys(source).length === 0;
 }
 

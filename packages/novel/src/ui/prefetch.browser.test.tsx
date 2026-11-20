@@ -1,7 +1,7 @@
 /**
  * Runtime prefetch in a real browser: the files of the scenes within reach warmed the way the
- * player uses them (images decoded, sounds into the mixer, music as prefetch links), each URL
- * once, `data:` URLs skipped, waiting work dropped on leaving a scene, and the player's wiring.
+ * player uses them (images decoded, sounds into the mixer, music as prefetch links), each URL once,
+ * `data:` URLs and Blobs skipped, waiting work dropped on leaving a scene, and the player's wiring.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,7 +53,7 @@ const CAST = cast({
 const ASSETS = assets({
 	backgrounds: { room: INLINE, cafe: "/prefetch/cafe.png", far: "/prefetch/far.png" },
 	music: { chill: "/prefetch/chill.ogg" },
-	sounds: { door: "/prefetch/door.wav" },
+	sounds: { door: "/prefetch/door.wav", chime: new Blob(["chime"], { type: "audio/wav" }) },
 });
 
 const OPENING = createScene(SCENES.opening, (ctx) => [
@@ -68,6 +68,7 @@ const CAFE = createScene(SCENES.cafe, (ctx) => [
 	ctx.play(ASSETS.music.chill),
 	ctx.enter(CAST.mika, { at: "left", expression: "smile" }),
 	ctx.play(ASSETS.sounds.door),
+	ctx.play(ASSETS.sounds.chime),
 	ctx.say(CAST.mika, "opening.lucky"),
 	ctx.goto(SCENES.far),
 ]);
@@ -131,6 +132,7 @@ describe(Prefetcher, () => {
 			"/prefetch/door.wav",
 		]);
 		expect(preload).toHaveBeenCalledWith("/prefetch/door.wav");
+		expect(preload).toHaveBeenCalledTimes(1);
 		expect(
 			[...document.head.querySelectorAll<HTMLLinkElement>('link[rel="prefetch"]')].map(
 				(link) => new URL(link.href).pathname,

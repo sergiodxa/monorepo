@@ -33,10 +33,11 @@ const ASSET = Symbol.for("@sdxc/novel.asset");
 const INTERACTION = Symbol.for("@sdxc/novel.interaction");
 
 /**
- * One media file: a URL, or a map of locale to URL for media with text in it. A URL from the
- * bundler is content-hashed; a `data:` URL from an inlined file works too.
+ * One media file, or a map of locale to file for media with text in it. A string is a URL to
+ * load (a bundler's content-hashed URL, or a `data:` URL); a Blob is a file the page already holds,
+ * such as audio or an image generated in the browser, played or drawn without a fetch.
  */
-export type AssetSource = string | Readonly<Record<string, string>>;
+export type AssetSource = string | Blob | Readonly<Record<string, string | Blob>>;
 
 /** A scene as `scene()` declares it, before `scenes()` names it. */
 export interface SceneLeaf {
@@ -404,7 +405,7 @@ export type AssetMap<Tree extends AssetTree> = {
 };
 
 /**
- * Names every asset by its group and key. Each file is a URL, or a map of locale to URL.
+ * Names every asset by its group and key. Each file is a URL or a Blob, or a map of locale to one.
  *
  * @param tree - Backgrounds, images, music, ambience and sounds.
  * @returns The same groups with every asset named.

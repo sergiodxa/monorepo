@@ -16,6 +16,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import type { FrameCharacter, FrameStage } from "../stage.js";
 
 import { columnOf, stillStage } from "./layout.js";
+import { objectUrl } from "./source.js";
 import { Stage } from "./stage.js";
 import { finiteAnimations, settle, stageImages } from "./transitions.js";
 
@@ -333,6 +334,29 @@ describe("Stage", () => {
 		expect(result.$('[data-novel-layer="background"]')!.style.viewTransitionName).toMatch(
 			/^novel-/,
 		);
+	});
+
+	test("draws a Blob background and sprite from one object URL per Blob", async () => {
+		let file = (color: string) =>
+			new Blob([decodeURIComponent(sprite(color).slice("data:image/svg+xml,".length))], {
+				type: "image/svg+xml",
+			});
+		let cafe = file("green");
+		let smile = file("pink");
+		let result = mount(
+			{
+				background: { id: "backgrounds.cafe", src: cafe },
+				image: null,
+				characters: [{ id: "mika", at: "1/3", images: [{ en: smile }], speaking: false }],
+			},
+			{ width: 800, height: 450 },
+		);
+		let background = result.$('[data-novel-layer="background"] img') as HTMLImageElement;
+		let drawn = result.$("[data-novel-character] img") as HTMLImageElement;
+		expect(background.getAttribute("src")).toBe(objectUrl(cafe));
+		expect(drawn.getAttribute("src")).toBe(objectUrl(smile));
+		await background.decode();
+		expect(background.naturalWidth).toBe(200);
 	});
 
 	test("draws a saved stage as a thumbnail with no transition names", () => {

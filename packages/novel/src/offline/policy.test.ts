@@ -143,7 +143,7 @@ describe("undeclared()", () => {
 });
 
 describe("the page's message", () => {
-	test("lists every declared file once, in every locale, without inlined ones", () => {
+	test("lists every declared file once, in every locale, without inlined ones or Blobs", () => {
 		let declared = scenes({ only: scene() });
 		let novel = createNovel({
 			scenes: declared,
@@ -157,7 +157,11 @@ describe("the page's message", () => {
 			assets: assets({
 				backgrounds: { cafe: "/bg/cafe.webp", dot: "data:image/png;base64,AA" },
 				images: { letter: { en: "/cg/letter-en.webp", ja: "/cg/letter-ja.webp" } },
-				sounds: { door: { src: "/sfx/door.ogg" } },
+				music: { theme: new Blob(["theme"], { type: "audio/wav" }) },
+				sounds: {
+					door: { src: "/sfx/door.ogg" },
+					chime: { src: { en: new Blob(["chime"]), ja: "/sfx/chime-ja.ogg" } },
+				},
 			}),
 			state: STATE,
 			initial: declared.only,
@@ -167,6 +171,7 @@ describe("the page's message", () => {
 			"/cg/letter-en.webp",
 			"/cg/letter-ja.webp",
 			"/sfx/door.ogg",
+			"/sfx/chime-ja.ogg",
 			"/mika/smile.webp",
 			"/ren/grin.webp",
 			"/voice/mika/hello.ogg",

@@ -16,21 +16,23 @@ import type { Audio } from "../stage.js";
 
 import { AudioMixer } from "./audio.js";
 import { DEFAULT_SETTINGS } from "./settings.js";
+import { objectUrl } from "./source.js";
 
 let mixer: AudioMixer | undefined;
 
 afterEach(() => {
+	vi.restoreAllMocks();
 	mixer?.dispose();
 	mixer = undefined;
 });
 
 /**
- * A silent mono WAV file of `ms` milliseconds as a blob URL, so buffers decode without a server.
+ * A silent mono WAV file of `ms` milliseconds, as a game generates one in the browser.
  *
  * @param ms - The file's length.
- * @returns The file's URL.
+ * @returns The file.
  */
-function wav(ms: number): string {
+function wavFile(ms: number): Blob {
 	let rate = 8000;
 	let samples = Math.round((rate * ms) / 1000);
 	let buffer = new ArrayBuffer(44 + samples * 2);
@@ -53,7 +55,17 @@ function wav(ms: number): string {
 	view.setUint16(34, 16, true);
 	text(36, "data");
 	view.setUint32(40, samples * 2, true);
-	return URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }));
+	return new Blob([buffer], { type: "audio/wav" });
+}
+
+/**
+ * A silent WAV file as a blob URL, so buffers decode without a server.
+ *
+ * @param ms - The file's length.
+ * @returns The file's URL.
+ */
+function wav(ms: number): string {
+	return URL.createObjectURL(wavFile(ms));
 }
 
 /** Audio with nothing playing, plus `patch`. */
@@ -126,6 +138,41 @@ describe(AudioMixer, () => {
 	test("settles at once for a voice file that fails to load", async () => {
 		let mix = await running();
 		await mix.playVoice("/missing-voice.ogg");
+		expect(mix.snapshot.voice).toBeNull();
+	});
+
+	test("decodes a Blob sound from its bytes, with no fetch", async () => {
+		let mix = await running();
+		let decode = vi.spyOn(mix.context, "decodeAudioData");
+		let fetching = vi.spyOn(globalThis, "fetch");
+		let chime = wavFile(50);
+		mix.reconcile(
+			audio({ sounds: [{ id: "sounds.chime", src: chime, occurrence: "chime-1" }] }),
+			"en",
+		);
+		await vi.waitFor(() => expect(decode).toHaveBeenCalledTimes(1));
+		expect(fetching).not.toHaveBeenCalled();
+		expect(mix.snapshot.sounds).toEqual(["chime-1"]);
+	});
+
+	test("streams a Blob music loop through its object URL", async () => {
+		let mix = await running();
+		let play = vi.spyOn(HTMLMediaElement.prototype, "play");
+		let theme = wavFile(400);
+		mix.reconcile(audio({ music: { id: "music.theme", src: { en: theme } } }), "en");
+		expect(mix.snapshot.music).toBe("music.theme");
+		expect(play).toHaveBeenCalledTimes(1);
+		let element = play.mock.contexts[0] as HTMLAudioElement;
+		expect(element.src).toBe(objectUrl(theme));
+		await vi.waitFor(() => expect(element.paused).toBe(false));
+	});
+
+	test("speaks a Blob voice", async () => {
+		let mix = await running();
+		let line = wavFile(200);
+		let ended = mix.playVoice(line);
+		await vi.waitFor(() => expect(mix.snapshot.voice).toBe(objectUrl(line)));
+		await ended;
 		expect(mix.snapshot.voice).toBeNull();
 	});
 
