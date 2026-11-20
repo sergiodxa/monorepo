@@ -149,6 +149,16 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain(`${listPackages().length} packages published under one npm scope`);
 	});
 
+	test("sends a moved guide and its markdown twin to their new address", async () => {
+		let page = await fetchApp("/docs/building-remix-apps/visual-novels");
+		let twin = await fetchApp("/docs/building-remix-apps/visual-novels.md");
+
+		expect(page.status).toBe(308);
+		expect(page.headers.get("Location")).toBe("/docs/visual-novels/first-novel");
+		expect(twin.status).toBe(308);
+		expect(twin.headers.get("Location")).toBe("/docs/visual-novels/first-novel.md");
+	});
+
 	test("answers 404 for a slug no file owns", async () => {
 		expect((await fetchApp("/docs/nothing/here")).status).toBe(404);
 	});

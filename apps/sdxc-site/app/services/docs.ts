@@ -94,6 +94,19 @@ export async function listGuides(): Promise<GuideSection[]> {
 	return Array.from(sections.values()).sort((a, b) => a.order - b.order);
 }
 
+/**
+ * Guides that moved, by their old slug, answered with a permanent redirect to the new one so a
+ * bookmark, a search result or a link from another site still reaches the guide.
+ */
+const MOVED_GUIDES: Readonly<Record<string, string>> = {
+	"building-remix-apps/visual-novels": "visual-novels/first-novel",
+};
+
+/** The slug a moved guide answers at now, or `null` for a slug that never moved. */
+export function movedGuide(slug: string): string | null {
+	return Object.hasOwn(MOVED_GUIDES, slug) ? (MOVED_GUIDES[slug] ?? null) : null;
+}
+
 /** The source of one guide, or `null` when no file answers to that slug. */
 export async function readGuide(slug: string): Promise<string | null> {
 	let load = guideLoaders[`${DOCS_PREFIX}${slug}.md`];
@@ -137,6 +150,8 @@ const SECTION_DESCRIPTIONS: Readonly<Record<string, string>> = {
 	Conventions: "The rules every package keeps: results over throws, naming, logging, validation.",
 	"Routing & forms": "Wire the router, validate input, translate pages and serve them to crawlers.",
 	Interface: "Build pages with remix/component: landings, search, shortcuts and calendars.",
+	"Visual novels":
+		"Write, test and play a visual novel: scenes, saves, interactions, extensions and the player.",
 	"HTTP APIs": "JSON APIs with problem details, OpenAPI, typed clients and safe writes.",
 	"Sign-in & access": "OpenID Connect, passkeys, two-factor, tokens, SSO and permissions.",
 	Security: "Webhooks, headers, signatures and keeping bots and abuse out.",

@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { redirect } from "@sdxc/http/response";
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
 import { MicroTime, mf } from "@sdxc/microformats/ui";
@@ -25,7 +26,7 @@ import notFound from "~/app/http/controllers/docs-not-found";
 import { articleSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { prepareArticle, tableOfContents } from "~/app/services/article";
-import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
+import { MARKDOWN_OPTIONS, movedGuide, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { AUTHOR_NAME, AUTHOR_URL, absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
@@ -43,6 +44,12 @@ const GUIDE_SOURCE_BASE =
 
 export default createAction(routes.docs.show, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
+	let moved = movedGuide(slug);
+	if (moved !== null) {
+		return redirect(routes.docs.show.href({ slug: moved }), {
+			status: redirect.Status.Permanent,
+		});
+	}
 	let tree = await buildGuidesNav();
 
 	let source = await readGuide(slug);

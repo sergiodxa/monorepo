@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { markdown, text } from "@sdxc/http/response";
+import { markdown, redirect, text } from "@sdxc/http/response";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -18,7 +18,7 @@ import {
 	readUiExportMarkdown,
 	readUtilityMarkdown,
 } from "~/app/services/catalogue-pages";
-import { readGuide } from "~/app/services/docs";
+import { movedGuide, readGuide } from "~/app/services/docs";
 import { renderIconSvg } from "~/app/services/icon-svg";
 import { findIcon } from "~/app/services/icons";
 import { findPackage, readPackageReadme } from "~/app/services/packages";
@@ -29,9 +29,16 @@ function missing(): Response {
 	return text("Not found\n", { status: 404 });
 }
 
-/** Serves one guide's own markdown source. */
+/** Serves one guide's own markdown source; a moved guide's twin redirects to the new twin. */
 export default createAction(routes.markdown.docs, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
+
+	let moved = movedGuide(slug);
+	if (moved !== null) {
+		return redirect(routes.markdown.docs.href({ slug: moved }), {
+			status: redirect.Status.Permanent,
+		});
+	}
 
 	let source = await readGuide(slug);
 	if (source === null) return missing();
