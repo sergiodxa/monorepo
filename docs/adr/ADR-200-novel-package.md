@@ -1246,3 +1246,79 @@ Made while opening the engine and the player to a game's own code:
   line always offers its voice; no prop switches a piece of a screen on or off. `onSelect` and `onReplayVoice` were
   removed, and internal parts use native events (`toggle` on a screen's `<dialog>`, `input`
   bubbling from `RangeSetting`'s slider) through `mix` instead of `onToggle` and `onInput`.
+
+### Blob sources, runtime picks, lasting data and player conveniences decisions
+
+Made while adding generated assets, scenes picked at play time, data kept across playthroughs,
+and autosave, toasts and read-line marks to the player:
+
+- **An asset source is a URL or a Blob.** Every asset kind, and every file of a per-locale map,
+  takes either. A string is a URL to load; a Blob is a file the page already holds, such as audio
+  rendered in the browser with `@sdxc/synth`, and it plays or draws without a fetch.
+- **One cached object URL per Blob, never revoked.** Images and streamed music or ambience use an
+  object URL made on first use and kept for the life of the page, so every replay, rollback and
+  redraw reuses it and no part has to know when the last one stopped showing it. Sounds and voices
+  decode straight from the Blob's bytes. The cost is one URL per declared Blob for the page's
+  life, which a declaration bounds.
+- **A Blob has no URL on the server.** A server render draws a Blob image without `src`, and
+  hydration sets its object URL. `novel.links()`, prefetching and `offlineAssets()` list URLs only,
+  since a Blob has nothing to fetch.
+- **Frames carry the declared Blob itself from stop to stop**, so the same Blob keeps its
+  identity, and its object URL, across stops; saves keep asset ids, which a loaded save
+  re-resolves to the current declaration.
+- **The interaction completion event is `novel:interaction:complete`.** The name says which part
+  of the player it belongs to; `InteractionCompleteEvent` keeps its name and payload.
+- **`goto.oneOf` and `call.oneOf` pick a scene at play time.** `goto` and `call` stay callable and
+  gain `oneOf(scenes, weight?)`, so a pick reads as the jump it is. A weight is a number or a
+  boolean read from the scene, the state and the tools: `true` counts as 1, while `false`, `0` and
+  anything not positive and finite leaves the candidate out; without a weight every candidate
+  weighs 1.
+- **No qualifying candidate falls through.** The play continues with the next directive and emits
+  no `error`, so a scene writes its default after the pick.
+- **One draw per pick, from the play's seeded stream.** A pick with any qualifying candidate takes
+  exactly one draw, also when `explore()` settles it, so the stream after a pick is the same
+  whichever scene it took, and a save, a reload or a rollback picks the same scene. A pick with no
+  qualifying candidate draws nothing. A `call.oneOf` gets a counted anchor like `call`, so a save
+  inside the called scene returns after the pick.
+- **Static tools treat every candidate as a jump.** `check()` reports a candidate without a module
+  and counts every candidate as reachable; `links()` and `reachable()` prefetch them all; the dev
+  tools graph draws one edge per candidate.
+- **`explore()` branches over each candidate.** A pick with more than one qualifying candidate forks
+  the walk, adding a `{ type: "pick", scene }` step after the reply whose run reached it, and
+  `follow()` settles picks from those steps instead of the draw, so every reported path replays.
+- **`notify` is a side effect of passing a directive.** `ctx.notify(key, values?)` is typed like
+  `narrate`, leaves the state unchanged and emits `notify` with `{ scene, key, values }` as the
+  play passes it, during skip included. It is not re-emitted when a rollback or a load lands past
+  it, since the reader already saw it, and it is suppressed in replays, which record nothing.
+  `check()` reports a notification key a catalog lacks as `missing-message`.
+- **Lasting extension data lives at the top level of the persistent record**, under the
+  extension's name beside `seen`, `chosen` and the rest, so the record `persist` emits is still
+  the one object an app stores. An extension that keeps lasting data cannot take the name of one
+  of those fields. A stored record without the slice, or one its schema refuses, reads as the
+  extension's `initial` value and keeps the rest of the record.
+- **`ctx.remember` writes lasting data through the play.** It validates the value, reports one the
+  schema refuses as `invalid-state` with the extension's name, and later directives of the same run
+  read the new value; the play emits `persist` at its stop. A replay never changes it.
+- **A rollback keeps lasting data**, like the rest of the persistent record, so passing a
+  `remember` again after one applies it again: repeated updaters must give the same result, such
+  as adding an id only when it is absent.
+- **Per-play state is optional on an extension.** An extension may keep lasting data only, and one
+  without per-play state adds no slice to the state or to saves.
+- **Lasting data is read before a play starts.** The player and the library screens read stored
+  persistent data with every extension's slice validated and filled, so a part reading
+  `player.persistent` sees it before the first stop.
+- **Autosave is a behavior that asks; the player saves.** `AutosaveModel` dispatches `save` when a
+  chapter starts, a new play's first chapter included, and every 20 lines; the player saves at the
+  stop it shows through its own save path, so an autosave reaches `novel:save` and the save screens
+  like any other, and never happens in a replay.
+- **The autosave slot is load-only.** It is `AUTO_SLOT` (`"auto"`), listed first on both save
+  screens and disabled on the save screen, so a reader never overwrites the save the game manages.
+- **Notifications are a queue behavior and a part.** `NotificationsModel` holds a bounded queue fed
+  by `unlock`, `ending` and `notify` outside replays, and by `push()` for a game's own news.
+  `NovelPlayer.Notifications` shows it with the Popover API (`popover="manual"`), so toasts sit in
+  the top layer over the stage, open dialogs and full screen without a z-index contest; it is a
+  polite live region, and reduced motion drops the entrance.
+- **Read lines reuse `frame.seen`.** `ReadModel` keeps the `seen` flag each line frame already
+  carries from persistent data, the same flag skip's read-only mode follows, so a line marked read
+  is exactly a line skip passes. The textbox and backlog mark read lines with `data-novel-read`,
+  and `--novel-read-color` (`inherit` by default) tints them.

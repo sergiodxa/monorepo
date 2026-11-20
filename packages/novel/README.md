@@ -173,6 +173,7 @@ let player = (
 		<NovelPlayer.Backlog />
 		<NovelPlayer.Saves slots={3} />
 		<NovelPlayer.Settings />
+		<NovelPlayer.Notifications />
 	</NovelPlayer>
 );
 ```
@@ -246,7 +247,18 @@ Names every character by its key, which the stage and saves refer to it by.
 
 #### `assets(tree: AssetTree): AssetMap`
 
-Names every file by its group and key (`backgrounds.cafe`). Groups are `backgrounds`, `images` (full-screen CGs), `music`, `ambience` and `sounds`; a file is a URL or a map of locale to URL, and a sound may be `{ src, caption }`. Saves keep the id, so a save loaded after a rebuild draws the file's current URL.
+Names every file by its group and key (`backgrounds.cafe`). Groups are `backgrounds`, `images` (full-screen CGs), `music`, `ambience` and `sounds`; a file is a URL, a `Blob`, or a map of locale to either, and a sound may be `{ src, caption }`. A string is loaded from its URL; a `Blob` is a file the page already holds, such as audio rendered in the browser, and plays or draws without a fetch. Saves keep the id, so a save loaded after a rebuild draws the file's current declaration.
+
+```typescript
+import { encodeWav, renderSong } from "@sdxc/synth";
+
+let song = renderSong({ seed: 7, style: "lofi", key: "A2", mode: "dorian", duration: 60 });
+
+let ASSETS = assets({
+	backgrounds: { cafe: "/bg/cafe.webp" },
+	music: { theme: new Blob([encodeWav(song)], { type: "audio/wav" }) },
+});
+```
 
 #### `interaction(options: { input: StandardSchemaV1; output: StandardSchemaV1 }): InteractionLeaf`
 
@@ -258,14 +270,29 @@ Names every interaction by its key, which a custom frame carries as `frame.inter
 
 #### `extension(name: string, options: ExtensionOptions): Extension`
 
-Declares a story extension: a slice of state at `state.<name>` and methods scenes call as `ctx.<name>.<method>(…)`. Pass it to `createNovel({ extensions })` and declare the list as `NovelTypes["extensions"]` to type both.
+Declares a story extension: methods scenes call as `ctx.<name>.<method>(…)`, a per-play slice of state at `state.<name>`, and lasting data at `persistent.<name>` that outlives every playthrough. Pass it to `createNovel({ extensions })` and declare the list as `NovelTypes["extensions"]` to type all three. Each slice is optional, so an extension may keep lasting data only.
 
-- `options.state`: The slice's schema, which validates it whenever a play starts or loads
+- `options.state`: The per-play slice's schema, which validates it whenever a play starts or loads
 - `options.initial`: The slice of a new play, and of a save made before the extension existed
-- `options.directives`: `(ctx) => methods`; `ctx` holds every scene directive plus `update(value | (value, state, tools) => next)` for the slice, and its callbacks read the declared state and that slice
+- `options.persistent`: `{ state, initial }` for the lasting slice, kept in the persistent record under the extension's name; a stored record without it, or one its schema refuses, reads as `initial`
+- `options.directives`: `(ctx) => methods`; `ctx` holds every scene directive plus `update(value | (value, state, tools) => next)` for the per-play slice and `remember(value | (value) => next)` for the lasting one, and callbacks read the lasting data as `tools.persistent.<name>`
 - `options.on`: Listeners for the novel's events, side effects only
 
-A scene records each call as data, and the novel replaces it with the method's directives when it loads the scene; a call to an extension the novel lacks fails with `load-failed`.
+```typescript
+let achievements = extension("achievements", {
+	persistent: { state: s.array(s.string()), initial: [] },
+	directives: (ctx) => ({
+		unlock: (id: string, key: LineKey) => [
+			ctx.remember((all) => (all.includes(id) ? all : [...all, id])),
+			ctx.notify(key),
+		],
+		ifUnlocked: (id: string, directives: Directive[]) =>
+			ctx.when((_state, tools) => tools.persistent.achievements.includes(id), directives),
+	}),
+});
+```
+
+A scene records each call as data, and the novel replaces it with the method's directives when it loads the scene; a call to an extension the novel lacks fails with `load-failed`. `remember` validates the new value and reports one its schema refuses on `error` (`invalid-state`, with the extension's name as subject), keeping the slice as it was. Later directives of the same run read the new value, and the play emits `persist` at its next stop. A rollback keeps lasting data, so a `remember` passed again after one applies again: write updaters that give the same result when repeated. A replay never changes it. An extension that keeps lasting data cannot take the name of a persistent field (`seen`, `chosen`, `endings`, `chapters`, `unlocked`).
 
 #### `createScene(declaration: SceneDeclaration, build: (ctx: SceneContext) => Directive[]): SceneModule`
 
@@ -284,6 +311,8 @@ Builds a scene's directives once, when its module loads. The scene is plain data
 - `set(path, value | (value, state, tools) => next)`: changes state at a dotted path
 - `goto(scene)`: continues in another scene
 - `call(scene)` and `back()`: plays another scene and returns to the next directive; `back()` returns early
+- `goto.oneOf(scenes, weight?)` and `call.oneOf(scenes, weight?)`: continue in, or play and return from, one scene drawn at play time. `weight(scene, state, tools)` answers a number or a boolean (`true` counts as 1; `false`, `0` and any number that is not positive and finite leave the scene out), and every candidate weighs 1 without it. The draw comes from the play's seeded stream, so a save, a reload or a rollback picks the same scene. When no candidate qualifies the play runs the next directive, so a scene falls through to a default
+- `notify(key, values?)`: emits `notify` with the message and its values as the play passes it, without a stop and leaving the state as it was; a rollback or a load that lands past it does not emit it again, and a replay never emits it
 - `wait(duration)`: a pause with no line, advanced after `duration` milliseconds
 - `play(asset, { volume?, fade? })`: starts music, an ambience loop or a one-shot sound
 - `stop("music" | "ambience" | ambienceAsset, { fade? })`: stops the music, every ambience loop, or one
@@ -307,7 +336,7 @@ Creates a novel from its declarations and story options; presentation settings b
 - `options.assets`: The `assets()` map, which a loaded save re-reads file URLs from
 - `options.interactions`: The `interactions()` map
 - `options.state`: The state schema; it gives a new play its defaults and validates every loaded save
-- `options.extensions`: Story extensions, each with a unique name that holds no dot and matches no built-in directive (`createNovel` throws otherwise)
+- `options.extensions`: Story extensions, each with a unique name that holds no dot and matches no built-in directive, `notify` included (`createNovel` throws otherwise)
 - `options.initial`: The scene a new play starts in
 - `options.rollback`: How many earlier stops `rollback()` can return to, `0` to turn it off (default `100`)
 - `options.positions`: Redefines the columns `left`, `center` and `right` stand in (default `1/3`, `2/3`, `3/3`)
@@ -324,7 +353,7 @@ One novel serves every play: it holds the declarations, the module mapped onto e
 - `novel.map(scene, module | lazy(…))`: maps a scene onto its module; mapping one twice throws
 - `novel.mapped`: every mapped scene, in mapping order
 - `novel.start(options?: StartOptions): Result<Play, NovelError>`: starts a play, or fails with `invalid-state` for a save or state the schemas refuse, `migration-failed` for a save no step upgrades, and `unmapped-scene` for a scene with no module
-- `novel.links(scene, { depth?, locale? }): Promise<NovelLink[]>`: the `<link>` descriptors for a page starting at `scene`; `preload` for the images and sounds it shows, `prefetch` for its music and voices and every file of the scenes within `depth` jumps (default `1`). It imports lazy modules on the way and leaves `data:` URLs out
+- `novel.links(scene, { depth?, locale? }): Promise<NovelLink[]>`: the `<link>` descriptors for a page starting at `scene`; `preload` for the images and sounds it shows, `prefetch` for its music and voices and every file of the scenes within `depth` jumps (default `1`), every candidate of a `oneOf` included. It imports lazy modules on the way and lists URLs only, leaving out `data:` URLs and Blobs
 - `novel.reachable(scene, { depth?, locale? }): Promise<ReachedScene[]>`: the same scenes, nearest first, each with its files, for a player to prefetch while the reader is in `scene`
 - `novel.on(name, listener): () => void` and `novel.off(name, listener)`: listen to an event of every play; a listener receives the payload and the play, and one that throws or rejects is reported on `error`
 - `novel.use(plugin): Novel`: installs a function that registers listeners, so plugins chain
@@ -348,30 +377,31 @@ The one error the engine reports, on `error` frames, `error` events and failed `
 | `unlock`  | `{ kind, id }`                     | An image (`kind: "image"`) or a track (`"music"`) appears for the first time in any playthrough |
 | `chapter` | `{ chapter, scene }`               | The play enters another chapter                                                                 |
 | `save`    | `{ slot, state }`                  | `play.save(slot)` runs, for the app to store `state`                                            |
-| `persist` | `Persistent`                       | Persistent data changes; the payload is the whole record                                        |
+| `notify`  | `{ scene, key, values }`           | The play passes a `notify`, outside replays                                                     |
+| `persist` | `NovelPersistent`                  | Persistent data changes; the payload is the whole record, lasting extension data included       |
 | `error`   | `NovelError`                       | A story problem the play continued past, or a failed listener                                   |
 
 #### Types from `@sdxc/novel`
 
 - `NovelTypes`: The interface an app augments with `state`, `messages`, `interactions` and `extensions`; without it state is any record and any key reads as a line.
 - `DeclaredState`, `NovelState`, `NovelMessages`, `LineKey`, `LineValues<Key>`, `SchemaInput<Schema>`: The declared state, that state with every extension's slice, the bundle read back from `NovelTypes`, every message key, the values argument a key requires, and what a schema accepts.
-- `Extension`, `AnyExtension`, `ExtensionOptions`, `ExtensionContext`, `ExtensionScope`, `ExtensionMethods`, `ExtensionListeners`, `ExtensionState`, `ExtensionCalls`: An extension and what `extension()` takes, the context and state its directives are written with, and the slices and calls every declared extension adds.
+- `Extension`, `AnyExtension`, `ExtensionOptions`, `ExtensionBaseOptions`, `StatelessExtensionOptions`, `LastingOptions`, `ExtensionContext`, `ExtensionScope`, `ExtensionMethods`, `ExtensionListeners`, `ExtensionState`, `ExtensionLasting`, `ExtensionPersistent`, `ExtensionCalls`: An extension and what `extension()` takes (with or without a per-play slice, and its lasting slice), the context and state its directives are written with, and the slices and calls every declared extension adds.
 - `StateRecord`, `StatePath<State>`, `PathValue<State, Path>`, `PathAccepting<State, Value>`, `DeepPartial<Value>`: State as any record, the dotted paths `set` takes, the value at a path, the paths whose value accepts an interaction's output, and the partial state a play or test starts from.
-- `PlayTools`, `StateCallback<Value>`, `ValuesInput<Values>`, `StoredCallback<Value>`: What callbacks receive beside the state, a read-only callback of the state, message values inline or computed, and a callback as a directive stores it.
+- `PlayTools`, `StateCallback<Value>`, `ValuesInput<Values>`, `StoredCallback<Value>`, `PickWeight<Scene>`, `StoredWeight`: What callbacks receive beside the state (`random`, and `persistent` with every lasting slice), a read-only callback of the state, message values inline or computed, a callback as a directive stores it, and a `oneOf` weight as written and as stored.
 - `SceneTree`, `SceneLeaf`, `ChapterLeaf`, `SceneMap`, `SceneDeclaration<Name>`, `ChapterInfo`, `ChapterMarker`: The scene tree before and after `scenes()` names it, a named scene with its optional title and chapter, and the chapter a group is branded with.
 - `CharacterOptions`, `CharacterLeaf`, `CharacterDeclaration`, `CastMap`, `CharacterImage`, `SpriteImage`, `LayerImage`, `NoImage`, `StagedCharacter`: A character before and after `cast()` names it, the three shapes its images take, and a character that can stand on stage.
-- `AssetSource`, `AssetKind`, `AssetTree`, `AssetMap`, `AssetDeclaration<Kind>`, `CaptionedSound`: A file's URL or locale map, the five kinds of media, and an asset before and after `assets()` names it.
+- `AssetSource`, `AssetKind`, `AssetTree`, `AssetMap`, `AssetDeclaration<Kind>`, `CaptionedSound`: A file's URL, Blob or locale map, the five kinds of media, and an asset before and after `assets()` names it.
 - `InteractionLeaf`, `InteractionDeclaration`, `InteractionMap`: An interaction before and after `interactions()` names it.
-- `SceneContext`, `SceneDirectives`, `SceneModule`, `Directive`, and each directive (`ExtensionDirective`, `ShowDirective`, `HideDirective`, `EnterDirective`, `ExitDirective`, `ExpressDirective`, `MoveDirective`, `SayDirective`, `NarrateDirective`, `ChooseDirective`, `WhenDirective`, `SetDirective`, `GotoDirective`, `CallDirective`, `BackDirective`, `WaitDirective`, `PlayDirective`, `StopDirective`, `CustomDirective`, `EndingDirective`): The builder a scene receives, the module it returns, and the plain data each directive is.
+- `SceneContext`, `SceneDirectives`, `SceneModule`, `GotoBuilder`, `CallBuilder`, `Directive`, and each directive (`ExtensionDirective`, `ShowDirective`, `HideDirective`, `EnterDirective`, `ExitDirective`, `ExpressDirective`, `MoveDirective`, `SayDirective`, `NarrateDirective`, `ChooseDirective`, `WhenDirective`, `SetDirective`, `GotoDirective`, `CallDirective`, `PickDirective`, `BackDirective`, `WaitDirective`, `PlayDirective`, `StopDirective`, `CustomDirective`, `EndingDirective`, `NotifyDirective`, `RememberDirective`): The builder a scene receives, its callable `goto` and `call` with their `oneOf`, the module it returns, and the plain data each directive is.
 - `EnterOptions<Character>`, `ExpressOptions<Character>`, `ChoiceOptions`, `ChoiceOption`, `ChoiceOptionDirective`, `MenuOptions<Options>`: The options `enter`, `express` and `choose` take, typed from the character's images and the menu's keys, and an option as the directive stores it.
 - `Frame`, `StopFrame`, `FrameBase`, `LineFrame`, `ChoiceFrame`, `FrameOption`, `PauseFrame`, `CustomFrame`, `InteractionFrame`, `ErrorFrame`, `Speaker`, `Reply`: What a play yields. Every stop carries its complete stage and audio; a line knows its speakers, voice and whether the reader has `seen` it; a reply comes only from the frame's `advance()`, `choose()` or `complete()`, and one from any other frame is refused. An error frame carries the stop to answer, or `null` when `next()` retries.
 - `Ending`, `ReplayScope`, `StoryPosition`, `GameState`: How a play finished, how far a replay plays, a position anchored on a message key, and the play as JSON with its version, stack, stage, audio, state, random stream and play time.
 - `Stage`, `StageScenery`, `StageCharacter`, `FrameStage`, `FrameCharacter`, `Position`, `Fraction`, `PositionAlias`, `SceneryTransition`, `CharacterTransition`: The stage as saved and as a frame shows it (with `speaking` focus and the characters that just left), columns as `n/d` or an alias, and the transition names; any name beyond the built-in ones is a CSS class the app styles.
 - `Audio`, `AudioTrack`, `AudioSound`: What each channel plays at a stop: one music loop, layered ambience, the one-shots since the previous stop, and the line's voice.
-- `Persistent`: What outlives a playthrough: lines read (with their values), options taken, endings, chapters and unlocked images and music.
+- `Persistent`, `NovelPersistent`: What outlives a playthrough: lines read (with their values), options taken, endings, chapters and unlocked images and music, and that record with every extension's lasting slice.
 - `Play`, `StartOptions`, `NovelOptions`, `VoiceLine`, `Migration`, `SavedObject`, `MessageCatalog`, `Lazy`: The play and the options above, and the shapes their callbacks and catalogs take.
 - `NovelLink`, `ReachOptions`, `ReachedScene`, `SceneAsset`: What `links()` and `reachable()` take and answer.
-- `NovelEvents`, `NovelEventName`, `NovelListener<Name>`, `NovelPlugin`, `SceneEvent`, `LineEvent`, `ChoiceEvent`, `UnlockEvent`, `ChapterEvent`, `SaveEvent`: The events above and their listeners.
+- `NovelEvents`, `NovelEventName`, `NovelListener<Name>`, `NovelPlugin`, `SceneEvent`, `LineEvent`, `ChoiceEvent`, `UnlockEvent`, `ChapterEvent`, `SaveEvent`, `NotifyEvent`: The events above and their listeners.
 - `NovelErrorCode`, `NovelErrorOptions`: What went wrong (`stale-reply`, `invalid-reply`, `unavailable-option`, `invalid-output`, `invalid-state`, `migration-failed`, `unmapped-scene`, `load-failed`, `endless-loop`, `dead-end-menu`, `missing-asset`, `missing-message`, `listener-failed`) and what an error is about.
 
 ### `@sdxc/novel/ui`
@@ -385,10 +415,10 @@ Owns a play and publishes it to the parts inside it; it draws nothing but its ch
 - `novel`: The novel, with its scenes mapped
 - `start`: The `StartOptions` the play starts from: a `scene`, `state`, `seed`, a save through `from`, and `persistent` data. The player reads it once, so mount a new player (change its `key`) to start another play
 - `settings`: The `StoredSettings` the app kept; missing fields take `DEFAULT_SETTINGS`
-- `saves`: The stored saves by slot name, which the save and load screens show; slots are `"quick"` and `"1"` upward
+- `saves`: The stored saves by slot name, which the save and load screens show; slots are `"auto"` (load-only), `"quick"` and `"1"` upward
 - `labels`: Replaces any of the interface's English words (`NovelLabels`)
 - `markup`: Line markup elements or `Trans.MarkupComponent`s beside `b`, `i`, `shake`, `speed` and `pause`
-- `behaviors`: Replaces any of the reader's behaviors (`reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`) with your own implementation of its interface; read once, at mount
+- `behaviors`: Replaces any of the reader's behaviors (`reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`) with your own implementation of its interface; read once, at mount
 - `prefetch`: How many jumps ahead to prefetch modules, images, sounds, voices and music as the play enters a scene, or `false` (default `1`)
 - `children`: The parts
 
@@ -418,7 +448,7 @@ The root carries `data-novel-player` with `data-phase`, `data-auto`, `data-skip`
 
 #### `NovelPlayer.Default`
 
-The whole player in one component: every part below, the six library screens under an Extras menu, and the three input mixins. It takes the provider's props, and its children (such as `NovelPlayer.Interaction`) are drawn on the stage. A game that needs a different slot count, no speaker focus or music titles composes its own player instead.
+The whole player in one component: every part below, notifications included, the six library screens under an Extras menu, and the three input mixins. It takes the provider's props, and its children (such as `NovelPlayer.Interaction`) are drawn on the stage. A game that needs a different slot count, no speaker focus or music titles composes its own player instead.
 
 ```tsx
 <NovelPlayer.Default novel={novel} settings={stored} saves={saves}>
@@ -433,7 +463,7 @@ The whole player in one component: every part below, the six library screens und
 What `handle.context.get(NovelPlayer)` answers inside a player: one stable object whose getters always read the current play, so a part or mixin can keep it from setup. It is a `TypedEventTarget` that dispatches `frame`, `phase` and `ending` as soon as each changes; the events carry no data, so a listener reads the getters.
 
 - State: `novel`, `element` (the root), `dialog` (the open dialog, or `null`), `frame`, `phase`, `ending`, `state` (the story state at the current stop, extension slices included, one value per stop), `error`, `stalled`, `instant` (true while skipping or under reduced motion), `hidden`, `replaying`, `persistent`, `labels`, `locale`, `markup` and `ids` (each screen's dialog id)
-- Behaviors, typed by their interfaces: `reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, plus `mixer` (`AudioMixer`) and `prefetcher` (`Prefetcher`)
+- Behaviors, typed by their interfaces: `reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`, plus `mixer` (`AudioMixer`) and `prefetcher` (`Prefetcher`)
 - Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument), `toggleFullscreen()`, `replay(scene, scope)`, `endReplay()`, `open(screen)` and `retry()`
 
 ```tsx
@@ -468,12 +498,12 @@ function PhoneChoices(handle: Handle) {
 
 #### Events: `NovelSaveEvent`, `NovelSettingsEvent`, `NovelEndingEvent`, `InteractionCompleteEvent`, `NovelReplayEvent` and `NovelReplayVoiceEvent`
 
-The player dispatches the first three from its root, an interaction's component dispatches `novel:complete`, and the library screens dispatch the last two; they all bubble, so `on()` on the component or any ancestor hears them with typed fields. No component takes a callback prop:
+The player dispatches the first three from its root, an interaction's component dispatches `novel:interaction:complete`, and the library screens dispatch the last two; they all bubble, so `on()` on the component or any ancestor hears them with typed fields. No component takes a callback prop:
 
-- `novel:save` (`slot`, `state`): The reader saved; the save also reaches the novel's `save` event
+- `novel:save` (`slot`, `state`): The reader saved, or the play autosaved into `"auto"`; the save also reaches the novel's `save` event
 - `novel:settings` (`settings`): The reader changed a setting; the event carries the whole `NovelSettings`
 - `novel:ending` (`ending`): The play reached an ending or ran out of story
-- `novel:complete` (`interaction`, `output`): `new InteractionCompleteEvent(declaration, output)` finishes an interaction, with `output` typed by its schema; `NovelPlayer.Interaction` answers the frame with it once
+- `novel:interaction:complete` (`interaction`, `output`): `new InteractionCompleteEvent(declaration, output)` finishes an interaction, with `output` typed by its schema; `NovelPlayer.Interaction` answers the frame with it once
 - `novel:replay` (`scene`, `scope`): The reader picked a chapter or scene in `ChapterSelect` or `SceneReplay`; inside a player the replay starts unless a listener calls `preventDefault()`
 - `novel:replay-voice` (`line`): The reader replayed a line's voice in `Memories`; it plays through the player's mixer, or outside one through the screen's own, unless a listener calls `preventDefault()`
 
@@ -510,16 +540,17 @@ Input as mixins on the player, so a game applies only the controls it wants. Eac
 Each part is a member of `NovelPlayer` and is also exported under its own name. Every one renders a real element that takes `mix`, and renders nothing while it has nothing to show.
 
 - `NovelPlayer.Stage` (`Stage`): The 16:9 stage, letterboxed inside any box, with its children above the characters; a click finishes a transition, then the line being typed, then advances. `focus` (default `true`) enlarges and raises the speaker and dims everyone else. Given a `stage` prop it draws that still stage instead of the play, which is how `SlotThumbnail` works
-- `NovelPlayer.Textbox` (`Textbox`): The line's box, a live region holding the whole line from the start; without children it draws `NamePlate`, `Line` and `NextIndicator`, and with children it draws those
+- `NovelPlayer.Textbox` (`Textbox`): The line's box, a live region holding the whole line from the start; without children it draws `NamePlate`, `Line` and `NextIndicator`, and with children it draws those. The box and its line carry `data-novel-read` on a line read in an earlier playthrough
 - `NovelPlayer.NamePlate` (`NamePlate`), `NovelPlayer.Line` (`Line`) and `NovelPlayer.NextIndicator` (`NextIndicator`): The speaker's name in their color, the typed line with its markup, and the sign that the line is complete
 - `NovelPlayer.Captions` (`Captions`): The captions of the frame's sounds
 - `NovelPlayer.Choices` (`ChoiceMenu`): A menu, with a locked option disabled with its reason, a taken one marked `data-chosen`, and a timed menu counting down
-- `NovelPlayer.Interaction` (`Interaction`): `interactions` (your `interactions()` map) and a children function of the custom frame, narrowed by `frame.interaction`, drawn over the stage while the play stops at one of those interactions; it answers the frame when `novel:complete` reaches it
+- `NovelPlayer.Interaction` (`Interaction`): `interactions` (your `interactions()` map) and a children function of the custom frame, narrowed by `frame.interaction`, drawn over the stage while the play stops at one of those interactions; it answers the frame when `novel:interaction:complete` reaches it
 - `NovelPlayer.QuickMenu` (`QuickMenu`): The buttons over the stage (auto, skip, backlog, save, load, quick save and load, settings, hide, full screen, and End replay during a replay), then its children
-- `NovelPlayer.Backlog` (`Backlog`): A modal dialog of the lines read, oldest first, each with a button that replays its voice
-- `NovelPlayer.Saves` (`SaveScreen`): The save and load dialogs, with `slots` numbered slots beside the quick one (default `6`); a replay offers no saving
+- `NovelPlayer.Backlog` (`Backlog`): A modal dialog of the lines read, oldest first, each with a button that replays its voice; an entry read before it showed carries `data-novel-read`
+- `NovelPlayer.Saves` (`SaveScreen`): The save and load dialogs, with the autosave slot first (load-only), then the quick one and `slots` numbered slots (default `6`); a replay offers no saving
 - `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting
 - `NovelPlayer.Extras` (`Extras`): An Extras menu offering the library screens given as its children, each in its own modal dialog
+- `NovelPlayer.Notifications` (`Notifications`): The `notifications` queue as toasts in a `popover="manual"` element, so they sit in the top layer over dialogs and full screen; a polite live region whose toasts each leave after `duration` milliseconds (default `4000`) and carry `data-kind`. Reduced motion drops their entrance
 
 #### Theme: `NOVEL_THEME_VARIABLES`
 
@@ -540,11 +571,11 @@ Every color, image, size and timing the parts draw is a `--novel-*` custom prope
 />
 ```
 
-The variables cover the player and stage (`letterbox`, `color`, `accent`, `stage-background`, transitions, character height), speaker focus (`focus-scale`, `focus-lift`, `focus-filter`, `dim-brightness`, `dim-filter`), the text (font, size, leading, tracking, color, shadow), the textbox (background, border, `border-image-*`, padding, radius, shadow, backdrop filter, position, inset, sizes), the name plate (background, `border-image-*`, font, color, offset), the next-line indicator (`next-content`, `next-image`, size, color, animation), the choices (gap, prompt, option background, border, `border-image-*`, hover, focus and disabled states, the countdown bar), the quick menu, the dialogs (background, color, `border-image-*`), captions, the ending overlay and errors.
+The variables cover the player and stage (`letterbox`, `color`, `accent`, `stage-background`, transitions, character height), speaker focus (`focus-scale`, `focus-lift`, `focus-filter`, `dim-brightness`, `dim-filter`), the text (font, size, leading, tracking, color, shadow), the textbox (background, border, `border-image-*`, padding, radius, shadow, backdrop filter, position, inset, sizes), the name plate (background, `border-image-*`, font, color, offset), the next-line indicator (`next-content`, `next-image`, size, color, animation), the choices (gap, prompt, option background, border, `border-image-*`, hover, focus and disabled states, the countdown bar), the quick menu, the dialogs (background, color, `border-image-*`), captions, the ending overlay, errors, read lines (`read-color`, `inherit` by default) and the notifications (`notification-inset`, `-gap`, `-background`, `-color`, `-border`, `-radius`, `-padding`, `-font`, `-font-size`, `-shadow`, `-animation`).
 
 #### Behaviors
 
-How the reader experiences the play, kept in the browser and never in the game state. Each slot is an interface the player relies on (`RevealBehavior`, `AutoBehavior`, `SkipBehavior`, `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`), extending `TypedEventTarget` and dispatching `change` when its state moves. The headless classes below implement them and are the defaults; a custom part subscribes to the player's instance (`player.reveal`, `player.auto`…), and `behaviors` replaces any of them.
+How the reader experiences the play, kept in the browser and never in the game state. Each slot is an interface the player relies on (`RevealBehavior`, `AutoBehavior`, `SkipBehavior`, `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`, `AutosaveBehavior`, `NotificationsBehavior`, `ReadBehavior`), extending `TypedEventTarget` and dispatching `change` when its state moves. The headless classes below implement them and are the defaults; a custom part subscribes to the player's instance (`player.reveal`, `player.auto`…), and `behaviors` replaces any of them.
 
 - `RevealModel`: A line's reveal: `begin(line, complete?)`, `start()`, `finish()` (the typing ended), `reveal()` (show it whole), `clear()`, with `status` (`idle`, `waiting`, `typing`, `revealed`), `complete` and `speed` in characters per second
 - `AutoModel`: Auto mode: `set(enabled)`, `toggle()`, `wait(line, advance)` (advances after the line's voice and `delay(line)`, which a subclass overrides), `cancel()`; `AUTO_PER_CHARACTER_MS` is the time added per character of an unvoiced line
@@ -553,6 +584,9 @@ How the reader experiences the play, kept in the browser and never in the game s
 - `SaveSlots`: The saves by slot: `get(slot)`, `put(slot, state)`, `replace(stored)` and `all`; `QUICK_SLOT` (`"quick"`) is the slot quick save writes
 - `SettingsModel`: The reader's settings: `value`, `set(next)`, `update(patch)`, `setVolume(channel, value)`, completed with `DEFAULT_SETTINGS`
 - `CountdownModel`: A timed menu's clock: `start(frame)`, `cancel()`, `endsAt`, and an `expire` event (`CountdownExpireEvent`) with the option `timeoutOption(frame)` picks, its `default` or else its first available option
+- `AutosaveModel`: Asks the player to save, through a `save` event, when a chapter starts (a new play's first one included) and every `every` lines (default `20`), into `slot` (default `AUTO_SLOT`, `"auto"`); the player saves through its own save path, so the save reaches `novel:save` and the save screens, and never during a replay
+- `NotificationsModel`: The toasts queue: `push({ text } | { key, values? })` with an optional `kind` (default `"custom"`), `dismiss(id)` and `entries`, holding at most `limit` toasts (default `5`). The player pushes `image` and `music` unlocks, an `ending` with how many of all endings are reached, and each `notify` outside replays
+- `ReadModel`: Whether the current line (`current`) and each backlog entry (`isRead(id)`) had been read before it showed, from the line frame's `seen`, which skip's read-only mode follows too
 - `Prefetcher`: Warms the files of the scenes ahead as the play enters a scene, four at a time
 
 #### `Message` and `lineMarkup(): Record<string, RemixElement | Trans.MarkupComponent>`
@@ -573,7 +607,7 @@ The library screens. Inside a player they read `novel` and the persistent data f
 
 #### `AudioMixer`
 
-Mixes the music, ambience, sound and voice channels through one `AudioContext`, created on first use. `new AudioMixer(volume)`; `resume()` from a user interaction, since browsers keep the context suspended until one; `reconcile(audio, locale, silent?)` brings it in line with a frame (crossfading music, layering ambience, playing each sound once); `playVoice(url)` lowers the music while a voice speaks; `preload(url)`, `stopVoice()`, `setVolume(volume)`, `snapshot` and `dispose()`.
+Mixes the music, ambience, sound and voice channels through one `AudioContext`, created on first use. `new AudioMixer(volume)`; `resume()` from a user interaction, since browsers keep the context suspended until one; `reconcile(audio, locale, silent?)` brings it in line with a frame (crossfading music, layering ambience, playing each sound once); `playVoice(source)` lowers the music while a voice speaks; `preload(source)` (each takes a URL or a Blob, which decodes from its bytes), `stopVoice()`, `setVolume(volume)`, `snapshot` and `dispose()`.
 
 #### `readLibrary(novel: Novel, persistent: unknown, locale: string): Promise<NovelLibrary>`
 
@@ -599,7 +633,7 @@ interface NovelSettings {
 }
 ```
 
-`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) and the rest (`replayVoice`, `retry`, `timeLeft`).
+`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`).
 
 #### `KEYMAP` and `gamepadActions(previous: readonly boolean[], current: readonly boolean[]): GamepadAction[]`
 
@@ -607,7 +641,7 @@ The default keyboard map `keyboardControls()` follows, by `KeyboardEvent.key`, a
 
 #### `resolveSource(source: AssetSource, locale: string): string`
 
-The URL to load for a file in a locale: the exact locale's, its language's (`es` for `es-MX`), or the first the map lists.
+The URL to load for a file in a locale: the exact locale's, its language's (`es` for `es-MX`), or the first the map lists. A Blob answers one object URL, made on first use and kept for the life of the page, so every replay reuses it. A server render of the stage draws a Blob image without `src`, and hydration sets it.
 
 #### `columnOf(at: Fraction): Column` and `stillStage(stage: Stage): FrameStage`
 
@@ -621,9 +655,10 @@ The scenery transitions the player draws itself as View Transitions (any other n
 
 - `NovelPlayer.Props`, `NovelPlayer.DefaultProps`, `NovelPlayer.Context`, `NovelPlayer.Screen`, `NovelPlayer.Markup`: The provider's props, `Default`'s, the context its parts read, the screens `open()` takes and the markup map.
 - `NovelPlayer.Behaviors`, `NovelPlayer.EventMap`: The `behaviors` prop and the context's events.
-- `RevealBehavior`, `AutoBehavior`, `SkipBehavior`, `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`: What the player relies on from each behavior.
+- `RevealBehavior`, `AutoBehavior`, `SkipBehavior`, `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`, `AutosaveBehavior`, `NotificationsBehavior`, `ReadBehavior`: What the player relies on from each behavior.
+- `NotificationInput`, `NotificationText`, `NotificationMessage`, `NovelNotification`: A toast as `push()` takes it, as plain text or a message to translate, and as the queue holds it.
 - `Interaction.Props<Map>`, `Interaction.Map`, `Interaction.Frame<Map>`, `Interaction.Rendered`: An interaction part's props, the map it takes, the custom frame of each interaction in it, and what the children function returns.
-- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Extras.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
+- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Extras.Props`, `Notifications.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
 - `keyboardControls.Options`: The keymap the keyboard mixin takes.
 - `RevealStatus`: Where a line's reveal stands.
 - `NovelThemeVariable`: A `--novel-*` variable name.
@@ -644,19 +679,19 @@ Starts a play a test drives by naming each reply, from the initial scene or from
 - `advance()`: starts the play or answers the current line or pause
 - `advanceUntil(type)`: advances through lines and pauses until a frame of `type`, which it resolves to
 - `choose(option)` and `complete(output)`: answer the current menu or interaction
-- `follow(steps)`: replays a path `explore()` reported
+- `follow(steps)`: replays a path `explore()` reported; its `pick` steps settle the play's `oneOf` picks in order instead of the seeded draw
 - `save(slot)`: emits `save` and answers the state
-- `frame`, `ending`, `state`, `game`, `scene`, `persistent`: where the play stands
+- `frame`, `ending`, `state`, `game`, `scene`, `persistent`: where the play stands, `persistent` with every lasting extension slice
 - `transcript` and `events`: every line, option and interaction so far, and every event emitted (the novel's own listeners receive them too)
 - `play`: the generator underneath, for `rollback()` or raw frames
 
 #### `check(novel: Novel): Promise<CheckReport>`
 
-Reads every mapped scene without playing a line. Errors break a play or a save: a key used twice in a scene, a jump to a scene with no module, an undeclared asset or character, a module that fails to load. Warnings may be intended: two characters in one column, a menu whose every option is conditional, a scene the initial one never reaches. `ok` is true when no problem is an error.
+Reads every mapped scene without playing a line. Errors break a play or a save: a key used twice in a scene, a jump to a scene with no module, an undeclared asset or character, a module that fails to load. Warnings may be intended: two characters in one column, a menu whose every option is conditional, a scene the initial one never reaches. Every `oneOf` candidate counts as reachable and is checked for a module, and a `notify` key a catalog lacks is a `missing-message` error scoped to its scene and locale. `ok` is true when no problem is an error.
 
 #### `explore(novel: Novel, options?: ExploreOptions): Promise<ExploreReport>`
 
-Plays every enabled option of every menu, and every output `interactions` answers for each interaction, from each seed, skipping a stop already reached with the same state, so loops and hubs end. It reports each ending with its shortest path, dead-end menus, unexplored interactions, errors, unreachable scenes, missing messages by locale, missing assets, which caps stopped the walk, and `check()`'s problems. Every path replays in `createTestPlay(novel, { seed }).follow(steps)`.
+Plays every enabled option of every menu, and every output `interactions` answers for each interaction, from each seed, skipping a stop already reached with the same state, so loops and hubs end. It reports each ending with its shortest path, dead-end menus, unexplored interactions, errors, unreachable scenes, missing messages by locale, missing assets, which caps stopped the walk, and `check()`'s problems. A `oneOf` with more than one candidate branches over every candidate it can take there, adding a `{ type: "pick", scene }` step after the reply whose run reached it, and `notify` keys count toward missing messages. Every path replays in `createTestPlay(novel, { seed }).follow(steps)`.
 
 - `options.scene`, `options.state`, `options.persistent`: Where every path starts
 - `options.seeds`: The seeds to explore from, one whole walk each (default `["explore"]`)
@@ -697,7 +732,7 @@ Follows the last play an event fired for, or one handed to `attach(play)`.
 
 #### `toMermaid(graph: SceneGraph): string` and `describeEvent(event: DevEvent): string`
 
-The scene graph as a [Mermaid](https://mermaid.js.org) flowchart (a box per scene grouped by chapter, solid arrows for `goto`, dotted for `call`, a rounded node per ending, and a slanted box for a scene with no module), and one line summing up a logged event.
+The scene graph as a [Mermaid](https://mermaid.js.org) flowchart (a box per scene grouped by chapter, solid arrows for `goto`, dotted for `call`, one per candidate of a `oneOf`, a rounded node per ending, and a slanted box for a scene with no module), and one line summing up a logged event.
 
 #### Types from `@sdxc/novel/dev`
 
@@ -720,7 +755,7 @@ Registers your worker script and sends it the novel's declared files, again when
 
 #### `offlineAssets(novel: Novel, extra?: Iterable<string>): string[]`
 
-Every file the novel declares (each asset in every locale, every sprite and layer) plus `extra`, each once in declaration order, leaving out `data:` and `blob:` URLs.
+Every file the novel declares (each asset in every locale, every sprite and layer) plus `extra`, each once in declaration order, leaving out `data:` and `blob:` URLs and Blobs.
 
 #### Types from `@sdxc/novel/offline`
 
@@ -1057,30 +1092,62 @@ function Title(handle: Handle<{ persistent: unknown }>) {
 }
 ```
 
-## Pattern: Achievements As A Plugin
+## Pattern: Achievements That Last Across Playthroughs
 
-A plugin is a function that registers listeners, so a feature ships as one call to `novel.use()`. Listeners run after a stop settles and never change the story.
+An achievement outlives the play that earned it, so it is lasting extension data: `remember` writes it into the persistent record the app already stores from `persist`, and `notify` shows its toast through `NovelPlayer.Notifications`. The updater gives the same list when repeated, which a rollback may do.
 
 ```typescript
-import type { NovelPlugin } from "@sdxc/novel";
+import type { Directive, LineKey } from "@sdxc/novel";
 
-import { novel } from "./novel.js";
+import { createScene, extension } from "@sdxc/novel";
+import * as s from "remix/data-schema";
 
-function achievements(unlock: (id: string) => void, byEnding: Record<string, string>): NovelPlugin {
-	return (novel) => {
-		novel.on("ending", ({ key }) => {
-			let id = key === null ? undefined : byEnding[key];
-			if (id !== undefined) unlock(id);
-		});
-	};
-}
+import { SCENES } from "./declarations.js";
 
-novel.use(
-	achievements((id) => localStorage.setItem(`achievement:${id}`, "1"), {
-		"endings.good": "GOOD_END",
+export let achievements = extension("achievements", {
+	persistent: { state: s.array(s.string()), initial: [] },
+	directives: (ctx) => ({
+		unlock: (id: string, key: LineKey) => [
+			ctx.remember((all) => (all.includes(id) ? all : [...all, id])),
+			ctx.notify(key),
+		],
+		ifUnlocked: (id: string, directives: Directive[]) =>
+			ctx.when((_state, tools) => tools.persistent.achievements.includes(id), directives),
 	}),
-);
+});
+
+let lake = createScene(SCENES.lake, (ctx) => [
+	ctx.when(
+		(state) => state.lastCatch.caught >= 3,
+		[ctx.achievements.unlock("angler", "achievements.angler")],
+	),
+]);
 ```
+
+A title screen reads the list from the stored record as `persistent.achievements`.
+
+## Pattern: A Day Loop With `goto.oneOf`
+
+A date sim plays one event a day, drawn from the candidates the state allows. The draw is seeded, so a reload or a rollback lands on the same day, and when no event qualifies the scene falls through to a quiet day.
+
+```typescript
+import { createScene } from "@sdxc/novel";
+
+import { SCENES } from "./declarations.js";
+
+export default createScene(SCENES.week.day, (ctx) => [
+	ctx.set("day", (day) => day + 1),
+	ctx.when((state) => state.day > 7, [ctx.goto(SCENES.week.weekend)]),
+	ctx.goto.oneOf(
+		[SCENES.week.beachMika, SCENES.week.libraryYuki, SCENES.week.rain],
+		(scene, state) => (scene === SCENES.week.libraryYuki ? (state.affection.yuki ?? 0) >= 10 : 2),
+	),
+	ctx.narrate("week.quiet"),
+	ctx.goto(SCENES.week.day),
+]);
+```
+
+`explore()` walks every event a day can draw, and a path it reports replays with `follow()`.
 
 ## Pattern: Developer Tools With Hot Reload
 
