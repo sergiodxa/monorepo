@@ -358,7 +358,7 @@ interface GameState {
 - **The stage and audio are saved**, so loading draws what was on screen without replaying the
   scene.
 - **New state fields take their schema default.** For larger changes,
-  `createNovel({ version, migrate })` upgrades an older `GameState` step by step.
+  `createNovel({ migrate })` upgrades an older `GameState` step by step.
 - **The package stores nothing.** It emits `GameState` as JSON on `save`, and the app keeps it in
   `localStorage`, IndexedDB, a server or anywhere else.
 
@@ -558,7 +558,6 @@ export const novel = createNovel({
 	interactions,
 	state: STATE,
 	initial: scenes.prologue.opening,
-	version: 1,
 });
 
 novel.map(
@@ -696,7 +695,7 @@ novel.on("persist", (persistent) => db.put("persistent", persistent, "main"));
 
 **Priority:** High
 
-1. Message-key anchoring, stage and audio snapshots, `version` and `migrate`, `start({ from })`
+1. Message-key anchoring, stage and audio snapshots, `migrate`, `start({ from })`
    validation.
 2. `Persistent` with seen-line values, chosen options, endings, chapters and unlocks.
 3. The event emitter, `use`, and `error` reporting with placeholders.
@@ -877,10 +876,10 @@ Made while building Phases 2 and 3, without a review, where this ADR left the de
   never on a resumed save or a return; `chapter` whenever the play enters a scene of another
   chapter than the scene before it; `unlock` only the first time in any playthrough; `ending` for
   every ending, `key: null` included, recording only keyed ones.
-- **`version` defaults to 1 and `migrate` is keyed by the version a step upgrades from.** A step
-  receives a copy and answers a `Result`; the novel stamps the next version. A throw, a failure, a
-  missing step or a save newer than the novel answers `migration-failed`; a save that is not an
-  object answers `invalid-state`.
+- **`migrate` is an ordered list, and the novel's version is `migrate.length + 1`.** The step at
+  index `n` upgrades a version `n + 1` save, so the version and the steps can never disagree. A
+  step receives a copy and answers a `Result`; the novel stamps the next version. A throw, a
+  failure or a save newer than the novel answers `migration-failed`; a non-object `invalid-state`.
 - **A counted anchor that no longer resolves resumes at its key's line**, and any other missing
   anchor at the scene's start.
 - **`error` carries a `NovelError` with `subject`** (and `locale` for a message). It reports

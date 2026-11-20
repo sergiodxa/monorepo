@@ -341,8 +341,7 @@ Creates a novel from its declarations and story options; presentation settings b
 - `options.rollback`: How many earlier stops `rollback()` can return to, `0` to turn it off (default `100`)
 - `options.positions`: Redefines the columns `left`, `center` and `right` stand in (default `1/3`, `2/3`, `3/3`)
 - `options.voice`: Finds a spoken line's voice file from `{ speaker, key, locale? }`, or answers `undefined`
-- `options.version`: The version saves are stamped with (default `1`)
-- `options.migrate`: Upgrade steps keyed by the version each upgrades from, each `(save) => Result<save, Error>`
+- `options.migrate`: Upgrade steps run in order, each `(save) => Result<save, Error>`; the step at index `n` upgrades a version `n + 1` save, and saves are stamped `migrate.length + 1`
 - `options.messages`: Catalogs by locale; a shown key a catalog lacks is reported on `error` and the frame still carries the key
 - `options.locales`: The locales `voice` is asked for, one call each (default the locales of `messages`)
 
@@ -352,7 +351,7 @@ One novel serves every play: it holds the declarations, the module mapped onto e
 
 - `novel.map(scene, module | lazy(…))`: maps a scene onto its module; mapping one twice throws
 - `novel.mapped`: every mapped scene, in mapping order
-- `novel.start(options?: StartOptions): Result<Play, NovelError>`: starts a play, or fails with `invalid-state` for a save or state the schemas refuse, `migration-failed` for a save no step upgrades, and `unmapped-scene` for a scene with no module
+- `novel.start(options?: StartOptions): Result<Play, NovelError>`: starts a play, or fails with `invalid-state` for a save or state the schemas refuse, `migration-failed` for a save a step fails on or one newer than the novel, and `unmapped-scene` for a scene with no module
 - `novel.links(scene, { depth?, locale? }): Promise<NovelLink[]>`: the `<link>` descriptors for a page starting at `scene`; `preload` for the images and sounds it shows, `prefetch` for its music and voices and every file of the scenes within `depth` jumps (default `1`), every candidate of a `oneOf` included. It imports lazy modules on the way and lists URLs only, leaving out `data:` URLs and Blobs
 - `novel.reachable(scene, { depth?, locale? }): Promise<ReachedScene[]>`: the same scenes, nearest first, each with its files, for a player to prefetch while the reader is in `scene`
 - `novel.on(name, listener): () => void` and `novel.off(name, listener)`: listen to an event of every play; a listener receives the payload and the play, and one that throws or rejects is reported on `error`
@@ -845,7 +844,7 @@ export let Game = clientEntry("/app/game.tsx#Game", function Game(handle: Handle
 });
 ```
 
-A save the schemas refuse fails `novel.start()` with `invalid-state`, and the player shows the error. When saved state changes shape in a way schema defaults cannot fill, raise the version and add a step:
+A save the schemas refuse fails `novel.start()` with `invalid-state`, and the player shows the error. When saved state changes shape in a way schema defaults cannot fill, append a step to `migrate`:
 
 ```typescript
 import { createNovel } from "@sdxc/novel";
@@ -857,8 +856,7 @@ let novel = createNovel({
 	scenes: SCENES,
 	state: STATE,
 	initial: SCENES.opening,
-	version: 2,
-	migrate: { 1: (save) => success({ ...save, state: { ...(save.state as object), charm: 0 } }) },
+	migrate: [(save) => success({ ...save, state: { ...(save.state as object), charm: 0 } })],
 });
 ```
 

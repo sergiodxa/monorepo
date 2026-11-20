@@ -21,6 +21,7 @@ import type {
 	Frame,
 	GameState,
 	LineFrame,
+	Migration,
 	NovelEventName,
 	NovelEvents,
 	NovelOptions,
@@ -840,11 +841,12 @@ describe("replay", () => {
 });
 
 describe("versions and migrations", () => {
-	test("stamps a save with the novel's version", async () => {
+	test("stamps a save with one version past its last migration", async () => {
 		let play = start();
 		await play.next();
 		expect(play.state.version).toBe(1);
-		let versioned = unwrap(fixture({ version: 4 }).start({ seed: "fixture" }));
+		let step: Migration = (game) => success(game);
+		let versioned = unwrap(fixture({ migrate: [step, step, step] }).start({ seed: "fixture" }));
 		await versioned.next();
 		expect(versioned.state.version).toBe(4);
 	});
@@ -857,14 +859,13 @@ describe("versions and migrations", () => {
 		let old = { ...saved, state: { coins: 7, affection: { mika: 3 } } };
 
 		let novel = fixture({
-			version: 3,
-			migrate: {
-				1: (game) => {
+			migrate: [
+				(game) => {
 					let { coins, ...rest } = game.state as { coins: number };
 					return success({ ...game, state: { ...rest, gold: coins } });
 				},
-				2: (game) => success({ ...game, state: { ...(game.state as object), charm: 50 } }),
-			},
+				(game) => success({ ...game, state: { ...(game.state as object), charm: 50 } }),
+			],
 		});
 		let resumed = unwrap(novel.start({ from: old }));
 		expect(line(frameOf(await resumed.next())).key).toBe("opening.hello");
@@ -872,17 +873,13 @@ describe("versions and migrations", () => {
 		expect(resumed.state.state).toEqual({ gold: 7, charm: 50, affection: { mika: 3 } });
 	});
 
-	test("refuses a save no migration upgrades", async () => {
+	test("refuses a save a migration fails on, a newer save and a non-object", async () => {
 		let play = start();
 		await play.next();
 		let saved = JSON.parse(JSON.stringify(play.state)) as GameState;
 
-		let missing = fixture({ version: 2 }).start({ from: saved });
-		expect(isFailure(missing) && missing.error.code).toBe("migration-failed");
-
 		let failing = fixture({
-			version: 2,
-			migrate: { 1: () => failure(new Error("no coins")) },
+			migrate: [() => failure(new Error("no coins"))],
 		}).start({ from: saved });
 		expect(isFailure(failing) && failing.error.message).toMatch(/no coins/);
 

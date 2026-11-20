@@ -87,8 +87,8 @@ export interface SavedObject {
 }
 
 /**
- * Upgrades a save from the version it is keyed by to the next one. It receives a copy of the
- * save, and the novel sets the new `version` on what it answers.
+ * Upgrades a save by one version: the step at index `n` turns a version `n + 1` save into a
+ * version `n + 2` one. It receives a copy of the save, and the novel stamps the new `version`.
  */
 export type Migration = (game: SavedObject) => Result<SavedObject, Error>;
 
@@ -128,14 +128,12 @@ export interface NovelOptions {
 	/** Finds the voice file for a spoken line, or answers `undefined` when it has none. */
 	voice?: (line: VoiceLine) => AssetSource | undefined;
 	/**
-	 * The version a save is stamped with. Raise it with a `migrate` step when saved state
-	 * changes shape in a way schema defaults cannot fill.
+	 * Upgrades older saves, run in order from the save's version. Append a step when saved state
+	 * changes shape in a way schema defaults cannot fill; saves are stamped `migrate.length + 1`.
 	 *
-	 * @default 1
+	 * @example migrate: [(save) => success({ ...save, state: { ...(save.state as object), warmth: 0 } })] // 1 → 2
 	 */
-	version?: number;
-	/** Upgrades a save step by step, keyed by the version each step upgrades from. */
-	migrate?: Readonly<Record<number, Migration>>;
+	migrate?: readonly Migration[];
 	/**
 	 * The app's catalogs by locale. A shown key a catalog lacks is reported on `error`, and the
 	 * frame still carries the key for the UI to show in its place.
@@ -506,7 +504,7 @@ export class Novel {
 
 	/**
 	 * Upgrades a save to this novel's version one `migrate` step at a time. A save without a
-	 * version is version 1; one newer than the novel, or one no step upgrades, is refused.
+	 * version is version 1; one newer than the novel is refused.
 	 */
 	#migrate(from: unknown): Result<unknown, NovelError> {
 		if (typeof from !== "object" || from === null || Array.isArray(from)) {
@@ -514,7 +512,7 @@ export class Novel {
 		}
 		let game = from as SavedObject;
 		let version = game.version ?? 1;
-		let target = this.#options.version ?? 1;
+		let target = this.#version();
 		if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
 			return failure(new NovelError("invalid-state", "The save's version is not a whole number."));
 		}
@@ -526,13 +524,18 @@ export class Novel {
 				),
 			);
 		}
-		while (version < target) {
-			let upgraded = runMigration(this.#options.migrate?.[version], game, version);
+		for (let step of (this.#options.migrate ?? []).slice(version - 1)) {
+			let upgraded = runMigration(step, game, version);
 			if (isFailure(upgraded)) return upgraded;
 			version += 1;
 			game = { ...upgraded.data, version };
 		}
 		return success(game);
+	}
+
+	/** The version this novel stamps on saves: one past the last `migrate` step's source. */
+	#version(): number {
+		return (this.#options.migrate?.length ?? 0) + 1;
 	}
 
 	/** Loads a mapped scene once, indexing its anchors. */
@@ -663,7 +666,7 @@ export class Novel {
 		let catalogs = Object.entries(this.#options.messages ?? {});
 		let runtime: NovelRuntime = {
 			rollback: this.#options.rollback ?? DEFAULT_ROLLBACK,
-			version: this.#options.version ?? 1,
+			version: this.#version(),
 			load: (scene) => this.#load(scene),
 			loaded: (scene) => this.#indexes.get(scene),
 			scene: (name) => this.#scenes.get(name),
@@ -704,17 +707,12 @@ function isEmptySource(source: AssetSource): boolean {
 	return typeof source === "string" ? source === "" : Object.keys(source).length === 0;
 }
 
-/** Runs one migration step, turning a missing step, a throw or a failure into a refusal. */
+/** Runs one migration step, turning a throw or a failure into a refusal. */
 function runMigration(
-	step: Migration | undefined,
+	step: Migration,
 	game: SavedObject,
 	version: number,
 ): Result<SavedObject, NovelError> {
-	if (step === undefined) {
-		return failure(
-			new NovelError("migration-failed", `No migration upgrades a version ${version} save.`),
-		);
-	}
 	let upgraded: Result<SavedObject, Error>;
 	try {
 		upgraded = step(structuredClone(game));
