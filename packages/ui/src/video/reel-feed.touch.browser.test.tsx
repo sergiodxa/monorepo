@@ -101,6 +101,19 @@ describe("ReelFeed under a finger", () => {
 		await vi.waitFor(() => expect(scroller.scrollTop).toBe(0), { timeout: 4000 });
 	});
 
+	test("in a looping feed, a fast flick past the last reel comes to rest on the first", async () => {
+		mounted = mountReels(5, 600, { loop: true });
+		await waitForActive(mounted, 5);
+		let scroller = scrollerOf(mounted);
+
+		await swipe(scroller, 590, 10);
+
+		await waitForActive(mounted, 0);
+		await settled(scroller);
+		expect(scroller.scrollTop).toBe(0);
+		expect(mounted.container.querySelector("[data-reel-active]")?.id).toBe("reel-0");
+	});
+
 	test("a short, slow drag settles back on the same reel", async () => {
 		mounted = mountReels(0, 600);
 		await waitForActive(mounted, 0);

@@ -29,6 +29,12 @@ const WHEEL_REST_MS = 220;
 /** The smallest wheel travel that counts as a flick, which drops a trackpad's stray nudges. */
 const WHEEL_THRESHOLD = 12;
 
+/**
+ * How long the feed holds still before it counts as at rest, for the browsers and touch flings
+ * that reach the end of the feed without a `scrollend`.
+ */
+const SCROLL_REST_MS = 150;
+
 /** What {@link REEL_CHANGE_EVENT} carries. */
 export interface ReelChangeDetail {
 	/** The reel's position in the feed, from 0. */
@@ -116,6 +122,8 @@ function wireFeed(feed: HTMLElement, scroller: HTMLElement, signal: AbortSignal)
 	let wheelTimer: ReturnType<typeof setTimeout> | undefined;
 	let hint: HTMLLinkElement | null = null;
 	let touchedAt: number | null = null;
+	let fingerDown = false;
+	let restTimer: ReturnType<typeof setTimeout> | undefined;
 
 	/** Moves the preload window, the playing reel and the address to the reel at `index`. */
 	function activate(index: number, announce: boolean) {
@@ -277,20 +285,58 @@ function wireFeed(feed: HTMLElement, scroller: HTMLElement, signal: AbortSignal)
 	/**
 	 * Settles a touch gesture on the reel next to the one it started from, so a long fling
 	 * moves one reel even where a browser carries its momentum past a snap stop.
+	 *
+	 * @returns Whether it scrolled again, which ends in another `scrollend`.
 	 */
-	function onScrollEnd() {
-		if (touchedAt === null) return;
+	function settleTouch(): boolean {
+		if (touchedAt === null) return false;
 		let height = scroller.clientHeight;
-		if (height === 0) return;
+		if (height === 0) return false;
 		let landed = Math.round(scroller.scrollTop / height);
 		let step = Math.sign(landed - touchedAt);
 		let last = clone === null ? reels.length - 1 : reels.length;
 		let allowed = Math.min(last, Math.max(0, touchedAt + step));
 		touchedAt = null;
 		let reel = allowed === reels.length ? clone : reels[allowed];
-		if (Math.abs(landed - allowed) === 0 || reel === undefined || reel === null) return;
+		if (Math.abs(landed - allowed) === 0 || reel === undefined || reel === null) return false;
 		scroller.scrollTo({ top: reel.offsetTop, behavior: scrollBehavior() });
 		if (reel !== clone) activate(allowed, true);
+		return true;
+	}
+
+	/**
+	 * Moves the feed from the loop clone to the real first reel it copies, in place. Hiding the
+	 * overflow for a frame ends any fling still running, which would carry on from the top.
+	 */
+	function wrapToFirst() {
+		touchedAt = null;
+		scroller.style.overflowY = "hidden";
+		scroller.scrollTo({ top: 0, behavior: "instant" });
+		requestAnimationFrame(() => scroller.style.removeProperty("overflow-y"));
+		if (current !== 0) activate(0, true);
+	}
+
+	/**
+	 * Wraps from the loop clone once the feed rests on it with no finger down, so no momentum
+	 * left from a fling carries on past the first reel after the jump.
+	 */
+	function wrapAtRest() {
+		if (fingerDown || clone === null) return;
+		if (Math.abs(scroller.scrollTop - clone.offsetTop) <= 1) wrapToFirst();
+	}
+
+	/** Settles the gesture, then wraps if it came to rest on the loop clone. */
+	function onScrollEnd() {
+		clearTimeout(restTimer);
+		if (settleTouch()) return;
+		wrapAtRest();
+	}
+
+	/** Restarts the rest timer, which stands in for a `scrollend` the browser never sends. */
+	function onScroll() {
+		if (clone === null) return;
+		clearTimeout(restTimer);
+		restTimer = setTimeout(wrapAtRest, SCROLL_REST_MS);
 	}
 
 	let observer = new IntersectionObserver(
@@ -298,8 +344,6 @@ function wireFeed(feed: HTMLElement, scroller: HTMLElement, signal: AbortSignal)
 			for (let entry of entries) {
 				if (!entry.isIntersecting || entry.intersectionRatio < 0.6) continue;
 				if (entry.target === clone) {
-					touchedAt = null;
-					scroller.scrollTo({ top: 0, behavior: "instant" });
 					activate(0, true);
 					continue;
 				}
@@ -322,7 +366,17 @@ function wireFeed(feed: HTMLElement, scroller: HTMLElement, signal: AbortSignal)
 	scroller.addEventListener("wheel", onWheel, { passive: false, signal });
 	scroller.addEventListener("click", onToggle, { signal });
 	feed.addEventListener("click", onStep, { signal });
-	scroller.addEventListener("touchstart", () => (touchedAt = current), { passive: true, signal });
+	scroller.addEventListener(
+		"touchstart",
+		() => {
+			touchedAt = current;
+			fingerDown = true;
+		},
+		{ passive: true, signal },
+	);
+	scroller.addEventListener("touchend", () => (fingerDown = false), { passive: true, signal });
+	scroller.addEventListener("touchcancel", () => (fingerDown = false), { passive: true, signal });
+	scroller.addEventListener("scroll", onScroll, { passive: true, signal });
 	scroller.addEventListener("scrollend", onScrollEnd, { signal });
 	scroller.addEventListener("timeupdate", onTime, { capture: true, signal });
 	document.addEventListener(
@@ -338,6 +392,7 @@ function wireFeed(feed: HTMLElement, scroller: HTMLElement, signal: AbortSignal)
 	signal.addEventListener("abort", () => {
 		observer.disconnect();
 		clearTimeout(wheelTimer);
+		clearTimeout(restTimer);
 		hint?.remove();
 		clone?.remove();
 		feed.removeAttribute(REEL_FEED_READY);
