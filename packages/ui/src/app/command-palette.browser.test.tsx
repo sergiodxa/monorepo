@@ -173,6 +173,17 @@ describe("CommandPalette", () => {
 		expect(visibleIds(dialog)[0]).toBe("create-recent");
 	});
 
+	test("opens fresh with Recent when reopened in the same task a command closed it", async () => {
+		let dialog = mount([]);
+		await open();
+		await userEvent.keyboard("create");
+		dialog.querySelector<HTMLElement>("#create [data-palette-control]")!.click();
+		dialog.showModal();
+
+		expect(dialog.querySelector<HTMLInputElement>("[data-command-input]")?.value).toBe("");
+		expect(visibleIds(dialog)[0]).toBe("create-recent");
+	});
+
 	test("filters by title and keywords, ignoring case and accents, and hides empty groups", async () => {
 		let dialog = mount();
 		await open();

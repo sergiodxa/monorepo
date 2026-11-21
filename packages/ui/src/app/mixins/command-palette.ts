@@ -332,6 +332,15 @@ function attach(dialog: HTMLDialogElement, props: PaletteController.Options, sig
 		showPage(null, "");
 	};
 
+	/**
+	 * Closes the palette and resets it in the same task, so reopening it before the dialog's
+	 * queued `close` event runs still shows an empty query and a fresh Recent group.
+	 */
+	let close = () => {
+		dialog.close();
+		reset();
+	};
+
 	/** Presses a row: a page opener opens its page; any other command runs and closes the palette. */
 	let run = (item: HTMLElement) => {
 		item.querySelector<HTMLElement>(`[${PALETTE_CONTROL_ATTRIBUTE}]`)?.click();
@@ -352,7 +361,7 @@ function attach(dialog: HTMLDialogElement, props: PaletteController.Options, sig
 			let id = control.closest(`[${PALETTE_ITEM_ATTRIBUTE}]`)?.getAttribute(PALETTE_ITEM_ATTRIBUTE);
 			let isFinderRow = control.closest(`[${PALETTE_FINDER_ATTRIBUTE}]`) !== null;
 			if (id != null && !isFinderRow) remember(props.remember, id);
-			dialog.close();
+			close();
 		},
 		{ signal },
 	);
@@ -399,7 +408,7 @@ function attach(dialog: HTMLDialogElement, props: PaletteController.Options, sig
 		global: true,
 		whileTyping: true,
 		run: () => {
-			if (dialog.open) dialog.close();
+			if (dialog.open) close();
 			else dialog.showModal();
 			return true;
 		},
