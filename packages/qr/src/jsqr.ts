@@ -6,9 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { compileFunction } from "node:vm";
 
 import type jsQRType from "jsqr";
 
@@ -20,17 +20,15 @@ const FIXED_V23_ALIGNMENT = "alignmentPatternCenters: [6, 30, 54, 78, 102]";
 
 /**
  * jsQR whose version-23 alignment table matches the standard, so a correct
- * encoder's version-23 symbols decode in the round-trip suite.
+ * encoder's version-23 symbols decode in the round-trip suite. The patched
+ * bundle is evaluated in memory, so test files loading it in parallel share no file.
  */
 function loadPatchedJsQR(): typeof jsQRType {
-	let require = createRequire(import.meta.url);
-	let entry = require.resolve("jsqr");
+	let entry = createRequire(import.meta.url).resolve("jsqr");
 	let source = readFileSync(entry, "utf8").replaceAll(BROKEN_V23_ALIGNMENT, FIXED_V23_ALIGNMENT);
-	let cacheDir = join(dirname(entry), "..", ".sdxc-jsqr-patched");
-	mkdirSync(cacheDir, { recursive: true });
-	let patched = join(cacheDir, "jsQR.js");
-	writeFileSync(patched, source);
-	return require(patched) as typeof jsQRType;
+	let module = { exports: {} as unknown };
+	compileFunction(source, ["module", "exports"], { filename: entry })(module, module.exports);
+	return module.exports as typeof jsQRType;
 }
 
 export default loadPatchedJsQR();
