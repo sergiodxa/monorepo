@@ -401,7 +401,6 @@ describe("LogViewer", () => {
 		expect(pill.hidden).toBe(true);
 
 		body.scrollTop = 0;
-		await new Promise((resolve) => setTimeout(resolve, 50));
 		send(
 			lines(20, 65)
 				.map((line) => line.text)

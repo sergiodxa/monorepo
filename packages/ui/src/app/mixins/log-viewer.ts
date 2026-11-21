@@ -271,12 +271,13 @@ function appendLine(live: LiveStep, raw: string): void {
 
 /**
  * Keeps the log on its newest line while the reader is there, and once they scroll up, shows
- * the "Jump to latest" pill instead of pulling them down.
+ * the "Jump to latest" pill instead of pulling them down. The returned function runs `write`,
+ * deciding from where the log sits just before it, so a scroll whose event is still queued counts.
  */
-function followTail(root: HTMLElement, signal: AbortSignal): () => void {
+function followTail(root: HTMLElement, signal: AbortSignal): (write: () => void) => void {
 	let body = root.querySelector<HTMLElement>('[data-slot="log-viewer-body"]');
 	let pill = root.querySelector<HTMLElement>("[data-log-jump]");
-	if (body === null) return () => {};
+	if (body === null) return (write) => write();
 	let following = true;
 	let toBottom = () => {
 		body.scrollTop = body.scrollHeight;
@@ -299,7 +300,9 @@ function followTail(root: HTMLElement, signal: AbortSignal): () => void {
 		{ signal },
 	);
 	if (root.ownerDocument.location.hash === "") toBottom();
-	return () => {
+	return (write) => {
+		following = body.scrollHeight - body.scrollTop - body.clientHeight <= FOLLOW_SLACK;
+		write();
 		if (following) toBottom();
 		else if (pill !== null) pill.hidden = false;
 	};
@@ -310,7 +313,7 @@ function followTail(root: HTMLElement, signal: AbortSignal): () => void {
  * one at the end. The step's `data-stream-end` becomes `done` or `failed`, and its Refresh link
  * shows again, since the page now holds a newer state than the log.
  */
-async function stream(step: HTMLElement, appended: () => void, signal: AbortSignal) {
+async function stream(step: HTMLElement, append: (write: () => void) => void, signal: AbortSignal) {
 	let src = step.getAttribute("data-log-stream") ?? "";
 	let live: LiveStep = {
 		step,
@@ -336,14 +339,14 @@ async function stream(step: HTMLElement, appended: () => void, signal: AbortSign
 			buffer += read.value;
 			let lines = buffer.split("\n");
 			buffer = lines.pop() ?? "";
-			for (let line of lines) appendLine(live, line.replace(/\r$/, ""));
+			if (lines.length > 0) {
+				append(() => {
+					for (let line of lines) appendLine(live, line.replace(/\r$/, ""));
+				});
+			}
 			step.setAttribute("data-log-next", String(live.next));
-			if (lines.length > 0) appended();
 		}
-		if (buffer !== "") {
-			appendLine(live, buffer);
-			appended();
-		}
+		if (buffer !== "") append(() => appendLine(live, buffer));
 		end("done");
 	} catch {
 		if (!signal.aborted) end("failed");
@@ -375,8 +378,8 @@ function attach(root: HTMLElement, options: LogViewerBehavior.Options, signal: A
 	attachSearch(root, options, signal);
 	let steps = [...root.querySelectorAll<HTMLElement>("[data-log-stream][data-stream-pending]")];
 	if (steps.length === 0) return showFirstError(root);
-	let appended = followTail(root, signal);
-	for (let step of steps) void stream(step, appended, signal);
+	let append = followTail(root, signal);
+	for (let step of steps) void stream(step, append, signal);
 }
 
 /**
