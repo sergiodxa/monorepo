@@ -37,7 +37,7 @@ const FILE = {
 
 /** Posts a form to a Hangwell action path with the given cookie. */
 async function post(page: string, fields: Array<[string, string]>, cookie = "") {
-	return await fetchApp(`/demo/apps/hangwell/${page}`, {
+	return await fetchApp(`/showcase/hangwell/demo/${page}`, {
 		method: "POST",
 		body: new URLSearchParams(fields),
 		headers: cookie === "" ? {} : { Cookie: cookie },
@@ -208,7 +208,7 @@ describe("Hangwell's checkout", () => {
 		let cookie = bag([FRAMED]);
 		for (let step of ["checkout", "checkout/shipping", "checkout/payment", "checkout/review"]) {
 			let body = await (
-				await fetchApp(`/demo/apps/hangwell/${step}`, { headers: { Cookie: cookie } })
+				await fetchApp(`/showcase/hangwell/demo/${step}`, { headers: { Cookie: cookie } })
 			).text();
 			expect(body).not.toMatch(/autocomplete="cc-|name="card/);
 		}
@@ -231,7 +231,9 @@ describe("Hangwell's checkout", () => {
 		expect(details.headers.get("Location")).toContain("checkout/shipping");
 		let withDraft = `${cookie}; ${cookiesOf(details)}`;
 		let placed = await post("checkout/place", [], withDraft);
-		expect(placed.headers.get("Location")).toMatch(/\/demo\/apps\/hangwell\/orders\/[0-9a-f-]{36}/);
+		expect(placed.headers.get("Location")).toMatch(
+			/\/showcase\/hangwell\/demo\/orders\/[0-9a-f-]{36}/,
+		);
 		let visitor = readVisitor(cookiesOf(placed));
 		expect(visitor.lines).toEqual([]);
 		expect(visitor.orders[0]?.lines).toHaveLength(2);
@@ -248,12 +250,12 @@ describe("Hangwell's orders", () => {
 
 	test("serve a bought print file as a download, and nothing else", async () => {
 		let order = "0190a1b2-0000-7000-8000-000000000102";
-		let file = await fetchApp(`/demo/apps/hangwell/files/orders/${order}/korrin-hills.svg`);
+		let file = await fetchApp(`/showcase/hangwell/demo/files/orders/${order}/korrin-hills.svg`);
 		expect(file.status).toBe(200);
 		expect(file.headers.get("Content-Disposition")).toContain("attachment");
 		expect(await file.text()).toContain("Hangwell demo · Korrin Hills");
 		expect(
-			(await fetchApp(`/demo/apps/hangwell/files/orders/${order}/fern-study.svg`)).status,
+			(await fetchApp(`/showcase/hangwell/demo/files/orders/${order}/fern-study.svg`)).status,
 		).toBe(404);
 	});
 });
@@ -287,7 +289,7 @@ describe("Hangwell's catalogue", () => {
 describe("Hangwell's product page", () => {
 	test("renders the variant's buy box and the reviews inside the page", async () => {
 		let body = await (
-			await fetchApp("/demo/apps/hangwell/p/port-anselm?format=print&size=a3")
+			await fetchApp("/showcase/hangwell/demo/p/port-anselm?format=print&size=a3")
 		).text();
 		expect(body).toContain("Add to bag");
 		expect(body).toContain("Unframed print");
@@ -301,7 +303,7 @@ describe("Hangwell's product page", () => {
 		).find(({ poster, size }) => framedStock(poster, size) === 0)!;
 		let body = await (
 			await fetchApp(
-				`/demo/apps/hangwell/p/${sold.poster.id}?format=framed&size=${sold.size}&frame=oak`,
+				`/showcase/hangwell/demo/p/${sold.poster.id}?format=framed&size=${sold.size}&frame=oak`,
 			)
 		).text();
 		expect(body).toContain("Notify me");

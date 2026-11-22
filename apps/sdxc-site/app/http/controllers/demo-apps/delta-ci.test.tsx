@@ -158,7 +158,7 @@ describe("Delta's job log", () => {
 
 describe("Delta's log stream", () => {
 	test("answers the running step's next lines as plain text, a line at a time", async () => {
-		let response = await fetchApp("/demo/apps/delta/streams/runs/815/job/4?after=14");
+		let response = await fetchApp("/showcase/delta/demo/streams/runs/815/job/4?after=14");
 		let reader = response.body!.pipeThrough(new TextDecoderStream()).getReader();
 		let first = await reader.read();
 		await reader.cancel();
@@ -170,7 +170,7 @@ describe("Delta's log stream", () => {
 	});
 
 	test("answers 404 for a part that isn't live", async () => {
-		let response = await fetchApp("/demo/apps/delta/streams/runs/812/job/3");
+		let response = await fetchApp("/showcase/delta/demo/streams/runs/812/job/3");
 
 		expect(response.status).toBe(404);
 	});

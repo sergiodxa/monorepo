@@ -1,5 +1,5 @@
 /**
- * Tests for `GET /philosophy` and `GET /showcase` — the two pages that argue for the
+ * Tests for `GET /philosophy` and the site-wide blocks around it — the pages that argue for the
  * collection rather than document it. Both quote numbers, and a number typed into
  * prose is the failure these assertions are here to catch: each one is checked against
  * the manifests it is supposed to have been counted from.
@@ -63,72 +63,6 @@ describe("GET /philosophy", () => {
 		/* The page argues from the decision itself, so a reader owes nothing to a record id. */
 		expect(body).not.toContain("ADR-");
 		expect(body).not.toContain("docs/adr");
-	});
-});
-
-describe("GET /showcase", () => {
-	test("lists exactly the curated applications", async () => {
-		let response = await fetchApp("/showcase");
-		let body = await response.text();
-
-		expect(response.status).toBe(200);
-
-		for (let entry of listShowcase()) expect(body).toContain(entry.title);
-		expect(body).not.toContain("pkmn");
-	});
-
-	test("quotes each application's count from its own manifest", async () => {
-		let body = await (await fetchApp("/showcase")).text();
-
-		for (let entry of listShowcase()) {
-			expect(body).toContain(`${entry.packageCount} packages`);
-		}
-	});
-
-	test("labels an application with no deployment instead of hiding it", async () => {
-		let body = await (await fetchApp("/showcase")).text();
-
-		expect(body).toContain("Source only");
-		expect(body).toContain("https://uptime.sergiodxa.com");
-		expect(body).toContain("https://books.sergiodxa.com");
-		expect(body).toContain("https://api.sdxc.dev");
-	});
-
-	test("describes books as the handbook funnel rather than a reading log", async () => {
-		let body = await (await fetchApp("/showcase")).text();
-
-		expect(body).toContain("React Router OAuth2 Handbook");
-		expect(body).not.toContain("reading log");
-	});
-
-	test("counts the curated set in the intro rather than quoting a fixed number", async () => {
-		let applications = listShowcase();
-		let body = await (await fetchApp("/showcase")).text();
-
-		expect(applications).toHaveLength(6);
-		expect(body).toContain("six things that run");
-		expect(body).toContain("Two of them have no deployment");
-	});
-});
-
-describe("GET /showcase layout", () => {
-	test("charts every application and links each bar to its card", async () => {
-		let body = await (await fetchApp("/showcase")).text();
-
-		for (let entry of listShowcase()) {
-			expect(body).toContain(`href="#app-${entry.directory}"`);
-			expect(body).toContain(`id="app-${entry.directory}"`);
-		}
-		expect(body).toContain(`against all ${readPackageFacts().published} published packages`);
-	});
-
-	test("closes on where to start instead of a card in the grid", async () => {
-		let body = await (await fetchApp("/showcase")).text();
-		let closing = body.slice(body.indexOf('id="build"'));
-
-		expect(closing).toContain("Build your own.");
-		expect(closing).toContain('href="/docs/getting-started/install-and-pin"');
-		expect(body.slice(0, body.indexOf('id="build"'))).not.toContain("Build your own");
 	});
 });
 

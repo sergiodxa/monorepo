@@ -1,5 +1,5 @@
 /**
- * `GET /demo/apps/:app/frames/*part` — one secondary part of a demo app screen as an HTML
+ * `GET /showcase/:slug/demo/frames/*part` — one secondary part of a demo app screen as an HTML
  * fragment, which the screen streams in after its shell. Each part is cached on its own,
  * per address and per value of the cookies its app reads, unless drawn for one visitor.
  *
@@ -15,15 +15,15 @@ import { findDemoApp } from "~/resources/views/demo-apps";
 import routes from "~/routes/web";
 
 /** The `:app` and `*part` the frame names. */
-const PARAMS = s.object({ app: s.string(), part: s.string() });
+const PARAMS = s.object({ slug: s.string(), part: s.string() });
 
 /**
  * Answers the part's fragment as the renderer streams it, so a blocking use of it inlines it
  * whole. An unknown app or part answers `404` with an empty fragment, which a frame draws as
  * nothing rather than as another page.
  */
-export default createAction(routes.demoFrames.app, async (ctx) => {
-	let { app: slug, part } = s.parse(PARAMS, ctx.params);
+export default createAction(routes.showcase.demoFrame, async (ctx) => {
+	let { slug, part } = s.parse(PARAMS, ctx.params);
 	let app = await findDemoApp(slug);
 	if (app === null || app.frame === undefined) return notFound();
 

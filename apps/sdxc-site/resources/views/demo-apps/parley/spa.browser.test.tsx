@@ -30,13 +30,13 @@ let posted: string[] = [];
  * with its real pauses, and every background post answered as the action route redirects.
  */
 const WORKER = setupWorker(
-	http.post(/\/demo\/apps\/parley\//, async ({ request }) => {
+	http.post(/\/showcase\/parley\/demo\//, async ({ request }) => {
 		posted.push(await request.text());
-		return new HttpResponse(null, { status: 303, headers: { Location: "/demo/apps/parley" } });
+		return new HttpResponse(null, { status: 303, headers: { Location: "/showcase/parley/demo" } });
 	}),
-	http.get(/\/demo\/apps\/parley\/streams\//, ({ request }) => {
+	http.get(/\/showcase\/parley\/demo\/streams\//, ({ request }) => {
 		let url = new URL(request.url);
-		let part = url.pathname.replace(/^\/demo\/apps\/parley\/streams\//, "");
+		let part = url.pathname.replace(/^\/showcase\/parley\/demo\/streams\//, "");
 		let stream = parley.stream?.(part, { page: part, url, cookie: null });
 		if (stream === null || stream === undefined) return new HttpResponse(null, { status: 404 });
 		return new HttpResponse(stream.pipeThrough(new TextEncoderStream()), {
@@ -78,9 +78,9 @@ describe("Parley as a single-page app", () => {
 		let sidebar = document.querySelector("#parley-sidebar");
 
 		press(document.querySelector('a[data-main-nav="c:launch-v3"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/parley/c/launch-v3"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/parley/demo/c/launch-v3"));
 		press(document.querySelector('[data-slot="message-group-thread"][href*="thread=l3"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/parley/c/launch-v3?thread=l3"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/parley/demo/c/launch-v3?thread=l3"));
 
 		expect(document.querySelector("#parley-sidebar")).toBe(sidebar);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
@@ -88,8 +88,8 @@ describe("Parley as a single-page app", () => {
 			"AVFoundation",
 		);
 		expect(mounted.requests.slice(-2)).toEqual([
-			"GET /demo/apps/parley/c/launch-v3 main",
-			"GET /demo/apps/parley/c/launch-v3?thread=l3 main",
+			"GET /showcase/parley/demo/c/launch-v3 main",
+			"GET /showcase/parley/demo/c/launch-v3?thread=l3 main",
 		]);
 	});
 });

@@ -84,7 +84,7 @@ function FrameProbe(handle: Handle) {
 function answer(src: string, target: string | undefined): ReadableStream<Uint8Array> | null {
 	if (target === undefined) return null;
 	let url = new URL(src, location.origin);
-	let page = url.pathname.replace(/^\/demo\/apps\/chorus\/?/, "");
+	let page = url.pathname.replace(/^\/showcase\/chorus\/demo\/?/, "");
 	let node = chorus.target?.(target, { page, url, cookie: null });
 	if (node === null || node === undefined || node instanceof Promise) return null;
 	return renderToStream(node, {
@@ -180,7 +180,7 @@ function mountedFrame(name: string): FrameHandle {
  * action does for a request carrying `X-Optimistic-Toggle`, and is kept for the test to read.
  */
 const WORKER = setupWorker(
-	http.post(/\/demo\/apps\/chorus\//, ({ request }) => {
+	http.post(/\/showcase\/chorus\/demo\//, ({ request }) => {
 		posted.push({
 			url: new URL(request.url).pathname,
 			toggle: request.headers.has("x-optimistic-toggle"),
@@ -406,7 +406,7 @@ describe("Chorus's New post dialog", () => {
 		let sent: string[] = [];
 		let opened: string[] = [];
 		WORKER.use(
-			http.post(/\/demo\/apps\/chorus\/compose$/, async ({ request }) => {
+			http.post(/\/showcase\/chorus\/demo\/compose$/, async ({ request }) => {
 				let text = (await request.formData()).get("text");
 				sent.push(typeof text === "string" ? text : "");
 				return new HttpResponse(null, {
@@ -414,7 +414,7 @@ describe("Chorus's New post dialog", () => {
 					headers: { Location: `${permalink}?toast=posted` },
 				});
 			}),
-			http.get(/\/demo\/apps\/chorus\/post\//, () => HttpResponse.html("<div></div>")),
+			http.get(/\/showcase\/chorus\/demo\/post\//, () => HttpResponse.html("<div></div>")),
 		);
 		let hold = (event: Event) => {
 			opened.push((event as Event & { destination: { url: string } }).destination.url);
@@ -521,7 +521,7 @@ describe("Chorus's Copy link", () => {
 
 		link.click();
 
-		expect(link.getAttribute("href")).toBe("/demo/apps/chorus/post/p-leonids");
+		expect(link.getAttribute("href")).toBe("/showcase/chorus/demo/post/p-leonids");
 		expect(followed).toBe(false);
 	});
 });
@@ -537,7 +537,11 @@ describe("Chorus keeps its shell across screens", () => {
 			Object.assign(nav, { marker: screen });
 			let addresses = [
 				...new Set(
-					[...root.querySelectorAll<HTMLAnchorElement>("#chorus-main a[href^='/demo/apps/chorus']")]
+					[
+						...root.querySelectorAll<HTMLAnchorElement>(
+							"#chorus-main a[href^='/showcase/chorus/demo']",
+						),
+					]
 						.map((link) => link.getAttribute("href")!)
 						.filter((address) => !address.includes("#")),
 				),

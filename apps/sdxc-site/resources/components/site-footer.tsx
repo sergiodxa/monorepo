@@ -73,7 +73,7 @@ export default function SiteFooter(_handle: Handle) {
 					title: "Project",
 					links: [
 						{ label: "Philosophy", href: routes.philosophy.href() },
-						{ label: "Showcase", href: routes.showcase.href() },
+						{ label: "Showcase", href: routes.showcase.index.href() },
 						{ label: "Maintenance", href: routes.maintenance.href() },
 						{ label: "Security", href: routes.security.href() },
 					],

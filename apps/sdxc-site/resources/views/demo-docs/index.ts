@@ -1,5 +1,5 @@
 /**
- * The demo docs sites `/demo/docs/:site` serves, discovered from
+ * The demo docs sites `/showcase/:slug/demo` serves, discovered from
  * `resources/views/demo-docs/<site>/index.tsx` and each loaded only when one of its own
  * pages is asked for, so a docs demo never weighs on another request.
  *
@@ -88,7 +88,7 @@ const SITE_MODULES = import.meta.glob<DemoDocsSite>("./*/index.tsx", { import: "
 /**
  * Loads the docs demo a slug names.
  *
- * @param slug The `:site` the request carried.
+ * @param slug The `:slug` the request carried.
  * @returns The site, or `null` for a slug no folder answers to.
  */
 export async function findDemoDocsSite(slug: string): Promise<DemoDocsSite | null> {
@@ -98,7 +98,7 @@ export async function findDemoDocsSite(slug: string): Promise<DemoDocsSite | nul
 }
 
 /**
- * The slugs `/demo/docs/:site` answers, in folder-name order.
+ * The slugs the docs demos answer under `/showcase/:slug/demo`, in folder-name order.
  *
  * @returns One slug per docs demo folder.
  */
@@ -139,10 +139,10 @@ export async function listDemoDocsSites(): Promise<DemoDocsSummary[]> {
  *
  * @param slug The demo's folder name.
  * @returns A function from a page path (none for the hub) to its address.
- * @example demoDocsHref("driftwood")("guides/quickstart") // "/demo/docs/driftwood/guides/quickstart"
+ * @example demoDocsHref("driftwood")("guides/quickstart") // "/showcase/driftwood/demo/guides/quickstart"
  */
 export function demoDocsHref(slug: string): (page?: string) => string {
-	return (page) => routes.demoDocs.show.href({ site: slug, page });
+	return (page) => routes.showcase.demo.href({ slug, page });
 }
 
 /**

@@ -691,7 +691,10 @@ export default function BocadoShell(handle: Handle<BocadoShell.Props>) {
 				>
 					<span>
 						Bocado is an invented delivery app, a demo of{" "}
-						<a href={routes.demos.href()} mix={[raw({ color: "inherit" })]}>
+						<a
+							href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}
+							mix={[raw({ color: "inherit" })]}
+						>
 							sdxc.dev's components
 						</a>
 						. Every restaurant, dish and card in it is made up, and nothing is charged.

@@ -12,6 +12,7 @@ import { fromRoutes } from "@sdxc/sitemap/remix";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import { listCaseStudySlugs } from "~/app/services/case-studies";
 import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";
 import { listIcons } from "~/app/services/icons";
@@ -31,13 +32,26 @@ const PRIORITY = {
 
 export default createAction(routes.sitemap, async (ctx) => {
 	let [sections, catalogue] = await Promise.all([listGuides(), listCataloguePages()]);
+	let caseStudies = listCaseStudySlugs();
 
 	let reference = { priority: PRIORITY.reference, frequency: "weekly" as const };
 
 	let sitemap = fromRoutes(routes, SITE_URL, {
 		home: { priority: PRIORITY.home, frequency: "weekly" },
 		philosophy: false,
-		showcase: false,
+		showcase: {
+			index: { priority: PRIORITY.hub, frequency: "weekly" },
+			show: caseStudies.map((slug) => ({
+				params: { slug },
+				priority: PRIORITY.guide,
+				frequency: "monthly" as const,
+			})),
+			demo: false,
+			demoFrame: false,
+			demoStream: false,
+			demoFile: false,
+			media: false,
+		},
 		security: false,
 		maintenance: false,
 		sponsors: false,
@@ -94,15 +108,8 @@ export default createAction(routes.sitemap, async (ctx) => {
 		health: false,
 		schemas: false,
 		robots: false,
-		demos: false,
-		demo: false,
 		stats: false,
-		demoDocs: false,
-		demoApps: false,
-		demoFrames: false,
-		demoStreams: false,
-		demoFiles: false,
-		demoMedia: false,
+		legacyDemos: false,
 	});
 
 	return await withBundleCache(ctx.request, xml(sitemap.toString()));

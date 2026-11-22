@@ -1,5 +1,5 @@
 /**
- * Tests `GET /demo/:slug` through the real router over a fixture demo: a demo renders
+ * Tests `GET /showcase/:slug/demo` for a landing through the real router over a fixture demo: a demo renders
  * `noindex, nofollow` with no site chrome, a named frame answers alone, an unknown slug answers
  * the site's 404, and no demo reaches robots-allowed paths, the sitemap, `/llms.txt` or search.
  *
@@ -32,6 +32,7 @@ let registry =
 vi.doMock("~/resources/views/demos", () => ({
 	...registry,
 	findDemoLanding: async (slug: string) => (slug === "fixture" ? FIXTURE : null),
+	listDemoSlugs: () => [...registry.listDemoSlugs(), "fixture"],
 }));
 
 let { fetchApp } = await import("~/app/test/router");
@@ -41,9 +42,9 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-describe("GET /demo/:slug", () => {
+describe("GET /showcase/:slug/demo for a landing", () => {
 	test("renders the demo alone and tells search engines to leave it out", async () => {
-		let response = await fetchApp("/demo/fixture");
+		let response = await fetchApp("/showcase/fixture/demo");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -57,7 +58,7 @@ describe("GET /demo/:slug", () => {
 	test("reuses a stored landing before rendering its demo", async () => {
 		vi.spyOn(caching, "withStreamCache").mockResolvedValue(new Response("cached landing"));
 		let render = vi.spyOn(FIXTURE, "render");
-		let response = await fetchApp("/demo/fixture");
+		let response = await fetchApp("/showcase/fixture/demo");
 
 		expect(await response.text()).toBe("cached landing");
 		expect(render).not.toHaveBeenCalled();
@@ -65,19 +66,19 @@ describe("GET /demo/:slug", () => {
 
 	test("gives a landing the shared cache policy and revalidates its build", async () => {
 		vi.stubEnv("PROD", true);
-		let response = await fetchApp("/demo/fixture");
+		let response = await fetchApp("/showcase/fixture/demo");
 		let tag = response.headers.get("ETag");
 
 		expect(response.headers.get("Cache-Control")).toContain("public");
 		expect(response.headers.get("Cache-Control")).toContain("s-maxage=3600");
 		expect(tag).toBeTruthy();
-		expect((await fetchApp("/demo/fixture", { headers: { "If-None-Match": tag! } })).status).toBe(
-			304,
-		);
+		expect(
+			(await fetchApp("/showcase/fixture/demo", { headers: { "If-None-Match": tag! } })).status,
+		).toBe(304);
 	});
 
 	test("answers a named frame with its content alone, varying by target", async () => {
-		let response = await fetchApp("/demo/fixture?hours=12", {
+		let response = await fetchApp("/showcase/fixture/demo?hours=12", {
 			headers: { "X-Remix-Target": "fixture-bill", "X-Remix-Frame": "true" },
 		});
 		let body = await response.text();
@@ -88,13 +89,15 @@ describe("GET /demo/:slug", () => {
 	});
 
 	test("answers a target the demo lacks with the whole landing", async () => {
-		let response = await fetchApp("/demo/fixture", { headers: { "X-Remix-Target": "nope" } });
+		let response = await fetchApp("/showcase/fixture/demo", {
+			headers: { "X-Remix-Target": "nope" },
+		});
 
 		expect(await response.text()).toContain('<main id="fixture-demo">Fixture landing</main>');
 	});
 
 	test("answers the site's 404 for a slug no demo answers to", async () => {
-		let response = await fetchApp("/demo/no-such-demo");
+		let response = await fetchApp("/showcase/no-such-demo/demo");
 
 		expect(response.status).toBe(404);
 	});
@@ -112,13 +115,13 @@ describe("demo discoverability", () => {
 	test("robots.txt disallows the gallery and every demo", async () => {
 		let body = await (await fetchApp("/robots.txt")).text();
 
-		expect(body).toMatch(/^Disallow: \/demo$/m);
+		expect(body).toMatch(/^Disallow: \/showcase\/\*\/demo$/m);
 	});
 
 	test.each(["/sitemap.xml", "/llms.txt", "/search.json"])("%s names no demo", async (path) => {
 		let response = await fetchApp(path);
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).not.toContain("/demo/");
+		expect(await response.text()).not.toMatch(/\/demo\b/);
 	});
 });

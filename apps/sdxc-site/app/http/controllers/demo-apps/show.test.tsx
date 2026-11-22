@@ -1,5 +1,5 @@
 /**
- * Tests `/demo/apps/:app(/*page)` through the real router over every demo app: each screen a
+ * Tests `/showcase/:slug/demo(/*page)` through the real router over every demo app: each screen a
  * visitor can click to answers `noindex` with one `h1`, a missing screen answers the app's own
  * 404, a toast shows only when the app names it, and a form post can only send the visitor back.
  *
@@ -41,7 +41,7 @@ function countH1(body: string): number {
 	return [...body.matchAll(/<h1[\s>]/g)].length;
 }
 
-describe("GET /demo/apps/:app", () => {
+describe("GET /showcase/:slug/demo for an app", () => {
 	test("the catalogue holds a dashboard, a CMS, an inbox, a chat assistant, a social network and an issue tracker", () => {
 		expect(listDemoAppSlugs()).toEqual(
 			expect.arrayContaining(["cairn", "chorus", "inkwell", "pulse", "relay", "tern"]),
@@ -117,7 +117,7 @@ describe("GET /demo/apps/:app", () => {
 
 			expect(targets).toEqual([`${slug}-workspace-menu`, `${slug}-user-menu`]);
 			for (let id of targets) expect(body).toContain(`id="${id}"`);
-			expect(body).toMatch(/href="\/demo"[^>]*>Sign out</);
+			expect(body).toMatch(/href="\/showcase\?kind=demo"[^>]*>Sign out</);
 		},
 	);
 
@@ -126,11 +126,11 @@ describe("GET /demo/apps/:app", () => {
 			(await fetchApp(path, { headers: cookie === "" ? {} : { Cookie: cookie } })).headers.get(
 				"ETag",
 			);
-		let plain = await tag("/demo/apps/pulse/services");
-		let filtered = await tag("/demo/apps/pulse/services?status=down");
-		let collapsed = await tag("/demo/apps/pulse/services", "ui-app-shell-collapsed=1");
-		let unrelated = await tag("/demo/apps/pulse/services", "theme=dark");
-		let toast = await fetchApp("/demo/apps/pulse/services?toast=service-paused.1a2b3c4d");
+		let plain = await tag("/showcase/pulse/demo/services");
+		let filtered = await tag("/showcase/pulse/demo/services?status=down");
+		let collapsed = await tag("/showcase/pulse/demo/services", "ui-app-shell-collapsed=1");
+		let unrelated = await tag("/showcase/pulse/demo/services", "theme=dark");
+		let toast = await fetchApp("/showcase/pulse/demo/services?toast=service-paused.1a2b3c4d");
 
 		expect(plain).toBeTruthy();
 		expect(new Set([plain, filtered, collapsed]).size).toBe(3);
@@ -138,7 +138,7 @@ describe("GET /demo/apps/:app", () => {
 		expect(toast.headers.get("ETag")).toBeNull();
 		expect(toast.headers.get("Cache-Control")).toBeNull();
 
-		let revalidated = await fetchApp("/demo/apps/pulse/services", {
+		let revalidated = await fetchApp("/showcase/pulse/demo/services", {
 			headers: { "If-None-Match": plain! },
 		});
 		expect(revalidated.status).toBe(304);
@@ -193,7 +193,7 @@ describe("GET /demo/apps/:app", () => {
 	);
 
 	test("an unknown app answers the site's 404", async () => {
-		expect((await fetchApp("/demo/apps/no-such-app")).status).toBe(404);
+		expect((await fetchApp("/showcase/no-such-app/demo")).status).toBe(404);
 	});
 
 	test.each(apps)("$slug shows a toast only when it names one", async ({ slug, app }) => {
@@ -211,9 +211,9 @@ describe("GET /demo/apps/:app", () => {
 	});
 });
 
-describe("POST /demo/apps/:app/*page", () => {
+describe("POST /showcase/:slug/demo(/*page) for an app", () => {
 	test("an unknown app answers 404", async () => {
-		let response = await fetchApp("/demo/apps/no-such-app/anything", {
+		let response = await fetchApp("/showcase/no-such-app/demo/anything", {
 			method: "POST",
 			body: new URLSearchParams({ name: "x" }),
 		});

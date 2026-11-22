@@ -26,7 +26,7 @@ import { listCookie, nowCookie, parseNowPlaying, readListener } from "./state";
 
 /** Posts a form to a Murmur action path with the given cookie. */
 async function post(page: string, fields: Record<string, string>, cookie = "") {
-	return await fetchApp(`/demo/apps/murmur/${page}`, {
+	return await fetchApp(`/showcase/murmur/demo/${page}`, {
 		method: "POST",
 		body: new URLSearchParams(fields),
 		headers: cookie === "" ? {} : { Cookie: cookie },
@@ -132,12 +132,12 @@ describe("Murmur's posts", () => {
 			back: "album/tidelight",
 		});
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toMatch(/^\/demo\/apps\/murmur\/album\/tidelight/);
+		expect(response.headers.get("Location")).toMatch(/^\/showcase\/murmur\/demo\/album\/tidelight/);
 		let cookie = cookieOf(response);
 		expect(readListener(cookie).now).toEqual({ context: "album:tidelight", track: "tidelight-3" });
 
 		let page = await (
-			await fetchApp("/demo/apps/murmur/album/tidelight", { headers: { Cookie: cookie } })
+			await fetchApp("/showcase/murmur/demo/album/tidelight", { headers: { Cookie: cookie } })
 		).text();
 		expect(page).toContain("First Light on the Breakwater");
 		expect(page).toMatch(
@@ -150,7 +150,7 @@ describe("Murmur's posts", () => {
 		expect(response.status).toBe(400);
 		let liked = await post("like/midnight-citrus-4", { on: "true", back: "https://evil.example" });
 		expect(liked.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/murmur\/library\?toast=liked-midnight-citrus-4/,
+			/^\/showcase\/murmur\/demo\/library\?toast=liked-midnight-citrus-4/,
 		);
 		expect(readListener(cookieOf(liked)).liked[0]).toBe("midnight-citrus-4");
 	});
@@ -171,7 +171,7 @@ describe("Murmur's posts", () => {
 			";",
 		)[0]!;
 		let body = await (
-			await fetchApp("/demo/apps/murmur/search", { headers: { Cookie: cookie } })
+			await fetchApp("/showcase/murmur/demo/search", { headers: { Cookie: cookie } })
 		).text();
 		let main = body.indexOf("data-main-region");
 		let bar = body.indexOf('aria-label="Player"');

@@ -50,9 +50,9 @@ describe("Inkwell as a single-page app", () => {
 		let start = navigation.currentEntry?.index ?? 0;
 
 		press(document.querySelector('a[data-main-nav="media"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/inkwell/media"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/inkwell/demo/media"));
 		press(document.querySelector('a[data-main-nav="settings"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/inkwell/settings"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/inkwell/demo/settings"));
 		await vi.waitFor(() =>
 			expect(document.querySelector("[data-main-crumb]")?.textContent).toContain("Settings"),
 		);
@@ -80,7 +80,7 @@ describe("Inkwell as a single-page app", () => {
 
 		expect(shell()).toBe(marker);
 		expect(navigation.currentEntry?.index ?? 0).toBe(start);
-		expect(mounted.requests.at(-1)).toBe("POST /demo/apps/inkwell/settings/general main");
+		expect(mounted.requests.at(-1)).toBe("POST /showcase/inkwell/demo/settings/general main");
 	});
 
 	test("keeps focus on the page when a bulk action closes the selection bar it was in", async () => {
@@ -149,9 +149,9 @@ describe("Inkwell as a single-page app", () => {
 		let marker = shell();
 
 		press(document.querySelector('a[data-main-nav="media"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/inkwell/media"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/inkwell/demo/media"));
 		navigation.back();
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/inkwell/posts"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/inkwell/demo/posts"));
 
 		expect(shell()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);

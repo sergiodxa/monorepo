@@ -189,7 +189,7 @@ describe("Tern's screens and frames", () => {
 			expect(body, group).toContain(`>${group}<`);
 		}
 		expect(body).toMatch(
-			/href="\/demo\/apps\/tern\/c\/debounce-search"[^>]*data-rmx-prefetch="intent"|data-rmx-prefetch="intent"[^>]*href="\/demo\/apps\/tern\/c\/debounce-search"/,
+			/href="\/showcase\/tern\/demo\/c\/debounce-search"[^>]*data-rmx-prefetch="intent"|data-rmx-prefetch="intent"[^>]*href="\/showcase\/tern\/demo\/c\/debounce-search"/,
 		);
 	});
 
@@ -261,12 +261,12 @@ describe("Tern's main frame", () => {
 			let tags = [...body.matchAll(/<(?:a|form)\s[^>]*>/g)].map((match) => match[0]);
 			let inApp = tags.filter(
 				(tag) =>
-					/(?:href|action)="\/demo\/apps\/tern(?:[/?"])/.test(tag) && !tag.includes("/share/"),
+					/(?:href|action)="\/showcase\/tern\/demo(?:[/?"])/.test(tag) && !tag.includes("/share/"),
 			);
 			expect(inApp.length, page).toBeGreaterThan(0);
 			for (let tag of inApp) {
 				let aimed = tag.includes('data-rmx-target="main"');
-				let settings = /action="\/demo\/apps\/tern\/settings\//.test(tag);
+				let settings = /action="\/showcase\/tern\/demo\/settings\//.test(tag);
 				let background = tag.includes('data-slot="optimistic-toggle"');
 				expect(aimed || settings || background, `${page}: ${tag}`).toBe(true);
 			}

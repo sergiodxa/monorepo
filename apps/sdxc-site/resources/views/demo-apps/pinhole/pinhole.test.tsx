@@ -18,7 +18,7 @@ import { commentsCookie, readState, toggleCookie } from "./state";
 import pinhole from "./index";
 
 /** The app's root address. */
-const ROOT = "/demo/apps/pinhole";
+const ROOT = "/showcase/pinhole/demo";
 
 /** Posts a form to a Pinhole action path with the given cookie. */
 async function post(page: string, fields: Record<string, string>, cookie = "") {

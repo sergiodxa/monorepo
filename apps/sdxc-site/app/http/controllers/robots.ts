@@ -31,6 +31,7 @@ export default createAction(routes.robots, () => {
 				rules: [
 					{ allow: true, pattern: "/" },
 					{ allow: false, pattern: "/demo" },
+					{ allow: false, pattern: "/showcase/*/demo" },
 				],
 				contentUsage: [{ preferences: USAGE_PREFERENCES }],
 			},

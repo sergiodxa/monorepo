@@ -22,7 +22,7 @@ import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
 
 /** Where Tern lives, the prefix every page path sits under. */
-const ROOT = "/demo/apps/tern";
+const ROOT = "/showcase/tern/demo";
 
 /** The package islands Tern's pages hydrate, by the module id their markup names. */
 const MODULES: Record<string, () => Promise<object>> = {
@@ -445,7 +445,7 @@ describe("Tern works like a single-page app", () => {
 
 		let dialog = document.querySelector<HTMLDialogElement>("#tern-share")!;
 		await vi.waitFor(() => expect(dialog.open).toBe(true));
-		expect(dialog.textContent).toContain("/demo/apps/tern/share/lisbon-offsite");
+		expect(dialog.textContent).toContain("/showcase/tern/demo/share/lisbon-offsite");
 		expect(requests).toHaveLength(0);
 	});
 });

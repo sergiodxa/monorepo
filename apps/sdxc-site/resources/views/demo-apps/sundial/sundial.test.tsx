@@ -49,7 +49,7 @@ async function post(page: string, fields: Record<string, string | string[]>, coo
 	for (let [name, value] of Object.entries(fields)) {
 		for (let item of Array.isArray(value) ? value : [value]) body.append(name, item);
 	}
-	return await fetchApp(`/demo/apps/sundial/${page}`, {
+	return await fetchApp(`/showcase/sundial/demo/${page}`, {
 		method: "POST",
 		body,
 		headers: cookie === "" ? {} : { Cookie: cookie },
@@ -140,7 +140,7 @@ describe("Sundial's posts", () => {
 		});
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/sundial\/day\?d=2026-11-18&toast=moved\./,
+			/^\/showcase\/sundial\/demo\/day\?d=2026-11-18&toast=moved\./,
 		);
 		let visitor = readVisitor(cookiesOf(response));
 		expect(visitor.changes.patched.standup).toEqual({
@@ -197,7 +197,7 @@ describe("Sundial's posts", () => {
 			"Pairing",
 		]);
 		let undone = await post("undo", {}, cookie);
-		expect(undone.headers.get("Location")).toMatch(/^\/demo\/apps\/sundial\?toast=undone\./);
+		expect(undone.headers.get("Location")).toMatch(/^\/showcase\/sundial\/demo\?toast=undone\./);
 		expect(readVisitor(cookiesOf(undone)).changes.added).toEqual([]);
 	});
 
@@ -223,7 +223,7 @@ describe("Sundial's posts", () => {
 
 	test("returns only to Sundial's own screens", async () => {
 		let response = await post("calendars", { show: "work", back: "https://example.com" });
-		expect(response.headers.get("Location")).toMatch(/^\/demo\/apps\/sundial(\?|$)/);
+		expect(response.headers.get("Location")).toMatch(/^\/showcase\/sundial\/demo(\?|$)/);
 		expect(readVisitor(cookiesOf(response)).hidden).toEqual([
 			"team",
 			"personal",
@@ -244,12 +244,14 @@ describe("Sundial's posts", () => {
 
 describe("Sundial's files and invitations", () => {
 	test("serves a calendar as an iCalendar feed and as a JSCalendar Group", async () => {
-		let ics = await fetchApp("/demo/apps/sundial/files/calendars/team.ics");
+		let ics = await fetchApp("/showcase/sundial/demo/files/calendars/team.ics");
 		expect(ics.headers.get("Content-Type")).toMatch(/^text\/calendar/);
 		let text = await ics.text();
 		expect(text).toContain("SUMMARY:Standup");
 		expect(text).toMatch(/RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR/);
-		let json = (await (await fetchApp("/demo/apps/sundial/files/calendars/team.json")).json()) as {
+		let json = (await (
+			await fetchApp("/showcase/sundial/demo/files/calendars/team.json")
+		).json()) as {
 			"@type": string;
 			entries: Array<{ uid: string }>;
 		};
@@ -274,7 +276,7 @@ describe("Sundial's files and invitations", () => {
 		};
 		let response = await post("import", { group: JSON.stringify(group), back: "" });
 		expect(response.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/sundial\?d=2026-12-03&toast=imported\./,
+			/^\/showcase\/sundial\/demo\?d=2026-12-03&toast=imported\./,
 		);
 		let [added] = readVisitor(cookiesOf(response)).changes.added;
 		expect([added?.calendar, added?.event.title]).toEqual(["travel", "Flight to Lisbon"]);
@@ -306,7 +308,7 @@ describe("Sundial's files and invitations", () => {
 			"Dinner at Taberna",
 		);
 		let refused = await post("import", { group: "not a calendar", back: "" });
-		expect(refused.headers.get("Location")).toMatch(/\/sundial\/import\?d=[\d-]+&problem=1$/);
+		expect(refused.headers.get("Location")).toMatch(/\/sundial\/demo\/import\?d=[\d-]+&problem=1$/);
 	});
 
 	test("invites guests over iTIP and records each one's reply from their working day", async () => {
@@ -339,7 +341,7 @@ describe("Sundial's files and invitations", () => {
 			rsvp: "yes",
 			back: "",
 		});
-		let reply = await fetchApp("/demo/apps/sundial/files/replies/metrics.ics", {
+		let reply = await fetchApp("/showcase/sundial/demo/files/replies/metrics.ics", {
 			headers: { Cookie: cookiesOf(answered) },
 		});
 		let text = (await reply.text()).replaceAll("\r\n ", "");
@@ -357,7 +359,7 @@ describe("Sundial's quick add", () => {
 			back: "month?d=2026-11-18",
 		});
 		expect(response.headers.get("Location")).toMatch(
-			new RegExp(`^/demo/apps/sundial/month\\?d=${tomorrow}&toast=invited\\.`),
+			new RegExp(`^/showcase/sundial/demo/month\\?d=${tomorrow}&toast=invited\\.`),
 		);
 		let [entry] = readVisitor(cookiesOf(response)).changes.added;
 		expect(entry?.event.title).toBe("Lunch with Mara");
@@ -410,7 +412,7 @@ describe("Sundial's screens", () => {
 	])("renders %s with every teammate available to invite", async (page) => {
 		let started = performance.now();
 		let response = await fetchApp(
-			`/demo/apps/sundial${page.startsWith("?") || page === "" ? "" : "/"}${page}`,
+			`/showcase/sundial/demo${page.startsWith("?") || page === "" ? "" : "/"}${page}`,
 		);
 		expect(response.status).toBe(200);
 		let html = await response.text();

@@ -38,8 +38,8 @@ const CLEAR_POSTER =
 function clip(minutes: number, start: number | undefined): { webm: string; mp4: string } {
 	let from = start === undefined ? "" : `#t=${start}`;
 	return {
-		webm: `${routes.demoMedia.href({ file: `video/vesper/${minutes}.webm` })}${from}`,
-		mp4: `${routes.demoMedia.href({ file: `video/vesper/${minutes}.mp4` })}${from}`,
+		webm: `${routes.showcase.media.href({ file: `video/vesper/${minutes}.webm` })}${from}`,
+		mp4: `${routes.showcase.media.href({ file: `video/vesper/${minutes}.mp4` })}${from}`,
 	};
 }
 

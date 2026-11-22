@@ -18,7 +18,7 @@ import { balanceOf, entries, readWallet } from "./state";
 
 /** Posts a form to a Tuppence action path with the given cookie. */
 async function post(page: string, fields: Record<string, string>, cookie = "") {
-	return await fetchApp(`/demo/apps/tuppence/${page}`, {
+	return await fetchApp(`/showcase/tuppence/demo/${page}`, {
 		method: "POST",
 		body: new URLSearchParams(fields),
 		headers: cookie === "" ? {} : { Cookie: cookie },
@@ -36,7 +36,7 @@ function cookiesOf(response: Response): string {
 
 /** A page's HTML for a cookie. */
 async function page(path: string, cookie = ""): Promise<string> {
-	let response = await fetchApp(`/demo/apps/tuppence${path}`, {
+	let response = await fetchApp(`/showcase/tuppence/demo${path}`, {
 		headers: cookie === "" ? {} : { Cookie: cookie },
 	});
 	return await response.text();
@@ -117,7 +117,7 @@ describe("Tuppence's posts", () => {
 		});
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/tuppence\/transactions\?category=groceries&tx=t0190&toast=category-saved\./,
+			/^\/showcase\/tuppence\/demo\/transactions\?category=groceries&tx=t0190&toast=category-saved\./,
 		);
 		let cookie = cookiesOf(response);
 		expect(readWallet(cookie).edits.t0190?.category).toBe("travel");
@@ -127,7 +127,7 @@ describe("Tuppence's posts", () => {
 			back: "https://example.com",
 		});
 		expect(off.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/tuppence\/transactions\?tx=t0190&toast=/,
+			/^\/showcase\/tuppence\/demo\/transactions\?tx=t0190&toast=/,
 		);
 	});
 
@@ -176,7 +176,7 @@ describe("Tuppence's posts", () => {
 		expect(balanceOf(wallet, main)).toBe(main.balance - 5000);
 		let refused = await post("pots/kyoto", { direction: "in", amount: "999999" });
 		expect(refused.headers.get("Location")).toBe(
-			"/demo/apps/tuppence/pots/kyoto?direction=in&amount=999999&error=balance",
+			"/showcase/tuppence/demo/pots/kyoto?direction=in&amount=999999&error=balance",
 		);
 		let html = await page("/pots/kyoto?direction=in&amount=999999&error=balance");
 		expect(html).toContain('value="999999"');
@@ -190,12 +190,12 @@ describe("Tuppence's posts", () => {
 		let sent = await post("transfer", { payee: "tomas", amount: "2550", reference: "Dinner" });
 		let location = sent.headers.get("Location") ?? "";
 		expect(location).toMatch(
-			/^\/demo\/apps\/tuppence\/transfer\/sent\?payee=tomas&amount=2550&id=s/,
+			/^\/showcase\/tuppence\/demo\/transfer\/sent\?payee=tomas&amount=2550&id=s/,
 		);
 		let cookie = cookiesOf(sent);
 		let main = ACCOUNTS[0]!;
 		expect(balanceOf(readWallet(cookie), main)).toBe(main.balance - 2550);
-		let confirmation = await page(location.replace("/demo/apps/tuppence", ""), cookie);
+		let confirmation = await page(location.replace("/showcase/tuppence/demo", ""), cookie);
 		expect(confirmation).toContain("View in transactions");
 		let statementHtml = await page("/transactions", cookie);
 		expect(statementHtml).toContain("Transfers · Pending · Dinner");
@@ -223,7 +223,7 @@ describe("Tuppence's posts", () => {
 
 	test("reset expires every Tuppence cookie", async () => {
 		let response = await post("reset", {}, "tuppence.frozen=everyday; tuppence.sent=%5B%5D");
-		expect(response.headers.get("Location")).toMatch(/^\/demo\/apps\/tuppence\?toast=reset\./);
+		expect(response.headers.get("Location")).toMatch(/^\/showcase\/tuppence\/demo\?toast=reset\./);
 		let expired = response.headers.getSetCookie();
 		expect(expired).toHaveLength(2);
 		for (let cookie of expired) expect(cookie).toContain("Max-Age=0");

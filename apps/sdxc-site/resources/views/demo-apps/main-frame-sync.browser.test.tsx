@@ -22,15 +22,15 @@ beforeEach(async () => {
 	mounted = render(
 		<div>
 			<nav>
-				<a data-main-nav="alpha" href="/demo/apps/demo/alpha" aria-current="page">
+				<a data-main-nav="alpha" href="/showcase/demo/demo/alpha" aria-current="page">
 					Alpha
 				</a>
-				<a data-main-nav="beta" href="/demo/apps/demo/beta">
+				<a data-main-nav="beta" href="/showcase/demo/demo/beta">
 					Beta
 				</a>
-				<a href="/demo/apps/demo/settings/general">Settings</a>
-				<a href="/demo/docs/elsewhere">Elsewhere</a>
-				<a href="/demo/apps/demo/alpha?sheet=1" data-rmx-target="sheet">
+				<a href="/showcase/demo/demo/settings/general">Settings</a>
+				<a href="/showcase/elsewhere/demo">Elsewhere</a>
+				<a href="/showcase/demo/demo/alpha?sheet=1" data-rmx-target="sheet">
 					Sheet
 				</a>
 				<span data-main-crumb="">Alpha</span>
@@ -41,12 +41,12 @@ beforeEach(async () => {
 					data-title="Alpha"
 					data-nav="alpha"
 					data-crumb="Alpha"
-					data-url="/demo/apps/demo/alpha"
+					data-url="/showcase/demo/demo/alpha"
 				>
 					<h1>Alpha</h1>
 				</div>
 			</div>
-			<MainFrameSync root="/demo/apps/demo" shells={["settings"]} />
+			<MainFrameSync root="/showcase/demo/demo" shells={["settings"]} />
 		</div>,
 	);
 	await vi.waitFor(() => expect(document.querySelector("[data-main-frame-sync]")).not.toBeNull());
@@ -78,7 +78,7 @@ function swapTo(title: string, nav: string) {
 	screen.dataset.title = title;
 	screen.dataset.nav = nav;
 	screen.dataset.crumb = title;
-	screen.dataset.url = `/demo/apps/demo/${nav}`;
+	screen.dataset.url = `/showcase/demo/demo/${nav}`;
 	screen.querySelector("h1")!.textContent = title;
 }
 
@@ -124,7 +124,7 @@ describe("MainFrameSync after a swap", () => {
 	test("keeps focus on the control the visitor used when only the query changes", async () => {
 		link("Beta").focus();
 		let screen = document.querySelector<HTMLElement>("[data-main-screen]")!;
-		screen.dataset.url = "/demo/apps/demo/alpha?sort=name";
+		screen.dataset.url = "/showcase/demo/demo/alpha?sort=name";
 
 		await new Promise((resolve) => setTimeout(resolve, 200));
 		expect(document.activeElement).toBe(link("Beta"));

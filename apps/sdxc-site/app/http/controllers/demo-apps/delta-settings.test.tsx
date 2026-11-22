@@ -157,7 +157,7 @@ describe("Delta's settings", () => {
 
 		expect(wrong.location).toBe(href("delta/settings/general"));
 		expect(wrong.cookie).toBe("");
-		expect(deleted.location).toMatch(/\/demo\/apps\/delta\?toast=repo-deleted\./);
+		expect(deleted.location).toMatch(/\/showcase\/delta\/demo\?toast=repo-deleted\./);
 		let restored = await post("delta/settings/restore", [], deleted.cookie);
 		expect(restored.location).toMatch(/toast=repo-restored\./);
 	});

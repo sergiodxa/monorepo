@@ -20,7 +20,10 @@ describe("GET /robots.txt", () => {
 		let document = parse(await response.text());
 		expect(isAllowed(document, "ExampleBot/1.0", "/docs")).toBe(true);
 		expect(isAllowed(document, "ExampleBot/1.0", "/demo")).toBe(false);
-		expect(isAllowed(document, "ExampleBot/1.0", "/demo/saas")).toBe(false);
+		expect(isAllowed(document, "ExampleBot/1.0", "/showcase/keel/demo")).toBe(false);
+		expect(isAllowed(document, "ExampleBot/1.0", "/showcase/keel/demo/pricing")).toBe(false);
+		expect(isAllowed(document, "ExampleBot/1.0", "/showcase")).toBe(true);
+		expect(isAllowed(document, "ExampleBot/1.0", "/showcase/keel")).toBe(true);
 		expect(contentUsage(document, "ExampleBot/1.0", "/docs")).toEqual({ search: true });
 		expect(document.sitemaps).toEqual(["https://sdxc.dev/sitemap.xml"]);
 	});

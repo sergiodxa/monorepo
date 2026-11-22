@@ -152,7 +152,7 @@ describe("Parley messages", () => {
 		});
 		expect(response.status).toBe(303);
 		let location = locationOf(response);
-		expect(location).toMatch(/^\/demo\/apps\/parley\/c\/design#msg-s[0-9a-f]{8}$/);
+		expect(location).toMatch(/^\/showcase\/parley\/demo\/c\/design#msg-s[0-9a-f]{8}$/);
 		let cookie = cookiesFrom(response);
 		let body = await page("c/design", cookie);
 		expect(body).toMatch(/<strong[^>]*>great<\/strong>/);

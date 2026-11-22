@@ -130,11 +130,13 @@ function SegmentPicture(handle: Handle<{ segment: StorySegment; preload: "auto" 
 						]}
 					>
 						<source
-							src={routes.demoMedia.href({ file: `video/vesper/${segment.clip.minutes}.webm` })}
+							src={routes.showcase.media.href({
+								file: `video/vesper/${segment.clip.minutes}.webm`,
+							})}
 							type="video/webm"
 						/>
 						<source
-							src={routes.demoMedia.href({ file: `video/vesper/${segment.clip.minutes}.mp4` })}
+							src={routes.showcase.media.href({ file: `video/vesper/${segment.clip.minutes}.mp4` })}
 							type="video/mp4"
 						/>
 					</video>

@@ -18,7 +18,7 @@ async function vote(page: string, target?: string): Promise<Response> {
 		headers.set("X-Remix-Frame", "true");
 		headers.set("X-Remix-Target", target);
 	}
-	return await fetchApp("/demo/docs/driftwood/feedback", {
+	return await fetchApp("/showcase/driftwood/demo/feedback", {
 		method: "POST",
 		headers,
 		body: new URLSearchParams({ helpful: "yes", page, note: "" }),
@@ -26,25 +26,29 @@ async function vote(page: string, target?: string): Promise<Response> {
 	});
 }
 
-describe("POST /demo/docs/:site/feedback", () => {
+describe("POST /showcase/:slug/demo/feedback", () => {
 	test("redirects to the page with its thanks, which the page then shows", async () => {
-		let response = await vote("/demo/docs/driftwood/start/quickstart");
+		let response = await vote("/showcase/driftwood/demo/start/quickstart");
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			"/demo/docs/driftwood/start/quickstart?feedback=sent#feedback",
+			"/showcase/driftwood/demo/start/quickstart?feedback=sent#feedback",
 		);
 
-		let page = await (await fetchApp("/demo/docs/driftwood/start/quickstart?feedback=sent")).text();
+		let page = await (
+			await fetchApp("/showcase/driftwood/demo/start/quickstart?feedback=sent")
+		).text();
 		expect(page).toContain("Thanks for telling us");
 	});
 
 	test("a vote aimed at the feedback frame answers the frame's thanks", async () => {
-		let response = await vote("/demo/docs/driftwood/start/quickstart", "feedback");
+		let response = await vote("/showcase/driftwood/demo/start/quickstart", "feedback");
 
 		expect(response.status).toBe(303);
 		let location = response.headers.get("Location");
-		expect(location).toBe("/demo/frames/docs/driftwood/feedback/start/quickstart?feedback=sent");
+		expect(location).toBe(
+			"/showcase/driftwood/demo/frames/feedback/start/quickstart?feedback=sent",
+		);
 
 		let frame = await fetchApp(location!);
 		let body = await frame.text();
@@ -55,26 +59,26 @@ describe("POST /demo/docs/:site/feedback", () => {
 
 	test("the action's address, left in the location bar by a frame vote, returns to the page", async () => {
 		let response = await fetchApp(
-			"/demo/docs/driftwood/feedback?page=/demo/docs/driftwood/start/quickstart",
+			"/showcase/driftwood/demo/feedback?page=/showcase/driftwood/demo/start/quickstart",
 			{ redirect: "manual" },
 		);
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			"/demo/docs/driftwood/start/quickstart?feedback=sent#feedback",
+			"/showcase/driftwood/demo/start/quickstart?feedback=sent#feedback",
 		);
-		let bare = await fetchApp("/demo/docs/driftwood/feedback", { redirect: "manual" });
-		expect(bare.headers.get("Location")).toBe("/demo/docs/driftwood");
+		let bare = await fetchApp("/showcase/driftwood/demo/feedback", { redirect: "manual" });
+		expect(bare.headers.get("Location")).toBe("/showcase/driftwood/demo");
 	});
 
 	test("a frame vote about a page the demo lacks is refused", async () => {
-		expect((await vote("/demo/docs/driftwood/no/such-page", "feedback")).status).toBe(400);
+		expect((await vote("/showcase/driftwood/demo/no/such-page", "feedback")).status).toBe(400);
 	});
 
 	test.each([
 		"https://evil.example/",
-		"//evil.example/demo/docs/driftwood/x",
-		"/demo/docs/other/page",
+		"//evil.example/showcase/driftwood/demo/x",
+		"/showcase/other/demo/page",
 	])("refuses a vote about %s", async (page) => {
 		expect((await vote(page)).status).toBe(400);
 	});

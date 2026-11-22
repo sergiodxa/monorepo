@@ -65,17 +65,17 @@ describe("Sundial as a single-page app", () => {
 
 		await press(
 			document.querySelector(
-				'nav[aria-label="Views"] a[href="/demo/apps/sundial/month?d=2026-11-18"]',
+				'nav[aria-label="Views"] a[href="/showcase/sundial/demo/month?d=2026-11-18"]',
 			),
 		);
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/sundial/month?d=2026-11-18"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/sundial/demo/month?d=2026-11-18"));
 		expect(document.querySelector('[data-slot="month-view"]')).not.toBeNull();
 		await press(
 			document.querySelector(
-				'nav[aria-label="Views"] a[href="/demo/apps/sundial/agenda?d=2026-11-18"]',
+				'nav[aria-label="Views"] a[href="/showcase/sundial/demo/agenda?d=2026-11-18"]',
 			),
 		);
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/sundial/agenda?d=2026-11-18"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/sundial/demo/agenda?d=2026-11-18"));
 
 		expect(document.querySelector("[data-main-region]")).toBe(region);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
@@ -120,7 +120,7 @@ describe("Sundial as a single-page app", () => {
 			end: "990",
 			back: "?d=2026-11-18",
 		});
-		expect(mounted.requests.at(-1)).toBe("POST /demo/apps/sundial/move main");
+		expect(mounted.requests.at(-1)).toBe("POST /showcase/sundial/demo/move main");
 	});
 
 	test("opens the edit dialog as a modal from its address, and Escape returns to the week", async () => {
@@ -138,7 +138,7 @@ describe("Sundial as a single-page app", () => {
 		).toBe("Roadmap review");
 
 		document.querySelector<HTMLDialogElement>("#sundial-event")!.close();
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/sundial?d=2026-11-18"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/sundial/demo?d=2026-11-18"));
 		expect(document.querySelector("#sundial-event")).toBeNull();
 	});
 

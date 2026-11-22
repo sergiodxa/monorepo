@@ -50,16 +50,16 @@ describe("Pulse as a single-page app", () => {
 		let start = navigation.currentEntry?.index ?? 0;
 
 		await press(document.querySelector('a[data-main-nav="incidents"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/pulse/incidents"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/pulse/demo/incidents"));
 		await press(document.querySelector('a[data-main-nav="deployments"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/pulse/deployments"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/pulse/demo/deployments"));
 
 		expect(shell()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 		expect((navigation.currentEntry?.index ?? 0) - start).toBe(2);
 		expect(mounted.requests.slice(-2)).toEqual([
-			"GET /demo/apps/pulse/incidents main",
-			"GET /demo/apps/pulse/deployments main",
+			"GET /showcase/pulse/demo/incidents main",
+			"GET /showcase/pulse/demo/deployments main",
 		]);
 		await vi.waitFor(() => expect(document.title).toContain("Deployments"));
 	});
@@ -82,7 +82,9 @@ describe("Pulse as a single-page app", () => {
 		expect(document.activeElement).not.toBe(document.body);
 		expect(shell()).toBe(marker);
 		expect(navigation.currentEntry?.index ?? 0).toBe(start);
-		expect(mounted.requests.at(-1)).toMatch(/^POST \/demo\/apps\/pulse\/services\/.+\/pause main$/);
+		expect(mounted.requests.at(-1)).toMatch(
+			/^POST \/showcase\/pulse\/demo\/services\/.+\/pause main$/,
+		);
 	});
 
 	test("loads Services without reloading the page, so the shell keeps what the browser set", async () => {
@@ -101,9 +103,9 @@ describe("Pulse as a single-page app", () => {
 		let marker = shell();
 
 		await press(document.querySelector('a[data-main-nav="incidents"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/pulse/incidents"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/pulse/demo/incidents"));
 		navigation.back();
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/pulse/services"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/pulse/demo/services"));
 
 		expect(shell()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);

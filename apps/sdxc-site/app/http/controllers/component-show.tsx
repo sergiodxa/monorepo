@@ -185,7 +185,10 @@ export default createAction(routes.api.component, async (ctx) => {
 								<DemoLinks links={demos} />
 								<p mix={[m(0), text("sm"), fg("neutral")]}>
 									Every demo, landings and docs sites alike, is listed in the{" "}
-									<a href={routes.demos.href()}>demo gallery</a>.
+									<a href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}>
+										showcase
+									</a>
+									.
 								</p>
 							</ReferenceSection>
 						) : null}

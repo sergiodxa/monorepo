@@ -15,9 +15,9 @@ import { page } from "vitest/browser";
 
 import type { DemoLanding } from "~/resources/views/demos";
 
-import app from "~/resources/views/demos/app/index";
-import book from "~/resources/views/demos/book/index";
-import saas from "~/resources/views/demos/saas/index";
+import saas from "~/resources/views/demos/keel/index";
+import app from "~/resources/views/demos/rooftree/index";
+import book from "~/resources/views/demos/the-measure/index";
 
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";

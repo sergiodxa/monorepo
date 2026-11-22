@@ -69,7 +69,7 @@ describe("Pinhole's reels under a finger", () => {
 		await swipe(600, 220);
 
 		await vi.waitFor(
-			() => expect(location.pathname).toBe(`/demo/apps/pinhole/reels/${second!.id}`),
+			() => expect(location.pathname).toBe(`/showcase/pinhole/demo/reels/${second!.id}`),
 			{ timeout: 4000 },
 		);
 		expect(document.querySelector("[data-reel-active]")?.id).toBe(`reel-${second!.id}`);
@@ -78,7 +78,7 @@ describe("Pinhole's reels under a finger", () => {
 		await swipe(220, 600);
 
 		await vi.waitFor(
-			() => expect(location.pathname).toBe(`/demo/apps/pinhole/reels/${first!.id}`),
+			() => expect(location.pathname).toBe(`/showcase/pinhole/demo/reels/${first!.id}`),
 			{ timeout: 4000 },
 		);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);

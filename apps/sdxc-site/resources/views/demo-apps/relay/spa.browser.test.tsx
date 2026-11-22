@@ -57,9 +57,9 @@ describe("Relay as a single-page app", () => {
 		let start = navigation.currentEntry?.index ?? 0;
 
 		press(document.querySelector('a[data-main-nav="contacts"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/relay/contacts"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/relay/demo/contacts"));
 		press(document.querySelector('a[data-main-nav="view:inbox"]'));
-		await vi.waitFor(() => expect(screenUrl()).toMatch(/^\/demo\/apps\/relay(\/inbox)?$/));
+		await vi.waitFor(() => expect(screenUrl()).toMatch(/^\/showcase\/relay\/demo(\/inbox)?$/));
 
 		expect(shell()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
@@ -77,8 +77,8 @@ describe("Relay as a single-page app", () => {
 
 		expect(shell()).toBe(marker);
 		expect(navigation.currentEntry?.index ?? 0).toBe(start);
-		expect(mounted.requests.at(-1)).toMatch(/^POST \/demo\/apps\/relay\/inbox\/2041 main$/);
-		expect(location.pathname).not.toBe("/demo/apps/relay/inbox/2041");
+		expect(mounted.requests.at(-1)).toMatch(/^POST \/showcase\/relay\/demo\/inbox\/2041 main$/);
+		expect(location.pathname).not.toBe("/showcase/relay/demo/inbox/2041");
 	});
 
 	test("sends a reply through the conversation pane alone", async () => {
@@ -105,9 +105,9 @@ describe("Relay as a single-page app", () => {
 		let marker = shell();
 
 		press(document.querySelector('a[data-main-nav="contacts"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/relay/contacts"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/relay/demo/contacts"));
 		navigation.back();
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/relay/inbox/2041"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/relay/demo/inbox/2041"));
 
 		expect(shell()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);

@@ -50,16 +50,16 @@ describe("Vesper as a single-page app", () => {
 		let start = navigation.currentEntry?.index ?? 0;
 
 		await press(document.querySelector('nav[aria-label="Primary"] a[data-main-nav="series"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/series"));
-		await press(document.querySelector('a[href="/demo/apps/vesper/title/tidewater"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/title/tidewater"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo/series"));
+		await press(document.querySelector('a[href="/showcase/vesper/demo/title/tidewater"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo/title/tidewater"));
 
 		expect(bar()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 		expect((navigation.currentEntry?.index ?? 0) - start).toBe(2);
 		expect(mounted.requests.slice(-2)).toEqual([
-			"GET /demo/apps/vesper/series main",
-			"GET /demo/apps/vesper/title/tidewater main",
+			"GET /showcase/vesper/demo/series main",
+			"GET /showcase/vesper/demo/title/tidewater main",
 		]);
 		await vi.waitFor(() => expect(document.title).toContain("Tidewater"));
 		let current = [...document.querySelectorAll('[data-main-nav][aria-current="page"]')];
@@ -70,10 +70,12 @@ describe("Vesper as a single-page app", () => {
 		mounted = await mountApp(vesper, "vesper", "title/tidewater");
 
 		await press(
-			document.querySelector('a[href="/demo/apps/vesper/title/tidewater?tab=episodes&season=2"]'),
+			document.querySelector(
+				'a[href="/showcase/vesper/demo/title/tidewater?tab=episodes&season=2"]',
+			),
 		);
 		await vi.waitFor(() =>
-			expect(screenUrl()).toBe("/demo/apps/vesper/title/tidewater?tab=episodes&season=2"),
+			expect(screenUrl()).toBe("/showcase/vesper/demo/title/tidewater?tab=episodes&season=2"),
 		);
 
 		let episodes = [...document.querySelectorAll("[data-slot=episode-title]")];
@@ -99,10 +101,10 @@ describe("Vesper as a single-page app", () => {
 		expect(bar()).toBe(marker);
 		expect(navigation.currentEntry?.index ?? 0).toBe(start);
 		expect(mounted.requests.at(-1)).toBe(
-			"POST /demo/apps/vesper/title/signal-fire/list vesper-list-icon-signal-fire",
+			"POST /showcase/vesper/demo/title/signal-fire/list vesper-list-icon-signal-fire",
 		);
 		expect(document.querySelector("[data-main-screen]")?.getAttribute("data-url")).toBe(
-			"/demo/apps/vesper/title/signal-fire",
+			"/showcase/vesper/demo/title/signal-fire",
 		);
 	});
 
@@ -111,9 +113,9 @@ describe("Vesper as a single-page app", () => {
 		let marker = bar();
 
 		await press(document.querySelector('nav[aria-label="Primary"] a[data-main-nav="films"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/films"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo/films"));
 		navigation.back();
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/my-list"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo/my-list"));
 
 		expect(bar()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
@@ -123,13 +125,13 @@ describe("Vesper as a single-page app", () => {
 		mounted = await mountApp(vesper, "vesper", "title/tidewater");
 		let marker = bar();
 
-		await press(document.querySelector('a[href="/demo/apps/vesper/watch/tidewater/2-3"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/watch/tidewater/2-3"));
+		await press(document.querySelector('a[href="/showcase/vesper/demo/watch/tidewater/2-3"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo/watch/tidewater/2-3"));
 		expect(document.querySelector("[data-slot=video-player]")).not.toBeNull();
 		expect(document.querySelector("[data-vesper-bar]")).toBeNull();
 
-		await press(document.querySelector('a[href="/demo/apps/vesper/title/tidewater"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/title/tidewater"));
+		await press(document.querySelector('a[href="/showcase/vesper/demo/title/tidewater"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo/title/tidewater"));
 		expect(bar()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 	});
@@ -138,13 +140,13 @@ describe("Vesper as a single-page app", () => {
 		mounted = await mountApp(vesper, "vesper", "profiles");
 
 		await press(document.querySelector('button[formaction$="/profiles/theo"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo"));
 		await vi.waitFor(() =>
 			expect(document.querySelector('[data-slot="toast-item"]')?.textContent).toContain(
 				"Watching as Theo",
 			),
 		);
-		expect(mounted.requests.at(-1)).toBe("POST /demo/apps/vesper/profiles/theo main");
+		expect(mounted.requests.at(-1)).toBe("POST /showcase/vesper/demo/profiles/theo main");
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 	});
 
@@ -158,7 +160,7 @@ describe("Vesper as a single-page app", () => {
 		await vi.waitFor(() => expect(location.search).toBe("?q=halcyon"));
 
 		expect(mounted.requests.at(-1)).toBe(
-			"GET /demo/apps/vesper/search?q=halcyon vesper-search-results",
+			"GET /showcase/vesper/demo/search?q=halcyon vesper-search-results",
 		);
 		expect(
 			document.querySelector("#vesper-search-results, [data-search-count]")?.textContent,
@@ -172,9 +174,11 @@ describe("Vesper as a single-page app", () => {
 		mounted = await mountApp(vesper, "vesper", "title/tidewater");
 		let start = navigation.currentEntry?.index ?? 0;
 
-		await press(document.querySelector('a[href="/demo/apps/vesper/title/tidewater?tab=details"]'));
+		await press(
+			document.querySelector('a[href="/showcase/vesper/demo/title/tidewater?tab=details"]'),
+		);
 		await vi.waitFor(() =>
-			expect(screenUrl()).toBe("/demo/apps/vesper/title/tidewater?tab=details"),
+			expect(screenUrl()).toBe("/showcase/vesper/demo/title/tidewater?tab=details"),
 		);
 
 		expect(document.querySelector('section[aria-label="Details"]')?.textContent).toContain(
@@ -188,14 +192,14 @@ describe("Vesper as a single-page app", () => {
 	test("keeps focus on the genre chip it pressed rather than the heading", async () => {
 		mounted = await mountApp(vesper, "vesper", "series");
 		let chip = document.querySelector<HTMLElement>(
-			'a[href="/demo/apps/vesper/series?genre=comedy"]',
+			'a[href="/showcase/vesper/demo/series?genre=comedy"]',
 		);
 		chip?.focus();
 		await press(chip);
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper/series?genre=comedy"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo/series?genre=comedy"));
 		await vi.waitFor(() =>
 			expect(document.activeElement?.getAttribute("href")).toBe(
-				"/demo/apps/vesper/series?genre=comedy",
+				"/showcase/vesper/demo/series?genre=comedy",
 			),
 		);
 		expect(document.activeElement?.tagName).not.toBe("H1");
@@ -209,7 +213,7 @@ describe("Vesper as a single-page app", () => {
 		expect(scroller.scrollTop).toBeGreaterThan(0);
 
 		await press(document.querySelector('form[action$="/profiles/theo"] button'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/vesper"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/vesper/demo"));
 		await vi.waitFor(() => expect(scroller.scrollTop).toBe(0));
 	});
 

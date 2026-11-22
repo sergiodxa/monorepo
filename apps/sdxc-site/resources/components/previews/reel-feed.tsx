@@ -59,8 +59,11 @@ export default {
 						offset={index}
 						loopAt={20}
 						sources={[
-							{ src: routes.demoMedia.href({ file: "video/lesson.webm" }), type: "video/webm" },
-							{ src: routes.demoMedia.href({ file: "video/lesson.mp4" }), type: "video/mp4" },
+							{
+								src: routes.showcase.media.href({ file: "video/lesson.webm" }),
+								type: "video/webm",
+							},
+							{ src: routes.showcase.media.href({ file: "video/lesson.mp4" }), type: "video/mp4" },
 						]}
 						backdrop={
 							<span

@@ -19,7 +19,7 @@ import { listCookie, readViewer } from "./state";
 
 /** Posts a form to a Vesper action path with the given cookie. */
 async function post(page: string, fields: Record<string, string>, cookie = "") {
-	return await fetchApp(`/demo/apps/vesper/${page}`, {
+	return await fetchApp(`/showcase/vesper/demo/${page}`, {
 		method: "POST",
 		body: new URLSearchParams(fields),
 		headers: cookie === "" ? {} : { Cookie: cookie },
@@ -59,10 +59,12 @@ describe("Vesper's posts", () => {
 	test("picking a profile sets its cookie and lands on home with a toast", async () => {
 		let response = await post("profiles/theo", {});
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toMatch(/^\/demo\/apps\/vesper\?toast=profile-theo\./);
+		expect(response.headers.get("Location")).toMatch(
+			/^\/showcase\/vesper\/demo\?toast=profile-theo\./,
+		);
 		expect(cookieOf(response)).toBe("vesper.profile=theo");
 		let home = await (
-			await fetchApp("/demo/apps/vesper", { headers: { Cookie: "vesper.profile=theo" } })
+			await fetchApp("/showcase/vesper/demo", { headers: { Cookie: "vesper.profile=theo" } })
 		).text();
 		expect(home).toContain("Continue watching for Theo");
 	});
@@ -70,11 +72,13 @@ describe("Vesper's posts", () => {
 	test("My List returns to the page it came from, and never off Vesper", async () => {
 		let back = await post("title/tidewater/list", { on: "true", back: "title/tidewater?season=2" });
 		expect(back.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/vesper\/title\/tidewater\?season=2&toast=listed-tidewater\./,
+			/^\/showcase\/vesper\/demo\/title\/tidewater\?season=2&toast=listed-tidewater\./,
 		);
 		expect(cookieOf(back)).toMatch(/^vesper\.list\.noa=tidewater%2C/);
 		let away = await post("title/tidewater/list", { on: "true", back: "https://example.com" });
-		expect(away.headers.get("Location")).toMatch(/^\/demo\/apps\/vesper\/title\/tidewater\?toast=/);
+		expect(away.headers.get("Location")).toMatch(
+			/^\/showcase\/vesper\/demo\/title\/tidewater\?toast=/,
+		);
 	});
 
 	test("reset expires every Vesper cookie and lands on home with a toast", async () => {
@@ -84,7 +88,7 @@ describe("Vesper's posts", () => {
 			"vesper.profile=theo; vesper.list.theo=tidewater; other=1",
 		);
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toMatch(/^\/demo\/apps\/vesper\?toast=reset\./);
+		expect(response.headers.get("Location")).toMatch(/^\/showcase\/vesper\/demo\?toast=reset\./);
 		let cleared = response.headers.getSetCookie();
 		expect(
 			cleared
@@ -105,7 +109,7 @@ describe("Vesper's catalogue", () => {
 	test("keeps the Kids profile to titles rated for all ages, even by address", async () => {
 		let kids = findProfile("kids")!;
 		expect(visibleTitles(kids).every((title) => title.kids)).toBe(true);
-		let response = await fetchApp("/demo/apps/vesper/title/ember-line", {
+		let response = await fetchApp("/showcase/vesper/demo/title/ember-line", {
 			headers: { Cookie: "vesper.profile=kids" },
 		});
 		expect(response.status).toBe(404);
@@ -125,12 +129,12 @@ describe("Vesper's catalogue", () => {
 	});
 
 	test("resumes an episode at the time the profile left it, with a clip as long as it", async () => {
-		let body = await (await fetchApp("/demo/apps/vesper/watch/tidewater/2-3")).text();
+		let body = await (await fetchApp("/showcase/vesper/demo/watch/tidewater/2-3")).text();
 		let start = Math.round(0.42 * 50 * 60);
-		expect(body).toContain(`/demo/media/video/vesper/50.webm#t=${start}`);
-		expect(body).toContain(`/demo/media/video/vesper/50.mp4#t=${start}`);
-		let fresh = await (await fetchApp("/demo/apps/vesper/watch/tidewater/1-1")).text();
-		expect(fresh).toContain('/demo/media/video/vesper/52.webm"');
+		expect(body).toContain(`/showcase/media/video/vesper/50.webm#t=${start}`);
+		expect(body).toContain(`/showcase/media/video/vesper/50.mp4#t=${start}`);
+		let fresh = await (await fetchApp("/showcase/vesper/demo/watch/tidewater/1-1")).text();
+		expect(fresh).toContain('/showcase/media/video/vesper/52.webm"');
 	});
 
 	test("ships a clip for every running time in the catalogue", () => {
@@ -154,7 +158,7 @@ describe("Vesper's catalogue", () => {
 	});
 
 	test("answers its own 404 for an episode a series lacks", async () => {
-		expect((await fetchApp("/demo/apps/vesper/watch/tidewater/9-9")).status).toBe(404);
-		expect((await fetchApp("/demo/apps/vesper/watch/the-quiet-hours/1-1")).status).toBe(404);
+		expect((await fetchApp("/showcase/vesper/demo/watch/tidewater/9-9")).status).toBe(404);
+		expect((await fetchApp("/showcase/vesper/demo/watch/the-quiet-hours/1-1")).status).toBe(404);
 	});
 });

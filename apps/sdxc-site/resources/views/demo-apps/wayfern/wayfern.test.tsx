@@ -26,7 +26,7 @@ const MONDAY = (() => {
 
 /** Posts a form to a Wayfern action path with the given cookie. */
 async function post(page: string, fields: Record<string, string>, cookie = "") {
-	return await fetchApp(`/demo/apps/wayfern/${page}`, {
+	return await fetchApp(`/showcase/wayfern/demo/${page}`, {
 		method: "POST",
 		body: new URLSearchParams(fields),
 		headers: cookie === "" ? {} : { Cookie: cookie },
@@ -162,12 +162,12 @@ describe("Wayfern's posts", () => {
 		let back = await post("saved/dune-hollow", { on: "true", back: "s?where=ribeira-grande" });
 		expect(back.status).toBe(303);
 		expect(back.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/wayfern\/s\?where=ribeira-grande&toast=saved-dune-hollow\./,
+			/^\/showcase\/wayfern\/demo\/s\?where=ribeira-grande&toast=saved-dune-hollow\./,
 		);
 		expect(cookiesOf(back)).toMatch(/^wayfern\.saved=dune-hollow%2C/);
 		let away = await post("saved/dune-hollow", { on: "true", back: "https://example.com" });
 		expect(away.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/wayfern\/stay\/dune-hollow\?toast=/,
+			/^\/showcase\/wayfern\/demo\/stay\/dune-hollow\?toast=/,
 		);
 	});
 
@@ -183,16 +183,16 @@ describe("Wayfern's posts", () => {
 		});
 		expect(response.status).toBe(303);
 		let location = response.headers.get("Location") ?? "";
-		expect(location).toMatch(/^\/demo\/apps\/wayfern\/trips\/WF-[A-Z0-9]{5}\?toast=booked\./);
+		expect(location).toMatch(/^\/showcase\/wayfern\/demo\/trips\/WF-[A-Z0-9]{5}\?toast=booked\./);
 		let cookie = cookiesOf(response);
 		let code = /trips\/(WF-[A-Z0-9]{5})/.exec(location)![1]!;
 		let trip = await (
-			await fetchApp(`/demo/apps/wayfern/trips/${code}`, { headers: { Cookie: cookie } })
+			await fetchApp(`/showcase/wayfern/demo/trips/${code}`, { headers: { Cookie: cookie } })
 		).text();
 		expect(trip).toContain("The Canopy, Furnas");
 		expect(trip).toContain("Mastercard ending in 5100");
 		let calendar = await (
-			await fetchApp("/demo/apps/wayfern/stay/the-canopy", { headers: { Cookie: cookie } })
+			await fetchApp("/showcase/wayfern/demo/stay/the-canopy", { headers: { Cookie: cookie } })
 		).text();
 		expect(calendar).not.toMatch(new RegExp(`<a[^>]*data-date="${open.start}"`));
 	});
@@ -215,7 +215,7 @@ describe("Wayfern's posts", () => {
 	test("cancelling marks the trip cancelled, and Undo restores it", async () => {
 		let cancel = await post("trips/WF-7M3QK/cancel", {});
 		expect(cancel.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/wayfern\/trips\/WF-7M3QK\?toast=cancelled\./,
+			/^\/showcase\/wayfern\/demo\/trips\/WF-7M3QK\?toast=cancelled\./,
 		);
 		let cookie = cookiesOf(cancel);
 		expect(readTraveller(cookie, today()).trips[0]?.status).toBe("cancelled");

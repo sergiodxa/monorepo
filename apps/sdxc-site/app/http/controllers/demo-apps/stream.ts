@@ -1,5 +1,5 @@
 /**
- * `GET /demo/apps/:app/streams/*part` — a live part of a demo app's screen as a streamed
+ * `GET /showcase/:slug/demo/streams/*part` — a live part of a demo app's screen as a streamed
  * `text/plain` body, such as a running job's log. Nothing is cached or buffered, so the page
  * appends each line the moment it is written.
  *
@@ -14,14 +14,14 @@ import { findDemoApp } from "~/resources/views/demo-apps";
 import routes from "~/routes/web";
 
 /** The `:app` and `*part` the stream names. */
-const PARAMS = s.object({ app: s.string(), part: s.string() });
+const PARAMS = s.object({ slug: s.string(), part: s.string() });
 
 /**
  * Answers the part's text as the app writes it, encoded as UTF-8 and marked uncacheable; an
  * unknown app or part answers `404` with an empty body.
  */
-export default createAction(routes.demoStreams.app, async (ctx) => {
-	let { app: slug, part } = s.parse(PARAMS, ctx.params);
+export default createAction(routes.showcase.demoStream, async (ctx) => {
+	let { slug, part } = s.parse(PARAMS, ctx.params);
 	let app = await findDemoApp(slug);
 	let stream =
 		app?.stream?.(part, {

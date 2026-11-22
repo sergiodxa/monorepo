@@ -426,7 +426,7 @@ function submitSettings(form: FormData): DemoAppRedirect | null {
 }
 
 /**
- * Relay as the gallery and `/demo/apps/relay` read it: its theme, every screen, and where
+ * Relay as the gallery and `/showcase/relay/demo` read it: its theme, every screen, and where
  * each form returns the visitor with which toast.
  */
 export default {

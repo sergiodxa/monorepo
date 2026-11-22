@@ -1,5 +1,5 @@
 /**
- * `GET /demo/media/*file` — the demos' video clips, answered with byte ranges. A browser
+ * `GET /showcase/media/*file` — the demos' video clips, answered with byte ranges. A browser
  * only lets a video seek when its file answers `Range` requests with `206 Partial Content`,
  * which the site's static files do not, so the clips are served from the Worker itself.
  *
@@ -68,7 +68,7 @@ function bytesOf(dataUrl: string): Uint8Array<ArrayBuffer> {
  * Answers the whole clip with `Accept-Ranges`, or the part a `Range` header asks for as `206`
  * with its `Content-Range`; a range past the end answers `416`, and a file no clip has `404`.
  */
-export default createAction(routes.demoMedia, async (ctx) => {
+export default createAction(routes.showcase.media, async (ctx) => {
 	let { file } = s.parse(PARAMS, ctx.params);
 	let load = CLIPS[`/resources/media/${file}`];
 	let type = TYPES[file.slice(file.lastIndexOf(".") + 1)];

@@ -10,9 +10,9 @@ import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
 
-describe("GET /demo/apps/:app/files/*part", () => {
+describe("GET /showcase/:slug/demo/files/*part", () => {
 	test("answers an app's file with its own content type, never stored", async () => {
-		let response = await fetchApp("/demo/apps/sundial/files/calendars/work.ics");
+		let response = await fetchApp("/showcase/sundial/demo/files/calendars/work.ics");
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Content-Type")).toMatch(/^text\/calendar/);
 		expect(response.headers.get("Cache-Control")).toBe("private, no-store");
@@ -20,7 +20,7 @@ describe("GET /demo/apps/:app/files/*part", () => {
 	});
 
 	test("answers 404 for a part the app lacks and for an app without files", async () => {
-		expect((await fetchApp("/demo/apps/sundial/files/nothing.txt")).status).toBe(404);
-		expect((await fetchApp("/demo/apps/cairn/files/anything.ics")).status).toBe(404);
+		expect((await fetchApp("/showcase/sundial/demo/files/nothing.txt")).status).toBe(404);
+		expect((await fetchApp("/showcase/cairn/demo/files/anything.ics")).status).toBe(404);
 	});
 });

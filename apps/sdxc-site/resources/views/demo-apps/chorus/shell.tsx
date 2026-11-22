@@ -356,7 +356,9 @@ function AccountMenu() {
 			>
 				<Menu.Item type="submit">Reset the demo</Menu.Item>
 			</form>
-			<Menu.Item href={routes.demos.href()}>Sign out</Menu.Item>
+			<Menu.Item href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}>
+				Sign out
+			</Menu.Item>
 		</Menu>
 	);
 }
@@ -398,7 +400,10 @@ function RightRail() {
 				]}
 			>
 				Chorus is an invented network, a demo of{" "}
-				<a href={routes.demos.href()} mix={[raw({ color: "inherit" })]}>
+				<a
+					href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}
+					mix={[raw({ color: "inherit" })]}
+				>
 					sdxc.dev's components
 				</a>
 				. Everyone on it is fictional.

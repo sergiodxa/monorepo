@@ -24,6 +24,9 @@ export const FEEDBACK_ID = "feedback";
 /** The frame's name, which the form targets and the vote's action recognises. */
 export const FEEDBACK_FRAME = "feedback";
 
+/** The page path under a docs demo its vote posts to; a reload of it returns to the page voted on. */
+export const FEEDBACK_PAGE = "feedback";
+
 /** The frame part every page's block is served under, followed by the page's path. */
 export const FEEDBACK_PART = "feedback";
 
@@ -33,10 +36,10 @@ export const FEEDBACK_PART = "feedback";
  * @param slug The demo's folder name.
  * @param path The page's path under the site.
  * @param sent Whether the frame thanks the reader in place of the form.
- * @returns The frame's address under `/demo/frames/docs`.
+ * @returns The frame's address under the demo's own `frames` path.
  */
 export function demoDocsFeedbackHref(slug: string, path: string, sent: boolean): string {
-	let href = routes.demoFrames.docs.href({ site: slug, part: `${FEEDBACK_PART}/${path}` });
+	let href = routes.showcase.demoFrame.href({ slug, part: `${FEEDBACK_PART}/${path}` });
 	return sent ? `${href}?${FEEDBACK_SENT_PARAM}=sent` : href;
 }
 
@@ -78,7 +81,7 @@ export function demoDocsThanksHref(slug: string, path: string): string {
  * @returns The vote action's address.
  */
 export function demoDocsFeedbackAction(slug: string, path: string): string {
-	return `${routes.demoDocs.feedback.href({ site: slug })}?page=${demoDocsHref(slug)(path)}`;
+	return `${routes.showcase.demoAction.href({ slug, page: FEEDBACK_PAGE })}?page=${demoDocsHref(slug)(path)}`;
 }
 
 namespace DemoDocsFeedback {

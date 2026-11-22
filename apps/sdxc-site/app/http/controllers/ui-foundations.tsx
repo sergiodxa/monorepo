@@ -129,7 +129,10 @@ export default async function foundationsPage(
 							{DEMOED_MODULES.has(foundations.module) ? (
 								<p>
 									See the components assembled into whole sites in the{" "}
-									<a href={routes.demos.href()}>demo gallery</a>.
+									<a href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}>
+										showcase
+									</a>
+									.
 								</p>
 							) : null}
 						</Typeset>

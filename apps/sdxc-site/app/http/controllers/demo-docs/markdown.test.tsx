@@ -10,9 +10,9 @@ import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
 
-describe("GET /demo/docs/:site/*page.md", () => {
+describe("GET /showcase/:slug/demo/*page.md", () => {
 	test("answers the page's title and outline as Markdown", async () => {
-		let response = await fetchApp("/demo/docs/driftwood/start/quickstart.md");
+		let response = await fetchApp("/showcase/driftwood/demo/start/quickstart.md");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -23,7 +23,7 @@ describe("GET /demo/docs/:site/*page.md", () => {
 	});
 
 	test("answers 404 for a page the demo doesn't hold", async () => {
-		expect((await fetchApp("/demo/docs/driftwood/start/nothing.md")).status).toBe(404);
-		expect((await fetchApp("/demo/docs/nowhere/start/quickstart.md")).status).toBe(404);
+		expect((await fetchApp("/showcase/driftwood/demo/start/nothing.md")).status).toBe(404);
+		expect((await fetchApp("/showcase/nowhere/demo/start/quickstart.md")).status).toBe(404);
 	});
 });

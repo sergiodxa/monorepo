@@ -439,7 +439,7 @@ function submit(
 }
 
 /**
- * Tern as the gallery and `/demo/apps/tern` read it: its theme, every screen, its frames,
+ * Tern as the gallery and `/showcase/tern/demo` read it: its theme, every screen, its frames,
  * and how each form answers.
  */
 export default {

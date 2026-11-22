@@ -47,13 +47,13 @@ const CODE = `<VideoPlayer duration={703} chapters={chapters} transcript={transc
 </VideoPlayer>`;
 
 /** A transparent clip as long as the lesson, so every control works over the drawn frame. */
-const CLIP = routes.demoMedia.href({ file: "video/lesson.webm" });
+const CLIP = routes.showcase.media.href({ file: "video/lesson.webm" });
 
 /**
  * The same length in H.264 for browsers without WebM, on a solid ground the colour of the
  * drawn frame's backdrop, since an MP4 carries no alpha.
  */
-const CLIP_MP4 = routes.demoMedia.href({ file: "video/lesson.mp4" });
+const CLIP_MP4 = routes.showcase.media.href({ file: "video/lesson.mp4" });
 
 /** The lesson's chapters. */
 const CHAPTERS: VideoPlayer.Chapter[] = [

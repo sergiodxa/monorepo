@@ -1,5 +1,5 @@
 /**
- * `GET /demo/apps/:app(/*page)` — a complete sample app built from `@sdxc/ui/app`, every
+ * `GET /showcase/:slug/demo(/*page)` — a complete sample app built from `@sdxc/ui/app`, every
  * screen drawn from fixture data in the app's own art direction, with the toast a form's
  * redirect named. Marked `noindex, nofollow`, since each app runs an invented product.
  *
@@ -23,7 +23,7 @@ import DemoAppDocument from "~/resources/views/demo-apps/document";
 import routes from "~/routes/web";
 
 /** The params a request carries; `page` is absent on the home screen. */
-const PARAMS = s.object({ app: s.string(), page: s.optional(s.string()) });
+const PARAMS = s.object({ slug: s.string(), page: s.optional(s.string()) });
 
 /**
  * Renders the screen the path names, or the app's own 404 screen. An unknown app answers the
@@ -33,8 +33,8 @@ const PARAMS = s.object({ app: s.string(), page: s.optional(s.string()) });
  * answers only that frame's content. Pages and frames are cached per address, target and value
  * of the cookies the app reads; a toast's page never is, nor is anything drawn for one visitor.
  */
-export default createAction(routes.demoApps.show, async (ctx) => {
-	let { app: slug, page = "" } = s.parse(PARAMS, ctx.params);
+export default createAction(routes.showcase.demo, async (ctx) => {
+	let { slug, page = "" } = s.parse(PARAMS, ctx.params);
 	let app = await findDemoApp(slug);
 	if (app === null) return defaultHandler(ctx);
 	if (app.csp !== undefined) patchCsp(ctx, { reportOnlyPolicy: withSources(app.csp) });

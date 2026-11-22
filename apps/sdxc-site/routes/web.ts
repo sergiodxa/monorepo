@@ -15,8 +15,35 @@ export default route({
 
 	/** The essay on why the packages look the way they do, and who funds the work. */
 	philosophy: get("/philosophy"),
-	/** The applications these packages are built and proven in. */
-	showcase: get("/showcase"),
+	/**
+	 * Everything built on these packages: the applications running in production and the demos
+	 * for invented products, each with a case study and, for a demo, the demo itself beneath it.
+	 */
+	showcase: {
+		/** Every item in one grid, narrowed by `?kind=` (production, demo, landing, docs). */
+		index: get("/showcase"),
+		/** One item's case study: what it demonstrates, its screenshots and what it is built from. */
+		show: get("/showcase/:slug"),
+		/**
+		 * The demo itself, whatever its kind: a landing, a docs site with its pages, search,
+		 * feedback and Markdown twins, or an app with its screens.
+		 */
+		demo: get("/showcase/:slug/demo(/*page)"),
+		/** Where a demo's forms post: an app's actions, or a docs page's feedback vote. */
+		demoAction: post("/showcase/:slug/demo(/*page)"),
+		/**
+		 * One secondary part of a demo screen as an HTML fragment, which the screen streams in
+		 * after its shell. It sits under the demo's own path, so the cookies scoped to a demo
+		 * reach its frames too.
+		 */
+		demoFrame: get("/showcase/:slug/demo/frames/*part"),
+		/** A live part of a demo app's screen as a streamed `text/plain` body, such as a CI log. */
+		demoStream: get("/showcase/:slug/demo/streams/*part"),
+		/** A file a demo app offers to download or subscribe to, such as a calendar's `.ics`. */
+		demoFile: get("/showcase/:slug/demo/files/*part"),
+		/** The demos' video clips, answered with byte ranges. */
+		media: get("/showcase/media/*file"),
+	},
 	/** Which releases get fixes, and how to report something privately. */
 	security: get("/security"),
 	/** What support a dated release carries, which is the question its number raises. */
@@ -157,69 +184,26 @@ export default route({
 	/** The crawl rules and AI usage preferences, served as robots.txt. */
 	robots: get("/robots.txt"),
 	/**
-	 * Every demo landing and demo docs site on one page, kept out of search engines like the
-	 * demos it lists.
-	 */
-	demos: get("/demo"),
-	/**
-	 * A complete sample landing built from `@sdxc/ui`'s landing parts, kept out of search
-	 * engines: each one invents its product, so none of it is a page about sdxc.
-	 */
-	demo: get("/demo/:slug"),
-	/**
 	 * Usage stats for every package, for the maintainer. `.json` answers every snapshot the
 	 * page draws from and `.md` a report of its figures, for an agent to analyse. Linked from
 	 * nowhere and kept out of search engines; the address is the only way in.
 	 */
 	stats: get("/stats(.:format)"),
 	/**
-	 * A complete sample docs site built from `@sdxc/ui/docs`, several pages deep, kept out of
-	 * search engines like the landing demos: each one documents an invented product.
+	 * Where the demos used to live. Every address answers a permanent redirect that keeps its
+	 * method and query string: the galleries to the showcase's demo filter, and each demo, page,
+	 * frame and clip to the same place under `/showcase/:slug/demo`.
 	 */
-	demoDocs: {
-		/** The site's hub without `page`, one of its pages with it, and its search at `search`. */
-		show: get("/demo/docs/:site(/*page)"),
-		/** A page's Markdown twin, which the page's "Copy page" button copies. */
-		markdown: get("/demo/docs/:site/*page.md"),
-		/** Where a page's "Was this helpful?" form posts; it answers by thanking the reader. */
-		feedback: post("/demo/docs/:site/feedback"),
+	legacyDemos: {
+		gallery: "/demo",
+		apps: "/demo/apps",
+		/** Every address of one demo app, its frames, streams, files and actions included. */
+		app: "/demo/apps/:slug(/*rest)",
+		/** Every address of one docs demo, its Markdown twins and feedback included. */
+		docs: "/demo/docs/:slug(/*rest)",
+		docsFrame: "/demo/frames/docs/:slug/*part",
+		media: "/demo/media/*file",
+		/** A landing demo under the generic name it had before it took its product's name. */
+		landing: "/demo/:slug",
 	},
-	/**
-	 * A complete sample app built from `@sdxc/ui/app`, several screens deep and kept out of
-	 * search engines like the other demos: each one runs an invented product on fixture data.
-	 */
-	demoApps: {
-		/** The app's home without `page`, one of its screens with it. */
-		show: get("/demo/apps/:app(/*page)"),
-		/** Where a screen's forms post; it keeps nothing and answers by sending the visitor back. */
-		action: post("/demo/apps/:app(/*page)"),
-	},
-	/**
-	 * One secondary part of a demo screen as an HTML fragment, which the screen streams in
-	 * after its shell: a chart, a feed, a side panel, or a docs page's interactive piece.
-	 */
-	demoFrames: {
-		/**
-		 * A part of a demo app's screen, named by its path under the app. It sits under the app's
-		 * own path, so the cookies scoped to that app reach its frames too.
-		 */
-		app: get("/demo/apps/:app/frames/*part"),
-		/** An interactive piece of a docs demo page, such as its feedback form or a live example. */
-		docs: get("/demo/frames/docs/:site/*part"),
-	},
-	/**
-	 * A live part of a demo app's screen as a streamed `text/plain` body, such as a running CI
-	 * job's log, which the page appends line by line as it arrives.
-	 */
-	demoStreams: {
-		app: get("/demo/apps/:app/streams/*part"),
-	},
-	/**
-	 * A file a demo app offers to download or subscribe to, such as a calendar's `.ics`, answered
-	 * with the app's own content type under the app's path, so its cookies reach it.
-	 */
-	demoFiles: {
-		app: get("/demo/apps/:app/files/*part"),
-	},
-	demoMedia: get("/demo/media/*file"),
 });

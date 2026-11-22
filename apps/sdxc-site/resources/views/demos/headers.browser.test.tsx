@@ -13,9 +13,9 @@ import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 
-import { SiteHeader as AppDemoHeader } from "~/resources/views/demos/app/site-chrome";
-import BookHeader from "~/resources/views/demos/book/header";
-import { SaasHeader } from "~/resources/views/demos/saas/header";
+import { SaasHeader } from "~/resources/views/demos/keel/header";
+import { SiteHeader as AppDemoHeader } from "~/resources/views/demos/rooftree/site-chrome";
+import BookHeader from "~/resources/views/demos/the-measure/header";
 
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";

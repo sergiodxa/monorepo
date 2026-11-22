@@ -60,8 +60,14 @@ export function reelTitle(reel: Reel): string {
 /** The clip a reel plays: one of the demo's transparent clips, in WebM and in MP4. */
 function sourcesOf(reel: Reel): ReelFeed.Source[] {
 	return [
-		{ src: routes.demoMedia.href({ file: `video/vesper/${reel.clip}.webm` }), type: "video/webm" },
-		{ src: routes.demoMedia.href({ file: `video/vesper/${reel.clip}.mp4` }), type: "video/mp4" },
+		{
+			src: routes.showcase.media.href({ file: `video/vesper/${reel.clip}.webm` }),
+			type: "video/webm",
+		},
+		{
+			src: routes.showcase.media.href({ file: `video/vesper/${reel.clip}.mp4` }),
+			type: "video/mp4",
+		},
 	];
 }
 

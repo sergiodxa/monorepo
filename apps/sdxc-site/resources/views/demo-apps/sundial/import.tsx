@@ -14,12 +14,14 @@ import { raw } from "@sdxc/u/general";
 import { Button } from "@sdxc/ui";
 import { DropZone } from "@sdxc/ui/app/drop-zone";
 
+import routes from "~/routes/web";
+
 import { CALENDARS, SLUG, actionHref, colorValue, findCalendar } from "./data";
 import { IMPORT_CALENDAR } from "./ics";
 
 /** The address of one of Sundial's files. */
 export function fileHref(part: string): string {
-	return `/demo/apps/${SLUG}/files/${part}`;
+	return routes.showcase.demoFile.href({ slug: SLUG, part });
 }
 
 /** A small link to a file, downloaded rather than opened in the app's frame. */

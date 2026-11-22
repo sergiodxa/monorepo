@@ -307,7 +307,7 @@ shares.
 
 ## Where to go next
 
-- The demo docs sites in the [demo gallery](/demo) — content docs, component docs, utilities
+- The demo docs sites in the [showcase](/showcase?kind=demo) — content docs, component docs, utilities
   and an API reference, each built from `@sdxc/ui/docs` — to see what a reference page can
   look like once it is rendered.
 - [Docs foundations](/api/ui/docs-foundations) — the shell, reading type and variables the

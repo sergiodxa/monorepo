@@ -1,5 +1,5 @@
 /**
- * `POST /demo/apps/:app/*page` — where a demo app's forms post. A demo keeps nothing: the app
+ * `POST /showcase/:slug/demo(/*page)` — where a demo app's forms post. A demo keeps nothing: the app
  * picks the screen to return to and the toast to greet the visitor with, or answers the form
  * again with what was typed and its issues, the way a real app answers a save.
  *
@@ -22,7 +22,7 @@ import DemoAppDocument from "~/resources/views/demo-apps/document";
 import routes from "~/routes/web";
 
 /** The `:app` and `*page` the form posted under; `page` is absent on the home screen. */
-const PARAMS = s.object({ app: s.string(), page: s.optional(s.string()) });
+const PARAMS = s.object({ slug: s.string(), page: s.optional(s.string()) });
 
 /**
  * Answers `303` to the screen the app chose, with its toast's key and a one-time suffix in
@@ -33,8 +33,8 @@ const PARAMS = s.object({ app: s.string(), page: s.optional(s.string()) });
  * toggle's background post answers `204` with the redirect's cookies, as its page already
  * shows the change.
  */
-export default createAction(routes.demoApps.action, async (ctx) => {
-	let { app: slug, page = "" } = s.parse(PARAMS, ctx.params);
+export default createAction(routes.showcase.demoAction, async (ctx) => {
+	let { slug, page = "" } = s.parse(PARAMS, ctx.params);
 	let app = await findDemoApp(slug);
 	if (app === null) return new Response("Not found.", { status: 404 });
 

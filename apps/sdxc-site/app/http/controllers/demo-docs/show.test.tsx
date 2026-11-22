@@ -1,5 +1,5 @@
 /**
- * Tests `GET /demo/docs/:site(/*page)` through the real router over every docs demo: each
+ * Tests `GET /showcase/:slug/demo(/*page)` through the real router over every docs demo: each
  * hub and page answers `noindex`, every heading the rail lists exists on its page, search
  * finds a page by a heading's word, and a missing page answers the site's own 404.
  *
@@ -25,10 +25,10 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-describe("GET /demo/docs/:site", () => {
+describe("GET /showcase/:slug/demo for a docs site", () => {
 	test("reuses a stored docs response through the streaming cache", async () => {
 		vi.spyOn(caching, "withStreamCache").mockResolvedValue(new Response("cached docs"));
-		let response = await fetchApp("/demo/docs/driftwood");
+		let response = await fetchApp("/showcase/driftwood/demo");
 
 		expect(await response.text()).toBe("cached docs");
 	});
@@ -37,7 +37,7 @@ describe("GET /demo/docs/:site", () => {
 		"gives %s the shared cache policy and a working validator",
 		async (path) => {
 			vi.stubEnv("PROD", true);
-			let href = `/demo/docs/driftwood${path}`;
+			let href = `/showcase/driftwood/demo${path}`;
 			let response = await fetchApp(href);
 			let tag = response.headers.get("ETag");
 
@@ -51,10 +51,10 @@ describe("GET /demo/docs/:site", () => {
 	test("keeps search, feedback and remembered-tab cache variants distinct", async () => {
 		let edge = vi.spyOn(caching, "withStreamCache");
 		let paths = [
-			"/demo/docs/driftwood/search?q=deploy",
-			"/demo/docs/driftwood/search?q=domain",
-			"/demo/docs/driftwood/start/quickstart",
-			"/demo/docs/driftwood/start/quickstart?feedback=sent",
+			"/showcase/driftwood/demo/search?q=deploy",
+			"/showcase/driftwood/demo/search?q=domain",
+			"/showcase/driftwood/demo/start/quickstart",
+			"/showcase/driftwood/demo/start/quickstart?feedback=sent",
 		];
 		let tags = [];
 		for (let path of paths) tags.push((await fetchApp(path)).headers.get("ETag"));
@@ -67,14 +67,18 @@ describe("GET /demo/docs/:site", () => {
 		expect(tags.every(Boolean)).toBe(true);
 		expect(new Set(tags).size).toBe(paths.length + 1);
 		let variants = edge.mock.calls
-			.filter(([request]) => new URL(request.url).pathname.startsWith("/demo/docs/"))
+			.filter(
+				([request]) =>
+					/^\/showcase\/[\w-]+\/demo(\/|$)/.test(new URL(request.url).pathname) &&
+					!new URL(request.url).pathname.includes("/demo/frames/"),
+			)
 			.map(([, variant]) => variant);
 		expect(new Set(variants).size).toBe(paths.length + 1);
 	});
 
 	test("keeps remembered package-manager HTML private", async () => {
 		vi.stubEnv("PROD", true);
-		let response = await fetchApp("/demo/docs/driftwood/start/quickstart", {
+		let response = await fetchApp("/showcase/driftwood/demo/start/quickstart", {
 			headers: { Cookie: "ui-code-tabs.package-manager=bun" },
 		});
 
@@ -134,7 +138,7 @@ describe("GET /demo/docs/:site", () => {
 	});
 
 	test("a missing page answers 404 inside the site, with the search pre-filled", async () => {
-		let response = await fetchApp("/demo/docs/driftwood/guides/custom-domain-setup");
+		let response = await fetchApp("/showcase/driftwood/demo/guides/custom-domain-setup");
 		let body = await response.text();
 
 		expect(response.status).toBe(404);
@@ -145,7 +149,7 @@ describe("GET /demo/docs/:site", () => {
 	});
 
 	test("an unknown site answers the site's 404", async () => {
-		expect((await fetchApp("/demo/docs/no-such-site")).status).toBe(404);
-		expect((await fetchApp("/demo/docs/constructor")).status).toBe(404);
+		expect((await fetchApp("/showcase/no-such-site/demo")).status).toBe(404);
+		expect((await fetchApp("/showcase/constructor/demo")).status).toBe(404);
 	});
 });

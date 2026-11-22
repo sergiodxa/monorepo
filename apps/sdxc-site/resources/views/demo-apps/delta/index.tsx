@@ -383,7 +383,7 @@ async function framePart(part: string, request: DemoAppRequest): Promise<RemixNo
 }
 
 /**
- * Delta as the gallery and `/demo/apps/delta` read it: its theme, every screen, and the one
+ * Delta as the gallery and `/showcase/delta/demo` read it: its theme, every screen, and the one
  * form it answers.
  */
 export default {

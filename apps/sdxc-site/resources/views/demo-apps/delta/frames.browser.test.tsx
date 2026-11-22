@@ -26,7 +26,7 @@ import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
 
 /** Every page Delta draws lives under this path. */
-const ROOT = "/demo/apps/delta";
+const ROOT = "/showcase/delta/demo";
 
 /** Wraps a node in Delta's theme tokens, so type and spacing match the page. */
 function themed(node: RemixNode): RemixNode {
@@ -398,13 +398,13 @@ let toggled: string[] = [];
  * toggle's background post answered `204`, as the action route answers one.
  */
 const WORKER = setupWorker(
-	http.post(/\/demo\/apps\/delta\//, ({ request }) => {
-		toggled.push(new URL(request.url).pathname.replace(/^\/demo\/apps\/delta\//, ""));
+	http.post(/\/showcase\/delta\/demo\//, ({ request }) => {
+		toggled.push(new URL(request.url).pathname.replace(/^\/showcase\/delta\/demo\//, ""));
 		return new HttpResponse(null, { status: 204 });
 	}),
-	http.get(/\/demo\/apps\/delta\/streams\//, ({ request }) => {
+	http.get(/\/showcase\/delta\/demo\/streams\//, ({ request }) => {
 		let url = new URL(request.url);
-		let part = url.pathname.replace(/^\/demo\/apps\/delta\/streams\//, "");
+		let part = url.pathname.replace(/^\/showcase\/delta\/demo\/streams\//, "");
 		let stream = streamFails ? null : delta.stream?.(part, { page: part, url, cookie: null });
 		if (stream === null || stream === undefined) return new HttpResponse(null, { status: 503 });
 		return new HttpResponse(stream.pipeThrough(new TextEncoderStream()), {

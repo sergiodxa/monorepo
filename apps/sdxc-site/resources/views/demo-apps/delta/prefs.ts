@@ -57,7 +57,7 @@ export const DEFAULT_SETTINGS: RepoSettings = {
 	name: "delta",
 	description:
 		"The code-hosting demo on sdxc.dev, built from @sdxc/ui. You're reading its source: every file, commit and blame line comes from git.",
-	website: "https://sdxc.dev/demo/apps/delta",
+	website: "https://sdxc.dev/showcase/delta/demo",
 	issues: true,
 	discussions: false,
 	wiki: false,

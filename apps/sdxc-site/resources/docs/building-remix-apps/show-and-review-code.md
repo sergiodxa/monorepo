@@ -21,7 +21,7 @@ selection on top.
 npm add @sdxc/diff @sdxc/icons @sdxc/ui remix
 ```
 
-The [Delta demo](/demo/apps/delta) is a code host built this way; open a file there to see
+The [Delta demo](/showcase/delta/demo) is a code host built this way; open a file there to see
 `CodeView` with blame.
 
 ## Register the islands
@@ -129,7 +129,7 @@ let files = parsePatch(patchText);
 let hunks = parseHunks(patchText, files[0]!);
 ```
 
-The [Delta demo](/demo/apps/delta) reads its own git history this way. A Worker has no git, so
+The [Delta demo](/showcase/delta/demo) reads its own git history this way. A Worker has no git, so
 its build runs `git show --format= -M --patch` for each commit and stores the text. On a
 request the Worker parses a commit's files once, and a file's hunks only when a page asks for
 that file, so a commit touching forty files costs one scan plus the files on screen.

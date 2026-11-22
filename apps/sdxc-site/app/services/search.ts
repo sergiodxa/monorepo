@@ -84,17 +84,17 @@ let packageCorpus: Array<PackageMatch & { haystack: string }> | null = null;
 const CATALOGUE_DIRECTORIES = new Set(["u", "ui"]);
 
 /**
- * The demo gallery, listed with the components it is built from. Its summary names the
- * words a reader reaches for instead of "demo", so "examples" or "showcase" land there too.
+ * The showcase, listed with the components it is built from. Its summary names the words a
+ * reader reaches for instead of "showcase", so "examples" or "demo" land there too.
  */
-const DEMOS_DOCUMENT: SearchDocument = {
-	href: routes.demos.href(),
-	title: "Demos",
-	page: "Demos",
-	section: "@sdxc/ui · Demos",
+const SHOWCASE_DOCUMENT: SearchDocument = {
+	href: routes.showcase.index.href(),
+	title: "Showcase",
+	page: "Showcase",
+	section: "@sdxc/ui · Showcase",
 	kind: "ui",
 	summary:
-		"Example landing pages, docs sites and apps built from @sdxc/ui, each a sample or showcase for an invented product with its own art direction.",
+		"Applications running in production and example demos built from @sdxc/ui — landing pages, docs sites and apps, each with a case study of what it demonstrates.",
 };
 
 /**
@@ -180,7 +180,7 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 		});
 	}
 
-	documents.push(DEMOS_DOCUMENT);
+	documents.push(SHOWCASE_DOCUMENT);
 
 	corpus = documents;
 	return documents;

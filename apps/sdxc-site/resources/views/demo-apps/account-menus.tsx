@@ -81,7 +81,9 @@ export function UserMenu(handle: Handle<UserMenu.Props>) {
 				</Menu.Item>
 				{extra}
 				<Menu.Separator />
-				<Menu.Item href={routes.demos.href()}>Sign out</Menu.Item>
+				<Menu.Item href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}>
+					Sign out
+				</Menu.Item>
 			</Menu>
 		);
 	};

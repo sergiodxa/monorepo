@@ -512,7 +512,7 @@ function submit(
 }
 
 /**
- * Parley as the gallery and `/demo/apps/parley` read it: its theme, every screen, the main
+ * Parley as the gallery and `/showcase/parley/demo` read it: its theme, every screen, the main
  * frame, the live stream, and how each form answers.
  */
 export default {

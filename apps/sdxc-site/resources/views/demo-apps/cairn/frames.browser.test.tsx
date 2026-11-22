@@ -101,14 +101,14 @@ function resolveCairnFrame(
 	if (target === undefined || cairn.target === undefined) return new Promise<never>(() => {});
 	requested.push(target);
 	let url = new URL(src, "http://localhost");
-	let page = url.pathname.replace(/^\/demo\/apps\/cairn\/?/, "");
+	let page = url.pathname.replace(/^\/showcase\/cairn\/demo\/?/, "");
 	if (options?.method?.toLowerCase() === "post" && options.formData) {
 		posted.push(page);
 		let answer = cairn.submit(page, options.formData, { page, url, cookie: jarHeader() });
 		if (answer && !("body" in answer)) {
 			keep(answer.cookies);
-			url = new URL(`/demo/apps/cairn/${answer.page}`, "http://localhost");
-			page = url.pathname.replace(/^\/demo\/apps\/cairn\/?/, "");
+			url = new URL(`/showcase/cairn/demo/${answer.page}`, "http://localhost");
+			page = url.pathname.replace(/^\/showcase\/cairn\/demo\/?/, "");
 		}
 	}
 	return cairn.target(target, { page, url, cookie: jarHeader() }) ?? new Promise<never>(() => {});
@@ -123,7 +123,7 @@ function resolveCairnFrame(
  */
 async function mountScreen(screen: string, cookie: string | null = null): Promise<HTMLElement> {
 	let [path = "", query = ""] = screen.split("?");
-	let url = new URL(`http://localhost/demo/apps/cairn/${path}${query ? `?${query}` : ""}`);
+	let url = new URL(`http://localhost/showcase/cairn/demo/${path}${query ? `?${query}` : ""}`);
 	let rendered = cairn.render({ page: path, url, cookie });
 	requested = [];
 	posted = [];
@@ -165,7 +165,7 @@ async function reloadFrame(name: string, path: string): Promise<string[]> {
 	let frame = frames?.get(name);
 	expect(frame, name).toBeDefined();
 	requested = [];
-	await frame!.reload({ src: `/demo/apps/cairn/${path}` });
+	await frame!.reload({ src: `/showcase/cairn/demo/${path}` });
 	await settleFrames();
 	return requested;
 }
@@ -464,7 +464,7 @@ describe("Cairn works like an app once its script runs", () => {
 
 		expect(posted).toEqual(["team/web"]);
 		expect(`${location.pathname}${location.search}`).toBe(
-			"/demo/apps/cairn/team/web?issue=WEB-121",
+			"/showcase/cairn/demo/team/web?issue=WEB-121",
 		);
 		expect(history.length).toBe(entries);
 		expect(root.querySelector('[data-group="done"] [data-issue="WEB-121"]')).not.toBeNull();
@@ -490,7 +490,7 @@ describe("Cairn works like an app once its script runs", () => {
 		await settleFrames();
 
 		expect(posted).toEqual(["team/web/board"]);
-		expect(`${location.pathname}${location.search}`).toBe("/demo/apps/cairn/team/web/board");
+		expect(`${location.pathname}${location.search}`).toBe("/showcase/cairn/demo/team/web/board");
 		expect(history.length).toBe(entries);
 		let now = root.querySelector('[data-sortable-item="WEB-130"]')!.closest("[data-sortable-list]");
 		expect(now!.getAttribute("data-sortable-list")).not.toBe(from);

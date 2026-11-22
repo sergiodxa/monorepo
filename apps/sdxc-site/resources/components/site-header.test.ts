@@ -35,14 +35,16 @@ describe("SiteHeader", () => {
 		let rows = Array.from(sheet?.querySelectorAll("nav a") ?? [], (link) => link.textContent);
 
 		expect(button?.getAttribute("command")).toBe("show-modal");
-		expect(rows).toEqual(["Docs", "API", "Utilities", "Components", "Demos", "GitHub"]);
+		expect(rows).toEqual(["Docs", "API", "Utilities", "Components", "Showcase", "GitHub"]);
 	});
 
-	test("marks Demos as the current destination on the demo gallery", async () => {
-		let page = unwrap(parseDocument(await (await fetchApp("/demo")).text()));
-		let current = page.querySelector('header nav a[aria-current="page"]');
+	test("marks Showcase as the current destination on the showcase and its case studies", async () => {
+		for (let path of ["/showcase", "/showcase/uptime"]) {
+			let page = unwrap(parseDocument(await (await fetchApp(path)).text()));
+			let current = page.querySelector('header nav a[aria-current="page"]');
 
-		expect(current?.textContent).toBe("Demos");
+			expect(current?.textContent, path).toBe("Showcase");
+		}
 	});
 
 	test("hydrates the island that closes the sheet once a link in it is followed", async () => {

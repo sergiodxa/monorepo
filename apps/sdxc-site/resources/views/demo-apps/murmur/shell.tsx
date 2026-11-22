@@ -145,7 +145,9 @@ function AccountMenu() {
 				</Menu.Item>
 			</form>
 			<Menu.Separator />
-			<Menu.Item href={routes.demos.href()}>Sign out of Murmur</Menu.Item>
+			<Menu.Item href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}>
+				Sign out of Murmur
+			</Menu.Item>
 		</Menu>
 	);
 }

@@ -620,7 +620,7 @@ test("opens with one h1 and never skips a heading level", async () => {
 
 ## Where to go next
 
-- The [demo gallery](/demo) — a SaaS, an app and a book landing built only from these bands,
+- The [showcase](/showcase?kind=demo) — a SaaS, an app and a book landing built only from these bands,
   each with its own palette and type.
 - The Landing group in the [`@sdxc/ui`](/api/ui) catalogue — a live demo and the full props
   of each band and primitive.

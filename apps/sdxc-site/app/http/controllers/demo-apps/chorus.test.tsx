@@ -460,7 +460,7 @@ describe("Chorus timeline and screens", () => {
 
 		expect(body).toMatch(/<button[^>]*commandfor="chorus-account"/);
 		expect(body).toContain('id="chorus-account"');
-		expect(body).toMatch(/href="\/demo"[^>]*>Sign out</);
+		expect(body).toMatch(/href="\/showcase\?kind=demo"[^>]*>Sign out</);
 		expect(body).toContain(`action="${action("reset")}"`);
 	});
 
@@ -530,7 +530,7 @@ describe("Chorus frames", () => {
 		let post = await (await targeted(href("post/p-leonids"), MAIN_FRAME)).text();
 
 		expect(home).toMatch(
-			/data-main-screen="" data-title="Home" data-nav="home" data-url="[^"]*\/chorus"/,
+			/data-main-screen="" data-title="Home" data-nav="home" data-url="[^"]*\/chorus\/demo"/,
 		);
 		expect(home).toContain("Your post is live");
 		expect(thread).toContain('data-title="Messages with Kofi Mensah" data-nav="messages"');

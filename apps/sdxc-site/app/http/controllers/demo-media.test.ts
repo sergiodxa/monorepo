@@ -13,9 +13,9 @@ import { readRange } from "~/app/http/controllers/demo-media";
 import { fetchApp } from "~/app/test/router";
 
 /** A clip the Vesper demo plays. */
-const CLIP = "/demo/media/video/vesper/50.webm";
+const CLIP = "/showcase/media/video/vesper/50.webm";
 
-describe("GET /demo/media/*file", () => {
+describe("GET /showcase/media/*file", () => {
 	test("answers the whole clip and says it takes ranges", async () => {
 		let response = await fetchApp(CLIP);
 		let body = new Uint8Array(await response.arrayBuffer());
@@ -38,12 +38,12 @@ describe("GET /demo/media/*file", () => {
 	test("answers a range past the end as 416, and an unknown file as 404", async () => {
 		let past = await fetchApp(CLIP, { headers: { Range: "bytes=999999-" } });
 		expect(past.status).toBe(416);
-		expect((await fetchApp("/demo/media/video/nope.webm")).status).toBe(404);
-		expect((await fetchApp("/demo/media/video/../../routes/web.ts")).status).toBe(404);
+		expect((await fetchApp("/showcase/media/video/nope.webm")).status).toBe(404);
+		expect((await fetchApp("/showcase/media/video/../../routes/web.ts")).status).toBe(404);
 	});
 
 	test("serves the course lesson's clip too", async () => {
-		let response = await fetchApp("/demo/media/video/lesson.mp4", {
+		let response = await fetchApp("/showcase/media/video/lesson.mp4", {
 			headers: { Range: "bytes=0-" },
 		});
 		expect(response.status).toBe(206);

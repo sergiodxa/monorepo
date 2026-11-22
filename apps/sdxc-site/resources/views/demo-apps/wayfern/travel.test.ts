@@ -152,7 +152,7 @@ describe("Wayfern's itinerary", () => {
 
 /** Posts a form to a Wayfern action path with the given cookie. */
 async function post(page: string, fields: Array<[string, string]>, cookie = "") {
-	return await fetchApp(`/demo/apps/wayfern/${page}`, {
+	return await fetchApp(`/showcase/wayfern/demo/${page}`, {
 		method: "POST",
 		body: new URLSearchParams(fields),
 		headers: cookie === "" ? {} : { Cookie: cookie },
@@ -185,7 +185,7 @@ describe("Wayfern's travel bookings", () => {
 			["card", "fern-visa"],
 		]);
 		let location = response.headers.get("Location") ?? "";
-		expect(location).toMatch(/^\/demo\/apps\/wayfern\/trips\/WF-[A-Z0-9]{5}\?toast=booked\./);
+		expect(location).toMatch(/^\/showcase\/wayfern\/demo\/trips\/WF-[A-Z0-9]{5}\?toast=booked\./);
 		let page = await (
 			await fetchApp(location.split("?")[0]!, { headers: { Cookie: cookiesOf(response) } })
 		).text();
@@ -207,7 +207,7 @@ describe("Wayfern's travel bookings", () => {
 			["card", "fern-visa"],
 		]);
 		let location = response.headers.get("Location") ?? "";
-		expect(location).toContain("/demo/apps/wayfern/flights/seats?");
+		expect(location).toContain("/showcase/wayfern/demo/flights/seats?");
 		expect(location).toContain(`pick=${out.id}`);
 		expect(location).toContain("problem=names");
 	});
@@ -236,26 +236,28 @@ describe("Wayfern's travel bookings", () => {
 	});
 
 	test("downloads a journey as iCalendar with every flight, the stay and the car", async () => {
-		let response = await fetchApp("/demo/apps/wayfern/files/journey/WF-8F2TL.ics");
+		let response = await fetchApp("/showcase/wayfern/demo/files/journey/WF-8F2TL.ics");
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Content-Type")).toContain("text/calendar");
 		let ics = await response.text();
 		expect(ics.match(/BEGIN:VEVENT/g)?.length).toBeGreaterThanOrEqual(4);
 		expect(ics).toContain("UID:WF-7M3QK-stay@wayfern.demo");
-		expect((await fetchApp("/demo/apps/wayfern/files/journey/WF-ZZZZZ.ics")).status).toBe(404);
+		expect((await fetchApp("/showcase/wayfern/demo/files/journey/WF-ZZZZZ.ics")).status).toBe(404);
 	});
 });
 
 describe("Wayfern's content security policy", () => {
 	test("allows the map's tile host on Wayfern's pages and on no other demo", async () => {
 		let wayfern =
-			(await fetchApp("/demo/apps/wayfern/s")).headers.get("Content-Security-Policy-Report-Only") ??
-			"";
+			(await fetchApp("/showcase/wayfern/demo/s")).headers.get(
+				"Content-Security-Policy-Report-Only",
+			) ?? "";
 		expect(wayfern).toMatch(/connect-src[^;]*https:\/\/tiles\.openfreemap\.org/);
 		expect(wayfern).toMatch(/img-src[^;]*https:\/\/tiles\.openfreemap\.org[^;]*blob:/);
 		expect(wayfern).toMatch(/worker-src[^;]*blob:/);
 		let pulse =
-			(await fetchApp("/demo/apps/pulse")).headers.get("Content-Security-Policy-Report-Only") ?? "";
+			(await fetchApp("/showcase/pulse/demo")).headers.get("Content-Security-Policy-Report-Only") ??
+			"";
 		expect(pulse).not.toContain("openfreemap");
 	});
 });

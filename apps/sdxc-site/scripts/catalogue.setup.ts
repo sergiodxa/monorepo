@@ -18,7 +18,9 @@ const SCRIPTS = dirname(fileURLToPath(import.meta.url));
  * The extractors, each run as its own process so it resolves the app's aliases as `bun`
  * does, in the order `dev` and `build` run them.
  */
-const EXTRACTORS = ["extract-catalogue.ts", "extract-delta.ts"].map((name) => join(SCRIPTS, name));
+const EXTRACTORS = ["extract-catalogue.ts", "extract-delta.ts", "extract-showcase.ts"].map((name) =>
+	join(SCRIPTS, name),
+);
 
 /** Regenerates every document once per run; a failed extraction fails the run before any test. */
 export default function setup(): void {

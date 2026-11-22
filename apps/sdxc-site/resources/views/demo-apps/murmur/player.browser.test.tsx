@@ -75,9 +75,9 @@ describe("Murmur's player", () => {
 		let before = audio.currentTime;
 
 		await press(document.querySelector('nav[aria-label="Primary"] a[data-main-nav="search"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/murmur/search"));
-		await press(document.querySelector('a[href="/demo/apps/murmur/genre/house"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/murmur/genre/house"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/murmur/demo/search"));
+		await press(document.querySelector('a[href="/showcase/murmur/demo/genre/house"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/murmur/demo/genre/house"));
 		await playedPast(before + 0.3);
 
 		expect(media()).toBe(audio);
@@ -85,8 +85,8 @@ describe("Murmur's player", () => {
 		expect(document.querySelector("[data-player-bar]")).toBe(bar);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 		expect(mounted.requests.filter((line) => line.endsWith(" main"))).toEqual([
-			"GET /demo/apps/murmur/search main",
-			"GET /demo/apps/murmur/genre/house main",
+			"GET /showcase/murmur/demo/search main",
+			"GET /showcase/murmur/demo/genre/house main",
 		]);
 		expect(document.querySelector("[data-player-track]")?.textContent).toContain("Salt Glass");
 	});

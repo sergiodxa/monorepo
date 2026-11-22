@@ -205,7 +205,9 @@ function ProfileMenu(handle: Handle<{ viewer: Viewer }>) {
 						</span>
 					</Menu.Item>
 				</form>
-				<Menu.Item href={routes.demos.href()}>Sign out of Vesper</Menu.Item>
+				<Menu.Item href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}>
+					Sign out of Vesper
+				</Menu.Item>
 			</Menu>
 		);
 	};
@@ -666,7 +668,10 @@ export default function VesperShell(handle: Handle<VesperShell.Props>) {
 					]}
 				>
 					Vesper is an invented streaming service, a demo of{" "}
-					<a href={routes.demos.href()} mix={[raw({ color: "inherit" })]}>
+					<a
+						href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}
+						mix={[raw({ color: "inherit" })]}
+					>
 						sdxc.dev's components
 					</a>
 					. Every title, person and picture in it is made up.

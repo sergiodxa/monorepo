@@ -241,7 +241,7 @@ describe("Delta's commits", () => {
 		let { body } = await page(`delta/commit/${commit.sha}`);
 		expect(body).toContain("data-large");
 		expect(body).toContain("Load diff");
-		let frame = /"(\/demo\/apps\/delta\/frames\/diff\/commit\/[^"]+)"/.exec(body)?.[1];
+		let frame = /"(\/showcase\/delta\/demo\/frames\/diff\/commit\/[^"]+)"/.exec(body)?.[1];
 		expect(frame).toBeDefined();
 		let response = await fetchApp(frame!.replaceAll("&amp;", "&"));
 		expect(response.status).toBe(200);

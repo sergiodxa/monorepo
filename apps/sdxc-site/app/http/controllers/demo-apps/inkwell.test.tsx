@@ -135,7 +135,7 @@ describe("Inkwell's main frame", () => {
 		expect(body).toContain('data-title="Posts"');
 		expect(body).toContain('data-nav="drafts"');
 		expect(body).toContain('data-crumb="Posts"');
-		expect(body).toContain('data-url="/demo/apps/inkwell/posts?status=draft"');
+		expect(body).toContain('data-url="/showcase/inkwell/demo/posts?status=draft"');
 		expect(body).toContain("data-main-toast");
 		expect(body).not.toContain("data-main-frame-sync");
 		expect([...body.matchAll(/<h1[\s>]/g)]).toHaveLength(1);
@@ -144,7 +144,7 @@ describe("Inkwell's main frame", () => {
 	test("a saved editor answers main with its status reading Saved", async () => {
 		let body = await (await main("posts/the-letterpress-year?toast=post-updated.1a2b3c4d")).text();
 
-		expect(body).toContain('data-url="/demo/apps/inkwell/posts/the-letterpress-year"');
+		expect(body).toContain('data-url="/showcase/inkwell/demo/posts/the-letterpress-year"');
 		expect(body).toContain("Post updated");
 	});
 
@@ -169,7 +169,7 @@ describe("Inkwell's main frame", () => {
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
-		expect(body).toContain('data-url="/demo/apps/inkwell/posts/the-letterpress-year"');
+		expect(body).toContain('data-url="/showcase/inkwell/demo/posts/the-letterpress-year"');
 		expect(body).toContain("Give the post a title, then save again.");
 		expect(body).toContain("The press arrived in a borrowed van.");
 		expect(body).toMatch(/value="ingrid"[^>]*checked/);
@@ -191,7 +191,7 @@ describe("Inkwell's main frame", () => {
 
 		expect(response.status).toBe(400);
 		expect(body).toContain(
-			'data-url="/demo/apps/inkwell/posts?tag=Notebook&amp;quick=how-we-edit"',
+			'data-url="/showcase/inkwell/demo/posts?tag=Notebook&amp;quick=how-we-edit"',
 		);
 		expect(body).toContain('id="quick-edit"');
 		expect(body).toContain("Give the post a title, then update it again.");
@@ -199,7 +199,7 @@ describe("Inkwell's main frame", () => {
 
 	test("the links into the preview, which draws no shell, load the whole document", async () => {
 		expect(await screen("posts/the-letterpress-year")).toMatch(
-			/href="\/demo\/apps\/inkwell\/posts\/the-letterpress-year\/preview"[^>]*data-rmx-document/,
+			/href="\/showcase\/inkwell\/demo\/posts\/the-letterpress-year\/preview"[^>]*data-rmx-document/,
 		);
 		expect(await screen("posts")).toMatch(/\/preview"[^>]*data-rmx-document/);
 	});
@@ -211,7 +211,7 @@ describe("Inkwell frames", () => {
 	 * `data-rmx-src`, with HTML's escaped ampersands read back.
 	 */
 	function frameAddresses(body: string): string[] {
-		let found = body.match(/\/demo\/apps\/inkwell\/frames\/[^"'\s<>\\]+/g) ?? [];
+		let found = body.match(/\/showcase\/inkwell\/demo\/frames\/[^"'\s<>\\]+/g) ?? [];
 		return found.map((address) => address.replaceAll("&amp;", "&"));
 	}
 
@@ -223,14 +223,14 @@ describe("Inkwell frames", () => {
 
 		expect([...addresses].map((address) => new URL(address, "https://sdxc.test").pathname)).toEqual(
 			expect.arrayContaining([
-				"/demo/apps/inkwell/frames/home/stats",
-				"/demo/apps/inkwell/frames/home/drafts",
-				"/demo/apps/inkwell/frames/home/scheduled",
-				"/demo/apps/inkwell/frames/home/activity",
-				"/demo/apps/inkwell/frames/home/comments",
-				"/demo/apps/inkwell/frames/posts/on-slow-reading/history",
-				"/demo/apps/inkwell/frames/posts/the-letterpress-year/quick",
-				"/demo/apps/inkwell/frames/media/winter-train/attachment",
+				"/showcase/inkwell/demo/frames/home/stats",
+				"/showcase/inkwell/demo/frames/home/drafts",
+				"/showcase/inkwell/demo/frames/home/scheduled",
+				"/showcase/inkwell/demo/frames/home/activity",
+				"/showcase/inkwell/demo/frames/home/comments",
+				"/showcase/inkwell/demo/frames/posts/on-slow-reading/history",
+				"/showcase/inkwell/demo/frames/posts/the-letterpress-year/quick",
+				"/showcase/inkwell/demo/frames/media/winter-train/attachment",
 			]),
 		);
 		for (let address of addresses) {
@@ -243,7 +243,7 @@ describe("Inkwell frames", () => {
 
 	test("the quick-edit form saves back to the list its frame names", async () => {
 		let body = await (
-			await fetchApp("/demo/apps/inkwell/frames/posts/how-we-edit/quick?tag=Notebook")
+			await fetchApp("/showcase/inkwell/demo/frames/posts/how-we-edit/quick?tag=Notebook")
 		).text();
 
 		expect(body).toContain(`action="${action("posts/how-we-edit/quick")}"`);
@@ -252,10 +252,10 @@ describe("Inkwell frames", () => {
 	});
 
 	test("Retry reloads only the comments frame", async () => {
-		let body = await (await fetchApp("/demo/apps/inkwell/frames/home/comments")).text();
+		let body = await (await fetchApp("/showcase/inkwell/demo/frames/home/comments")).text();
 
 		expect(body).toContain('data-rmx-target="inkwell-comments"');
-		expect(body).toContain('data-rmx-src="/demo/apps/inkwell/frames/home/comments"');
+		expect(body).toContain('data-rmx-src="/showcase/inkwell/demo/frames/home/comments"');
 	});
 
 	test("an unknown part or record answers 404", async () => {
@@ -264,7 +264,7 @@ describe("Inkwell frames", () => {
 			"posts/no-such-post/history",
 			"media/no-such-file/attachment",
 		]) {
-			expect((await fetchApp(`/demo/apps/inkwell/frames/${part}`)).status, part).toBe(404);
+			expect((await fetchApp(`/showcase/inkwell/demo/frames/${part}`)).status, part).toBe(404);
 		}
 	});
 });

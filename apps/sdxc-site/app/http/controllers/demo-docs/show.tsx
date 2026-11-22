@@ -1,5 +1,5 @@
 /**
- * `GET /demo/docs/:site(/*page)` — a complete sample docs site built from `@sdxc/ui/docs`:
+ * `GET /showcase/:slug/demo(/*page)` — a complete sample docs site built from `@sdxc/ui/docs`:
  * its hub at the root, its pages, a search page and a 404 that searches. Marked `noindex,
  * nofollow`, since each site documents an invented product rather than sdxc.
  *
@@ -22,6 +22,7 @@ import DocumentLayout from "~/resources/layouts/document";
 import { demoDocsHref, findDemoDocsSite } from "~/resources/views/demo-docs";
 import {
 	demoDocsThanksHref,
+	FEEDBACK_PAGE,
 	FEEDBACK_SENT_PARAM,
 	findFeedbackPage,
 } from "~/resources/views/demo-docs/feedback";
@@ -30,15 +31,15 @@ import { DemoDocsArticle, DemoDocsShell, SEARCH_PAGE } from "~/resources/views/d
 import routes from "~/routes/web";
 
 /** The params a request carries; `page` is absent on the hub. */
-const PARAMS = s.object({ site: s.string(), page: s.optional(s.string()) });
+const PARAMS = s.object({ slug: s.string(), page: s.optional(s.string()) });
 
 /**
  * Renders the hub, a page, the search page or the site's own 404. The vote action's address,
  * which an enhanced vote leaves in the location bar, returns a reload to the page voted on.
  * An unknown page inside a known site answers `404` in its shell, search pre-filled.
  */
-export default createAction(routes.demoDocs.show, async (ctx) => {
-	let { page: path, site: slug } = s.parse(PARAMS, ctx.params);
+export default createAction(routes.showcase.demo, async (ctx) => {
+	let { page: path, slug } = s.parse(PARAMS, ctx.params);
 	let site = await findDemoDocsSite(slug);
 	if (site === null) return defaultHandler(ctx);
 
@@ -91,7 +92,7 @@ export default createAction(routes.demoDocs.show, async (ctx) => {
 		});
 	}
 
-	if (ctx.url.pathname === routes.demoDocs.feedback.href({ site: slug })) {
+	if (path === FEEDBACK_PAGE) {
 		let voted = await findFeedbackPage(slug, ctx.url.searchParams.get("page") ?? "");
 		let location = voted === null ? href() : demoDocsThanksHref(slug, voted);
 		return new Response(null, { status: 303, headers: { Location: location } });

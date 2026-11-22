@@ -178,7 +178,9 @@ function AccountMenu() {
 						</span>
 					</Menu.Item>
 				</form>
-				<Menu.Item href={routes.demos.href()}>Sign out of Wayfern</Menu.Item>
+				<Menu.Item href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}>
+					Sign out of Wayfern
+				</Menu.Item>
 			</Menu>
 		</>
 	);
@@ -308,7 +310,10 @@ export default function WayfernShell(handle: Handle<WayfernShell.Props>) {
 					>
 						<div mix={[raw({ maxInlineSize: MEASURE, marginInline: "auto" })]}>
 							Wayfern is an invented place to book stays, a demo of{" "}
-							<a href={routes.demos.href()} mix={[raw({ color: "inherit" })]}>
+							<a
+								href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}
+								mix={[raw({ color: "inherit" })]}
+							>
 								sdxc.dev's components
 							</a>
 							. Every place, host and picture in it is made up, and no payment is ever taken.

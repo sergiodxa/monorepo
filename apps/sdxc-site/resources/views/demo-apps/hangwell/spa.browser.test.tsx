@@ -51,11 +51,11 @@ describe("Hangwell as a single-page app", () => {
 		mounted = await mountApp(hangwell, "hangwell", "");
 		let marker = region();
 
-		await press(document.querySelector('a[href="/demo/apps/hangwell/shop/botanical"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/hangwell/shop/botanical"));
+		await press(document.querySelector('a[href="/showcase/hangwell/demo/shop/botanical"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/hangwell/demo/shop/botanical"));
 		expect(document.querySelector("h1")?.textContent).toBe("Botanical");
-		await press(document.querySelector('a[href="/demo/apps/hangwell/p/fern-study"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/hangwell/p/fern-study"));
+		await press(document.querySelector('a[href="/showcase/hangwell/demo/p/fern-study"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/hangwell/demo/p/fern-study"));
 
 		expect(region()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);

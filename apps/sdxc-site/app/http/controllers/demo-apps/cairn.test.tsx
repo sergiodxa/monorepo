@@ -298,12 +298,12 @@ describe("Cairn edits", () => {
 		]);
 		let location = response.headers.get("Location") ?? "";
 		expect(location).toMatch(
-			/^\/demo\/apps\/cairn\/team\/web\?status=todo&toast=bulk-status-done\./,
+			/^\/showcase\/cairn\/demo\/team\/web\?status=todo&toast=bulk-status-done\./,
 		);
 		let cookie = cookiesFrom(response);
 		expect(cookie).toContain("cairn.i.WEB-124=done");
 		expect(cookie).toContain("cairn.i.WEB-135=done");
-		expect(await page(location.replace("/demo/apps/cairn/", ""), cookie)).toContain(
+		expect(await page(location.replace("/showcase/cairn/demo/", ""), cookie)).toContain(
 			"Issues marked done",
 		);
 	});
@@ -372,7 +372,7 @@ describe("Cairn screens", () => {
 		let reset = await post(action("reset"), [], edited);
 		let cleared = reset.headers.getSetCookie();
 		expect(cleared).toContainEqual(
-			expect.stringMatching(/^cairn\.i\.WEB-121=; Path=\/demo\/apps\/cairn; Max-Age=0/),
+			expect.stringMatching(/^cairn\.i\.WEB-121=; Path=\/showcase\/cairn\/demo; Max-Age=0/),
 		);
 		expect(cleared).toContainEqual(
 			expect.stringMatching(/^cairn\.i\.WEB-121=; Path=\/demo; Max-Age=0/),
@@ -385,9 +385,9 @@ describe("Cairn screens", () => {
 			["status", "done"],
 		]);
 		expect(response.headers.getSetCookie()).toEqual([
-			expect.stringMatching(/^cairn\.i\.WEB-121=[^;]+; Path=\/demo\/apps\/cairn;/),
+			expect.stringMatching(/^cairn\.i\.WEB-121=[^;]+; Path=\/showcase\/cairn\/demo;/),
 		]);
-		expect(frame("cycles/web-24/stats")).toBe("/demo/apps/cairn/frames/cycles/web-24/stats");
+		expect(frame("cycles/web-24/stats")).toBe("/showcase/cairn/demo/frames/cycles/web-24/stats");
 		expect((await fetchApp(frame("cycles/web-24/stats"))).status).toBe(200);
 	});
 
@@ -503,7 +503,7 @@ describe("Cairn frames", () => {
 		expect(location).toMatch(/[?&]at=comment-v-/);
 
 		let issue = await frameOf(
-			location.replace("/demo/apps/cairn/", ""),
+			location.replace("/showcase/cairn/demo/", ""),
 			"cairn-issue",
 			cookiesFrom(response),
 		);
@@ -533,7 +533,7 @@ describe("Cairn frames", () => {
 
 		let roadmap = await page("roadmap");
 		expect(roadmap).toMatch(
-			/href="\/demo\/apps\/cairn\/roadmap\?show=closed"[^>]*data-rmx-target="cairn-roadmap"/,
+			/href="\/showcase\/cairn\/demo\/roadmap\?show=closed"[^>]*data-rmx-target="cairn-roadmap"/,
 		);
 	});
 });

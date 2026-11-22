@@ -24,7 +24,7 @@ const TRES = findRestaurant("tres-empanadas")!;
 
 /** Posts a form to a Bocado action path with the given cookie. */
 async function post(page: string, fields: Array<[string, string]>, cookie = "") {
-	return await fetchApp(`/demo/apps/bocado/${page}`, {
+	return await fetchApp(`/showcase/bocado/demo/${page}`, {
 		method: "POST",
 		body: new URLSearchParams(fields),
 		headers: cookie === "" ? {} : { Cookie: cookie },
@@ -84,7 +84,7 @@ describe("Bocado's cart", () => {
 		let response = await post("cart/add", fields, ONE_TRIO);
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/bocado\/r\/tres-empanadas\?toast=added\./,
+			/^\/showcase\/bocado\/demo\/r\/tres-empanadas\?toast=added\./,
 		);
 		expect(readVisitor(cookiesOf(response)).cart?.lines).toEqual([
 			{ item: "cuchillo", choices: ["horno", "chimi"], qty: 3 },
@@ -145,13 +145,15 @@ describe("Bocado's cart", () => {
 			],
 			ONE_TRIO,
 		);
-		expect(gone.headers.get("Location")).toMatch(/^\/demo\/apps\/bocado\/cart\?toast=removed\./);
+		expect(gone.headers.get("Location")).toMatch(
+			/^\/showcase\/bocado\/demo\/cart\?toast=removed\./,
+		);
 		expect(gone.headers.getSetCookie()[0]).toMatch(/^bocado\.cart=; .*Max-Age=0/);
 	});
 
 	test("names the cart button's count in the singular for one item", async () => {
 		let body = await (
-			await fetchApp("/demo/apps/bocado/cart", { headers: { Cookie: ONE_TRIO } })
+			await fetchApp("/showcase/bocado/demo/cart", { headers: { Cookie: ONE_TRIO } })
 		).text();
 		expect(body).toContain('aria-label="Cart, 1 item, $11.50"');
 	});
@@ -161,7 +163,7 @@ describe("Bocado's cart", () => {
 			["address", "studio"],
 			["back", "https://example.com"],
 		]);
-		expect(away.headers.get("Location")).toMatch(/^\/demo\/apps\/bocado\?toast=address\./);
+		expect(away.headers.get("Location")).toMatch(/^\/showcase\/bocado\/demo\?toast=address\./);
 		expect(cookiesOf(away)).toBe("bocado.address=studio");
 	});
 });
@@ -198,7 +200,7 @@ describe("Bocado's checkout", () => {
 			ONE_TRIO,
 		);
 		let location = response.headers.get("Location") ?? "";
-		expect(location).toMatch(/^\/demo\/apps\/bocado\/orders\/[0-9a-f-]{36}\?toast=placed\./);
+		expect(location).toMatch(/^\/showcase\/bocado\/demo\/orders\/[0-9a-f-]{36}\?toast=placed\./);
 		let cookies = cookiesOf(response);
 		let visitor = readVisitor(cookies);
 		expect(visitor.cart).toBeUndefined();
@@ -229,7 +231,7 @@ describe("Bocado's checkout", () => {
 		let order = readVisitor(null).orders[0]!;
 		let response = await post(`orders/${order.id}/reorder`, []);
 		expect(response.headers.get("Location")).toMatch(
-			/^\/demo\/apps\/bocado\/cart\?toast=reordered\./,
+			/^\/showcase\/bocado\/demo\/cart\?toast=reordered\./,
 		);
 		expect(readVisitor(cookiesOf(response)).cart?.lines).toEqual(order.lines);
 	});
@@ -253,10 +255,10 @@ describe("Bocado's order tracking", () => {
 
 	test("streams a placed order's progress, and nothing for an order the visitor lacks", async () => {
 		let order = readVisitor(null).orders[0]!;
-		let response = await fetchApp(`/demo/apps/bocado/streams/orders/${order.id}`);
+		let response = await fetchApp(`/showcase/bocado/demo/streams/orders/${order.id}`);
 		expect(response.headers.get("Content-Type")).toMatch(/^text\/plain/);
 		expect(await response.text()).toBe("delivered 1.000 0\n");
-		expect((await fetchApp("/demo/apps/bocado/streams/orders/nope")).status).toBe(404);
+		expect((await fetchApp("/showcase/bocado/demo/streams/orders/nope")).status).toBe(404);
 	});
 });
 
@@ -314,17 +316,17 @@ describe("Bocado's screens", () => {
 	});
 
 	test.each(app.screens)("renders %s", async (page) => {
-		let response = await fetchApp(`/demo/apps/bocado${page === "" ? "" : `/${page}`}`);
+		let response = await fetchApp(`/showcase/bocado/demo${page === "" ? "" : `/${page}`}`);
 		expect(response.status).toBe(200);
 	});
 
 	test("answers its own 404 for a restaurant or order it lacks", async () => {
-		expect((await fetchApp("/demo/apps/bocado/r/nowhere")).status).toBe(404);
-		expect((await fetchApp("/demo/apps/bocado/orders/nope")).status).toBe(404);
+		expect((await fetchApp("/showcase/bocado/demo/r/nowhere")).status).toBe(404);
+		expect((await fetchApp("/showcase/bocado/demo/orders/nope")).status).toBe(404);
 	});
 
 	test("gives every dish on every menu a dialog that posts to the cart", async () => {
-		let body = await (await fetchApp("/demo/apps/bocado/r/tres-empanadas")).text();
+		let body = await (await fetchApp("/showcase/bocado/demo/r/tres-empanadas")).text();
 		for (let section of TRES.sections) {
 			for (let entry of section.items) expect(body).toContain(`id="bocado-item-${entry.id}"`);
 		}

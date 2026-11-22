@@ -508,7 +508,7 @@ function submitPost(
 }
 
 /**
- * Chorus as the gallery and `/demo/apps/chorus` read it: its theme, every screen, its frames,
+ * Chorus as the gallery and `/showcase/chorus/demo` read it: its theme, every screen, its frames,
  * and how each form answers.
  */
 export default {

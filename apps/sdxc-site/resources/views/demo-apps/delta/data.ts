@@ -12,7 +12,7 @@ import type { DeltaCommitMeta, DeltaFile } from "~/app/services/delta/source";
 import { DELTA_BRANCH } from "~/config/delta";
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 
-/** The demo's folder name, which is its slug under `/demo/apps`. */
+/** The demo's folder name, which is its slug under `/showcase`. */
 export const SLUG = "delta";
 
 /** The repository's segment under the app, so `delta/blob/main/…` reads as `sdxc/delta`. */
@@ -31,7 +31,7 @@ export const actionHref = demoAppActionHref(SLUG);
  * The address of one of the repository's pages.
  *
  * @param page A path under the repository, with its query; none for the repository's home.
- * @example repoHref("commits/main") // "/demo/apps/delta/delta/commits/main"
+ * @example repoHref("commits/main") // "/showcase/delta/demo/delta/commits/main"
  */
 export function repoHref(page?: string): string {
 	return href(page === undefined || page === "" ? REPO : `${REPO}/${page}`);

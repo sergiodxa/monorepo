@@ -54,11 +54,11 @@ describe("Wayfern as a single-page app", () => {
 		mounted = await mountApp(wayfern, "wayfern", "");
 		let marker = region();
 
-		await press(document.querySelector('a[href="/demo/apps/wayfern/s?where=furnas"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/wayfern/s?where=furnas"));
+		await press(document.querySelector('a[href="/showcase/wayfern/demo/s?where=furnas"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/wayfern/demo/s?where=furnas"));
 		expect(document.querySelector("h1")?.textContent).toBe("3 stays in Furnas");
 		await press(document.querySelector('[data-stay="the-canopy"] h2 a'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/wayfern/stay/the-canopy"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/wayfern/demo/stay/the-canopy"));
 
 		expect(region()).toBe(marker);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
@@ -69,9 +69,11 @@ describe("Wayfern as a single-page app", () => {
 		await page.viewport(1280, 900);
 		mounted = await mountApp(wayfern, "wayfern", "s?where=furnas");
 
-		await press(document.querySelector('a[href="/demo/apps/wayfern/s?where=furnas&type=cabin"]'));
+		await press(
+			document.querySelector('a[href="/showcase/wayfern/demo/s?where=furnas&type=cabin"]'),
+		);
 		await vi.waitFor(() =>
-			expect(screenUrl()).toBe("/demo/apps/wayfern/s?where=furnas&type=cabin"),
+			expect(screenUrl()).toBe("/showcase/wayfern/demo/s?where=furnas&type=cabin"),
 		);
 		let cards = [...document.querySelectorAll("[data-stay]")].map((card) =>
 			card.getAttribute("data-stay"),
@@ -132,7 +134,7 @@ describe("Wayfern as a single-page app", () => {
 		await vi.waitFor(() => expect(total()?.textContent).toMatch(/^\$[\d,.]+$/));
 		await press(document.querySelector("#wayfern-booking button[formaction]"));
 		await vi.waitFor(() =>
-			expect(screenUrl()).toMatch(/\/demo\/apps\/wayfern\/book\/the-canopy\?/),
+			expect(screenUrl()).toMatch(/\/showcase\/wayfern\/demo\/book\/the-canopy\?/),
 		);
 		expect(document.querySelector("h1")?.textContent).toBe("Confirm and pay");
 		expect(document.querySelectorAll('input[name="card"][type="radio"]')).toHaveLength(3);
@@ -183,8 +185,8 @@ describe("Wayfern as a single-page app", () => {
 		await page.viewport(390, 844);
 		mounted = await mountApp(wayfern, "wayfern", "s");
 
-		await press(document.querySelector('a[href="/demo/apps/wayfern/s?view=map"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/wayfern/s?view=map"));
+		await press(document.querySelector('a[href="/showcase/wayfern/demo/s?view=map"]'));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/wayfern/demo/s?view=map"));
 		let map = document.querySelector('aside[aria-label="Map"]')!;
 		expect(map.getBoundingClientRect().height).toBeGreaterThan(400);
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);

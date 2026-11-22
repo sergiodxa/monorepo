@@ -1,5 +1,5 @@
 /**
- * The demo landings `/demo/:slug` serves, discovered from `resources/views/demos/<slug>/index.tsx`
+ * The demo landings `/showcase/:slug/demo` serves, discovered from `resources/views/demos/<slug>/index.tsx`
  * and each loaded only when its own URL is asked for, so one demo's page never weighs on
  * another's request or on the rest of the site.
  *
@@ -56,7 +56,7 @@ export async function findDemoLanding(slug: string): Promise<DemoLanding | null>
 }
 
 /**
- * The slugs `/demo/:slug` answers, in folder-name order.
+ * The slugs the landing demos answer under `/showcase/:slug/demo`, in folder-name order.
  *
  * @returns One slug per demo folder.
  */
@@ -105,7 +105,7 @@ export async function demoLandingLinks(): Promise<
 	Array<{ href: string; title: string; description: string }>
 > {
 	return (await listDemoLandings()).map((demo) => ({
-		href: routes.demo.href({ slug: demo.slug }),
+		href: routes.showcase.demo.href({ slug: demo.slug }),
 		title: demo.title.split(" — ")[0] ?? demo.title,
 		description: demo.description,
 	}));

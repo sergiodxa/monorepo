@@ -234,7 +234,7 @@ export function MoreMenu(handle: Handle<{ id: string; placement: "top-start" | "
 						<MenuRow icon={<RotateCcwIcon size={18} aria-hidden="true" />}>Reset the demo</MenuRow>
 					</Menu.Item>
 				</form>
-				<Menu.Item href={routes.demos.href()}>
+				<Menu.Item href={routes.showcase.index.href(null, { searchParams: { kind: "demo" } })}>
 					<MenuRow icon={<LogOutIcon size={18} aria-hidden="true" />}>Sign out</MenuRow>
 				</Menu.Item>
 			</Menu>

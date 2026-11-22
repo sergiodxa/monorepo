@@ -164,6 +164,8 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 | The four sidebars and the pager's order               | `app/services/navigation.ts`                                                 |
 | The shared markdown pass, and the link rewriting      | `app/services/article.ts`                                                    |
 | The applications the showcase and a package page name | `resources/content/apps.ts`, `app/services/showcase.ts`                      |
+| The showcase items, their case studies and shots      | `app/services/case-studies.ts`, `resources/content/showcase/`                |
+| Which kind of demo a slug names, and old slugs        | `app/services/demos.ts`                                                      |
 | Who funds the work, and where the list is kept        | `app/services/sponsors.ts`, `app/http/controllers/sponsors.tsx`              |
 | The cache policy a documentation page carries         | `app/http/caching.ts`                                                        |
 | The remembered code-tab choices and their cookies     | `app/services/remembered-tabs.ts`                                            |

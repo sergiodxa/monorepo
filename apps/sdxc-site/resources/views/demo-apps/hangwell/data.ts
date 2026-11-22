@@ -24,7 +24,7 @@ export const actionHref = demoAppActionHref(SLUG);
 
 /** Builds the address of a file Hangwell serves, such as a print file to download. */
 export function fileHref(part: string): string {
-	return routes.demoFiles.app.href({ app: SLUG, part });
+	return routes.showcase.demoFile.href({ slug: SLUG, part });
 }
 
 /** Every price is in euros, written the Irish English way (`€45.00`). */

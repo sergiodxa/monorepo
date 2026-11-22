@@ -11,7 +11,7 @@
  *
  * @param location A `Location` header or address, or `null` when the response had none.
  * @returns The same address with `toast=<key>`.
- * @example withoutToastNonce("/demo/apps/pulse/services?toast=service-deleted.9f3a1c2e") // "/demo/apps/pulse/services?toast=service-deleted"
+ * @example withoutToastNonce("/showcase/pulse/demo/services?toast=service-deleted.9f3a1c2e") // "/showcase/pulse/demo/services?toast=service-deleted"
  */
 export function withoutToastNonce(location: string | null | undefined): string | null | undefined {
 	return location?.replace(/([?&]toast=[^&.#]+)\.[0-9a-f]{8}/, "$1");

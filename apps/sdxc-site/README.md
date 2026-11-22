@@ -91,7 +91,12 @@ Observability is enabled, with traces head-sampled at 10%.
 - **Documentation pages are cached.** Every input to one is a file in the bundle, so a
   page carries a long `Cache-Control` and a weak `ETag` over the bytes rendered, and a
   client whose copy is current gets a `304`.
-- **Demo HTML is reused at the edge.** The gallery, landings, docs sites and app screens
+- **The showcase holds every demo.** `/showcase` lists the applications in production and
+  every demo, `?kind=` narrowing it; `/showcase/<slug>` is a case study written as
+  `resources/content/showcase/<slug>.md`, and `/showcase/<slug>/demo` is the demo itself.
+  `bun scripts/capture-showcase.ts [slug…]` (needs `cwebp`) re-shoots a case study's screenshots from a running
+  `vp preview` on port 4317, and every old `/demo` address answers a `308` to its new one.
+- **Demo HTML is reused at the edge.** Landings, docs sites and app screens
   use the existing build-keyed Workers Cache: a hit skips rendering the demo, while a miss
   keeps the renderer's stream and frame fallbacks.
   Docs query strings keep search and feedback states distinct; remembered package-manager

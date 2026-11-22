@@ -86,37 +86,37 @@ test("a frame request says it is one, so the Worker keeps the edge from rewritin
 
 test("a prefetched page answers the next navigation to it once, without another request", async () => {
 	REQUESTS.length = 0;
-	options?.prefetch?.("https://sdxc.dev/demo/apps/pulse/services");
-	await vi.waitFor(() => expect(REQUESTS).toEqual(["/demo/apps/pulse/services"]));
+	options?.prefetch?.("https://sdxc.dev/showcase/pulse/demo/services");
+	await vi.waitFor(() => expect(REQUESTS).toEqual(["/showcase/pulse/demo/services"]));
 
-	let first = await options?.resolveFrame?.("https://sdxc.dev/demo/apps/pulse/services#top");
+	let first = await options?.resolveFrame?.("https://sdxc.dev/showcase/pulse/demo/services#top");
 	expect(first).toBeInstanceOf(Response);
 	expect(REQUESTS).toHaveLength(1);
 
-	await options?.resolveFrame?.("https://sdxc.dev/demo/apps/pulse/services");
+	await options?.resolveFrame?.("https://sdxc.dev/showcase/pulse/demo/services");
 	expect(REQUESTS).toHaveLength(2);
 });
 
 test("a prefetched page older than its lifetime is fetched again", async () => {
 	REQUESTS.length = 0;
 	vi.useFakeTimers({ toFake: ["Date"] });
-	options?.prefetch?.("https://sdxc.dev/demo/apps/relay");
+	options?.prefetch?.("https://sdxc.dev/showcase/relay/demo");
 	vi.setSystemTime(Date.now() + 31_000);
-	await options?.resolveFrame?.("https://sdxc.dev/demo/apps/relay");
+	await options?.resolveFrame?.("https://sdxc.dev/showcase/relay/demo");
 	vi.useRealTimers();
 
-	expect(REQUESTS).toEqual(["/demo/apps/relay", "/demo/apps/relay"]);
+	expect(REQUESTS).toEqual(["/showcase/relay/demo", "/showcase/relay/demo"]);
 });
 
 test("a submission empties the prefetched pages, so none outlives what it changed", async () => {
 	REQUESTS.length = 0;
-	options?.prefetch?.("https://sdxc.dev/demo/apps/inkwell/posts");
-	await options?.resolveFrame?.("https://sdxc.dev/demo/apps/inkwell/posts/new", {
+	options?.prefetch?.("https://sdxc.dev/showcase/inkwell/demo/posts");
+	await options?.resolveFrame?.("https://sdxc.dev/showcase/inkwell/demo/posts/new", {
 		method: "POST",
 		formData: new FormData(),
 		encType: "application/x-www-form-urlencoded",
 	});
-	await options?.resolveFrame?.("https://sdxc.dev/demo/apps/inkwell/posts");
+	await options?.resolveFrame?.("https://sdxc.dev/showcase/inkwell/demo/posts");
 
-	expect(REQUESTS.filter((path) => path === "/demo/apps/inkwell/posts")).toHaveLength(2);
+	expect(REQUESTS.filter((path) => path === "/showcase/inkwell/demo/posts")).toHaveLength(2);
 });

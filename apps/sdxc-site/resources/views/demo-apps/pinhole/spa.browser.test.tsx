@@ -43,15 +43,15 @@ describe("Pinhole as a single-page app", () => {
 		let region = document.querySelector("[data-main-region]");
 
 		press(document.querySelector('a[data-main-nav="explore"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/pinhole/explore"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/pinhole/demo/explore"));
 		press(document.querySelector('a[data-main-nav="reels"]'));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/pinhole/reels"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/pinhole/demo/reels"));
 
 		expect(document.querySelector("[data-main-region]")).toBe(region);
 		expect(performance.getEntriesByType("navigation")).toHaveLength(1);
 		expect(mounted.requests.slice(-2)).toEqual([
-			"GET /demo/apps/pinhole/explore main",
-			"GET /demo/apps/pinhole/reels main",
+			"GET /showcase/pinhole/demo/explore main",
+			"GET /showcase/pinhole/demo/reels main",
 		]);
 	});
 
@@ -67,15 +67,17 @@ describe("Pinhole as a single-page app", () => {
 		expect(document.querySelector('nav[aria-label="Primary"]')).toBeNull();
 
 		document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/pinhole"));
+		await vi.waitFor(() => expect(screenUrl()).toBe("/showcase/pinhole/demo"));
 	});
 
 	test("switches a profile's tab through the address", async () => {
 		mounted = await mountApp(pinhole, "pinhole", "u/mara.quint");
 
-		press(document.querySelector('a[href="/demo/apps/pinhole/u/mara.quint?tab=reels"]'));
+		press(document.querySelector('a[href="/showcase/pinhole/demo/u/mara.quint?tab=reels"]'));
 
-		await vi.waitFor(() => expect(screenUrl()).toBe("/demo/apps/pinhole/u/mara.quint?tab=reels"));
+		await vi.waitFor(() =>
+			expect(screenUrl()).toBe("/showcase/pinhole/demo/u/mara.quint?tab=reels"),
+		);
 		expect(document.querySelector('a[aria-current="page"][href$="?tab=reels"]')).not.toBeNull();
 	});
 

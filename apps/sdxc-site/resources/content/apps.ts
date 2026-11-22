@@ -45,7 +45,7 @@ export const APPLICATIONS: ApplicationDefinition[] = [
 		summary: "A feed reader that subscribes, polls and pushes what it finds.",
 		study:
 			"Every feed format in the collection read by one app — RSS, Atom, JSON Feed and OPML — alongside WebSub, caching and article extraction.",
-		href: null,
+		href: "https://reader.sergiodxa.com",
 	},
 	{
 		directory: "blog",

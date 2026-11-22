@@ -87,7 +87,7 @@ for the dialog's results.
 
 - [Docs foundations](/api/ui/docs-foundations) — lay the pages out with `@sdxc/ui/docs`: the
   shell's measures, the reading type and every variable the docs components read, and the
-  [demo gallery](/demo) for whole docs sites built from them.
+  [showcase](/showcase?kind=demo) for whole docs sites built from them.
 - [Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) — check every
   page's links and headings in CI.
 - [SEO, sitemaps and robots.txt](/docs/building-remix-apps/seo-sitemaps-and-robots) — list every

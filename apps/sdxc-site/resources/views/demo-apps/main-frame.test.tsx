@@ -14,13 +14,15 @@ import { MAIN_FRAME, mainSource, MainScreen } from "~/resources/views/demo-apps/
 
 describe("mainSource", () => {
 	test("keeps the screen's path and query and drops its one-time toast", () => {
-		let url = new URL("https://sdxc.test/demo/apps/pulse/services?status=down&toast=x.1a2b3c4d");
-		expect(mainSource(url)).toBe("/demo/apps/pulse/services?status=down");
+		let url = new URL(
+			"https://sdxc.test/showcase/pulse/demo/services?status=down&toast=x.1a2b3c4d",
+		);
+		expect(mainSource(url)).toBe("/showcase/pulse/demo/services?status=down");
 	});
 
 	test("drops the anchor a framed post's redirect carried", () => {
-		let url = new URL("https://sdxc.test/demo/apps/chorus?toast=posted.1a2b3c4d&at=post-n-1");
-		expect(mainSource(url)).toBe("/demo/apps/chorus");
+		let url = new URL("https://sdxc.test/showcase/chorus/demo?toast=posted.1a2b3c4d&at=post-n-1");
+		expect(mainSource(url)).toBe("/showcase/chorus/demo");
 	});
 });
 
@@ -31,7 +33,7 @@ describe("MainScreen", () => {
 				title="Services"
 				nav="services"
 				crumb="Services"
-				url={new URL("https://sdxc.test/demo/apps/pulse/services?toast=x.1a2b3c4d")}
+				url={new URL("https://sdxc.test/showcase/pulse/demo/services?toast=x.1a2b3c4d")}
 			>
 				<h1>Services</h1>
 			</MainScreen>,
@@ -40,19 +42,19 @@ describe("MainScreen", () => {
 		expect(html).toContain('data-title="Services"');
 		expect(html).toContain('data-nav="services"');
 		expect(html).toContain('data-crumb="Services"');
-		expect(html).toContain('data-url="/demo/apps/pulse/services"');
+		expect(html).toContain('data-url="/showcase/pulse/demo/services"');
 		expect(html).not.toContain("data-main-toast");
 	});
 
 	test("carries the anchor a framed post's redirect named as a marker", async () => {
 		let html = await renderToString(
-			<MainScreen title="Home" url={new URL("https://sdxc.test/demo/apps/chorus?at=post-n-1")}>
+			<MainScreen title="Home" url={new URL("https://sdxc.test/showcase/chorus/demo?at=post-n-1")}>
 				<h1>Home</h1>
 			</MainScreen>,
 		);
 
 		expect(html).toContain('data-main-anchor="post-n-1"');
-		expect(html).toContain('data-url="/demo/apps/chorus"');
+		expect(html).toContain('data-url="/showcase/chorus/demo"');
 	});
 
 	test("carries the post's toast as a marker with a fresh id each render", async () => {
@@ -60,7 +62,7 @@ describe("MainScreen", () => {
 			renderToString(
 				<MainScreen
 					title="Services"
-					url={new URL("https://sdxc.test/demo/apps/pulse/services")}
+					url={new URL("https://sdxc.test/showcase/pulse/demo/services")}
 					toast={{ color: "success", title: "Service paused" }}
 				>
 					<h1>Services</h1>

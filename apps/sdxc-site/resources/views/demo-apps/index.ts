@@ -1,5 +1,5 @@
 /**
- * The demo apps `/demo/apps/:app` serves, discovered from
+ * The demo apps `/showcase/:slug/demo` serves, discovered from
  * `resources/views/demo-apps/<app>/index.tsx` and each loaded only when one of its own
  * screens is asked for, so a demo app never weighs on another request.
  *
@@ -124,7 +124,7 @@ export interface DemoApp {
 	 */
 	stream?: (part: string, request: DemoAppRequest) => ReadableStream<string> | null;
 	/**
-	 * Answers a file the app offers at `/demo/apps/:app/files/*part`, such as a calendar's `.ics`
+	 * Answers a file the app offers at `/showcase/:slug/demo/files/*part`, such as a calendar's `.ics`
 	 * to download or subscribe to, with its own content type and headers. `null` answers `404`.
 	 */
 	file?: (part: string, request: DemoAppRequest) => Response | null | Promise<Response | null>;
@@ -172,7 +172,7 @@ const APP_MODULES = import.meta.glob<DemoApp>("./*/index.tsx", { import: "defaul
 /**
  * Loads the demo app a slug names.
  *
- * @param slug The `:app` the request carried.
+ * @param slug The `:slug` the request carried.
  * @returns The app, or `null` for a slug no folder answers to.
  */
 export async function findDemoApp(slug: string): Promise<DemoApp | null> {
@@ -182,7 +182,7 @@ export async function findDemoApp(slug: string): Promise<DemoApp | null> {
 }
 
 /**
- * The slugs `/demo/apps/:app` answers, in folder-name order.
+ * The slugs the demo apps answer under `/showcase/:slug/demo`, in folder-name order.
  *
  * @returns One slug per demo app folder.
  */
@@ -224,16 +224,16 @@ export async function listDemoApps(): Promise<DemoAppSummary[]> {
  * @param slug The demo's folder name.
  * @returns A function from a page path (none for the home screen) to its address; a query
  *   string on the path is kept.
- * @example demoAppHref("pulse")("services?status=down") // "/demo/apps/pulse/services?status=down"
+ * @example demoAppHref("pulse")("services?status=down") // "/showcase/pulse/demo/services?status=down"
  */
 export function demoAppHref(slug: string): (page?: string) => string {
 	return (page) => {
-		if (page === undefined || page === "") return routes.demoApps.show.href({ app: slug });
+		if (page === undefined || page === "") return routes.showcase.demo.href({ slug });
 		let [path = "", query] = page.split("?", 2);
 		let href =
 			path === ""
-				? routes.demoApps.show.href({ app: slug })
-				: routes.demoApps.show.href({ app: slug, page: path });
+				? routes.showcase.demo.href({ slug })
+				: routes.showcase.demo.href({ slug, page: path });
 		return query === undefined ? href : `${href}?${query}`;
 	};
 }
@@ -244,12 +244,12 @@ export function demoAppHref(slug: string): (page?: string) => string {
  *
  * @param slug The demo's folder name.
  * @returns A function from a part path, with its query string when it keeps one, to its address.
- * @example demoAppFrameHref("pulse")("overview/stats?range=7d") // "/demo/apps/pulse/frames/overview/stats?range=7d"
+ * @example demoAppFrameHref("pulse")("overview/stats?range=7d") // "/showcase/pulse/demo/frames/overview/stats?range=7d"
  */
 export function demoAppFrameHref(slug: string): (part: string) => string {
 	return (part) => {
 		let [path = "", query] = part.split("?", 2);
-		let href = routes.demoFrames.app.href({ app: slug, part: path });
+		let href = routes.showcase.demoFrame.href({ slug, part: path });
 		return query === undefined || query === "" ? href : `${href}?${query}`;
 	};
 }
@@ -259,10 +259,10 @@ export function demoAppFrameHref(slug: string): (part: string) => string {
  * so the rest of the site and every other demo never receive them.
  *
  * @param slug The demo's folder name.
- * @example demoAppCookiePath("cairn") // "/demo/apps/cairn"
+ * @example demoAppCookiePath("cairn") // "/showcase/cairn/demo"
  */
 export function demoAppCookiePath(slug: string): string {
-	return routes.demoApps.show.href({ app: slug });
+	return routes.showcase.demo.href({ slug });
 }
 
 /**
@@ -270,12 +270,12 @@ export function demoAppCookiePath(slug: string): string {
  *
  * @param slug The demo's folder name.
  * @returns A function from a part path, with its query string when it keeps one, to its address.
- * @example demoAppStreamHref("delta")("runs/815/job/4?after=14") // "/demo/apps/delta/streams/runs/815/job/4?after=14"
+ * @example demoAppStreamHref("delta")("runs/815/job/4?after=14") // "/showcase/delta/demo/streams/runs/815/job/4?after=14"
  */
 export function demoAppStreamHref(slug: string): (part: string) => string {
 	return (part) => {
 		let [path = "", query] = part.split("?", 2);
-		let href = routes.demoStreams.app.href({ app: slug, part: path });
+		let href = routes.showcase.demoStream.href({ slug, part: path });
 		return query === undefined || query === "" ? href : `${href}?${query}`;
 	};
 }
@@ -286,13 +286,13 @@ export function demoAppStreamHref(slug: string): (part: string) => string {
  *
  * @param slug The demo's folder name.
  * @returns A function from the page path the form acts on to the action's address.
- * @example demoAppActionHref("chorus")("") // "/demo/apps/chorus"
+ * @example demoAppActionHref("chorus")("") // "/showcase/chorus/demo"
  */
 export function demoAppActionHref(slug: string): (page: string) => string {
 	return (page) =>
 		page === ""
-			? routes.demoApps.action.href({ app: slug })
-			: routes.demoApps.action.href({ app: slug, page });
+			? routes.showcase.demoAction.href({ slug })
+			: routes.showcase.demoAction.href({ slug, page });
 }
 
 /**

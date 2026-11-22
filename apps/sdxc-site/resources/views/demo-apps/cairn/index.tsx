@@ -677,7 +677,7 @@ function submitCreate(
 }
 
 /**
- * Cairn as the gallery and `/demo/apps/cairn` read it: its theme, every screen, its frames,
+ * Cairn as the gallery and `/showcase/cairn/demo` read it: its theme, every screen, its frames,
  * and how each form answers.
  */
 export default {

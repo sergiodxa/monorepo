@@ -14,7 +14,7 @@ import { listDemoSlugs } from "~/resources/views/demos";
 
 describe("demo landing links", () => {
 	test("the catalogue holds a SaaS, an app and a book demo", () => {
-		expect(listDemoSlugs()).toEqual(expect.arrayContaining(["app", "book", "saas"]));
+		expect(listDemoSlugs()).toEqual(expect.arrayContaining(["rooftree", "the-measure", "keel"]));
 	});
 
 	test.each(["/api/ui/landing-section", "/api/ui/landing-hero"])(
@@ -23,8 +23,8 @@ describe("demo landing links", () => {
 			let body = await (await fetchApp(page)).text();
 
 			for (let slug of listDemoSlugs()) {
-				expect(body).toContain(`href="/demo/${slug}"`);
-				expect((await fetchApp(`/demo/${slug}`)).status).toBe(200);
+				expect(body).toContain(`href="/showcase/${slug}/demo"`);
+				expect((await fetchApp(`/showcase/${slug}/demo`)).status).toBe(200);
 			}
 		},
 	);
@@ -76,7 +76,7 @@ describe("demo landing links", () => {
 		"/docs/building-remix-apps/landing-pages",
 		"/docs/recipes/documentation-site",
 		"/docs/content-and-feeds/reference-docs",
-	])("%s links the demo gallery", async (page) => {
-		expect(await (await fetchApp(page)).text()).toContain('href="/demo"');
+	])("%s links the showcase's demos", async (page) => {
+		expect(await (await fetchApp(page)).text()).toContain('href="/showcase?kind=demo"');
 	});
 });

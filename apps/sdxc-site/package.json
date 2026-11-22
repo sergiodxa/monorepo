@@ -3,11 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "bun scripts/extract-catalogue.ts && bun scripts/extract-delta.ts && vp build",
+		"build": "bun scripts/extract-catalogue.ts && bun scripts/extract-delta.ts && bun scripts/extract-showcase.ts && vp build",
 		"catalogue": "bun scripts/extract-catalogue.ts",
 		"cli": "bun ./bootstrap/cli.ts",
 		"delta": "bun scripts/extract-delta.ts",
-		"dev": "bun scripts/extract-catalogue.ts && bun scripts/extract-delta.ts && vp dev",
+		"dev": "bun scripts/extract-catalogue.ts && bun scripts/extract-delta.ts && bun scripts/extract-showcase.ts && vp dev",
 		"start": "vp preview",
 		"typecheck": "tsc --noEmit"
 	},

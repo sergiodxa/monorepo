@@ -1,5 +1,5 @@
 /**
- * `GET /demo/:slug` — a complete sample landing built only from `@sdxc/ui`'s marketing
+ * `GET /showcase/:slug/demo` — a complete sample landing built only from `@sdxc/ui`'s marketing
  * parts, each with its own invented product and palette. Marked `noindex, nofollow`, since
  * the page is a specimen of the components rather than a page about sdxc.
  *
@@ -22,10 +22,13 @@ import routes from "~/routes/web";
  * query, so each answer to a demo's GET form is cached on its own. A request naming one of
  * the demo's frames in `X-Remix-Target` answers that frame's content alone, cached apart.
  */
-export default createAction(routes.demo, async (ctx) => {
-	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
+export default createAction(routes.showcase.demo, async (ctx) => {
+	let { page, slug } = s.parse(
+		s.object({ slug: s.string(), page: s.optional(s.string()) }),
+		ctx.params,
+	);
 	let demo = await findDemoLanding(slug);
-	if (demo === null) return defaultHandler(ctx);
+	if (demo === null || page !== undefined) return defaultHandler(ctx);
 
 	let url = new URL(ctx.request.url);
 	let target = ctx.request.headers.get("X-Remix-Target");

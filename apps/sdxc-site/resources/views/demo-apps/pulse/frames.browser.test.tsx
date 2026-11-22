@@ -62,7 +62,7 @@ function themed(node: RemixNode): RemixNode {
 
 /** A request for a frame of Pulse, as the frame route builds it. */
 function request(part: string) {
-	let url = new URL(`https://sdxc.test/demo/apps/pulse/frames/${part}`);
+	let url = new URL(`https://sdxc.test/showcase/pulse/demo/frames/${part}`);
 	return { page: part, url, cookie: null };
 }
 

@@ -175,8 +175,36 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/philosophy")),
 	);
 	router.map(
-		routes.showcase,
-		lazy(() => import("~/app/http/controllers/showcase")),
+		routes.showcase.index,
+		lazy(() => import("~/app/http/controllers/showcase/index")),
+	);
+	router.map(
+		routes.showcase.show,
+		lazy(() => import("~/app/http/controllers/showcase/show")),
+	);
+	router.map(
+		routes.showcase.demo,
+		lazy(() => import("~/app/http/controllers/showcase/demo").then((it) => it.showDemo)),
+	);
+	router.map(
+		routes.showcase.demoAction,
+		lazy(() => import("~/app/http/controllers/showcase/demo").then((it) => it.submitDemo)),
+	);
+	router.map(
+		routes.showcase.demoFrame,
+		lazy(() => import("~/app/http/controllers/showcase/demo").then((it) => it.demoFrame)),
+	);
+	router.map(
+		routes.showcase.demoStream,
+		lazy(() => import("~/app/http/controllers/demo-apps/stream")),
+	);
+	router.map(
+		routes.showcase.demoFile,
+		lazy(() => import("~/app/http/controllers/demo-apps/file")),
+	);
+	router.map(
+		routes.showcase.media,
+		lazy(() => import("~/app/http/controllers/demo-media")),
 	);
 	router.map(
 		routes.security,
@@ -307,56 +335,36 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/robots")),
 	);
 	router.map(
-		routes.demos,
-		lazy(() => import("~/app/http/controllers/demos")),
-	);
-	router.map(
-		routes.demo,
-		lazy(() => import("~/app/http/controllers/demo")),
-	);
-	router.map(
 		routes.stats,
 		lazy(() => import("~/app/http/controllers/stats")),
 	);
 	router.map(
-		routes.demoDocs.show,
-		lazy(() => import("~/app/http/controllers/demo-docs/show")),
+		routes.legacyDemos.gallery,
+		lazy(() => import("~/app/http/controllers/legacy-demos").then((it) => it.legacyGallery)),
 	);
 	router.map(
-		routes.demoDocs.markdown,
-		lazy(() => import("~/app/http/controllers/demo-docs/markdown")),
+		routes.legacyDemos.apps,
+		lazy(() => import("~/app/http/controllers/legacy-demos").then((it) => it.legacyApps)),
 	);
 	router.map(
-		routes.demoDocs.feedback,
-		lazy(() => import("~/app/http/controllers/demo-docs/feedback")),
+		routes.legacyDemos.app,
+		lazy(() => import("~/app/http/controllers/legacy-demos").then((it) => it.legacyApp)),
 	);
 	router.map(
-		routes.demoApps.show,
-		lazy(() => import("~/app/http/controllers/demo-apps/show")),
+		routes.legacyDemos.docs,
+		lazy(() => import("~/app/http/controllers/legacy-demos").then((it) => it.legacyDocs)),
 	);
 	router.map(
-		routes.demoApps.action,
-		lazy(() => import("~/app/http/controllers/demo-apps/action")),
+		routes.legacyDemos.docsFrame,
+		lazy(() => import("~/app/http/controllers/legacy-demos").then((it) => it.legacyDocsFrame)),
 	);
 	router.map(
-		routes.demoFrames.app,
-		lazy(() => import("~/app/http/controllers/demo-apps/frame")),
+		routes.legacyDemos.media,
+		lazy(() => import("~/app/http/controllers/legacy-demos").then((it) => it.legacyMedia)),
 	);
 	router.map(
-		routes.demoFrames.docs,
-		lazy(() => import("~/app/http/controllers/demo-docs/frame")),
-	);
-	router.map(
-		routes.demoStreams.app,
-		lazy(() => import("~/app/http/controllers/demo-apps/stream")),
-	);
-	router.map(
-		routes.demoFiles.app,
-		lazy(() => import("~/app/http/controllers/demo-apps/file")),
-	);
-	router.map(
-		routes.demoMedia,
-		lazy(() => import("~/app/http/controllers/demo-media")),
+		routes.legacyDemos.landing,
+		lazy(() => import("~/app/http/controllers/legacy-demos").then((it) => it.legacyLanding)),
 	);
 
 	return router;

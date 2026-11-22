@@ -303,7 +303,7 @@ export function DemoDocsArticle(handle: Handle<DemoDocsArticle.Props>) {
 		let activePath = href(path);
 		let section = flattenDocsTree(site.tree).find((entry) => entry.href === activePath)?.section;
 		let { next, previous } = findNeighbours(site.tree, activePath, { boundary: "section" });
-		let markdownHref = routes.demoDocs.markdown.href({ site: slug, page: path });
+		let markdownHref = routes.showcase.demo.href({ slug, page: `${path}.md` });
 
 		return (
 			<article mix={[vstack({ gap: 10, align: "stretch" })]}>

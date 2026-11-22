@@ -1,5 +1,5 @@
 /**
- * `GET /demo/frames/docs/:site/*part` — one interactive piece of a docs demo page as an HTML
+ * `GET /showcase/:slug/demo/frames/*part` — one interactive piece of a docs demo page as an HTML
  * fragment, cached on its own per address. Today that is a page's feedback block, served at
  * `feedback/<page path>` with `?feedback=sent` once the reader has voted.
  *
@@ -20,15 +20,15 @@ import {
 import routes from "~/routes/web";
 
 /** The `:site` and `*part` the frame names. */
-const PARAMS = s.object({ site: s.string(), part: s.string() });
+const PARAMS = s.object({ slug: s.string(), part: s.string() });
 
 /**
  * Answers the piece's fragment as the renderer streams it, which a page's blocking frame
  * inlines. An unknown site, part or page answers `404` with an empty fragment, so a frame
  * naming one draws nothing instead of another page.
  */
-export default createAction(routes.demoFrames.docs, async (ctx) => {
-	let { part, site: slug } = s.parse(PARAMS, ctx.params);
+export default createAction(routes.showcase.demoFrame, async (ctx) => {
+	let { part, slug } = s.parse(PARAMS, ctx.params);
 	let prefix = `${FEEDBACK_PART}/`;
 	if (!part.startsWith(prefix)) return notFound();
 

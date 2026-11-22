@@ -1,5 +1,5 @@
 /**
- * `POST /demo/docs/:site/feedback` — where a docs demo page's "Was this helpful?" form posts.
+ * `POST /showcase/:slug/demo/feedback` — where a docs demo page's "Was this helpful?" form posts.
  * A demo keeps no votes: a document post goes back to the page, and a post aimed at the
  * feedback frame goes to that frame, both thanking the reader in place of the form.
  *
@@ -22,7 +22,7 @@ import {
 import routes from "~/routes/web";
 
 /** The `:site` the form posted under. */
-const PARAMS = s.object({ site: s.string() });
+const PARAMS = s.object({ slug: s.string() });
 
 /** A vote as the form posts it; the note is read and dropped. */
 const VOTE = s.object({
@@ -36,8 +36,8 @@ const VOTE = s.object({
  * frame's thanks instead, so only that frame reloads. The page must be one of the demo's
  * own pages; anything else answers `400`.
  */
-export default createAction(routes.demoDocs.feedback, async (ctx) => {
-	let { site } = s.parse(PARAMS, ctx.params);
+export default createAction(routes.showcase.demoAction, async (ctx) => {
+	let { slug: site } = s.parse(PARAMS, ctx.params);
 	let parsed = await validate(ctx.formData, VOTE);
 	if (isFailure(parsed)) return new Response("That feedback could not be read.", { status: 400 });
 

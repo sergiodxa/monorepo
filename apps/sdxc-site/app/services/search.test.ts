@@ -94,11 +94,11 @@ describe("searchDocs", () => {
 	});
 
 	test.each(["demo", "demos", "Demos", "examples", "showcase"])(
-		"answers %s with the demo gallery",
+		"answers %s with the showcase",
 		async (query) => {
 			let results = await searchDocs(query, 5);
 
-			expect(results.map((result) => result.href)).toContain("/demo");
+			expect(results.map((result) => result.href)).toContain("/showcase");
 		},
 	);
 });

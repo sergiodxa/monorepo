@@ -90,7 +90,7 @@ describe("Tern at a phone's width", () => {
 	test.each(tern.screens)("screen %j never scrolls sideways at 375px", async (screen) => {
 		await page.viewport(375, 812);
 		let [path = "", query = ""] = screen.split("?");
-		let url = new URL(`http://localhost/demo/apps/tern/${path}${query ? `?${query}` : ""}`);
+		let url = new URL(`http://localhost/showcase/tern/demo/${path}${query ? `?${query}` : ""}`);
 		let request = { page: path, url, cookie: null };
 		let pane = tern.target(MAIN_FRAME, request);
 		let body =
