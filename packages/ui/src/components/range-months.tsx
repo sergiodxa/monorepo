@@ -96,6 +96,11 @@ export namespace RangeMonths {
 		max?: string;
 		/** Days already taken: drawn struck through, never a link, and never crossed by a range. */
 		isUnavailable?: (date: string) => boolean;
+		/**
+		 * Counts each day as a night, as a stay calendar does: the first taken day after a pending
+		 * start still links as its end, since checking out that morning leaves the night free.
+		 */
+		nights?: boolean;
 		/** Builds the URL of every day and month link from what that link selects. */
 		href: (next: Next) => string;
 		/** A small line under each day's number, such as the nightly price or event dots. */
@@ -149,6 +154,7 @@ export function RangeMonths(handle: Handle<RangeMonths.Props>) {
 			min,
 			max,
 			isUnavailable,
+			nights = false,
 			href,
 			dayNote,
 			weekStartsOn,
@@ -192,6 +198,7 @@ export function RangeMonths(handle: Handle<RangeMonths.Props>) {
 		function isSelectable(date: string): boolean {
 			if (min !== undefined && date < min) return false;
 			if (max !== undefined && date > max) return false;
+			if (nights && date === block) return true;
 			if (isUnavailable?.(date)) return false;
 			return block === undefined || date < block;
 		}

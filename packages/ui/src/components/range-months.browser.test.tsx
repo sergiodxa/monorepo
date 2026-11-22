@@ -169,6 +169,18 @@ describe("RangeMonths", () => {
 		expect(linkOf(root, "2026-03-05")).toBe("month=2026-03&start=2026-03-05");
 	});
 
+	test("in a nights calendar, ends a pending range on the first taken day after its start", () => {
+		let root = mount({
+			start: "2026-03-10",
+			nights: true,
+			isUnavailable: (date) => date === "2026-03-15" || date === "2026-03-16",
+		});
+		expect(linkOf(root, "2026-03-15")).toBe("month=2026-03&start=2026-03-10&end=2026-03-15");
+		expect(cellOf(root, "2026-03-15").hasAttribute("data-pending")).toBe(true);
+		expect(linkOf(root, "2026-03-16")).toBeNull();
+		expect(linkOf(root, "2026-03-17")).toBeNull();
+	});
+
 	test("marks today with aria-current", () => {
 		let root = mount({ today: "2026-03-18" });
 		expect(root.querySelector("[aria-current=date]")?.getAttribute("data-date")).toBe("2026-03-18");
