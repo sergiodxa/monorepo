@@ -68,6 +68,12 @@ namespace DocumentLayout {
 		schema?: SchemaOrg.Node | SchemaOrg.Node[];
 		/** Whether the site footer closes the page; a page carrying its own footer turns it off. */
 		siteFooter?: boolean;
+		/**
+		 * Images the page paints above the fold, fetched at high priority from the head before
+		 * the body is parsed. `media` limits one to a color scheme, so a reader downloads only
+		 * the capture their scheme shows.
+		 */
+		preloadImages?: Array<{ href: string; media?: string }>;
 	}
 }
 
@@ -85,6 +91,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 			cookie,
 			description,
 			og,
+			preloadImages,
 			robots,
 			schema,
 			siteFooter,
@@ -125,6 +132,18 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 
 					{stylesheets.map((href) => (
 						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
+					))}
+
+					{preloadImages?.map(({ href, media }) => (
+						<link
+							key={href}
+							rel="preload"
+							as="image"
+							href={href}
+							media={media}
+							fetchpriority="high"
+							data-rmx-key={`preload:${href}`}
+						/>
 					))}
 
 					<Seo

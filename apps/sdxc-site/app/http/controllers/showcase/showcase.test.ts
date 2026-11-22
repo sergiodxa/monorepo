@@ -127,6 +127,42 @@ describe("GET /showcase/:slug", () => {
 		expect(keel).toContain("Landing demo");
 	});
 
+	test.each(["wayfern", "wakaba", "books"])(
+		"%s reserves every screenshot's box, so nothing shifts as the shots load",
+		async (slug) => {
+			let page = unwrap(parseDocument(await (await fetchApp(`/showcase/${slug}`)).text()));
+			let images = Array.from(page.querySelectorAll("main img"));
+
+			expect(images.length).toBeGreaterThanOrEqual(6);
+			for (let image of images) {
+				let src = image.getAttribute("src") ?? "";
+				expect(Number(image.getAttribute("width")), src).toBeGreaterThan(0);
+				expect(Number(image.getAttribute("height")), src).toBeGreaterThan(0);
+			}
+		},
+	);
+
+	test("preloads the cover from the head, one capture per color scheme", async () => {
+		let response = await fetchApp("/showcase/wayfern");
+		let page = unwrap(parseDocument(await response.text()));
+		let preloads = Array.from(
+			page.querySelectorAll('head link[rel="preload"][as="image"]'),
+			(link) => [link.getAttribute("href"), link.getAttribute("media")],
+		);
+		let cover = page.querySelector("img#cover")?.getAttribute("src") ?? "";
+
+		expect(preloads).toEqual([
+			[cover, "not all and (prefers-color-scheme: dark)"],
+			[cover.replace(/\.webp$/, "-dark.webp"), "(prefers-color-scheme: dark)"],
+		]);
+		expect(response.headers.get("Link")).toBe(
+			[
+				`<${cover}>; rel=preload; as=image; media="not all and (prefers-color-scheme: dark)"; fetchpriority=high`,
+				`<${cover.replace(/\.webp$/, "-dark.webp")}>; rel=preload; as=image; media="(prefers-color-scheme: dark)"; fetchpriority=high`,
+			].join(", "),
+		);
+	});
+
 	test("names a demo's real-world inspirations and links its components to the catalogue", async () => {
 		let body = await (await fetchApp("/showcase/wayfern")).text();
 

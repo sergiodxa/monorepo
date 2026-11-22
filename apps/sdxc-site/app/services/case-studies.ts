@@ -14,7 +14,7 @@ import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 
 import type { CaseStudyFrontmatter } from "~/app/services/case-study-schema";
 import type { DemoKind } from "~/app/services/demos";
-import type { ShowcaseUsage } from "~/scripts/showcase-usage";
+import type { ImageSize, ShowcaseUsage } from "~/scripts/showcase-usage";
 
 import { prepareArticle } from "~/app/services/article";
 import { CASE_STUDY_FRONTMATTER } from "~/app/services/case-study-schema";
@@ -84,10 +84,32 @@ const CASE_STUDIES = import.meta.glob<string>("../../resources/content/showcase/
 const CASE_STUDY_PREFIX = "../../resources/content/showcase/";
 
 /** The cover screenshot, with the address its image is served at. */
-export interface ShowcaseCover {
+export interface ShowcaseCover extends ImageSize {
 	src: string;
 	alt: string;
 	viewport: "desktop" | "phone";
+}
+
+/**
+ * Every screenshot's pixel size, written by the extractor at build time. It is bundled with the
+ * page, so each image's box is reserved in the first HTML and nothing shifts as shots load.
+ */
+const SHOT_SIZES = import.meta.glob<{ sizes: Record<string, ImageSize> }>(
+	"../../resources/generated/showcase-shots.json",
+	{ import: "default", eager: true },
+);
+
+/** The viewport a shot fills when the extractor has not measured it, the desktop capture's. */
+const DESKTOP_SHOT: ImageSize = { width: 1440, height: 900 };
+
+/**
+ * A screenshot's intrinsic size, which its light and dark captures share in aspect ratio.
+ *
+ * @param src The shot's address, as {@link screenshotSrc} names it.
+ * @returns The size, or `null` for a shot the extractor has not measured.
+ */
+export function shotSize(src: string): ImageSize | null {
+	return Object.values(SHOT_SIZES)[0]?.sizes[src] ?? null;
 }
 
 /** One showcase item as a card, a filter and a case study read it. */
@@ -120,6 +142,12 @@ export interface ShowcaseItem {
 export function screenshotSrc(slug: string, id: string): string {
 	return `${routes.showcase.show.href({ slug })}/${id}.webp`;
 }
+
+/** The media query a screenshot's dark capture answers, the one the site's theme switches on. */
+export const DARK_SCHEME = "(prefers-color-scheme: dark)";
+
+/** Its complement, which every reader the dark capture leaves out matches, a missing preference included. */
+export const LIGHT_SCHEME = "not all and (prefers-color-scheme: dark)";
 
 /**
  * The dark-scheme twin of a screenshot, captured from the same page with the reader's system
@@ -246,6 +274,7 @@ export function toShowcaseItem(
 						src: screenshotSrc(slug, cover.id),
 						alt: cover.alt,
 						viewport: cover.viewport ?? "desktop",
+						...(shotSize(screenshotSrc(slug, cover.id)) ?? DESKTOP_SHOT),
 					},
 		shots: frontmatter.shots.map((shot) => screenshotSrc(slug, shot.id)),
 		...links,

@@ -1,7 +1,7 @@
 /**
- * Writes `resources/generated/showcase-usage.json`: for every showcase item, the `@sdxc/*`
- * packages and `@sdxc/ui` catalogue entries its own source imports. Run after the catalogue
- * extractor, whose documents name every page an import can resolve to.
+ * Writes `resources/generated/showcase-usage.json`, the `@sdxc/*` packages and `@sdxc/ui`
+ * entries each showcase item imports, and `showcase-shots.json`, every screenshot's pixel size.
+ * Run after the catalogue extractor, whose documents name every page an import can resolve to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,16 +11,22 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { CatalogueEntry, ShowcaseUsage } from "~/scripts/showcase-usage";
+import type { CatalogueEntry, ImageSize, ShowcaseUsage } from "~/scripts/showcase-usage";
 
 import { APPLICATIONS, PRODUCTION_LANDINGS } from "~/resources/content/apps";
-import { collectUsage, readImports } from "~/scripts/showcase-usage";
+import { collectUsage, readImports, readWebpSize } from "~/scripts/showcase-usage";
 
 /** The app's own root, which every path below is resolved against. */
 const APP = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /** Where the document is written, and where the site reads it from. */
 const OUTPUT = join(APP, "resources", "generated", "showcase-usage.json");
+
+/** Where every screenshot's size is written, keyed by the address it is served at. */
+const SHOTS_OUTPUT = join(APP, "resources", "generated", "showcase-shots.json");
+
+/** The screenshots' folder, one subfolder per item, served from `/showcase/`. */
+const SHOTS = join(APP, "public", "showcase");
 
 /**
  * The folders holding each kind of demo, one subfolder per demo named by its slug, with the
@@ -100,6 +106,19 @@ function main(): void {
 
 	mkdirSync(dirname(OUTPUT), { recursive: true });
 	writeFileSync(OUTPUT, `${JSON.stringify({ usage }, null, "\t")}\n`);
+	writeFileSync(SHOTS_OUTPUT, `${JSON.stringify({ sizes: readShotSizes() }, null, "\t")}\n`);
+}
+
+/** Every screenshot's size, keyed by its address, such as `/showcase/keel/hero.webp`. */
+function readShotSizes(): Record<string, ImageSize> {
+	let sizes: Record<string, ImageSize> = {};
+	if (!existsSync(SHOTS)) return sizes;
+	for (let path of readdirSync(SHOTS, { recursive: true, encoding: "utf8" }).sort()) {
+		if (!path.endsWith(".webp")) continue;
+		let size = readWebpSize(readFileSync(join(SHOTS, path)));
+		if (size !== null) sizes[`/showcase/${path.split("\\").join("/")}`] = size;
+	}
+	return sizes;
 }
 
 /** Every page under `/api/ui`, from the documents the catalogue extractor wrote. */

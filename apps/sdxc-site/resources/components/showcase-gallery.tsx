@@ -19,7 +19,12 @@ import { Badge, LinkButton } from "@sdxc/ui";
 
 import type { ShowcaseFilter, ShowcaseItem } from "~/app/services/case-studies";
 
-import { CATEGORY_LABELS, darkScreenshotSrc, showcaseHref } from "~/app/services/case-studies";
+import {
+	CATEGORY_LABELS,
+	DARK_SCHEME,
+	darkScreenshotSrc,
+	showcaseHref,
+} from "~/app/services/case-studies";
 
 /** How each filter chip reads. */
 const FILTER_LABELS: Record<ShowcaseFilter, string> = {
@@ -132,7 +137,7 @@ export function ShowcaseScreenshot(handle: Handle<ShowcaseScreenshot.Props>) {
 		let { alt, fetchpriority, height, id, loading, mix, src, width } = handle.props;
 		return (
 			<picture mix={[raw({ display: "contents" })]}>
-				<source media="(prefers-color-scheme: dark)" srcset={darkScreenshotSrc(src)} />
+				<source media={DARK_SCHEME} srcset={darkScreenshotSrc(src)} />
 				<img
 					id={id}
 					src={src}
@@ -194,8 +199,8 @@ export function ShowcaseTile(handle: Handle<ShowcaseTile.Props>) {
 							src={shot.src}
 							alt=""
 							loading="lazy"
-							width={1440}
-							height={900}
+							width={shot.width}
+							height={shot.height}
 							mix={[
 								raw({
 									display: "block",

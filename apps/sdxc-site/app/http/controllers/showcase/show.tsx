@@ -31,7 +31,16 @@ import { withBundleCache } from "~/app/http/caching";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { pageSchema, seo } from "~/app/initializers/seo";
 import { tableOfContents } from "~/app/services/article";
-import { filterOf, kindLabel, readCaseStudy, showcaseHref } from "~/app/services/case-studies";
+import {
+	DARK_SCHEME,
+	LIGHT_SCHEME,
+	darkScreenshotSrc,
+	filterOf,
+	kindLabel,
+	readCaseStudy,
+	shotSize,
+	showcaseHref,
+} from "~/app/services/case-studies";
 import Hero from "~/resources/components/hero";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import { ProseHeading, ProseParagraph } from "~/resources/components/prose";
@@ -61,6 +70,14 @@ export default createAction(routes.showcase.show, async (ctx) => {
 		...(usage.packages.length > 0 ? [{ id: "built-with", text: "Built with", level: 2 }] : []),
 	];
 
+	let preloads =
+		item.cover === null
+			? []
+			: [
+					{ href: item.cover.src, media: LIGHT_SCHEME },
+					{ href: darkScreenshotSrc(item.cover.src), media: DARK_SCHEME },
+				];
+
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -73,6 +90,7 @@ export default createAction(routes.showcase.show, async (ctx) => {
 				url: seo.canonical(ctx.url),
 				cardTitle: title,
 			})}
+			preloadImages={preloads}
 		>
 			<SiteHeader activePath={routes.showcase.index.href()} />
 
@@ -101,8 +119,8 @@ export default createAction(routes.showcase.show, async (ctx) => {
 							id="cover"
 							src={item.cover.src}
 							alt={item.cover.alt}
-							width={1440}
-							height={900}
+							width={item.cover.width}
+							height={item.cover.height}
 							fetchpriority="high"
 							mix={[
 								border({ color: "neutral" }),
@@ -174,8 +192,24 @@ export default createAction(routes.showcase.show, async (ctx) => {
 		</DocumentLayout>,
 	);
 
+	if (preloads.length > 0) response.headers.set("Link", imagePreloadLinks(preloads));
 	return await withBundleCache(ctx.request, response);
 });
+
+/**
+ * The cover's preloads as a `Link` header, so the browser, or an edge sending `103 Early
+ * Hints`, starts the image before the HTML arrives; each keeps its `media`, so a reader fetches
+ * only the capture their color scheme shows.
+ *
+ * @example imagePreloadLinks([{ href: "/a.webp", media: "(prefers-color-scheme: dark)" }]) // '</a.webp>; rel=preload; as=image; media="(prefers-color-scheme: dark)"; fetchpriority=high'
+ */
+function imagePreloadLinks(preloads: Array<{ href: string; media: string }>): string {
+	return preloads
+		.map(
+			({ href, media }) => `<${href}>; rel=preload; as=image; media="${media}"; fetchpriority=high`,
+		)
+		.join(", ");
+}
 
 namespace CaseStudyActions {
 	export interface Props {
@@ -226,6 +260,7 @@ function CaseStudyFigure(handle: Handle<CaseStudyFigure.Props>) {
 	return () => {
 		let { children, src, title } = handle.props;
 		let alt = plainText(children);
+		let size = shotSize(src);
 		return (
 			<figure
 				mix={[vstack({ gap: 3, align: "stretch" }), raw({ margin: "2.5rem 0", display: "flex" })]}
@@ -234,6 +269,8 @@ function CaseStudyFigure(handle: Handle<CaseStudyFigure.Props>) {
 					<ShowcaseScreenshot
 						src={src}
 						alt={alt}
+						width={size?.width}
+						height={size?.height}
 						loading="lazy"
 						mix={[
 							border({ color: "neutral" }),

@@ -134,3 +134,36 @@ export function collectUsage(sources: string[], catalogue: CatalogueEntry[]): Sh
 		),
 	};
 }
+
+/** An image's intrinsic size in pixels. */
+export interface ImageSize {
+	width: number;
+	height: number;
+}
+
+/**
+ * Reads a WebP file's pixel size from its header, for lossy (`VP8 `), lossless (`VP8L`) and
+ * extended (`VP8X`) files alike, so a page can reserve each screenshot's box before it loads.
+ *
+ * @param bytes The file's contents, or at least its first 30 bytes.
+ * @returns The size, or `null` for bytes that are not a WebP file.
+ */
+export function readWebpSize(bytes: Uint8Array): ImageSize | null {
+	let ascii = (start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));
+	if (bytes.length < 30 || ascii(0, 4) !== "RIFF" || ascii(8, 12) !== "WEBP") return null;
+	let view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	let chunk = ascii(12, 16);
+	if (chunk === "VP8 ") {
+		return { width: view.getUint16(26, true) & 0x3fff, height: view.getUint16(28, true) & 0x3fff };
+	}
+	if (chunk === "VP8L") {
+		let bits = view.getUint32(21, true);
+		return { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
+	}
+	if (chunk === "VP8X") {
+		let uint24 = (offset: number) =>
+			view.getUint16(offset, true) | (view.getUint8(offset + 2) << 16);
+		return { width: uint24(24) + 1, height: uint24(27) + 1 };
+	}
+	return null;
+}
