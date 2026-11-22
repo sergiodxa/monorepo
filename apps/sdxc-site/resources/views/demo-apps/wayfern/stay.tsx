@@ -874,6 +874,7 @@ export default function StayPage(handle: Handle<{ stay: Stay; ctx: Screen }>) {
 									end: "check-out",
 								}}
 								isUnavailable={(day) => isBooked(stay, day, mine)}
+								nights
 								dayNote={(day) =>
 									isBooked(stay, day, mine) ? null : `$${Math.round(nightPrice(stay, day) / 100)}`
 								}

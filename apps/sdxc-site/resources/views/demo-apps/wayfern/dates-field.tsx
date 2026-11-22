@@ -274,6 +274,7 @@ export const DatesField = clientEntry(
 							label="Stay dates"
 							labels={LABELS}
 							isUnavailable={(day) => taken.has(day)}
+							nights
 							href={link}
 						/>
 						<div
