@@ -34,6 +34,23 @@ describe("GET /showcase", () => {
 		expect(production).not.toContain(">Demo<");
 	});
 
+	test("lists the product landings an application serves beside the applications", async () => {
+		let body = await (await fetchApp("/showcase?kind=production")).text();
+		let production = body.slice(body.indexOf('id="production"'), body.indexOf('id="items"'));
+
+		expect(production).toContain('href="/showcase/wakaba"');
+		expect(production).toContain('href="/showcase/encore"');
+		expect(body).not.toMatch(/id="items"[\s\S]*href="\/showcase\/wakaba"/);
+	});
+
+	test("shows each screenshot in the reader's color scheme", async () => {
+		let body = await (await fetchApp("/showcase")).text();
+
+		expect(body).toMatch(
+			/<source media="\(prefers-color-scheme: dark\)" srcset="\/showcase\/keel\/[\w-]+-dark\.webp"/,
+		);
+	});
+
 	test("marks every demo as a demo, so none reads as a product", async () => {
 		let body = await (await fetchApp("/showcase?kind=demo")).text();
 		let grid = body.slice(body.indexOf('id="items"'));
@@ -97,6 +114,18 @@ describe("GET /showcase/:slug", () => {
 			expect(body).not.toMatch(/<meta name="robots" content="[^"]*noindex/);
 		},
 	);
+
+	test("names what an item is, kind and category together", async () => {
+		let uptime = await (await fetchApp("/showcase/uptime")).text();
+		let wakaba = await (await fetchApp("/showcase/wakaba")).text();
+		let keel = await (await fetchApp("/showcase/keel")).text();
+
+		expect(uptime).toContain("Production app");
+		expect(wakaba).toContain("Production landing");
+		expect(wakaba).toContain('href="https://sergiodxa.com/apps/wakaba"');
+		expect(wakaba).toContain(">Open the page");
+		expect(keel).toContain("Landing demo");
+	});
 
 	test("names a demo's real-world inspirations and links its components to the catalogue", async () => {
 		let body = await (await fetchApp("/showcase/wayfern")).text();

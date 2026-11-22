@@ -1,6 +1,6 @@
 /**
- * `GET /showcase` — everything built on these packages: the applications running in
- * production in a row of large tiles, then every demo for an invented product in one grid.
+ * `GET /showcase` — everything built on these packages: the applications and product landings
+ * running in production in a row of large tiles, then every demo for an invented product in one grid.
  * `?kind=` narrows the page, so each filter is a link with its own address.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -22,6 +22,7 @@ import {
 	listShowcaseItems,
 	matchesFilter,
 	readFilter,
+	readUsage,
 } from "~/app/services/case-studies";
 import { listShowcase } from "~/app/services/showcase";
 import Actions from "~/resources/components/actions";
@@ -58,14 +59,22 @@ export default createAction(routes.showcase.index, async (ctx) => {
 	) as Record<ShowcaseFilter, number>;
 
 	let packageCounts = new Map(listShowcase().map((entry) => [entry.directory, entry.packageCount]));
+	for (let item of items) {
+		if (item.kind === "production" && !packageCounts.has(item.slug)) {
+			packageCounts.set(item.slug, (await readUsage(item.slug)).packages.length);
+		}
+	}
 	let production = items
 		.filter((item) => item.kind === "production")
 		.sort(
 			(a, b) =>
+				Number(a.category !== "app") - Number(b.category !== "app") ||
 				Number(b.liveHref !== null) - Number(a.liveHref !== null) ||
 				(packageCounts.get(b.slug) ?? 0) - (packageCounts.get(a.slug) ?? 0),
 		);
-	let live = production.filter((item) => item.liveHref !== null).length;
+	let apps = production.filter((item) => item.category === "app");
+	let live = apps.filter((item) => item.liveHref !== null).length;
+	let landings = production.length - apps.length;
 	let showsProduction = filter === "all" || filter === "production";
 	let rest = items.filter((item) => item.kind === "demo" && matchesFilter(item, filter));
 
@@ -89,13 +98,13 @@ export default createAction(routes.showcase.index, async (ctx) => {
 					<div mix={[vstack({ gap: 6, align: "start" }), maxIs("44rem")]}>
 						<ProseHeading level={1}>Showcase</ProseHeading>
 						<ProseParagraph>
-							{live} applications run in production on these packages
-							{production.length > live
-								? `, ${production.length - live} more is source only,`
-								: ""}{" "}
-							and {counts.demo} demos for invented products show what @sdxc/ui builds: apps, landing
-							pages and documentation sites, each in its own art direction. Every one has a case
-							study of what it demonstrates and what it is built from.
+							{live} applications
+							{landings > 0 ? ` and ${landings} product landings` : ""} run in production on these
+							packages
+							{apps.length > live ? ` (${apps.length - live} more application is source only)` : ""}
+							, and {counts.demo} demos for invented products show what @sdxc/ui builds: apps,
+							landing pages and documentation sites, each in its own art direction. Every one has a
+							case study of what it demonstrates and what it is built from.
 						</ProseParagraph>
 						<ShowcaseFilters current={filter} counts={counts} />
 					</div>
@@ -105,7 +114,7 @@ export default createAction(routes.showcase.index, async (ctx) => {
 					<SectionBlock
 						id="production"
 						eyebrow="Running in production"
-						title="Real applications"
+						title="Real products"
 						tone="tinted"
 					>
 						<div

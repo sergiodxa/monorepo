@@ -16,10 +16,15 @@ card sat beside nothing that said it was a demo, so an invented product could re
 
 ### One showcase, one address per item
 
-- `/showcase` lists everything. A row of the applications in production comes first, then a
-  grid of every demo. `?kind=` (`all`, `production`, `demo`, `app`, `landing`, `docs`) narrows
-  it, and each filter is a plain link with its own address. Every tile carries a chip:
-  "In production", or "Demo" plus its kind.
+- `/showcase` lists everything. A row of what runs in production comes first, then a grid of
+  every demo. `?kind=` (`all`, `production`, `demo`, `app`, `landing`, `docs`) narrows it, and
+  each filter is a plain link with its own address; `app`, `landing` and `docs` narrow the
+  demos. Every tile carries a chip, "In production", "Source only" or "Demo", beside its
+  category, and a case study names both together: "Production app", "Landing demo".
+- An item has a kind, production or demo, and a category, app, landing or docs. Production
+  holds the applications in this repository and the product landings an application serves
+  (Wakaba and Encore, pages of the author's site), listed in `resources/content/apps.ts`; a
+  landing's packages and components come from its views folder and what it imports.
 - `/showcase/:slug` is a case study for every item, real applications included. Its copy is a
   Markdown file, `resources/content/showcase/<slug>.md`, so it is reviewed as prose. The
   `@sdxc/*` packages and `@sdxc/ui` entries an item uses come from its own imports, read at
@@ -58,6 +63,7 @@ The showcase and the case studies may be indexed and are in the sitemap. Demos s
 - A new demo is still one folder; it needs a case study before the case-study test passes.
 - The screenshots a case study shows are listed in its front matter and captured from a
   production build by `scripts/capture-showcase.ts`, so a demo's redesign is re-shot by running
-  it again.
+  it again. Each is captured in light and in dark (`<id>-dark.webp`), and the page picks the
+  one matching the reader's system scheme, as the site's own theme does.
 - `sergiodxa.com/apps` stays the author's list of real products; the showcase links only to the
   applications in this repository.

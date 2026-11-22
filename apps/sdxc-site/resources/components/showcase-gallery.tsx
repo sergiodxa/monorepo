@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { border, fg, outline } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
@@ -19,7 +19,7 @@ import { Badge, LinkButton } from "@sdxc/ui";
 
 import type { ShowcaseFilter, ShowcaseItem } from "~/app/services/case-studies";
 
-import { CATEGORY_LABELS, showcaseHref } from "~/app/services/case-studies";
+import { CATEGORY_LABELS, darkScreenshotSrc, showcaseHref } from "~/app/services/case-studies";
 
 /** How each filter chip reads. */
 const FILTER_LABELS: Record<ShowcaseFilter, string> = {
@@ -99,15 +99,52 @@ export function ShowcaseKindChips(handle: Handle<ShowcaseKindChips.Props>) {
 				{item.kind === "production" && item.liveHref !== null ? (
 					<Badge color="success">In production</Badge>
 				) : null}
-				{item.kind === "production" ? null : (
-					<>
-						<Badge color="warning">Demo</Badge>
-						<Badge color="neutral" variant="outline">
-							{CATEGORY_LABELS[item.category].replace(" demo", "")}
-						</Badge>
-					</>
-				)}
+				{item.kind === "production" ? null : <Badge color="warning">Demo</Badge>}
+				<Badge color="neutral" variant="outline">
+					{CATEGORY_LABELS[item.category]}
+				</Badge>
 			</span>
+		);
+	};
+}
+
+namespace ShowcaseScreenshot {
+	export interface Props {
+		/** The light-scheme shot; its dark twin sits beside it under the same name. */
+		src: string;
+		alt: string;
+		id?: string;
+		loading?: "lazy" | "eager";
+		fetchpriority?: "high" | "low" | "auto";
+		width?: number;
+		height?: number;
+		mix?: TagProps<"img">["mix"];
+	}
+}
+
+/**
+ * A showcase screenshot in the reader's color scheme: the browser picks the dark capture when
+ * the system prefers dark, as the site's own theme does, so a shot never flashes the other
+ * scheme inside a page. The image carries the styles; the picture around it adds no box.
+ */
+export function ShowcaseScreenshot(handle: Handle<ShowcaseScreenshot.Props>) {
+	return () => {
+		let { alt, fetchpriority, height, id, loading, mix, src, width } = handle.props;
+		return (
+			<picture mix={[raw({ display: "contents" })]}>
+				<source media="(prefers-color-scheme: dark)" srcset={darkScreenshotSrc(src)} />
+				<img
+					id={id}
+					src={src}
+					alt={alt}
+					loading={loading}
+					decoding="async"
+					fetchpriority={fetchpriority}
+					width={width}
+					height={height}
+					mix={mix}
+				/>
+			</picture>
 		);
 	};
 }
@@ -153,11 +190,10 @@ export function ShowcaseTile(handle: Handle<ShowcaseTile.Props>) {
 					]}
 				>
 					{shot === null ? null : (
-						<img
+						<ShowcaseScreenshot
 							src={shot.src}
 							alt=""
 							loading="lazy"
-							decoding="async"
 							width={1440}
 							height={900}
 							mix={[

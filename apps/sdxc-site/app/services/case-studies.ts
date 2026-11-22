@@ -20,7 +20,7 @@ import { prepareArticle } from "~/app/services/article";
 import { CASE_STUDY_FRONTMATTER } from "~/app/services/case-study-schema";
 import { TAGS } from "~/app/services/content";
 import { findDemoKind } from "~/app/services/demos";
-import { APPLICATIONS } from "~/resources/content/apps";
+import { APPLICATIONS, PRODUCTION_LANDINGS } from "~/resources/content/apps";
 import routes from "~/routes/web";
 
 /** Where every application's and demo's source is read. */
@@ -36,8 +36,8 @@ const DEMO_FOLDERS: Record<DemoKind, string> = {
 /** Whether an item runs for real, or is a demo for an invented product. */
 export type ShowcaseKind = "production" | "demo";
 
-/** The finer grouping the showcase's filters and cards name. */
-export type ShowcaseCategory = "production" | DemoKind;
+/** What an item is, production or demo alike: an app, a landing or a docs site. */
+export type ShowcaseCategory = DemoKind;
 
 /** The `?kind=` values the showcase filters by, `all` showing everything. */
 export const SHOWCASE_FILTERS = ["all", "production", "demo", "app", "landing", "docs"] as const;
@@ -45,13 +45,28 @@ export const SHOWCASE_FILTERS = ["all", "production", "demo", "app", "landing", 
 /** One of {@link SHOWCASE_FILTERS}. */
 export type ShowcaseFilter = (typeof SHOWCASE_FILTERS)[number];
 
-/** How a category reads on a chip and a case study's eyebrow. */
+/** How a category reads on its own, as a demo's second chip does. */
 export const CATEGORY_LABELS: Record<ShowcaseCategory, string> = {
-	production: "In production",
-	app: "App demo",
-	landing: "Landing demo",
-	docs: "Docs demo",
+	app: "App",
+	landing: "Landing",
+	docs: "Docs",
 };
+
+/**
+ * What an item is, kind and category together, as a case study's breadcrumb and facts read.
+ *
+ * @example kindLabel({ kind: "production", category: "app" }) // "Production app"
+ * @example kindLabel({ kind: "demo", category: "docs" }) // "Docs demo"
+ */
+export function kindLabel(item: Pick<ShowcaseItem, "kind" | "category">): string {
+	let category = CATEGORY_LABELS[item.category];
+	return item.kind === "production" ? `Production ${category.toLowerCase()}` : `${category} demo`;
+}
+
+/** The filter that lists an item beside its peers: every production item together, a demo by kind. */
+export function filterOf(item: Pick<ShowcaseItem, "kind" | "category">): ShowcaseFilter {
+	return item.kind === "production" ? "production" : item.category;
+}
 
 /** The options every case study is parsed with, so the index and the page read it alike. */
 export const CASE_STUDY_OPTIONS = {
@@ -107,6 +122,16 @@ export function screenshotSrc(slug: string, id: string): string {
 }
 
 /**
+ * The dark-scheme twin of a screenshot, captured from the same page with the reader's system
+ * set to dark, so a shot matches the page around it in either scheme.
+ *
+ * @example darkScreenshotSrc("/showcase/wayfern/fare-calendar.webp") // "/showcase/wayfern/fare-calendar-dark.webp"
+ */
+export function darkScreenshotSrc(src: string): string {
+	return src.replace(/\.webp$/, "-dark.webp");
+}
+
+/**
  * The showcase's address, narrowed to one filter.
  *
  * @param filter What `?kind=` narrows to; `all` and none give the bare address.
@@ -125,8 +150,8 @@ export function showcaseHref(filter?: ShowcaseFilter): string {
  */
 export function matchesFilter(item: ShowcaseItem, filter: ShowcaseFilter): boolean {
 	if (filter === "all") return true;
-	if (filter === "demo") return item.kind === "demo";
-	return item.category === filter;
+	if (filter === "demo" || filter === "production") return item.kind === filter;
+	return item.kind === "demo" && item.category === filter;
 }
 
 /**
@@ -162,7 +187,8 @@ export async function readCaseStudySource(slug: string): Promise<string | null> 
 
 /**
  * Where an item runs and where its source is, by kind: an application in production names
- * its own site and workspace, a demo its address under `/showcase` and its folder.
+ * its own site and workspace, a production landing its page and views folder, a demo its
+ * address under `/showcase` and its folder.
  */
 function itemLinks(
 	slug: string,
@@ -171,9 +197,18 @@ function itemLinks(
 	if (application !== undefined) {
 		return {
 			kind: "production",
-			category: "production",
+			category: "app",
 			liveHref: application.href,
 			sourceHref: `${REPOSITORY_TREE}/${application.directory}`,
+		};
+	}
+	let landing = PRODUCTION_LANDINGS.find((entry) => entry.slug === slug);
+	if (landing !== undefined) {
+		return {
+			kind: "production",
+			category: "landing",
+			liveHref: landing.href,
+			sourceHref: `${REPOSITORY_TREE}/${landing.application}/${landing.folder}`,
 		};
 	}
 	let demo = findDemoKind(slug);
@@ -217,8 +252,8 @@ export function toShowcaseItem(
 	};
 }
 
-/** Production first, then apps, landings and docs sites, each in title order. */
-const CATEGORY_ORDER: ShowcaseCategory[] = ["production", "app", "landing", "docs"];
+/** Apps, then landings, then docs sites, within production and within the demos. */
+const CATEGORY_ORDER: ShowcaseCategory[] = ["app", "landing", "docs"];
 
 /**
  * Every showcase item with a case study, applications in production first, then the demos by
@@ -238,6 +273,7 @@ export async function listShowcaseItems(): Promise<ShowcaseItem[]> {
 		.filter((item): item is ShowcaseItem => item !== null)
 		.sort(
 			(a, b) =>
+				Number(a.kind === "demo") - Number(b.kind === "demo") ||
 				CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category) ||
 				a.title.localeCompare(b.title),
 		);

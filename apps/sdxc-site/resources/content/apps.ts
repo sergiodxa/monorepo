@@ -1,7 +1,8 @@
 /**
  * The applications the showcase lists, and the same set a package page may name as
  * users of it. The list is curated rather than exhaustive: an app that reaches for a
- * handful of packages proves nothing about them, and a count a reader cannot check
+ * handful of packages proves nothing about them. The product landings an application
+ * serves are listed beside them, since each is a real page built from the same packages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -70,5 +71,33 @@ export const APPLICATIONS: ApplicationDefinition[] = [
 		study:
 			"What the collection looks like as a paid HTTP and MCP surface: one Worker runs package capabilities, settles payments and keeps a catalog humans can still read for free.",
 		href: "https://api.sdxc.dev",
+	},
+];
+
+/**
+ * A landing in production that is one page of an application rather than a workspace of its
+ * own, such as a product's marketing page served by the author's site.
+ */
+export interface ProductionLandingDefinition {
+	slug: string;
+	/** The workspace that serves it. */
+	application: string;
+	/** The folder of that workspace its views live in, which its source link opens. */
+	folder: string;
+	href: string;
+}
+
+export const PRODUCTION_LANDINGS: ProductionLandingDefinition[] = [
+	{
+		slug: "wakaba",
+		application: "blog",
+		folder: "resources/views/wakaba",
+		href: "https://sergiodxa.com/apps/wakaba",
+	},
+	{
+		slug: "encore",
+		application: "blog",
+		folder: "resources/views/encore",
+		href: "https://sergiodxa.com/apps/encore",
 	},
 ];

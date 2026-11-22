@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import type { CatalogueEntry, ShowcaseUsage } from "~/scripts/showcase-usage";
 
-import { APPLICATIONS } from "~/resources/content/apps";
+import { APPLICATIONS, PRODUCTION_LANDINGS } from "~/resources/content/apps";
 import { collectUsage, readImports } from "~/scripts/showcase-usage";
 
 /** The app's own root, which every path below is resolved against. */
@@ -45,6 +45,26 @@ const APPLICATION_FOLDERS = ["app", "bootstrap", "config", "database", "resource
  */
 const FOLLOWED = ["resources/views", "resources/components"].map((path) => join(APP, path));
 
+/**
+ * The folders of an application a production landing's imports are followed into: its views,
+ * parts, layout, copy and listing. The application's document shell draws every page it
+ * serves, so it is left out and the landing names only what it is built from.
+ */
+const LANDING_FOLLOWED = ["resources", "config"];
+
+/** The application-wide document shell, left out of a landing's own files. */
+const LANDING_SHELL = "resources/layouts/document.tsx";
+
+/** Where `~/` resolves, which folders an import is followed into, and which files never are. */
+interface FollowScope {
+	root: string;
+	followed: string[];
+	skipped: string[];
+}
+
+/** The site's own scope, which a demo's imports are followed within. */
+const SITE_SCOPE: FollowScope = { root: APP, followed: FOLLOWED, skipped: [] };
+
 main();
 
 /** Reads the catalogue, walks every item's source and writes the document. */
@@ -56,6 +76,17 @@ function main(): void {
 		let root = join(APP, "..", application.directory);
 		let files = APPLICATION_FOLDERS.flatMap((folder) => listSources(join(root, folder)));
 		usage[application.directory] = collectUsage(files.map(read), catalogue);
+	}
+
+	for (let landing of PRODUCTION_LANDINGS) {
+		let root = join(APP, "..", landing.application);
+		let scope = {
+			root,
+			followed: LANDING_FOLLOWED.map((folder) => join(root, folder)),
+			skipped: [join(root, LANDING_SHELL)],
+		};
+		let files = followImports(listSources(join(root, landing.folder)), scope);
+		usage[landing.slug] = collectUsage([...files].map(read), catalogue);
 	}
 
 	for (let root of DEMO_ROOTS) {
@@ -111,17 +142,17 @@ function listSources(folder: string): string[] {
 }
 
 /**
- * The files a demo is drawn from: its own folder, plus every shared shell or part those files
- * import from the site, followed until nothing new turns up.
+ * The files an item is drawn from: its own folder, plus every shared shell or part those files
+ * import from inside the scope, followed until nothing new turns up.
  */
-function followImports(start: string[]): Set<string> {
+function followImports(start: string[], scope: FollowScope = SITE_SCOPE): Set<string> {
 	let seen = new Set(start);
 	let queue = [...start];
 	while (queue.length > 0) {
 		let file = queue.pop();
 		if (file === undefined) break;
 		for (let record of readImports(read(file))) {
-			let target = resolveImport(file, record.specifier);
+			let target = resolveImport(file, record.specifier, scope);
 			if (target === null || seen.has(target)) continue;
 			seen.add(target);
 			queue.push(target);
@@ -130,12 +161,12 @@ function followImports(start: string[]): Set<string> {
 	return seen;
 }
 
-/** The site file an import names, when it is one a demo is drawn with. */
-function resolveImport(from: string, specifier: string): string | null {
+/** The file an import names, when it is one inside the scope an item is drawn with. */
+function resolveImport(from: string, specifier: string, scope: FollowScope): string | null {
 	let base: string | null = null;
-	if (specifier.startsWith("~/")) base = join(APP, specifier.slice(2));
+	if (specifier.startsWith("~/")) base = join(scope.root, specifier.slice(2));
 	else if (specifier.startsWith(".")) base = resolve(dirname(from), specifier);
-	if (base === null || !FOLLOWED.some((folder) => base.startsWith(folder))) return null;
+	if (base === null || !scope.followed.some((folder) => base.startsWith(folder))) return null;
 	for (let candidate of [
 		base,
 		`${base}.ts`,
@@ -143,6 +174,7 @@ function resolveImport(from: string, specifier: string): string | null {
 		join(base, "index.ts"),
 		join(base, "index.tsx"),
 	]) {
+		if (scope.skipped.includes(candidate)) return null;
 		if (/\.tsx?$/.test(candidate) && existsSync(candidate) && statSync(candidate).isFile()) {
 			return candidate;
 		}

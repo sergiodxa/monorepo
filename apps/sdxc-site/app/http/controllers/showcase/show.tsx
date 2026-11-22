@@ -10,6 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { ArrowUpRightIcon } from "@sdxc/icons";
+import { iife } from "@sdxc/iife";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { border, fg } from "@sdxc/u/color";
@@ -30,12 +31,12 @@ import { withBundleCache } from "~/app/http/caching";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { pageSchema, seo } from "~/app/initializers/seo";
 import { tableOfContents } from "~/app/services/article";
-import { CATEGORY_LABELS, readCaseStudy, showcaseHref } from "~/app/services/case-studies";
+import { filterOf, kindLabel, readCaseStudy, showcaseHref } from "~/app/services/case-studies";
 import Hero from "~/resources/components/hero";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import { ProseHeading, ProseParagraph } from "~/resources/components/prose";
 import SectionBlock from "~/resources/components/section-block";
-import { ShowcaseKindChips } from "~/resources/components/showcase-gallery";
+import { ShowcaseKindChips, ShowcaseScreenshot } from "~/resources/components/showcase-gallery";
 import SiteHeader from "~/resources/components/site-header";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -81,7 +82,9 @@ export default createAction(routes.showcase.show, async (ctx) => {
 						<nav aria-label="Breadcrumb" mix={[text("sm"), fg("neutral")]}>
 							<a href={routes.showcase.index.href()}>Showcase</a>
 							{" / "}
-							<a href={showcaseHref(item.category)}>{CATEGORY_LABELS[item.category]}</a>
+							<a href={showcaseHref(filterOf(item))}>
+								{item.kind === "production" ? "In production" : `${kindLabel(item)}s`}
+							</a>
 							{" / "}
 							<span aria-current="page">{item.title}</span>
 						</nav>
@@ -94,7 +97,7 @@ export default createAction(routes.showcase.show, async (ctx) => {
 
 				{item.cover === null ? null : (
 					<div mix={[is("100%"), maxIs(PAGE_WIDTH), p(0, 4)]}>
-						<img
+						<ShowcaseScreenshot
 							id="cover"
 							src={item.cover.src}
 							alt={item.cover.alt}
@@ -189,7 +192,10 @@ function CaseStudyActions(handle: Handle<CaseStudyActions.Props>) {
 			<div mix={[hstack({ gap: 3, align: "center" }), raw({ flexWrap: "wrap" })]}>
 				{item.liveHref === null ? null : (
 					<LinkButton href={item.liveHref} rel={external ? "noreferrer" : undefined}>
-						{external ? "Open the app" : "Open the demo"}
+						{iife(() => {
+							if (!external) return "Open the demo";
+							return item.category === "landing" ? "Open the page" : "Open the app";
+						})}
 						{external ? <ArrowUpRightIcon size={16} aria-hidden="true" /> : null}
 					</LinkButton>
 				)}
@@ -225,11 +231,10 @@ function CaseStudyFigure(handle: Handle<CaseStudyFigure.Props>) {
 				mix={[vstack({ gap: 3, align: "stretch" }), raw({ margin: "2.5rem 0", display: "flex" })]}
 			>
 				<a href={src} mix={[raw({ display: "block" })]}>
-					<img
+					<ShowcaseScreenshot
 						src={src}
 						alt={alt}
 						loading="lazy"
-						decoding="async"
 						mix={[
 							border({ color: "neutral" }),
 							raw({
@@ -277,7 +282,7 @@ function CaseStudyRail(handle: Handle<CaseStudyRail.Props>) {
 	return () => {
 		let { anchors, item, usage } = handle.props;
 		let facts: Array<{ label: string; value: RemixNode }> = [
-			{ label: "Kind", value: CATEGORY_LABELS[item.category] },
+			{ label: "Kind", value: kindLabel(item) },
 			{ label: "Packages", value: `${usage.packages.length} from @sdxc` },
 			{ label: "Components", value: `${usage.components.length} from @sdxc/ui` },
 			...(item.liveHref === null
