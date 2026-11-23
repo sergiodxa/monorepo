@@ -160,12 +160,13 @@ async function readCards(
 		let bytes = readFileSync(source);
 		let image = await decode(bytes);
 		if (isFailure(image)) continue;
-		let { accent, tagline, title } = parsed.data.frontmatter;
+		let { accent, cover, shots, tagline, title } = parsed.data.frontmatter;
 		cards[slug] = {
 			title,
 			tagline,
 			chips: kindChips(facts),
 			source: `/showcase/${slug}/card.png`,
+			screenshotAlt: shots.find((shot) => shot.id === cover)?.alt ?? "",
 			version: createHash("sha256").update(bytes).digest("hex").slice(0, 12),
 			...readPalette(image.data, accent === undefined ? undefined : channels(accent)),
 		};

@@ -85,7 +85,7 @@ export function readPalette(image: Pixels, accent?: RGB): CardPalette {
 				)
 				.sort((left, right) => score(right) - score(left))[0],
 	).find((entry) => entry !== undefined);
-	let chosen = accent ?? vivid?.rgb ?? mix(background, parse(foreground), 0.55);
+	let chosen = legibleAccent(accent ?? vivid?.rgb ?? mix(background, parse(foreground), 0.55));
 	return {
 		background: hex(background),
 		foreground,
@@ -112,14 +112,36 @@ function distance(left: RGB, right: RGB): number {
 	return Math.abs(left[0] - right[0]) + Math.abs(left[1] - right[1]) + Math.abs(left[2] - right[2]);
 }
 
+/** The WCAG AA contrast normal-size text needs against what it is set on. */
+export const AA_CONTRAST = 4.5;
+
+/**
+ * The accent, darkened or lightened in small steps toward whichever end its label reads on
+ * until the label reaches {@link AA_CONTRAST}, so a chip filled with a mid-tone brand colour
+ * keeps its hue and gains the contrast its label needs.
+ */
+function legibleAccent(accent: RGB): RGB {
+	let current = accent;
+	for (let step = 0; step < 20; step++) {
+		let text = readableOn(current);
+		if (contrastRatio(current, parse(text)) >= AA_CONTRAST) return current;
+		current = mix(current, text === INK ? [255, 255, 255] : [0, 0, 0], 0.08);
+	}
+	return current;
+}
+
+/**
+ * The WCAG contrast ratio between two colours, from 1 for the same colour to 21 for black on
+ * white.
+ */
+export function contrastRatio(left: RGB, right: RGB): number {
+	let [lighter, darker] = [luminance(left), luminance(right)].sort((a, b) => b - a);
+	return ((lighter ?? 0) + 0.05) / ((darker ?? 0) + 0.05);
+}
+
 /** Whichever of the dark and light text reaches the higher WCAG contrast against `rgb`. */
 function readableOn(rgb: RGB): string {
-	let surface = luminance(rgb);
-	let contrast = (text: string) => {
-		let other = luminance(parse(text));
-		return (Math.max(surface, other) + 0.05) / (Math.min(surface, other) + 0.05);
-	};
-	return contrast(INK) >= contrast(PAPER) ? INK : PAPER;
+	return contrastRatio(rgb, parse(INK)) >= contrastRatio(rgb, parse(PAPER)) ? INK : PAPER;
 }
 
 /** WCAG relative luminance, 0 for black to 1 for white. */
@@ -139,7 +161,7 @@ function mix(from: RGB, to: RGB, amount: number): RGB {
 }
 
 /** A `#rrggbb` string's channels. */
-function parse(value: string): RGB {
+export function parse(value: string): RGB {
 	return [1, 3, 5].map((start) => Number.parseInt(value.slice(start, start + 2), 16)) as RGB;
 }
 

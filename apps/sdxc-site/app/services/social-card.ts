@@ -57,6 +57,8 @@ export namespace SocialCard {
 		chips: [string, string];
 		/** The cover scaled to the card, as a path on this site. */
 		source: string;
+		/** What the cover shows, as its case study describes it, for the card's alt text. */
+		screenshotAlt: string;
 		/** The source image's hash, so a re-shot cover gets a new card. */
 		version: string;
 		background: string;
@@ -83,7 +85,7 @@ export const SOCIAL_CARD_SIZE = { width: 1200, height: 630 } as const;
  * Names the card design. Changing the drawing changes this, which changes every card's
  * storage key and URL, so platforms and storage pick up the new design with no purge.
  */
-export const SOCIAL_CARD_TEMPLATE = "1";
+export const SOCIAL_CARD_TEMPLATE = "2";
 
 /** This site's folder in the shared card bucket, which a lifecycle rule can target alone. */
 const SOCIAL_CARD_PREFIX = "sdxc";
@@ -129,6 +131,28 @@ export function socialCardContent(page: SocialCard.Page): SocialCard.Content {
 		url: page.path === "/" ? host : `${host}${page.path}`,
 		footer: packageName && name.startsWith("@") ? `npm add ${name}` : host,
 	};
+}
+
+/**
+ * The card's alternative text, for `og:image:alt` and `twitter:image:alt`: everything the card
+ * says, in reading order, and for a showcase card what its screenshot shows, so a reader who
+ * cannot see the image gets what it carries.
+ */
+export function socialCardAlt(page: SocialCard.Page): string {
+	let content = socialCardContent(page);
+	if (content.kind === "home") return `${SITE_NAME}: ${content.tagline} ${content.description}`;
+	if (content.kind === "page") {
+		return [`${content.eyebrow}: ${content.title}.`, content.description].filter(Boolean).join(" ");
+	}
+	let [status, category] = content.chips;
+	let kind = status === "Demo" ? `${category} demo` : `${category}, ${status.toLowerCase()}`;
+	return [
+		`${content.title} (${kind}): ${content.tagline}.`,
+		content.screenshotAlt === "" ? "" : `Beside it, a screenshot: ${content.screenshotAlt}`,
+		`From ${content.url}.`,
+	]
+		.filter(Boolean)
+		.join(" ");
 }
 
 /**
@@ -234,9 +258,9 @@ function homeContent(): SocialCard.HomeContent {
 		description: `${counts.packageCount ?? ""} packages built on web standards: Request and Response in, typed values out.`,
 		stats: [
 			stat("packageCount", "packages"),
-			stat("rfcCount", "RFCs followed"),
-			stat("componentCount", "UI components"),
-			stat("utilityCount", "styling utilities"),
+			stat("rfcCount", "RFCs"),
+			stat("componentCount", "components"),
+			stat("utilityCount", "utilities"),
 		].filter((entry) => entry.value !== ""),
 	};
 }

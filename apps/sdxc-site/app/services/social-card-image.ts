@@ -72,15 +72,29 @@ const HOME_BAND = 470;
 const TEXT_WIDTH = 880;
 
 /**
+ * The smallest text a card sets, in card pixels. Discord and Slack show a card about 400 px
+ * wide, a third of its size, where this is 12 px; every label is set at least this large.
+ */
+export const MIN_TEXT_SIZE = 36;
+
+/**
+ * How strongly a card's secondary text (a tagline, the address) is set against its background,
+ * dimmed only as far as keeps it above WCAG AA contrast on every palette the showcase uses.
+ */
+export const SECONDARY_TEXT_ALPHA = 0.84;
+
+/**
  * A showcase card's layout, in card pixels: the text column on the left and the window on the
  * right, sized so the screenshot draws at its source's own size and runs off the right and
- * bottom edges, and every text size readable when a platform shows the card at half width.
+ * bottom edges, with every label at least {@link MIN_TEXT_SIZE}.
  */
 const SHOWCASE = {
-	gutter: 72,
-	column: 460,
-	window: { x: 584, y: 150, width: 720, bar: 40, radius: 18 },
-	chip: { height: 44, padding: 20, gap: 10, size: 22 },
+	gutter: 64,
+	column: 508,
+	window: { x: 620, y: 168, width: 720, bar: 40, radius: 18 },
+	chip: { height: 60, padding: 24, gap: 12, size: MIN_TEXT_SIZE },
+	title: { size: 104, minSize: 72 },
+	tagline: { size: 42, minSize: MIN_TEXT_SIZE },
 };
 
 /**
@@ -127,9 +141,10 @@ export async function renderSocialCard(
 	drawBody(canvas, content, fonts);
 	canvas.text(content.footer, {
 		font: fonts.mono,
-		size: 20,
+		size: MIN_TEXT_SIZE,
+		tracking: -1,
 		x: width / 2,
-		y: 590,
+		y: 596,
 		align: "center",
 		maxWidth: TEXT_WIDTH,
 		maxLines: 1,
@@ -193,19 +208,20 @@ function drawHeader(
 ): void {
 	canvas.text("sdxc", {
 		font: fonts.semibold,
-		size: 32,
-		tracking: -1,
-		x: FRAME.railLeft + 40,
-		y: 60,
+		size: 44,
+		tracking: -1.5,
+		x: FRAME.railLeft + 32,
+		y: 64,
 		paint: PALETTE.title,
 	});
 	canvas.text(content.url, {
 		font: fonts.mono,
-		size: 20,
-		x: FRAME.railRight - 40,
-		y: 58,
+		size: MIN_TEXT_SIZE,
+		tracking: -1,
+		x: FRAME.railRight - 32,
+		y: 62,
 		align: "end",
-		maxWidth: 640,
+		maxWidth: 720,
 		maxLines: 1,
 		paint: PALETTE.quiet,
 	});
@@ -222,21 +238,26 @@ function drawBody(
 	fonts: SocialCardImage.Fonts,
 ): void {
 	let x = canvas.width / 2;
-	let eyebrow = textOptions(fonts.mono, 24, x, { maxLines: 1, paint: PALETTE.eyebrow });
+	let eyebrow = textOptions(fonts.mono, MIN_TEXT_SIZE, x, {
+		maxLines: 1,
+		tracking: -1,
+		paint: PALETTE.eyebrow,
+	});
 	let title = textOptions(fonts.semibold, 76, x, {
 		tracking: -3,
-		lineHeight: 1.08,
+		lineHeight: 1.04,
 		maxLines: 2,
-		minSize: 52,
+		minSize: 60,
 		paint: PALETTE.title,
 	});
-	let description = textOptions(fonts.regular, 28, x, {
-		lineHeight: 1.45,
-		maxLines: 2,
+	let description = textOptions(fonts.regular, 38, x, {
+		lineHeight: 1.3,
+		maxLines: 3,
+		minSize: MIN_TEXT_SIZE,
 		paint: PALETTE.description,
 	});
-	let eyebrowGap = 28;
-	let descriptionGap = 30;
+	let eyebrowGap = 20;
+	let descriptionGap = 22;
 	let titleMetrics = canvas.measureText(content.title, title);
 	let descriptionMetrics = content.description
 		? canvas.measureText(content.description, description)
@@ -300,12 +321,12 @@ function drawHome(
 	});
 	canvas.text(content.description, {
 		font: fonts.regular,
-		size: 26,
-		lineHeight: 1.45,
-		maxWidth: 760,
+		size: MIN_TEXT_SIZE,
+		lineHeight: 1.3,
+		maxWidth: 960,
 		maxLines: 2,
 		x,
-		y: 372,
+		y: 376,
 		align: "center",
 		paint: PALETTE.description,
 	});
@@ -329,19 +350,19 @@ function drawStats(canvas: Canvas, stats: SocialCard.Stat[], fonts: SocialCardIm
 		}
 		canvas.text(stat.value, {
 			font: fonts.semibold,
-			size: 56,
+			size: 60,
 			tracking: -1.5,
-			x: x + 36,
-			y: HOME_BAND + 90,
+			x: x + 28,
+			y: HOME_BAND + 76,
 			paint: PALETTE.title,
 		});
 		canvas.text(stat.label, {
 			font: fonts.regular,
-			size: 20,
-			maxWidth: cell - 48,
+			size: MIN_TEXT_SIZE,
+			maxWidth: cell - 40,
 			maxLines: 1,
-			x: x + 36,
-			y: HOME_BAND + 126,
+			x: x + 28,
+			y: HOME_BAND + 124,
 			paint: PALETTE.quiet,
 		});
 	});
@@ -382,37 +403,40 @@ function drawShowcase(
 	drawChips(canvas, content, fonts);
 
 	let x = SHOWCASE.gutter;
+	let titleTop = 64 + SHOWCASE.chip.height + 44;
 	let title = canvas.text(content.title, {
 		font: fonts.semibold,
-		size: 92,
-		minSize: 60,
-		tracking: -3.5,
-		lineHeight: 1.02,
+		size: SHOWCASE.title.size,
+		minSize: SHOWCASE.title.minSize,
+		tracking: -4,
+		lineHeight: 1,
 		maxWidth: SHOWCASE.column,
 		maxLines: 2,
 		x,
-		y: 248,
+		y: titleTop + SHOWCASE.title.size * 0.74,
 		paint: foreground,
 	});
 	canvas.text(content.tagline, {
 		font: fonts.regular,
-		size: 34,
-		minSize: 26,
-		lineHeight: 1.3,
+		size: SHOWCASE.tagline.size,
+		minSize: SHOWCASE.tagline.minSize,
+		tracking: -0.5,
+		lineHeight: 1.22,
 		maxWidth: SHOWCASE.column,
-		maxLines: 3,
+		maxLines: 2,
 		x,
-		y: 248 + title.height - title.size * 0.15 + 30,
-		paint: withAlpha(foreground, 0.78),
+		y: titleTop + title.height + 24 + SHOWCASE.tagline.size * 0.8,
+		paint: withAlpha(foreground, SECONDARY_TEXT_ALPHA),
 	});
 	canvas.text(content.url, {
 		font: fonts.mono,
-		size: 22,
+		size: MIN_TEXT_SIZE,
+		tracking: -1,
 		x,
-		y: height - 56,
+		y: height - 52,
 		maxWidth: SHOWCASE.column,
 		maxLines: 1,
-		paint: withAlpha(foreground, 0.62),
+		paint: withAlpha(foreground, SECONDARY_TEXT_ALPHA),
 	});
 }
 
@@ -427,7 +451,7 @@ function drawChips(
 ): void {
 	let { gap, height, padding, size } = SHOWCASE.chip;
 	let foreground = color(content.foreground);
-	let top = 78;
+	let top = 64;
 	let x = SHOWCASE.gutter;
 	content.chips.forEach((label, index) => {
 		let text = { font: fonts.semibold, size, x: 0, y: 0 };
@@ -436,8 +460,8 @@ function drawChips(
 		if (index === 0) {
 			canvas.fillPath(Path.fromSVG(outline), color(content.accent));
 		} else {
-			let inner = roundedRectData(x + 2, top + 2, chipWidth - 4, height - 4, height / 2 - 2);
-			canvas.fillPath(Path.fromSVG(`${outline}${inner}`), withAlpha(foreground, 0.42), {
+			let inner = roundedRectData(x + 3, top + 3, chipWidth - 6, height - 6, height / 2 - 3);
+			canvas.fillPath(Path.fromSVG(`${outline}${inner}`), withAlpha(foreground, 0.72), {
 				rule: "evenodd",
 			});
 		}

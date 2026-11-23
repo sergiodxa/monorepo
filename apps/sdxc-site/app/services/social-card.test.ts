@@ -9,16 +9,22 @@
 
 import { describe, expect, test } from "vitest";
 
+import type { RGB } from "~/scripts/showcase-cards";
+
+import { listCaseStudySlugs } from "~/app/services/case-studies";
 import {
 	pagePathFromCardPath,
 	readPageFacts,
 	SOCIAL_CARD_TEMPLATE,
+	socialCardAlt,
 	socialCardContent,
 	socialCardHash,
 	socialCardKey,
 	socialCardUrl,
 } from "~/app/services/social-card";
+import { SECONDARY_TEXT_ALPHA } from "~/app/services/social-card-image";
 import { SITE_DESCRIPTION } from "~/config/constants";
+import { AA_CONTRAST, contrastRatio, parse } from "~/scripts/showcase-cards";
 
 /** The card for a page other than the home page, which every such page draws. */
 function pageCard(page: Parameters<typeof socialCardContent>[0]) {
@@ -137,6 +143,52 @@ describe("readPageFacts", () => {
 
 	test("a document with no title is no page", () => {
 		expect(readPageFacts("<p>hi</p>", "/")).toBeNull();
+	});
+});
+
+describe("socialCardAlt", () => {
+	test("says everything a case study's card shows, its screenshot included", () => {
+		let alt = socialCardAlt({ title: "Wayfern", description: "", path: "/showcase/wayfern" });
+
+		expect(alt).toMatch(/^Wayfern \(App demo\): Stays, flights and cars from one search\. /);
+		expect(alt).toContain("Beside it, a screenshot: ");
+		expect(alt).toMatch(/From sdxc\.dev\/showcase\.$/);
+		expect(socialCardAlt({ title: "uptime", description: "", path: "/showcase/uptime" })).toMatch(
+			/^uptime \(App, in production\): /,
+		);
+	});
+
+	test("reads a page's card as its eyebrow, title and description", () => {
+		expect(
+			socialCardAlt({
+				title: "@sdxc/jwt — sdxc",
+				description: "Sign tokens.",
+				path: "/api/jwt",
+			}),
+		).toBe("Package: @sdxc/jwt. Sign tokens.");
+	});
+});
+
+describe("every case study's card", () => {
+	/** A colour set at `alpha` over a background, as the canvas composites it. */
+	let over = (text: RGB, background: RGB, alpha: number) =>
+		text.map((channel, index) => channel * alpha + (background[index] ?? 0) * (1 - alpha)) as RGB;
+
+	test.each(listCaseStudySlugs())("%s sets its text at WCAG AA contrast", (slug) => {
+		let content = socialCardContent({ title: slug, description: "", path: `/showcase/${slug}` });
+		if (content.kind !== "showcase") throw new Error(`${slug} has no card`);
+		let background = parse(content.background);
+		let foreground = parse(content.foreground);
+
+		expect(contrastRatio(foreground, background), "name").toBeGreaterThanOrEqual(AA_CONTRAST);
+		expect(
+			contrastRatio(over(foreground, background, SECONDARY_TEXT_ALPHA), background),
+			"tagline and address",
+		).toBeGreaterThanOrEqual(AA_CONTRAST);
+		expect(
+			contrastRatio(parse(content.onAccent), parse(content.accent)),
+			"the status chip's label",
+		).toBeGreaterThanOrEqual(AA_CONTRAST);
 	});
 });
 

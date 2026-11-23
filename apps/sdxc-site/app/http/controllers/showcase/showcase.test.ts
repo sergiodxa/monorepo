@@ -115,6 +115,17 @@ describe("GET /showcase/:slug", () => {
 		},
 	);
 
+	test("describes its share image to Open Graph and to X", async () => {
+		let body = await (await fetchApp("/showcase/wayfern")).text();
+
+		expect(body).toMatch(
+			/<meta property="og:image:alt" content="Wayfern \(App demo\): Stays, flights/,
+		);
+		expect(body).toMatch(
+			/<meta name="twitter:image:alt" content="Wayfern \(App demo\): Stays, flights/,
+		);
+	});
+
 	test("names what an item is, kind and category together", async () => {
 		let uptime = await (await fetchApp("/showcase/uptime")).text();
 		let wakaba = await (await fetchApp("/showcase/wakaba")).text();

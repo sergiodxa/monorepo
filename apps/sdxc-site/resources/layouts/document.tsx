@@ -22,7 +22,7 @@ import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
 import { seo } from "~/app/initializers/seo";
-import { SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
+import { SOCIAL_CARD_SIZE, socialCardAlt, socialCardUrl } from "~/app/services/social-card";
 import { AUTHOR_PROFILES, AUTHOR_URL, SITE_DESCRIPTION, SITE_URL } from "~/config/constants";
 import { RememberedTabsScope } from "~/resources/components/markdown-blocks";
 import SiteFooter from "~/resources/components/site-footer";
@@ -99,14 +99,15 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		} = handle.props;
 		let { script, stylesheets } = assets;
 		let canonicalUrl = seo.canonical(canonical ?? SITE_URL);
+		let cardPage = {
+			title,
+			description: description ?? SITE_DESCRIPTION,
+			path: new URL(canonicalUrl).pathname,
+		};
 		let card = canonical
 			? {
-					image: socialCardUrl({
-						title,
-						description: description ?? SITE_DESCRIPTION,
-						path: new URL(canonicalUrl).pathname,
-					}),
-					imageAlt: title,
+					image: socialCardUrl(cardPage),
+					imageAlt: socialCardAlt(cardPage),
 					imageWidth: SOCIAL_CARD_SIZE.width,
 					imageHeight: SOCIAL_CARD_SIZE.height,
 				}
