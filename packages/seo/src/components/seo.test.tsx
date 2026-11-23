@@ -90,6 +90,20 @@ describe("Seo.Meta", () => {
 		);
 	});
 
+	test("describes the card image to both namespaces, since X reads only its own", async () => {
+		let instance = seo();
+		let html = await renderToString(
+			<Seo.Meta
+				canonical={instance.canonical("/")}
+				site={instance.site}
+				og={{ image: instance.absolute("/og/home.png"), imageAlt: "Example: monitoring." }}
+			/>,
+		);
+
+		expect(html).toContain('<meta property="og:image:alt" content="Example: monitoring." />');
+		expect(html).toContain('<meta name="twitter:image:alt" content="Example: monitoring." />');
+	});
+
 	test("states the card image's size when given, and only with an image", async () => {
 		let instance = seo();
 		let sized = await renderToString(

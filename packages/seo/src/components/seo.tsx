@@ -30,7 +30,7 @@ export namespace Seo {
 		type?: "website" | "article";
 		/** Absolute image URL for the social card — build it with `seo.absolute()`. */
 		image?: string;
-		/** Alternative text for the card image, for the consumers that expose it. */
+		/** Alternative text for the card image, written as `og:image:alt` and `twitter:image:alt`. */
 		imageAlt?: string;
 		/**
 		 * The image's size in pixels, as `og:image:width` and `og:image:height`. A platform that
@@ -112,6 +112,7 @@ function SeoMeta(handle: Handle<Seo.MetaProps>) {
 				{title && <meta name="twitter:title" content={title} />}
 				{description && <meta name="twitter:description" content={description} />}
 				{og?.image && <meta name="twitter:image" content={og.image} />}
+				{og?.image && og.imageAlt && <meta name="twitter:image:alt" content={og.imageAlt} />}
 			</>
 		);
 	};
