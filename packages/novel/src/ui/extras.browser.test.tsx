@@ -216,6 +216,21 @@ describe("Memories", () => {
 		expect(played).not.toHaveBeenCalled();
 	});
 
+	test("opens its scrolling box at the newest line", async () => {
+		let result = mount(
+			<div data-box="" style={{ blockSize: "40px", overflowY: "auto" }}>
+				<Memories novel={fixture()} persistent={STORED} />
+			</div>,
+		);
+		await loaded(result, "[data-novel-memories]");
+		let box = result.$("[data-box]")!;
+
+		expect(box.scrollHeight).toBeGreaterThan(box.clientHeight);
+		await vi.waitFor(() =>
+			expect(box.scrollTop).toBeGreaterThanOrEqual(box.scrollHeight - box.clientHeight - 1),
+		);
+	});
+
 	test("says there is nothing to remember on a first playthrough", async () => {
 		let result = mount(<Memories novel={fixture()} persistent={undefined} />);
 		let screen = await loaded(result, "[data-novel-memories]");

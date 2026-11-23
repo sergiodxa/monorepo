@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { intl } from "@sdxc/i18n/ui";
 import { Volume2Icon } from "@sdxc/icons";
 import { Button } from "@sdxc/ui";
-import { css, on } from "remix/component";
+import { css, on, ref } from "remix/component";
 
 import type { Novel } from "../novel.js";
 
@@ -42,8 +42,8 @@ export namespace Memories {
 }
 
 /**
- * Lists what the reader has read, scene by scene. Lazily mapped scenes load as the screen
- * opens, and it says so until they have.
+ * Lists what the reader has read, scene by scene, opening scrolled to the newest line. Lazily
+ * mapped scenes load as the screen opens, and it says so until they have.
  *
  * @example <Memories novel={novel} persistent={stored} mix={on("novel:replay-voice", (event) => play(event.line.voice))} />
  */
@@ -52,6 +52,8 @@ export function Memories(handle: Handle<Memories.Props>) {
 	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
 
 	let own: AudioMixer | undefined;
+	let root: HTMLElement | undefined;
+	let scrolledToNewest = false;
 
 	handle.signal.addEventListener("abort", () => own?.dispose());
 
@@ -74,12 +76,30 @@ export function Memories(handle: Handle<Memories.Props>) {
 		void target.playVoice(line.voice);
 	}
 
+	/**
+	 * Scrolls the nearest scrolling box around the screen, such as its dialog's body, to the end,
+	 * where the newest lines are; a screen that fits its box scrolls nothing.
+	 */
+	function scrollToNewest(): void {
+		for (let node = root?.parentElement; node; node = node.parentElement) {
+			let overflow = getComputedStyle(node).overflowY;
+			if (overflow !== "auto" && overflow !== "scroll") continue;
+			if (node.scrollHeight <= node.clientHeight) continue;
+			node.scrollTop = node.scrollHeight;
+			return;
+		}
+	}
+
 	return () => {
 		let { novel: _novel, persistent: _persistent, labels: overrides, mix, ...rest } = handle.props;
 		let source = librarySource(player, handle.props);
 		if (source === undefined) return null;
 		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
 		let library = read(source.novel, source.persistent, intl(handle).locale);
+		if (library !== undefined && !scrolledToNewest) {
+			scrolledToNewest = true;
+			handle.queueTask(scrollToNewest);
+		}
 		let chapters = (library?.chapters ?? [])
 			.map((group) => ({
 				...group,
@@ -91,7 +111,13 @@ export function Memories(handle: Handle<Memories.Props>) {
 				{...rest}
 				data-novel-memories=""
 				aria-busy={library === undefined ? "true" : undefined}
-				mix={[css({ display: "grid", gap: "1.25rem" }), mix]}
+				mix={[
+					css({ display: "grid", gap: "1.25rem" }),
+					ref((node) => {
+						root = node;
+					}),
+					mix,
+				]}
 			>
 				{library === undefined ? <p>{labels.loading}</p> : null}
 				{library !== undefined && chapters.length === 0 ? <p>{labels.noMemories}</p> : null}

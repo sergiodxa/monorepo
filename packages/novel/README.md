@@ -598,7 +598,7 @@ How the reader experiences the play, kept in the browser and never in the game s
 
 #### `Memories`, `Gallery`, `MusicRoom` and `EndingsList`
 
-The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, and replays a voiced line's voice through the player's mixer, or outside one a mixer it makes for itself (a `novel:replay-voice` listener may prevent that and play it another way); `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens.
+The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, opening its scrolling box at the newest one, and replays a voiced line's voice through the player's mixer, or outside one a mixer it makes for itself (a `novel:replay-voice` listener may prevent that and play it another way); `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens.
 
 #### `ChapterSelect` and `SceneReplay`
 
