@@ -85,7 +85,7 @@ export const SOCIAL_CARD_SIZE = { width: 1200, height: 630 } as const;
  * Names the card design. Changing the drawing changes this, which changes every card's
  * storage key and URL, so platforms and storage pick up the new design with no purge.
  */
-export const SOCIAL_CARD_TEMPLATE = "2";
+export const SOCIAL_CARD_TEMPLATE = "1";
 
 /** This site's folder in the shared card bucket, which a lifecycle rule can target alone. */
 const SOCIAL_CARD_PREFIX = "sdxc";
@@ -258,9 +258,9 @@ function homeContent(): SocialCard.HomeContent {
 		description: `${counts.packageCount ?? ""} packages built on web standards: Request and Response in, typed values out.`,
 		stats: [
 			stat("packageCount", "packages"),
-			stat("rfcCount", "RFCs"),
-			stat("componentCount", "components"),
-			stat("utilityCount", "utilities"),
+			stat("rfcCount", "RFCs followed"),
+			stat("componentCount", "UI components"),
+			stat("utilityCount", "styling utilities"),
 		].filter((entry) => entry.value !== ""),
 	};
 }

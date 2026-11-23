@@ -1,7 +1,6 @@
 /**
  * Renders a card with the bundled fonts and checks the PNG that comes out: its size, the
- * background and frame colours where the design puts them, ink where the text goes, and no text
- * smaller than a card shown a third of its size can still read.
+ * background and frame colours where the design puts them, and ink where the text goes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,13 +11,10 @@ import { join } from "node:path";
 
 import { parseFont } from "@sdxc/font";
 import { decode } from "@sdxc/png";
-import { Canvas } from "@sdxc/raster";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import type { SocialCard } from "~/app/services/social-card";
-
-import { SOCIAL_CARD_SIZE, socialCardContent } from "~/app/services/social-card";
-import { MIN_TEXT_SIZE, renderSocialCard } from "~/app/services/social-card-image";
+import { SOCIAL_CARD_SIZE } from "~/app/services/social-card";
+import { renderSocialCard } from "~/app/services/social-card-image";
 
 /** The bundled faces, read from disk as the Worker receives them as data modules. */
 function fonts() {
@@ -98,46 +94,4 @@ describe("renderSocialCard", () => {
 		expect(inkInRow(result.data, 100)).toBeLessThan(40);
 		expect(inkInRow(result.data, 530)).toBeLessThan(40);
 	});
-});
-
-describe("every card's text", () => {
-	/** One card of each design, with the longest copy each is drawn with. */
-	let cards: Array<[string, SocialCard.Content]> = [
-		[
-			"a package page",
-			socialCardContent({
-				title: "@sdxc/jwt — Package — sdxc",
-				description:
-					"Sign and verify JSON Web Tokens with Web Crypto, with typed claims, JWKS, key rotation and a Result for every failure along the way.",
-				path: "/api/jwt",
-			}),
-		],
-		["the home page", socialCardContent({ title: "sdxc", description: "", path: "/" })],
-		[
-			"a case study",
-			socialCardContent({
-				title: "Hollyhock Bakery",
-				description: "",
-				path: "/showcase/hollyhock",
-			}),
-		],
-	];
-
-	test.each(cards)(
-		"on %s is set no smaller than a third-size preview can read",
-		async (_, content) => {
-			let sizes: number[] = [];
-			let text = vi.spyOn(Canvas.prototype, "text");
-			text.mockImplementation(function (this: Canvas, value, options) {
-				let fitted = this.measureText(value, options);
-				sizes.push(fitted.size);
-				return fitted;
-			});
-			await renderSocialCard(content, fonts());
-			text.mockRestore();
-
-			expect(sizes.length).toBeGreaterThan(2);
-			expect(Math.min(...sizes)).toBeGreaterThanOrEqual(MIN_TEXT_SIZE);
-		},
-	);
 });

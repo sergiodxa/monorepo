@@ -22,7 +22,7 @@ import {
 	socialCardKey,
 	socialCardUrl,
 } from "~/app/services/social-card";
-import { SECONDARY_TEXT_ALPHA } from "~/app/services/social-card-image";
+import { ADDRESS_ALPHA, TAGLINE_ALPHA } from "~/app/services/social-card-image";
 import { SITE_DESCRIPTION } from "~/config/constants";
 import { AA_CONTRAST, contrastRatio, parse } from "~/scripts/showcase-cards";
 
@@ -182,8 +182,12 @@ describe("every case study's card", () => {
 
 		expect(contrastRatio(foreground, background), "name").toBeGreaterThanOrEqual(AA_CONTRAST);
 		expect(
-			contrastRatio(over(foreground, background, SECONDARY_TEXT_ALPHA), background),
-			"tagline and address",
+			contrastRatio(over(foreground, background, TAGLINE_ALPHA), background),
+			"tagline",
+		).toBeGreaterThanOrEqual(AA_CONTRAST);
+		expect(
+			contrastRatio(over(foreground, background, ADDRESS_ALPHA), background),
+			"address",
 		).toBeGreaterThanOrEqual(AA_CONTRAST);
 		expect(
 			contrastRatio(parse(content.onAccent), parse(content.accent)),
