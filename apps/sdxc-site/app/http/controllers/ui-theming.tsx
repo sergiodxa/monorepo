@@ -27,7 +27,7 @@ import { readTheme } from "~/app/services/theming";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
-import { EntrySummary, EntryTitle } from "~/resources/components/entry";
+import { EntryContent, EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
@@ -111,7 +111,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 						/>
 					</header>
 
-					<div mix={[mf("e-content")]}>
+					<EntryContent>
 						<ReferenceSection
 							id="roles"
 							title="Semantic roles"
@@ -165,7 +165,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 								language="css"
 							/>
 						</ReferenceSection>
-					</div>
+					</EntryContent>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

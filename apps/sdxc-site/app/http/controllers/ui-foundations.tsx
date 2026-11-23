@@ -31,7 +31,7 @@ import { CATALOGUE_SOURCE_BASE, THEMING_SLUG } from "~/app/services/catalogue-pa
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
-import { EntrySummary, EntryTitle } from "~/resources/components/entry";
+import { EntryContent, EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
@@ -121,7 +121,7 @@ export default async function foundationsPage(
 						/>
 					</header>
 
-					<div mix={[mf("e-content")]}>
+					<EntryContent>
 						<Typeset preset="docs">
 							{foundations.intro.map((paragraph) => (
 								<p key={paragraph}>{paragraph}</p>
@@ -239,7 +239,7 @@ export default async function foundationsPage(
 								</section>
 							))}
 						</ReferenceSection>
-					</div>
+					</EntryContent>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

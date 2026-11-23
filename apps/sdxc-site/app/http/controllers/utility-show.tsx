@@ -38,7 +38,7 @@ import { themeScales } from "~/app/services/utility-theme";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
-import { EntrySummary, EntryTitle } from "~/resources/components/entry";
+import { EntryContent, EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -147,7 +147,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 						/>
 					</header>
 
-					<div mix={[mf("e-content")]}>
+					<EntryContent>
 						{table.length > 0 ? (
 							<ReferenceSection
 								id="quick-reference"
@@ -261,7 +261,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 						<ReferenceSection id="signature" title="Signature">
 							<CodeBlock labels={CODE_LABELS} code={reference.signature} language="typescript" />
 						</ReferenceSection>
-					</div>
+					</EntryContent>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

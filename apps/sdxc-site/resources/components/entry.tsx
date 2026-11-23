@@ -1,6 +1,6 @@
 /**
- * The visible title and summary of an h-entry. The title links the page's permalink, so
- * the name, URL and uid a parser reads are the heading a reader sees.
+ * The visible title, summary and body of an h-entry. The title links the page's permalink,
+ * so the name, URL and uid a parser reads are the heading a reader sees.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
 import { textDecoration } from "@sdxc/u/typography";
 
 namespace EntryTitle {
@@ -47,4 +48,19 @@ export function EntryTitle(handle: Handle<EntryTitle.Props>) {
  */
 export function EntrySummary(handle: Handle<{ children: RemixNode }>) {
 	return () => <span mix={[mf("p-summary")]}>{handle.props.children}</span>;
+}
+
+/**
+ * Renders the entry's body: every band of a reference page, spaced as the article spaces
+ * its header, so marking the body for a parser leaves the page's rhythm as it was.
+ *
+ * @param handle Runtime handle carrying the page's bands.
+ * @returns The render function producing the stacked body.
+ */
+export function EntryContent(handle: Handle<{ children: RemixNode }>) {
+	return () => (
+		<div mix={[mf("e-content"), vstack({ gap: 10, align: "stretch" })]}>
+			{handle.props.children}
+		</div>
+	);
 }

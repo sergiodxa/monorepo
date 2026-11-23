@@ -35,7 +35,7 @@ import CompositionTree from "~/resources/components/composition-tree";
 import DemoLinks from "~/resources/components/demo-links";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
-import { EntrySummary, EntryTitle } from "~/resources/components/entry";
+import { EntryContent, EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import { findPreview, listExamples } from "~/resources/components/preview-registry.server";
 import PropsReference from "~/resources/components/props-reference";
@@ -173,7 +173,7 @@ export default createAction(routes.api.component, async (ctx) => {
 						/>
 					</header>
 
-					<div mix={[mf("e-content")]}>
+					<EntryContent>
 						{preview ? <Frame src={routes.frames.preview.href({ component })} /> : null}
 
 						{demos.length > 0 ? (
@@ -319,7 +319,7 @@ export default createAction(routes.api.component, async (ctx) => {
 								</ul>
 							</ReferenceSection>
 						) : null}
-					</div>
+					</EntryContent>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

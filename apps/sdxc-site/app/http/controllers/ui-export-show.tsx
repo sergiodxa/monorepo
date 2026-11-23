@@ -35,7 +35,7 @@ import { isUiSubpath } from "~/app/services/ui-subpaths";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
-import { EntrySummary, EntryTitle } from "~/resources/components/entry";
+import { EntryContent, EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import { findPreview } from "~/resources/components/preview-registry.server";
 import PropsReference from "~/resources/components/props-reference";
@@ -152,7 +152,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 						/>
 					</header>
 
-					<div mix={[mf("e-content")]}>
+					<EntryContent>
 						{preview ? (
 							<Frame src={routes.frames.preview.href({ component: previewSlug })} />
 						) : null}
@@ -227,7 +227,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 								</div>
 							</ReferenceSection>
 						) : null}
-					</div>
+					</EntryContent>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

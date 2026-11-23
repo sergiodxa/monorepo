@@ -35,7 +35,7 @@ import {
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
-import { EntrySummary, EntryTitle } from "~/resources/components/entry";
+import { EntryContent, EntrySummary, EntryTitle } from "~/resources/components/entry";
 import IconControls from "~/resources/components/icon-controls";
 import IconDialog from "~/resources/components/icon-dialog";
 import IconGrid, { ICON_FRAME_ATTRIBUTE } from "~/resources/components/icon-grid";
@@ -177,7 +177,7 @@ export default createAction(routes.api.icons, async (ctx) => {
 						</Callout>
 					</header>
 
-					<div mix={[mf("e-content")]}>
+					<EntryContent>
 						<ReferenceSection
 							id="usage"
 							title="Usage"
@@ -218,7 +218,7 @@ export default createAction(routes.api.icons, async (ctx) => {
 								<IconDialog id={DIALOG_ID} gridId={GRID_ID} frameAttribute={ICON_FRAME_ATTRIBUTE} />
 							</div>
 						</ReferenceSection>
-					</div>
+					</EntryContent>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,
