@@ -68,6 +68,7 @@ export const NOVEL_THEME_VARIABLES = {
 	"--novel-next-content": '"▼"',
 	"--novel-next-image": "none",
 	"--novel-next-size": "0.7em",
+	"--novel-next-inset": "2.4cqh 1.6cqw auto auto",
 	"--novel-next-color": "var(--novel-accent, #f4c95d)",
 	"--novel-next-animation": "novel-next 1s ease-in-out infinite alternate",
 	"--novel-choices-gap": "2cqh",

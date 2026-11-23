@@ -225,7 +225,8 @@ export function Line(handle: Handle<Textbox.PartProps>) {
 
 /**
  * The next-line indicator, shown once a line is fully revealed and waits for the reader. It is
- * drawn by CSS (`--novel-next-content` or `--novel-next-image`), so it adds no text to the box.
+ * drawn by CSS (`--novel-next-content` or `--novel-next-image`), so it adds no text to the box,
+ * in the textbox's top corner opposite the name, clear of a quick menu along the bottom edge.
  *
  * @example <NovelPlayer.NextIndicator mix={css({ "--novel-next-content": '"▶"' })} />
  */
@@ -242,8 +243,7 @@ export function NextIndicator(handle: Handle<Omit<TagProps<"span">, "children">>
 				mix={[
 					css({
 						position: "absolute",
-						insetBlockEnd: "1.2cqh",
-						insetInlineEnd: "1.6cqw",
+						inset: themeVar("--novel-next-inset"),
 						inlineSize: themeVar("--novel-next-size"),
 						blockSize: themeVar("--novel-next-size"),
 						display: "grid",

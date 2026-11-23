@@ -438,6 +438,24 @@ describe("NovelPlayer", () => {
 		expect(player.result.$('[data-id="ren"]')!.dataset["speaking"]).toBe("false");
 	});
 
+	test("draws the next-line indicator clear of every quick menu button", async () => {
+		let player = mount();
+		await shows(player, "Welcome to the café.");
+		let next = player.result.$("[data-novel-next]")!.getBoundingClientRect();
+		let buttons = player.result.$$("button[data-action]");
+
+		expect(buttons.length).toBeGreaterThan(0);
+		for (let button of buttons) {
+			let box = button.getBoundingClientRect();
+			let apart =
+				next.right <= box.left ||
+				box.right <= next.left ||
+				next.bottom <= box.top ||
+				box.bottom <= next.top;
+			expect(apart, button.dataset["action"]).toBe(true);
+		}
+	});
+
 	test("finishes the typewriter on the first click and advances on the second", async () => {
 		let player = mount({ settings: { textSpeed: 1 } });
 		await vi.waitFor(() => expect(player.phase()).toBe("typing"), { timeout: 5000 });
