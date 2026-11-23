@@ -59,6 +59,7 @@ Claude Code at it. `sdxc upgrade` keeps its sdxc section current; add your own r
 | `app/commands/`        | Commands for `sdxc run`                                     |
 | `app/initializers/`    | The one instance of each service: database, mailer, router… |
 | `resources/`           | Layouts, components and translations (`resources/locales/`) |
+| `resources/css/`       | `colors.css`, the app's palette for `@sdxc/ui`              |
 | `database/migrations/` | SQL migrations                                              |
 | `database/seed.ts`     | The rows `sdxc run db seed` writes into the local database  |
 | `config/`              | Site settings, security policy, security.txt, API problems  |

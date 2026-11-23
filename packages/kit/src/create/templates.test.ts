@@ -47,6 +47,18 @@ interface Manifest {
 /** The `@sdxc/kit` package directory these tests read templates from. */
 const PACKAGE_ROOT = defaultPackageRoot();
 
+/**
+ * The stylesheets `@sdxc/ui/theme.css` resolves to, from the packages directory: the theme and
+ * the base contract it imports, which together read the whole raw palette.
+ */
+const THEME_FILES = ["ui/src/theme.css", "u/src/theme.css"];
+
+/** The scales the theme contract derives its tones from, each with the same eleven steps. */
+const PALETTE_SCALES = ["neutral", "brand", "danger", "warning", "success"];
+
+/** The lightness steps of every palette scale, 50 lightest to 950 darkest. */
+const PALETTE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+
 /** A file of `tree` as text. */
 function text(files: Map<string, Uint8Array>, path: string): string {
 	let bytes = files.get(path);
@@ -118,6 +130,30 @@ describe("built-in templates", () => {
 		expect(tree.files.has(".gitignore")).toBe(true);
 		expect(tree.files.has("gitignore")).toBe(false);
 		expect(text(tree.files, ".dev.vars")).toBe(text(tree.files, ".env.example"));
+	});
+
+	test("app declares every palette step the @sdxc/ui theme reads, imported ahead of the theme", async () => {
+		let tree = unwrap(await readBuiltinTemplate(PACKAGE_ROOT, "app"));
+		let palette = text(tree.files, "resources/css/colors.css");
+		let document = text(tree.files, "resources/layouts/document.tsx");
+		let themes = await Promise.all(
+			THEME_FILES.map((path) => readFile(join(PACKAGE_ROOT, "..", path), "utf8")),
+		);
+
+		let declared = new Set(palette.match(/--ui-color-[a-z]+-\d+(?=\s*:)/g));
+		let read = new Set(themes.join("\n").match(/--ui-color-[a-z]+-\d+/g));
+		let expected = PALETTE_SCALES.flatMap((scale) =>
+			PALETTE_STEPS.map((step) => `--ui-color-${scale}-${step}`),
+		);
+		expect([...declared].sort()).toEqual(expected.sort());
+		expect([...read].filter((name) => !declared.has(name))).toEqual([]);
+
+		let reset = document.indexOf('import "@sdxc/ui/reset.css";');
+		let colors = document.indexOf('import "~/resources/css/colors.css";');
+		let theme = document.indexOf('import "@sdxc/ui/theme.css";');
+		expect(reset).toBeGreaterThan(-1);
+		expect(colors).toBeGreaterThan(reset);
+		expect(theme).toBeGreaterThan(colors);
 	});
 
 	test("app pins its tooling to the versions the package tests it with", async () => {

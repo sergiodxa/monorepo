@@ -16,6 +16,7 @@ import { ImportMap } from "remix/component/server";
 import { seo } from "~/app/initializers/seo";
 
 import "@sdxc/ui/reset.css";
+import "~/resources/css/colors.css";
 import "@sdxc/ui/theme.css";
 
 namespace DocumentLayout {
