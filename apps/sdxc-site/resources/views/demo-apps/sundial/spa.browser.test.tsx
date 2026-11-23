@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 
 import type { MountedApp } from "~/app/test/spa-harness";
@@ -18,12 +18,25 @@ import sundial from "~/resources/views/demo-apps/sundial";
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
 
+/**
+ * The moment every test runs at: a Wednesday in the week the tests open with `?d=2026-11-18`.
+ * Sundial seeds its calendar for the week holding today, so a pinned clock keeps the seeded
+ * events in the week the tests look at on any day the suite runs.
+ */
+const NOW = new Date("2026-11-18T15:00:00Z");
+
 let mounted: MountedApp | undefined;
+
+beforeEach(() => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(NOW);
+});
 
 afterEach(() => {
 	mounted?.dispose();
 	mounted = undefined;
 	vi.restoreAllMocks();
+	vi.useRealTimers();
 });
 
 afterAll(async () => {
