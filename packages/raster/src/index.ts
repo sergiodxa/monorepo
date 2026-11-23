@@ -10,5 +10,5 @@ export type { Raster } from "./types.js";
 
 export { Canvas } from "./canvas.js";
 export { color, TRANSPARENT, withAlpha } from "./color.js";
-export { linearGradient, radialGradient } from "./paint.js";
+export { imagePattern, linearGradient, radialGradient } from "./paint.js";
 export { Path } from "./path.js";

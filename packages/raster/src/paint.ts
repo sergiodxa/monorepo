@@ -1,6 +1,6 @@
 /**
- * Gradient constructors, and the compiler that turns any paint into a shader the fill loops
- * sample per pixel. A gradient is pre-baked into a premultiplied lookup table, so a pixel
+ * Gradient and image constructors, and the compiler that turns any paint into a shader the fill
+ * loops sample per pixel. A gradient is pre-baked into a premultiplied lookup table, so a pixel
  * costs one position calculation and four reads whatever the number of stops.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -37,6 +37,15 @@ export function radialGradient(
 }
 
 /**
+ * An image as a paint, placed by `transform` from its own pixels onto the canvas.
+ *
+ * @example imagePattern({ image, transform: [0.5, 0, 0, 0.5, 600, 120] }) // half size, its corner at (600, 120)
+ */
+export function imagePattern(options: Omit<Raster.ImagePattern, "kind">): Raster.ImagePattern {
+	return { kind: "image", ...options };
+}
+
+/**
  * A paint ready to shade: one premultiplied colour, or a gradient's lookup table with the
  * geometry that maps a pixel to its offset along it.
  */
@@ -51,7 +60,16 @@ export type Shader =
 			ux: number;
 			uy: number;
 	  }
-	| { kind: "radial"; lut: Float32Array; cx: number; cy: number; invX: number; invY: number };
+	| { kind: "radial"; lut: Float32Array; cx: number; cy: number; invX: number; invY: number }
+	| {
+			kind: "image";
+			/** The image premultiplied, four floats per pixel. */
+			pixels: Float32Array;
+			width: number;
+			height: number;
+			/** The transform's inverse, mapping a canvas point back into the image. */
+			inverse: Raster.Matrix;
+	  };
 
 /**
  * Compiles a paint for shading at pixel centres. A gradient's stops are sorted and
@@ -59,6 +77,7 @@ export type Shader =
  */
 export function compilePaint(paint: Raster.Paint): Shader {
 	if (!("kind" in paint)) return { kind: "solid", rgba: premultiply(paint) };
+	if (paint.kind === "image") return compileImage(paint);
 	let lut = bake(paint.stops);
 	if (paint.kind === "linear") {
 		let [x0, y0] = paint.from;
@@ -95,6 +114,10 @@ export function shadeSpan(
 		}
 		return;
 	}
+	if (shader.kind === "image") {
+		shadeImage(shader, y, x0, count, out);
+		return;
+	}
 	let lut = shader.lut;
 	let last = LUT_SIZE - 1;
 	let py = y + 0.5;
@@ -126,6 +149,76 @@ export function shadeSpan(
 		out[index + 2] = lut[entry + 2] as number;
 		out[index + 3] = lut[entry + 3] as number;
 		dx += shader.invX;
+	}
+}
+
+/**
+ * Premultiplies an image once and inverts its placement, so shading a pixel is a bilinear read
+ * at the point the inverse maps the pixel's centre to. A transform that cannot be inverted
+ * collapses the image to nothing and shades transparent.
+ */
+function compileImage(paint: Raster.ImagePattern): Shader {
+	let { data, height, width } = paint.image;
+	let pixels = new Float32Array(width * height * 4);
+	for (let index = 0; index < pixels.length; index += 4) {
+		let alpha = (data[index + 3] ?? 0) / 255;
+		pixels[index] = ((data[index] ?? 0) / 255) * alpha;
+		pixels[index + 1] = ((data[index + 1] ?? 0) / 255) * alpha;
+		pixels[index + 2] = ((data[index + 2] ?? 0) / 255) * alpha;
+		pixels[index + 3] = alpha;
+	}
+	let [a, b, c, d, e, f] = paint.transform ?? [1, 0, 0, 1, 0, 0];
+	let determinant = a * d - b * c;
+	if (determinant === 0) return { kind: "solid", rgba: new Float32Array(4) };
+	let inverse: Raster.Matrix = [
+		d / determinant,
+		-b / determinant,
+		-c / determinant,
+		a / determinant,
+		(c * f - d * e) / determinant,
+		(b * e - a * f) / determinant,
+	];
+	return { kind: "image", pixels, width, height, inverse };
+}
+
+/**
+ * Shades a span from an image: each pixel centre maps back into the image and blends its four
+ * nearest pixels, clamping at the edges so a shape that overruns the image repeats its border.
+ */
+function shadeImage(
+	shader: Extract<Shader, { kind: "image" }>,
+	y: number,
+	x0: number,
+	count: number,
+	out: Float32Array,
+): void {
+	let { height, inverse, pixels, width } = shader;
+	let [a, b, c, d, e, f] = inverse;
+	let py = y + 0.5;
+	let u = a * (x0 + 0.5) + c * py + e - 0.5;
+	let v = b * (x0 + 0.5) + d * py + f - 0.5;
+	for (let index = 0; index < count * 4; index += 4) {
+		let cu = Math.min(width - 1, Math.max(0, u));
+		let cv = Math.min(height - 1, Math.max(0, v));
+		let left = Math.floor(cu);
+		let top = Math.floor(cv);
+		let right = Math.min(width - 1, left + 1);
+		let bottom = Math.min(height - 1, top + 1);
+		let fx = cu - left;
+		let fy = cv - top;
+		let p00 = (top * width + left) * 4;
+		let p10 = (top * width + right) * 4;
+		let p01 = (bottom * width + left) * 4;
+		let p11 = (bottom * width + right) * 4;
+		for (let channel = 0; channel < 4; channel++) {
+			let upper =
+				(pixels[p00 + channel] as number) * (1 - fx) + (pixels[p10 + channel] as number) * fx;
+			let lower =
+				(pixels[p01 + channel] as number) * (1 - fx) + (pixels[p11 + channel] as number) * fx;
+			out[index + channel] = upper * (1 - fy) + lower * fy;
+		}
+		u += a;
+		v += b;
 	}
 }
 

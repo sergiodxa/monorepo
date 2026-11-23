@@ -125,6 +125,12 @@ out-of-gamut oklch. Throws a `RangeError` on anything else, since colours are wr
 Paints whose stops are `[offset, color]` pairs, interpolated in premultiplied sRGB and padded
 with the end colours. A `[rx, ry]` radius makes an elliptical gradient.
 
+### `imagePattern({ image, transform })`
+
+A paint from decoded RGBA pixels (such as `@sdxc/png`'s `decode` returns), placed on the canvas
+by a `matrix(a b c d e f)` transform and sampled bilinearly; fill a `Path.roundedRect` with it to
+draw a screenshot with rounded corners.
+
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.

@@ -10,7 +10,7 @@ import { describe, expect, test } from "vitest";
 
 import { Canvas } from "./canvas.js";
 import { color, TRANSPARENT } from "./color.js";
-import { linearGradient, radialGradient } from "./paint.js";
+import { imagePattern, linearGradient, radialGradient } from "./paint.js";
 import { Path } from "./path.js";
 
 const WHITE = color("#fff");
@@ -248,5 +248,48 @@ describe("layers", () => {
 		).toThrow("boom");
 		canvas.fillRect(0, 0, 1, 1, RED);
 		expect(pixel(canvas, 0, 0)).toEqual([255, 0, 0, 255]);
+	});
+});
+
+describe("imagePattern", () => {
+	/** A 2×2 image: red and blue on top, green and a transparent pixel below. */
+	let image = {
+		width: 2,
+		height: 2,
+		data: Uint8ClampedArray.of(255, 0, 0, 255, 0, 0, 255, 255, 0, 255, 0, 255, 0, 0, 0, 0),
+	};
+
+	test("paints an image's pixels where its transform places them", () => {
+		let canvas = new Canvas(6, 6);
+		canvas.fillRect(0, 0, 6, 6, imagePattern({ image, transform: [1, 0, 0, 1, 2, 3] }));
+
+		expect(pixel(canvas, 2, 3)).toEqual([255, 0, 0, 255]);
+		expect(pixel(canvas, 3, 3)).toEqual([0, 0, 255, 255]);
+		expect(pixel(canvas, 2, 4)).toEqual([0, 255, 0, 255]);
+		expect(pixel(canvas, 3, 4)).toEqual([0, 0, 0, 0]);
+	});
+
+	test("scales with its transform, repeating its edge pixels past the image", () => {
+		let canvas = new Canvas(8, 8);
+		canvas.fillRect(0, 0, 8, 8, imagePattern({ image, transform: [2, 0, 0, 2, 0, 0] }));
+
+		expect(pixel(canvas, 0, 0)).toEqual([255, 0, 0, 255]);
+		expect(pixel(canvas, 7, 0)).toEqual([0, 0, 255, 255]);
+		expect(pixel(canvas, 0, 7)).toEqual([0, 255, 0, 255]);
+	});
+
+	test("shows only where the filled shape covers", () => {
+		let canvas = new Canvas(4, 4);
+		canvas.fillPath(Path.rect(0, 0, 1, 1), imagePattern({ image }));
+
+		expect(pixel(canvas, 0, 0)).toEqual([255, 0, 0, 255]);
+		expect(pixel(canvas, 1, 0)).toEqual([0, 0, 0, 0]);
+	});
+
+	test("paints nothing for a transform that collapses the image", () => {
+		let canvas = new Canvas(2, 2);
+		canvas.fillRect(0, 0, 2, 2, imagePattern({ image, transform: [0, 0, 0, 0, 0, 0] }));
+
+		expect(inkedArea(canvas)).toBe(0);
 	});
 });

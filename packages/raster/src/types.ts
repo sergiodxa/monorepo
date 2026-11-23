@@ -55,8 +55,28 @@ export namespace Raster {
 		stops: Stop[];
 	}
 
-	/** What a fill paints with: one colour, or a colour that varies with position. */
-	export type Paint = Color | LinearGradient | RadialGradient;
+	/** Pixels to paint from: straight-alpha sRGB RGBA bytes, as `@sdxc/png` decodes them. */
+	export interface ImageSource {
+		width: number;
+		height: number;
+		/** `width * height * 4` bytes, row by row. */
+		data: Uint8ClampedArray;
+	}
+
+	/**
+	 * An image laid on the canvas by `transform`, mapping its pixel coordinates to the canvas;
+	 * a fill shows it wherever its shape covers, so a rounded path crops it to rounded corners.
+	 * Sampling is bilinear and clamps past the edges, so a shape a little larger shows no seam.
+	 */
+	export interface ImagePattern {
+		kind: "image";
+		image: ImageSource;
+		/** @default [1, 0, 0, 1, 0, 0] */
+		transform?: Matrix;
+	}
+
+	/** What a fill paints with: one colour, a colour that varies with position, or an image. */
+	export type Paint = Color | LinearGradient | RadialGradient | ImagePattern;
 
 	/** How overlapping contours of one path decide what is inside. */
 	export interface FillOptions {
