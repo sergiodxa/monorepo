@@ -83,7 +83,7 @@ app/policies/     abilities.ts, policy.ts
 app/mcp/  app/models/  app/services/  app/test/
 config/           security headers, security.txt, problem types
 database/         migrations/, seed.ts
-resources/        layouts/, locales/
+resources/        layouts/, locales/, css/colors.css: the palette @sdxc/ui colors from
 routes/           web.ts, api.ts
 ```
 
