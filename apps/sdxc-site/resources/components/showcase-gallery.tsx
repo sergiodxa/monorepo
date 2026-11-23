@@ -19,12 +19,8 @@ import { Badge, LinkButton } from "@sdxc/ui";
 
 import type { ShowcaseFilter, ShowcaseItem } from "~/app/services/case-studies";
 
-import {
-	CATEGORY_LABELS,
-	DARK_SCHEME,
-	darkScreenshotSrc,
-	showcaseHref,
-} from "~/app/services/case-studies";
+import { DARK_SCHEME, darkScreenshotSrc, showcaseHref } from "~/app/services/case-studies";
+import { kindChips } from "~/app/services/showcase-kinds";
 
 /** How each filter chip reads. */
 const FILTER_LABELS: Record<ShowcaseFilter, string> = {
@@ -83,6 +79,13 @@ export function ShowcaseFilters(handle: Handle<ShowcaseFilters.Props>) {
 	};
 }
 
+/** The first chip's colour: green for live, warning for a demo, neutral for source only. */
+const STATUS_COLORS: Record<string, "success" | "warning" | "neutral"> = {
+	"In production": "success",
+	Demo: "warning",
+	"Source only": "neutral",
+};
+
 namespace ShowcaseKindChips {
 	export interface Props {
 		item: ShowcaseItem;
@@ -96,17 +99,12 @@ namespace ShowcaseKindChips {
 export function ShowcaseKindChips(handle: Handle<ShowcaseKindChips.Props>) {
 	return () => {
 		let { item } = handle.props;
+		let [status, category] = kindChips({ ...item, live: item.liveHref !== null });
 		return (
 			<span mix={[hstack({ gap: 1.5, align: "center" }), raw({ flexWrap: "wrap" })]}>
-				{item.kind === "production" && item.liveHref === null ? (
-					<Badge color="neutral">Source only</Badge>
-				) : null}
-				{item.kind === "production" && item.liveHref !== null ? (
-					<Badge color="success">In production</Badge>
-				) : null}
-				{item.kind === "production" ? null : <Badge color="warning">Demo</Badge>}
+				<Badge color={STATUS_COLORS[status]}>{status}</Badge>
 				<Badge color="neutral" variant="outline">
-					{CATEGORY_LABELS[item.category]}
+					{category}
 				</Badge>
 			</span>
 		);

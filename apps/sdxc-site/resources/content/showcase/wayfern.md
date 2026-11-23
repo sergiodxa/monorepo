@@ -2,6 +2,8 @@
 title: Wayfern
 headline: Booking a stay, a flight and a car on one island, with every search, filter and fare choice kept in the address
 summary: An invented travel app that books stays, flights, cars and packages from one search, maps results on real streets, picks seats and fares, and exports every trip to calendars.
+tagline: Stays, flights and cars from one search
+accent: "oklch(0.5 0.105 156)"
 cover: results
 shots:
   - id: results

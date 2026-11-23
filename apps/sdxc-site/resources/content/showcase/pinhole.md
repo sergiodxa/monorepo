@@ -2,6 +2,8 @@
 title: Pinhole
 headline: A photo and short-video network whose stories, reels and likes are links and forms first
 summary: An invented photo and video network with a story tray, full-screen stories, a vertical reels feed and profile grids, every screen server-rendered and working before script loads.
+tagline: Stories, reels and grids, server-rendered
+accent: "oklch(0.565 0.2 29)"
 cover: home
 shots:
   - id: home

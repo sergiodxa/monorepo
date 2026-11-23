@@ -2,6 +2,7 @@
 title: Centered
 headline: A video course page whose lesson plays, seeks and reads its transcript before any script loads
 summary: A landing for an invented wheel-throwing video course, led by a lesson playing in a dark screening room set into a bright cobalt page.
+tagline: A pottery course in a screening room
 cover: hero
 shots:
   - id: hero

@@ -2,6 +2,7 @@
 title: Hollyhock Bakery
 headline: A bakery page that reads the shop's own clock on the server, from the door sign to the pickup form
 summary: A landing for an invented neighbourhood bakery whose door sign, chalkboard, hours and pickup form read the shop's own clock on the server.
+tagline: A bakery page that knows if it's open
 cover: hero
 shots:
   - id: hero

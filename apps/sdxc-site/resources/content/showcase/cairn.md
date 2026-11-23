@@ -2,6 +2,7 @@
 title: Cairn
 headline: An issue tracker that reloads only the frame a click changes, and keeps every view in the address
 summary: An invented issue tracker with grouped lists whose filters live in the address, a drag-and-drop board, projects on a roadmap, cycles with burn-up charts and an inbox.
+tagline: An issue tracker with boards and cycles
 cover: list
 shots:
   - id: list

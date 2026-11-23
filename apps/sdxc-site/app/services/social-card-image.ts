@@ -1,7 +1,8 @@
 /**
  * Draws a page's social card in the landing page's closing band: a dark field with a brand
- * glow, a grid fading out from the middle, dashed rails and rules framed by indigo markers,
- * and the page's eyebrow, title and description centred inside.
+ * glow, a grid fading out from the middle, dashed rails and rules framed by indigo markers, and
+ * the page's eyebrow, title and description centred inside. A showcase item's card instead
+ * wears the item's own colours, with its cover in a window bleeding off the card's edges.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +11,15 @@
 import type { Font } from "@sdxc/font";
 import type { Raster } from "@sdxc/raster";
 
-import { Canvas, color, radialGradient, TRANSPARENT, withAlpha } from "@sdxc/raster";
+import {
+	Canvas,
+	color,
+	imagePattern,
+	Path,
+	radialGradient,
+	TRANSPARENT,
+	withAlpha,
+} from "@sdxc/raster";
 
 import type { SocialCard } from "~/app/services/social-card";
 
@@ -63,15 +72,34 @@ const HOME_BAND = 470;
 const TEXT_WIDTH = 880;
 
 /**
+ * A showcase card's layout, in card pixels: the text column on the left and the window on the
+ * right, sized so the screenshot draws at its source's own size and runs off the right and
+ * bottom edges, and every text size readable when a platform shows the card at half width.
+ */
+const SHOWCASE = {
+	gutter: 72,
+	column: 460,
+	window: { x: 584, y: 150, width: 720, bar: 40, radius: 18 },
+	chip: { height: 44, padding: 20, gap: 10, size: 22 },
+};
+
+/**
  * Renders the card as PNG bytes. Drawing is CPU work in the tens of milliseconds, so the
  * caller stores the result and serves it again rather than drawing per request.
+ *
+ * @param screenshot A showcase card's cover, decoded; without it the window shows its frame alone.
  */
 export async function renderSocialCard(
 	content: SocialCard.Content,
 	fonts: SocialCardImage.Fonts,
+	screenshot?: Raster.ImageSource,
 ): Promise<Uint8Array> {
 	let { height, width } = SOCIAL_CARD_SIZE;
 	let canvas = new Canvas(width, height);
+	if (content.kind === "showcase") {
+		drawShowcase(canvas, content, fonts, screenshot ?? null);
+		return canvas.toPNG();
+	}
 	canvas.fillRect(0, 0, width, height, PALETTE.background);
 	canvas.fillRect(
 		0,
@@ -317,4 +345,167 @@ function drawStats(canvas: Canvas, stats: SocialCard.Stat[], fonts: SocialCardIm
 			paint: PALETTE.quiet,
 		});
 	});
+}
+
+/**
+ * A showcase item's card: the item's background with a glow of its accent, its chips, name and
+ * tagline down the left, the showcase's address in the corner, and its cover in a browser
+ * window that runs off the right and bottom edges, so the card reads as that item at a glance.
+ */
+function drawShowcase(
+	canvas: Canvas,
+	content: SocialCard.ShowcaseContent,
+	fonts: SocialCardImage.Fonts,
+	screenshot: Raster.ImageSource | null,
+): void {
+	let { height, width } = canvas;
+	let background = color(content.background);
+	let foreground = color(content.foreground);
+	let accent = color(content.accent);
+	canvas.fillRect(0, 0, width, height, background);
+	canvas.fillRect(
+		0,
+		0,
+		width,
+		height,
+		radialGradient({
+			center: [width * 0.86, height * 0.62],
+			radius: [width * 0.46, height * 0.78],
+			stops: [
+				[0, withAlpha(accent, 0.38)],
+				[0.8, TRANSPARENT],
+			],
+		}),
+	);
+	canvas.fillRect(0, 0, width, 10, accent);
+	drawWindow(canvas, content, screenshot);
+	drawChips(canvas, content, fonts);
+
+	let x = SHOWCASE.gutter;
+	let title = canvas.text(content.title, {
+		font: fonts.semibold,
+		size: 92,
+		minSize: 60,
+		tracking: -3.5,
+		lineHeight: 1.02,
+		maxWidth: SHOWCASE.column,
+		maxLines: 2,
+		x,
+		y: 248,
+		paint: foreground,
+	});
+	canvas.text(content.tagline, {
+		font: fonts.regular,
+		size: 34,
+		minSize: 26,
+		lineHeight: 1.3,
+		maxWidth: SHOWCASE.column,
+		maxLines: 3,
+		x,
+		y: 248 + title.height - title.size * 0.15 + 30,
+		paint: withAlpha(foreground, 0.78),
+	});
+	canvas.text(content.url, {
+		font: fonts.mono,
+		size: 22,
+		x,
+		y: height - 56,
+		maxWidth: SHOWCASE.column,
+		maxLines: 1,
+		paint: withAlpha(foreground, 0.62),
+	});
+}
+
+/**
+ * The status chip filled with the item's accent and the category chip outlined, as the
+ * showcase's tiles set them, measured so each pill hugs its label.
+ */
+function drawChips(
+	canvas: Canvas,
+	content: SocialCard.ShowcaseContent,
+	fonts: SocialCardImage.Fonts,
+): void {
+	let { gap, height, padding, size } = SHOWCASE.chip;
+	let foreground = color(content.foreground);
+	let top = 78;
+	let x = SHOWCASE.gutter;
+	content.chips.forEach((label, index) => {
+		let text = { font: fonts.semibold, size, x: 0, y: 0 };
+		let chipWidth = canvas.measureText(label, text).width + padding * 2;
+		let outline = roundedRectData(x, top, chipWidth, height, height / 2);
+		if (index === 0) {
+			canvas.fillPath(Path.fromSVG(outline), color(content.accent));
+		} else {
+			let inner = roundedRectData(x + 2, top + 2, chipWidth - 4, height - 4, height / 2 - 2);
+			canvas.fillPath(Path.fromSVG(`${outline}${inner}`), withAlpha(foreground, 0.42), {
+				rule: "evenodd",
+			});
+		}
+		canvas.text(label, {
+			...text,
+			x: x + padding,
+			y: top + height / 2 + size * 0.36,
+			paint: index === 0 ? color(content.onAccent) : foreground,
+		});
+		x += chipWidth + gap;
+	});
+}
+
+/**
+ * The cover in a browser window: a soft shadow stepped out in translucent layers, a hairline
+ * edge, a title bar with its three dots, and the screenshot at its own size beneath, cut off by
+ * the card's right and bottom edges.
+ */
+function drawWindow(
+	canvas: Canvas,
+	content: SocialCard.ShowcaseContent,
+	screenshot: Raster.ImageSource | null,
+): void {
+	let { bar, radius, width, x, y } = SHOWCASE.window;
+	let height = canvas.height - y + radius * 2;
+	let foreground = color(content.foreground);
+	let dark = foreground.r + foreground.g + foreground.b > 1.5;
+	for (let step = 1; step <= 12; step++) {
+		canvas.fillPath(
+			Path.roundedRect(x - step, y + step * 2, width + step * 2, height, radius + step),
+			withAlpha(color("#000"), (dark ? 0.05 : 0.018) * (1 - step / 13)),
+		);
+	}
+	canvas.fillPath(
+		Path.roundedRect(x - 1.5, y - 1.5, width + 3, height + 3, radius + 1.5),
+		withAlpha(foreground, dark ? 0.22 : 0.14),
+	);
+	canvas.fillPath(
+		Path.roundedRect(x, y, width, height, radius),
+		color(dark ? "#1c1c21" : "#ffffff"),
+	);
+	[0, 1, 2].forEach((index) => {
+		canvas.fillPath(
+			Path.fromSVG(circleData(x + 26 + index * 22, y + bar / 2, 6)),
+			withAlpha(foreground, 0.22),
+		);
+	});
+	canvas.fillRect(x, y + bar - 1, width, 1, withAlpha(foreground, 0.12));
+	if (screenshot === null) return;
+	canvas.fillPath(
+		Path.rect(x, y + bar, width, screenshot.height),
+		imagePattern({ image: screenshot, transform: [1, 0, 0, 1, x, y + bar] }),
+	);
+}
+
+/** One rounded rectangle as SVG path data, so several combine into one path with holes. */
+function roundedRectData(
+	x: number,
+	y: number,
+	width: number,
+	height: number,
+	radius: number,
+): string {
+	let r = Math.min(radius, width / 2, height / 2);
+	return `M${x + r} ${y}H${x + width - r}A${r} ${r} 0 0 1 ${x + width} ${y + r}V${y + height - r}A${r} ${r} 0 0 1 ${x + width - r} ${y + height}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + height - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+}
+
+/** A circle as SVG path data. */
+function circleData(cx: number, cy: number, r: number): string {
+	return `M${cx - r} ${cy}A${r} ${r} 0 1 0 ${cx + r} ${cy}A${r} ${r} 0 1 0 ${cx - r} ${cy}Z`;
 }

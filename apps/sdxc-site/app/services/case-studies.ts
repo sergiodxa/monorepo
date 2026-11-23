@@ -13,7 +13,7 @@ import { Markdown } from "@sdxc/markdown";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 
 import type { CaseStudyFrontmatter } from "~/app/services/case-study-schema";
-import type { DemoKind } from "~/app/services/demos";
+import type { ShowcaseCategory, ShowcaseKind } from "~/app/services/showcase-kinds";
 import type { ImageSize, ShowcaseUsage } from "~/scripts/showcase-usage";
 
 import { prepareArticle } from "~/app/services/article";
@@ -27,41 +27,17 @@ import routes from "~/routes/web";
 const REPOSITORY_TREE = "https://github.com/sergiodxa/monorepo/tree/main/apps";
 
 /** Where each kind of demo's folders live under the site's source. */
-const DEMO_FOLDERS: Record<DemoKind, string> = {
+const DEMO_FOLDERS: Record<ShowcaseCategory, string> = {
 	landing: "sdxc-site/resources/views/demos",
 	docs: "sdxc-site/resources/views/demo-docs",
 	app: "sdxc-site/resources/views/demo-apps",
 };
-
-/** Whether an item runs for real, or is a demo for an invented product. */
-export type ShowcaseKind = "production" | "demo";
-
-/** What an item is, production or demo alike: an app, a landing or a docs site. */
-export type ShowcaseCategory = DemoKind;
 
 /** The `?kind=` values the showcase filters by, `all` showing everything. */
 export const SHOWCASE_FILTERS = ["all", "production", "demo", "app", "landing", "docs"] as const;
 
 /** One of {@link SHOWCASE_FILTERS}. */
 export type ShowcaseFilter = (typeof SHOWCASE_FILTERS)[number];
-
-/** How a category reads on its own, as a demo's second chip does. */
-export const CATEGORY_LABELS: Record<ShowcaseCategory, string> = {
-	app: "App",
-	landing: "Landing",
-	docs: "Docs",
-};
-
-/**
- * What an item is, kind and category together, as a case study's breadcrumb and facts read.
- *
- * @example kindLabel({ kind: "production", category: "app" }) // "Production app"
- * @example kindLabel({ kind: "demo", category: "docs" }) // "Docs demo"
- */
-export function kindLabel(item: Pick<ShowcaseItem, "kind" | "category">): string {
-	let category = CATEGORY_LABELS[item.category];
-	return item.kind === "production" ? `Production ${category.toLowerCase()}` : `${category} demo`;
-}
 
 /** The filter that lists an item beside its peers: every production item together, a demo by kind. */
 export function filterOf(item: Pick<ShowcaseItem, "kind" | "category">): ShowcaseFilter {

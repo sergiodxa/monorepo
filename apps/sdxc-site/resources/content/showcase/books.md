@@ -2,6 +2,7 @@
 title: books
 headline: Selling a technical book from a Worker with no storage, no session and no first-party JavaScript
 summary: The storefront for the React Router OAuth2 Handbook, with live Polar pricing, a gated sample chapter, campaign attribution and no first-party JavaScript.
+tagline: A book storefront with no JavaScript
 cover: landing
 shots:
   - id: landing

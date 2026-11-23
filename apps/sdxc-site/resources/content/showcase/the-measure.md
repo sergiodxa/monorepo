@@ -2,6 +2,7 @@
 title: The Measure
 headline: A typography book's page set like the book itself, where every form confirms in place through a fragment
 summary: A landing for an invented web typography book and video course, set as an editorial print page in one serif on ivory paper with a single red.
+tagline: A typography course on ivory paper
 cover: hero
 shots:
   - id: hero

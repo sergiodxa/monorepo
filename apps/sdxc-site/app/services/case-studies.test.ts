@@ -18,7 +18,6 @@ import {
 	CASE_STUDY_OPTIONS,
 	darkScreenshotSrc,
 	filterOf,
-	kindLabel,
 	listCaseStudySlugs,
 	listShowcaseItems,
 	matchesFilter,
@@ -29,6 +28,7 @@ import {
 	showcaseHref,
 } from "~/app/services/case-studies";
 import { findDemoKind, LEGACY_LANDING_SLUGS, listDemoKinds } from "~/app/services/demos";
+import { kindChips, kindLabel } from "~/app/services/showcase-kinds";
 import { APPLICATIONS, PRODUCTION_LANDINGS } from "~/resources/content/apps";
 
 /** The slugs of everything in production: the applications, then the landings they serve. */
@@ -71,6 +71,14 @@ describe("case studies", () => {
 		let { frontmatter } = parsed.data;
 		let ids = frontmatter.shots.map((shot) => shot.id);
 		expect(frontmatter.summary.length).toBeLessThanOrEqual(200);
+		expect(
+			frontmatter.tagline.length,
+			"a tagline the social card sets on one or two lines",
+		).toBeLessThanOrEqual(44);
+		expect(
+			existsSync(join(PUBLIC, "showcase", slug, "card.png")),
+			"the social card's screenshot",
+		).toBe(true);
 		expect(ids.length).toBeGreaterThanOrEqual(5);
 		expect(new Set(ids).size).toBe(ids.length);
 		expect(ids).toContain(frontmatter.cover);
@@ -153,6 +161,18 @@ describe("kindLabel", () => {
 		expect(kindLabel({ kind: "production", category: "app" })).toBe("Production app");
 		expect(kindLabel({ kind: "production", category: "landing" })).toBe("Production landing");
 		expect(kindLabel({ kind: "demo", category: "docs" })).toBe("Docs demo");
+		expect(kindChips({ kind: "production", category: "app", live: true })).toEqual([
+			"In production",
+			"App",
+		]);
+		expect(kindChips({ kind: "production", category: "app", live: false })).toEqual([
+			"Source only",
+			"App",
+		]);
+		expect(kindChips({ kind: "demo", category: "landing", live: true })).toEqual([
+			"Demo",
+			"Landing",
+		]);
 		expect(filterOf({ kind: "production", category: "landing" })).toBe("production");
 		expect(filterOf({ kind: "demo", category: "app" })).toBe("app");
 	});

@@ -2,6 +2,8 @@
 title: Driftwood
 headline: Content docs that route a reader by task, remember their setup and work before any script loads
 summary: Docs for an invented static-site deploy CLI, written as a tutorial, how-to guides and concept pages on the @sdxc/ui docs kit.
+tagline: Docs for a static-site deploy CLI
+accent: "oklch(0.53 0.14 40)"
 cover: hub
 shots:
   - id: hub

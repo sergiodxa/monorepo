@@ -2,6 +2,7 @@
 title: Quoin
 headline: A studio portfolio set like a printed book, where case studies lead with results and the brief form explains itself
 summary: A landing for an invented design and engineering studio in Antwerp, set as a printed portfolio of a Didone on a strict twelve-column grid.
+tagline: A studio portfolio on a Didone grid
 cover: hero
 shots:
   - id: hero

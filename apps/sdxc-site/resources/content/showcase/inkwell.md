@@ -2,6 +2,7 @@
 title: Inkwell
 headline: A CMS whose save status stays quiet while one button says what publishing will do
 summary: An invented CMS for a quarterly magazine, with a posts list that filters from the address, an editor whose save status stays quiet beside one loud Publish, media and settings.
+tagline: A CMS for a quarterly magazine
 cover: posts
 shots:
   - id: posts

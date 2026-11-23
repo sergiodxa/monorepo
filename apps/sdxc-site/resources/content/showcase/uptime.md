@@ -2,6 +2,7 @@
 title: uptime
 headline: Running five kinds of monitor, alerts, status pages and per-team billing from one Cloudflare Worker
 summary: Monitoring for HTTP, DNS, TCP, cron jobs and scripted browser flows, with alerts, status pages, an API and MCP, on one Cloudflare Worker.
+tagline: Monitoring on one Cloudflare Worker
 cover: monitors
 shots:
   - id: monitors

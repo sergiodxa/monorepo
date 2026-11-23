@@ -2,6 +2,8 @@
 title: Lattice
 headline: Component docs where every example is the real component, rendered on the server beside the code that made it
 summary: Docs for an invented UI library, each page opening on a live preview, then its variants, props and what a screen reader hears.
+tagline: Docs that open on a live preview
+accent: "oklch(0.52 0.21 290)"
 cover: button
 shots:
   - id: button

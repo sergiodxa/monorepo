@@ -2,6 +2,7 @@
 title: Rooftree
 headline: A consumer app page whose phones are live markup, one household's day told across every screen
 summary: A landing for an invented household list app, with three fanned phones of live markup, a tour of four screens and six small app scenes.
+tagline: A household list app in fanned phones
 cover: hero
 shots:
   - id: hero

@@ -2,6 +2,7 @@
 title: plumb
 headline: A library landing that leads with code, from a copyable install line to a benchmark that shows its slow case
 summary: A landing for an invented TypeScript schema library that compiles to plain JavaScript, led by code, a typing terminal and an honest benchmark.
+tagline: A schema library, led by its code
 cover: hero
 shots:
   - id: hero

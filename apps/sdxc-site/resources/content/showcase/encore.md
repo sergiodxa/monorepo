@@ -2,6 +2,7 @@
 title: Encore
 headline: Selling a party game from a marketing page that lets the visitor play a round
 summary: The landing for Encore, a singing card game for iPhone, iPad, Apple Watch and Mac, with playable cards, the app's own sounds and three languages.
+tagline: A singing card game you can play here
 cover: landing
 shots:
   - id: landing

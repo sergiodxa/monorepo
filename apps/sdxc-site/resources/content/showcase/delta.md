@@ -2,6 +2,7 @@
 title: Delta
 headline: A code host that browses its own git history from a Worker with no filesystem and no git
 summary: An invented code host whose one repository is its own source, read from git at build time, with blame, issues, pull request reviews, Actions logs and an inbox.
+tagline: A code host reading its own git history
 cover: blob
 shots:
   - id: blob

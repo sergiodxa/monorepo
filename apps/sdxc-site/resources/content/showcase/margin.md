@@ -2,6 +2,7 @@
 title: Margin
 headline: An AI product page where every note links to the transcript line it came from, and the bill reprices as you type
 summary: A landing for an invented AI note-taker whose every summary line links to the transcript line it came from, set as a notebook page.
+tagline: Notes that link back to the transcript
 cover: hero
 shots:
   - id: hero

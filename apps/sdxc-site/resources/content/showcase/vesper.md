@@ -2,6 +2,8 @@
 title: Vesper
 headline: A streaming service that runs on links, forms and cookies, with a theater player and a list kept per profile
 summary: An invented streaming service with profiles, a billboard over sideways shelves, series with seasons, live search, a list kept per profile and a theater player, always dark and drawn in SVG.
+tagline: A streaming service, drawn in SVG
+accent: "oklch(0.6 0.18 40)"
 cover: home
 shots:
   - id: home

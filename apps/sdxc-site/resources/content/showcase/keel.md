@@ -2,6 +2,7 @@
 title: Keel
 headline: A billing product page that shows the product, the API and the invoice, and switches between them with radios
 summary: A landing for an invented usage-based billing product, set in a precise technical register of slate, sea green, hairline rails and mono.
+tagline: Usage-based billing, set in hairlines
 cover: hero
 shots:
   - id: hero

@@ -2,6 +2,7 @@
 title: auth-saas
 headline: A multi-tenant identity provider where every tenant is its own Durable Object and its own SQLite database
 summary: A multi-tenant OpenID Connect provider where every tenant runs in its own Durable Object, with passkeys, SAML, SCIM, signed webhooks and a management API.
+tagline: An OpenID Connect provider per tenant
 cover: readme
 shots:
   - id: readme

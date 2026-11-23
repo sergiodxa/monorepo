@@ -2,6 +2,7 @@
 title: Sundial
 headline: A calendar that stores every event as JSCalendar and keeps a London meeting at 3 PM London time
 summary: An invented calendar with day, week, month and year views, events you drag and resize, a second time zone, find-a-time across five zones, one-line quick add, and iCalendar import and export.
+tagline: A calendar across five time zones
 cover: week
 shots:
   - id: week

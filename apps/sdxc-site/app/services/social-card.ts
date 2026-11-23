@@ -46,8 +46,34 @@ export namespace SocialCard {
 		stats: Stat[];
 	}
 
+	/**
+	 * What a showcase item's card draws, read at build time from its case study and cover:
+	 * its name, tagline and chips, the screenshot, and the palette read from that screenshot.
+	 */
+	export interface ShowcaseFacts {
+		title: string;
+		tagline: string;
+		/** The status and category chips, worded as the showcase's tiles word them. */
+		chips: [string, string];
+		/** The cover scaled to the card, as a path on this site. */
+		source: string;
+		/** The source image's hash, so a re-shot cover gets a new card. */
+		version: string;
+		background: string;
+		foreground: string;
+		accent: string;
+		onAccent: string;
+	}
+
+	/** A showcase item's card: its own colours and screenshot, with the showcase's address. */
+	export interface ShowcaseContent extends ShowcaseFacts {
+		kind: "showcase";
+		/** The showcase's address without the scheme, set in the card's corner. */
+		url: string;
+	}
+
 	/** The text a card draws. */
-	export type Content = PageContent | HomeContent;
+	export type Content = PageContent | HomeContent | ShowcaseContent;
 }
 
 /** The size social platforms render a large card at. */
@@ -65,16 +91,30 @@ const SOCIAL_CARD_PREFIX = "sdxc";
 /** The segment the home page's card is stored under, since `/` leaves no name for a file. */
 const HOME_SEGMENT = "index";
 
+/**
+ * Each showcase item's card facts, written by the extractor at build time and bundled, so the
+ * layout can name a case study's card URL while it renders.
+ */
+const SHOWCASE_CARDS = import.meta.glob<{ cards: Record<string, SocialCard.ShowcaseFacts> }>(
+	"../../resources/generated/showcase-cards.json",
+	{ import: "default", eager: true },
+);
+
+/** A case study's path, whose one segment is the item's slug. */
+const CASE_STUDY_PATH = /^\/showcase\/([^/]+)$/;
+
 /** The separator every page title puts between its own name and the section it belongs to. */
 const TITLE_SEPARATOR = " — ";
 
 /**
- * Derives the card for a page. A title suffix other than the site's name is the eyebrow
- * (`Button — @sdxc/ui` reads "@sdxc/ui"); otherwise the path decides it, and a package page
- * gets its install command as the footer.
+ * Derives the card for a page. A case study gets its item's own card; elsewhere a title suffix
+ * other than the site's name is the eyebrow (`Button — @sdxc/ui` reads "@sdxc/ui"), otherwise
+ * the path decides it, and a package page gets its install command as the footer.
  */
 export function socialCardContent(page: SocialCard.Page): SocialCard.Content {
 	if (page.path === "/") return homeContent();
+	let showcase = showcaseContent(page.path);
+	if (showcase !== null) return showcase;
 	let separator = page.title.lastIndexOf(TITLE_SEPARATOR);
 	let name = separator === -1 ? page.title : page.title.slice(0, separator);
 	let section = separator === -1 ? SITE_NAME : page.title.slice(separator + TITLE_SEPARATOR.length);
@@ -199,6 +239,19 @@ function homeContent(): SocialCard.HomeContent {
 			stat("utilityCount", "styling utilities"),
 		].filter((entry) => entry.value !== ""),
 	};
+}
+
+/**
+ * A case study's card, drawn in its item's colours around its cover, or `null` for any other
+ * path and for an item the extractor wrote no card for.
+ */
+function showcaseContent(path: string): SocialCard.ShowcaseContent | null {
+	let slug = CASE_STUDY_PATH.exec(path)?.[1];
+	if (slug === undefined) return null;
+	let cards = Object.values(SHOWCASE_CARDS)[0]?.cards ?? {};
+	let facts = Object.hasOwn(cards, slug) ? cards[slug] : undefined;
+	if (facts === undefined) return null;
+	return { kind: "showcase", ...facts, url: `${new URL(SITE_URL).host}/showcase` };
 }
 
 /** The eyebrow for a page whose title names only the site, by the part of the site it is in. */

@@ -1,7 +1,8 @@
 /**
  * Drives `<page>.png` requests through the real router: a page advertises its card URL,
  * the middleware renders that card from the page's own tags and keeps it in storage, a guide
- * under a wildcard route still reaches its card, and a path that is not a page has none. Storage is in memory and the fonts are read from disk.
+ * under a wildcard route still reaches its card, a case study's card shows its own cover, and a
+ * path that is not a page has none. Storage is in memory; fonts and screenshots come from disk.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseFont } from "@sdxc/font";
+import { decode } from "@sdxc/png";
 import { success } from "@sdxc/result";
 import { createMemoryFileStorage } from "remix/file-storage/memory";
 import { beforeAll, describe, expect, test, vi } from "vitest";
@@ -31,6 +33,10 @@ let fetchApp: (path: string) => Promise<Response>;
 
 beforeAll(async () => {
 	vi.doMock("~/app/models/social-cards", () => ({ socialCards: () => STORAGE }));
+	vi.doMock("~/app/models/showcase-screenshots", () => ({
+		readShowcaseScreenshot: async (path: string) =>
+			new Uint8Array(readFileSync(join(import.meta.dirname, "../../../public", path))),
+	}));
 	vi.doMock("~/app/initializers/social-card-fonts", () => {
 		let fonts = success({
 			regular: load("inter-regular.ttf.bin"),
@@ -109,6 +115,29 @@ describe("GET <page>.png", () => {
 		expect(response.status).toBe(200);
 		expect(response.headers.get("cache-control")).toContain("immutable");
 		expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([137, 80, 78, 71]);
+	});
+
+	test("a case study's card draws its item's cover in its accent's frame", async () => {
+		let card = await advertisedCard("/showcase/keel");
+		expect(card).toMatch(/^\/showcase\/keel\.png\?v=[0-9a-z]+$/);
+
+		let response = await fetchApp(card);
+		let image = await decode(new Uint8Array(await response.arrayBuffer()));
+		if (image.status === "failure") throw image.error;
+		let source = await decode(
+			new Uint8Array(
+				readFileSync(join(import.meta.dirname, "../../../public/showcase/keel/card.png")),
+			),
+		);
+		if (source.status === "failure") throw source.error;
+		let pixel = (data: Uint8ClampedArray, width: number, x: number, y: number) =>
+			Array.from(data.slice((y * width + x) * 4, (y * width + x) * 4 + 3));
+
+		expect(response.status).toBe(200);
+		expect([image.data.width, image.data.height]).toEqual([1200, 630]);
+		expect(pixel(image.data.data, 1200, 1000, 400)).toEqual(
+			pixel(source.data.data, source.data.width, 1000 - 584, 400 - 150 - 40),
+		);
 	});
 
 	test("a path that is not a page has no card", async () => {

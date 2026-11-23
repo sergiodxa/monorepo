@@ -38,6 +38,13 @@ export const CASE_STUDY_FRONTMATTER = s.object({
 	headline: s.string(),
 	/** One sentence for the card and the meta description. */
 	summary: s.string(),
+	/** A few words for the social card, short enough to set large on one line. */
+	tagline: s.string(),
+	/**
+	 * The social card's accent as any CSS colour `@sdxc/raster` parses, for an item whose cover
+	 * shows its brand colour too little for the card to read it from the screenshot.
+	 */
+	accent: s.optional(s.string()),
 	/** The id of the shot set under the headline and on the showcase card. */
 	cover: s.string(),
 	shots: s.array(shotSchema),

@@ -2,6 +2,7 @@
  * Captures every screenshot a case study's front matter lists into `public/showcase/<slug>/`,
  * from a running `vp preview` build, as WebP in light (`<id>.webp`) and dark (`<id>-dark.webp`).
  * A `highlight` selector dims the page around that element and crops to it with some context.
+ * The cover is also written as `card.png`, the screenshot the item's social card is drawn with.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,6 +43,12 @@ const VIEWPORTS = {
 /** How much of the page around a highlighted element a crop keeps, in CSS pixels. */
 const CONTEXT = 64;
 
+/**
+ * The size the social card draws its screenshot at, in card pixels; the cover is scaled to it
+ * once here, so the Worker decodes a small PNG and draws it without resampling.
+ */
+const CARD_SOURCE = { width: 720, height: 450 };
+
 /** Each color scheme a shot is taken in, with the suffix its file carries. */
 const SCHEMES = { light: "", dark: "-dark" } as const;
 
@@ -52,7 +59,8 @@ await main(process.argv.slice(2));
 
 /**
  * Captures the slugs named on the command line, or every case study, in both schemes;
- * `--scheme=dark` or `--scheme=light` takes one.
+ * `--scheme=dark` or `--scheme=light` takes one, and `--cards` only rewrites each `card.png`
+ * from the cover already captured.
  */
 async function main(args: string[]): Promise<void> {
 	let only = args.filter((arg) => !arg.startsWith("--"));
@@ -60,6 +68,7 @@ async function main(args: string[]): Promise<void> {
 	let schemes = (Object.keys(SCHEMES) as Scheme[]).filter(
 		(scheme) => asked === undefined || scheme === asked,
 	);
+	let cardsOnly = args.includes("--cards");
 	let slugs = readdirSync(CONTENT)
 		.filter((file) => file.endsWith(".md"))
 		.map((file) => file.slice(0, -".md".length))
@@ -77,7 +86,8 @@ async function main(args: string[]): Promise<void> {
 				continue;
 			}
 			mkdirSync(join(OUTPUT, slug), { recursive: true });
-			for (let [shot, scheme] of parsed.data.frontmatter.shots.flatMap((entry) =>
+			let { cover, shots } = parsed.data.frontmatter;
+			for (let [shot, scheme] of (cardsOnly ? [] : shots).flatMap((entry) =>
 				schemes.map((name) => [entry, name] as const),
 			)) {
 				let viewport = VIEWPORTS[shot.viewport ?? "desktop"];
@@ -101,6 +111,14 @@ async function main(args: string[]): Promise<void> {
 				} finally {
 					await context.close();
 				}
+			}
+			try {
+				writeCardSource(slug, cover);
+				console.info(`${slug}/card.png`);
+			} catch (error) {
+				failures.push(
+					`${slug}/card.png: ${error instanceof Error ? error.message : String(error)}`,
+				);
 			}
 		}
 	} finally {
@@ -182,6 +200,23 @@ async function capture(page: Page, slug: string, shot: CaseStudyShot, path: stri
 	let width = Math.min(viewport.width - x, box.width + CONTEXT * 2);
 	let height = Math.min(viewport.height - y, box.height + CONTEXT * 2);
 	toWebp(await page.screenshot({ type: "png", clip: { x, y, width, height } }), path);
+}
+
+/**
+ * Writes the cover's light capture as `card.png` at the size the social card draws it, a PNG
+ * since that is what the Worker decodes. `dwebp` comes with `cwebp` in `brew install webp`.
+ */
+function writeCardSource(slug: string, cover: string): void {
+	let { height, width } = CARD_SOURCE;
+	execFileSync("dwebp", [
+		"-quiet",
+		join(OUTPUT, slug, `${cover}.webp`),
+		"-scale",
+		String(width),
+		String(height),
+		"-o",
+		join(OUTPUT, slug, "card.png"),
+	]);
 }
 
 /**

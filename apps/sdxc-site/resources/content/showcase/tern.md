@@ -2,6 +2,7 @@
 title: Tern
 headline: A chat assistant whose streamed replies are server HTML, and whose send button is a form that works with script off
 summary: An invented AI chat assistant with replies that stream in word by word, a thinking trace, code and tables, a canvas beside the chat, projects and sharing, and sending that works without JavaScript.
+tagline: An AI chat that streams word by word
 cover: chat
 shots:
   - id: chat

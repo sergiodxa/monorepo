@@ -2,6 +2,7 @@
 title: reader
 headline: A feed reader where each feed is fetched once for everyone and each reader keeps their library in their own database
 summary: A feed reader that follows RSS, Atom and JSON Feed, polls each feed at its own pace, takes WebSub pushes and keeps every reader's library in a Durable Object.
+tagline: A feed reader with WebSub pushes
 cover: home
 shots:
   - id: home

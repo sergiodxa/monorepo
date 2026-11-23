@@ -2,6 +2,7 @@
 title: Relay
 headline: A three-pane support inbox where the open conversation is the address and triage never leaves the page
 summary: An invented support inbox and light CRM with mailboxes, the conversation list and the open conversation on one Mail-like screen, triaged from the keyboard, with each conversation at its own address.
+tagline: A support inbox run from the keyboard
 cover: inbox
 shots:
   - id: inbox

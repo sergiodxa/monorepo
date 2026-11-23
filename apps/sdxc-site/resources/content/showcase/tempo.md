@@ -2,6 +2,7 @@
 title: Tempo
 headline: A utilities reference that draws what every call does, from one record per utility
 summary: A reference for an invented CSS utility library, where every utility is drawn doing what it does beside its call and the CSS it emits.
+tagline: CSS utilities drawn doing what they do
 cover: spacing
 shots:
   - id: spacing

@@ -2,6 +2,7 @@
 title: Undercurrent
 headline: A newsletter and podcast home set as one letter, where the sample issue, the episode and the archive all work without script
 summary: A landing for an invented letter and podcast about everyday infrastructure, set as one column of a letter with the latest issue and episode on the page.
+tagline: A letter and podcast on infrastructure
 cover: hero
 shots:
   - id: hero

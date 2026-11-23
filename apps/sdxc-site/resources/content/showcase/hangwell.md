@@ -2,6 +2,7 @@
 title: Hangwell
 headline: A poster shop whose configurator, checkout and returns all work as server-rendered forms
 summary: An invented poster shop selling each print as a file, a print or a framed print, with faceted collections, a configurator page, a checkout that adapts to what ships, and returns.
+tagline: A poster shop with a print configurator
 cover: shop
 shots:
   - id: shop

@@ -36,11 +36,11 @@ import {
 	LIGHT_SCHEME,
 	darkScreenshotSrc,
 	filterOf,
-	kindLabel,
 	readCaseStudy,
 	shotSize,
 	showcaseHref,
 } from "~/app/services/case-studies";
+import { kindLabel } from "~/app/services/showcase-kinds";
 import Hero from "~/resources/components/hero";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import { ProseHeading, ProseParagraph } from "~/resources/components/prose";

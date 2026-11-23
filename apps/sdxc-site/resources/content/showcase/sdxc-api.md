@@ -2,6 +2,8 @@
 title: sdxc-api
 headline: Selling package capabilities to agents one call at a time, paid in USDC over HTTP and MCP
 summary: Package capabilities sold per call to agents over HTTP and MCP, each priced in USDC through x402, with a catalog humans read for free.
+tagline: Package capabilities sold per call
+accent: "oklch(0.62 0.12 195)"
 cover: home
 shots:
   - id: home

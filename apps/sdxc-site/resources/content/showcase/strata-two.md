@@ -2,6 +2,7 @@
 title: Strata Two
 headline: A hardware launch drawn entirely in SVG, with scroll-driven scenes, a board you can play and a preorder answered from the URL
 summary: A launch page for an invented aluminium keyboard, drawn in SVG on a dark stage, with scroll-driven scenes, a playable board and a preorder that needs no script.
+tagline: A keyboard launch with a playable board
 cover: hero
 shots:
   - id: hero

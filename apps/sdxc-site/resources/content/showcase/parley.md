@@ -2,6 +2,7 @@
 title: Parley
 headline: A team chat where teammates type and post live over a stream, and every action is still a plain form
 summary: An invented team chat with channels, DMs, threads, reactions and search, where teammates type and post live over a stream and every action is still a plain form.
+tagline: Team chat that streams live
 cover: thread
 shots:
   - id: thread

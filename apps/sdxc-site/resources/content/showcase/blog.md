@@ -2,6 +2,7 @@
 title: blog
 headline: One Markdown post, published as a page, three feeds, an EPUB, a search result and a fediverse post
 summary: The author's site at sergiodxa.com, with articles in Markdown, full-text search, feeds in three formats, Webmentions, ActivityPub and a CMS behind sign-in.
+tagline: The author's site, feeds and CMS
 cover: home
 shots:
   - id: home

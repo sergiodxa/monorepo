@@ -2,6 +2,7 @@
 title: Chorus
 headline: A social network where likes, votes and new posts answer at once and still work as plain HTML
 summary: An invented social network with a live timeline, polls, threads, quotes, grouped notifications and messages, where every like, vote and post works without script.
+tagline: A social network that works without script
 cover: home
 shots:
   - id: home

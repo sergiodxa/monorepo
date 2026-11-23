@@ -100,6 +100,7 @@ describe("card addresses", () => {
 
 	test("the hash changes with the content and is stable for the same content", () => {
 		let content = socialCardContent(page);
+		if (content.kind !== "page") throw new Error("a package page gets a page card");
 		expect(socialCardHash(content)).toBe(socialCardHash({ ...content }));
 		expect(socialCardHash(content)).not.toBe(
 			socialCardHash({ ...content, description: "Changed." }),
@@ -136,5 +137,37 @@ describe("readPageFacts", () => {
 
 	test("a document with no title is no page", () => {
 		expect(readPageFacts("<p>hi</p>", "/")).toBeNull();
+	});
+});
+
+describe("a case study's card", () => {
+	test("wears its item's colours, chips and tagline, with the showcase's address", () => {
+		let content = socialCardContent({
+			title: "Wayfern — Showcase — sdxc",
+			description: "A long description that the card never sets.",
+			path: "/showcase/wayfern",
+		});
+
+		expect(content).toMatchObject({
+			kind: "showcase",
+			title: "Wayfern",
+			tagline: "Stays, flights and cars from one search",
+			chips: ["Demo", "App"],
+			source: "/showcase/wayfern/card.png",
+			url: "sdxc.dev/showcase",
+		});
+		expect(content).not.toHaveProperty("description");
+	});
+
+	test("names an application in production as one, and a page under a case study keeps the site's card", () => {
+		let uptime = socialCardContent({ title: "uptime", description: "", path: "/showcase/uptime" });
+
+		expect(uptime).toMatchObject({ kind: "showcase", chips: ["In production", "App"] });
+		expect(pageCard({ title: "Showcase — sdxc", description: "", path: "/showcase" }).kind).toBe(
+			"page",
+		);
+		expect(
+			pageCard({ title: "Nothing — sdxc", description: "", path: "/showcase/no-such-thing" }).kind,
+		).toBe("page");
 	});
 });

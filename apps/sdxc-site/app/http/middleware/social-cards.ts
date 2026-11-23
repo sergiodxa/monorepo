@@ -7,11 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Raster } from "@sdxc/raster";
 import type { Middleware } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 import { waitUntil } from "cloudflare:workers";
 
+import { readShowcaseScreenshot } from "~/app/models/showcase-screenshots";
 import { socialCards as cardStorage } from "~/app/models/social-cards";
 import {
 	pagePathFromCardPath,
@@ -79,7 +82,9 @@ export default function socialCards(
 			currentLog()?.fail(fonts.error, { path: pagePath });
 			return new Response("The card's fonts could not be read\n", { status: 500 });
 		}
-		let bytes = await renderSocialCard(content, fonts.data);
+		let screenshot =
+			content.kind === "showcase" ? await readScreenshot(content.source, context.url) : null;
+		let bytes = await renderSocialCard(content, fonts.data, screenshot ?? undefined);
 		let card = new File([bytes.slice()], `${hash}.png`, { type: "image/png" });
 		waitUntil(Promise.resolve(storage.set(key, card)));
 		currentLog()?.set({ socialCard: { path: pagePath, rendered: true } });
@@ -96,6 +101,25 @@ async function renderPage(fetchPage: (request: Request) => Promise<Response>, pa
 	if (response.status !== 200) return null;
 	if (!response.headers.get("content-type")?.includes("text/html")) return null;
 	return readPageFacts(await response.text(), pagePath);
+}
+
+/**
+ * A showcase card's screenshot, read from the site's own static files and decoded, or `null`
+ * when it cannot be read, so the card still draws with an empty window and the miss is logged.
+ */
+async function readScreenshot(path: string, origin: URL): Promise<Raster.ImageSource | null> {
+	let bytes = await readShowcaseScreenshot(path, origin);
+	if (bytes === null) {
+		currentLog()?.set({ socialCard: { screenshot: path, found: false } });
+		return null;
+	}
+	let { decode } = await import("@sdxc/png");
+	let decoded = await decode(bytes);
+	if (isFailure(decoded)) {
+		currentLog()?.fail(decoded.error, { screenshot: path });
+		return null;
+	}
+	return decoded.data;
 }
 
 /**

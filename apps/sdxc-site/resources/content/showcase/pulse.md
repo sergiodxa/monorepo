@@ -2,6 +2,7 @@
 title: Pulse
 headline: An ops dashboard whose filters, peeks and charts all live in the address and stream in at their final size
 summary: An invented ops dashboard for services, deploys and incidents, with filters in the URL, a keyboard-driven services table, a peek sheet and charts that stream in as their own frames.
+tagline: An ops dashboard with streaming charts
 cover: overview
 shots:
   - id: overview

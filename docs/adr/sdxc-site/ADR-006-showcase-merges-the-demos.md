@@ -58,6 +58,17 @@ landings through a map of old names to new, and clips from `/demo/media` to `/sh
 The showcase and the case studies may be indexed and are in the sitemap. Demos stay
 `noindex, nofollow`, and robots.txt disallows `/showcase/*/demo` and `/demo`.
 
+### Each case study has its own social card
+
+A case study's `og:image` is drawn for its item, through the same card route and storage as
+every other page: the item's name, its chips as the showcase words them, and a short `tagline`
+from the front matter on the left, and its cover in a browser window running off the right and
+bottom edges. The background is the colour the cover is mostly painted in and the accent its
+most vivid colour, read at build time from `public/showcase/<slug>/card.png` (the cover scaled
+to the card); an item whose brand colour the cover barely shows names it as `accent`. The
+Worker reads that PNG through its `ASSETS` binding and draws it with `@sdxc/raster`'s
+`imagePattern`, and the card URL's hash covers the image's, so a re-shot cover gets a new card.
+
 ## Consequences
 
 - A new demo is still one folder; it needs a case study before the case-study test passes.

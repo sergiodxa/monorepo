@@ -2,6 +2,8 @@
 title: Parcelo
 headline: An API reference where every endpoint page reads the same way, and one request becomes three languages
 summary: An HTTP API reference for an invented shipping-label API, with one page per endpoint and examples in cURL, JavaScript and Python.
+tagline: An API reference in three languages
+accent: "oklch(0.52 0.2 275)"
 cover: create
 shots:
   - id: create

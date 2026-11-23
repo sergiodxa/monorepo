@@ -2,6 +2,8 @@
 title: Murmur
 headline: A music service whose tracks are written in the browser and keep playing while every page swaps
 summary: An invented music service whose every track is synthesized in the browser, with a player that keeps playing while the pages around it swap.
+tagline: Music synthesized in the browser
+accent: "oklch(0.5 0.22 263)"
 cover: home
 shots:
   - id: home

@@ -97,7 +97,8 @@ Observability is enabled, with traces head-sampled at 10%.
   `/showcase/<slug>/demo` is the demo itself. `bun scripts/capture-showcase.ts [slug…]`
   (needs `cwebp`) re-shoots a case study's screenshots in light and dark from a running
   `vp preview` on port 4317 (`SHOWCASE_ORIGIN` points elsewhere, `--scheme=dark` takes one
-  scheme), and every old `/demo` address answers a `308` to its new one.
+  scheme), and every old `/demo` address answers a `308` to its new one. It also writes each
+  item's `card.png`, the cover its social card draws (`--cards` rewrites only those).
 - **Demo HTML is reused at the edge.** Landings, docs sites and app screens
   use the existing build-keyed Workers Cache: a hit skips rendering the demo, while a miss
   keeps the renderer's stream and frame fallbacks.

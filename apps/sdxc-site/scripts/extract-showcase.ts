@@ -1,19 +1,31 @@
 /**
  * Writes `resources/generated/showcase-usage.json`, the `@sdxc/*` packages and `@sdxc/ui`
- * entries each showcase item imports, and `showcase-shots.json`, every screenshot's pixel size.
- * Run after the catalogue extractor, whose documents name every page an import can resolve to.
+ * entries each showcase item imports; `showcase-shots.json`, every screenshot's pixel size; and
+ * `showcase-cards.json`, what each item's social card draws. Run after the catalogue extractor.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { Markdown } from "@sdxc/markdown";
+import { decode } from "@sdxc/png";
+import { color } from "@sdxc/raster";
+import { isFailure } from "@sdxc/result";
+
+import type { KindFacts, ShowcaseCategory } from "~/app/services/showcase-kinds";
+import type { SocialCard } from "~/app/services/social-card";
+import type { RGB } from "~/scripts/showcase-cards";
 import type { CatalogueEntry, ImageSize, ShowcaseUsage } from "~/scripts/showcase-usage";
 
+import { CASE_STUDY_FRONTMATTER } from "~/app/services/case-study-schema";
+import { kindChips } from "~/app/services/showcase-kinds";
 import { APPLICATIONS, PRODUCTION_LANDINGS } from "~/resources/content/apps";
+import { readPalette } from "~/scripts/showcase-cards";
 import { collectUsage, readImports, readWebpSize } from "~/scripts/showcase-usage";
 
 /** The app's own root, which every path below is resolved against. */
@@ -25,6 +37,12 @@ const OUTPUT = join(APP, "resources", "generated", "showcase-usage.json");
 /** Where every screenshot's size is written, keyed by the address it is served at. */
 const SHOTS_OUTPUT = join(APP, "resources", "generated", "showcase-shots.json");
 
+/** Where each item's social-card facts are written, keyed by slug. */
+const CARDS_OUTPUT = join(APP, "resources", "generated", "showcase-cards.json");
+
+/** The case studies, whose front matter names each card's title and tagline. */
+const CASE_STUDIES = join(APP, "resources", "content", "showcase");
+
 /** The screenshots' folder, one subfolder per item, served from `/showcase/`. */
 const SHOTS = join(APP, "public", "showcase");
 
@@ -33,13 +51,17 @@ const SHOTS = join(APP, "public", "showcase");
  * shared files that draw every demo of that kind around its own: a docs site's shell, pages
  * and feedback, and an app's document.
  */
-const DEMO_ROOTS: Array<{ folder: string; shared: string[] }> = [
-	{ folder: "demos", shared: [] },
-	{ folder: "demo-docs", shared: ["shell.tsx", "pages.tsx", "feedback.tsx"] },
-	{ folder: "demo-apps", shared: ["document.tsx"] },
-].map(({ folder, shared }) => {
+const DEMO_ROOTS: Array<{ folder: string; shared: string[]; category: ShowcaseCategory }> = [
+	{ folder: "demos", shared: [], category: "landing" as const },
+	{
+		folder: "demo-docs",
+		shared: ["shell.tsx", "pages.tsx", "feedback.tsx"],
+		category: "docs" as const,
+	},
+	{ folder: "demo-apps", shared: ["document.tsx"], category: "app" as const },
+].map(({ category, folder, shared }) => {
 	let root = join(APP, "resources", "views", folder);
-	return { folder: root, shared: shared.map((file) => join(root, file)) };
+	return { folder: root, shared: shared.map((file) => join(root, file)), category };
 });
 
 /** The folders of an application that hold the code it ships. */
@@ -71,17 +93,23 @@ interface FollowScope {
 /** The site's own scope, which a demo's imports are followed within. */
 const SITE_SCOPE: FollowScope = { root: APP, followed: FOLLOWED, skipped: [] };
 
-main();
+await main();
 
 /** Reads the catalogue, walks every item's source and writes the document. */
-function main(): void {
+async function main(): Promise<void> {
 	let catalogue = readCatalogue();
 	let usage: Record<string, ShowcaseUsage> = {};
+	let kinds: Record<string, KindFacts> = {};
 
 	for (let application of APPLICATIONS) {
 		let root = join(APP, "..", application.directory);
 		let files = APPLICATION_FOLDERS.flatMap((folder) => listSources(join(root, folder)));
 		usage[application.directory] = collectUsage(files.map(read), catalogue);
+		kinds[application.directory] = {
+			kind: "production",
+			category: "app",
+			live: application.href !== null,
+		};
 	}
 
 	for (let landing of PRODUCTION_LANDINGS) {
@@ -93,6 +121,7 @@ function main(): void {
 		};
 		let files = followImports(listSources(join(root, landing.folder)), scope);
 		usage[landing.slug] = collectUsage([...files].map(read), catalogue);
+		kinds[landing.slug] = { kind: "production", category: "landing", live: true };
 	}
 
 	for (let root of DEMO_ROOTS) {
@@ -101,12 +130,53 @@ function main(): void {
 			if (!statSync(folder).isDirectory() || !existsSync(join(folder, "index.tsx"))) continue;
 			let files = followImports([...listSources(folder), ...root.shared]);
 			usage[slug] = collectUsage([...files].map(read), catalogue);
+			kinds[slug] = { kind: "demo", category: root.category, live: true };
 		}
 	}
 
 	mkdirSync(dirname(OUTPUT), { recursive: true });
 	writeFileSync(OUTPUT, `${JSON.stringify({ usage }, null, "\t")}\n`);
 	writeFileSync(SHOTS_OUTPUT, `${JSON.stringify({ sizes: readShotSizes() }, null, "\t")}\n`);
+	let cards = await readCards(kinds);
+	writeFileSync(CARDS_OUTPUT, `${JSON.stringify({ cards }, null, "\t")}\n`);
+}
+
+/**
+ * Each item's social-card facts: its name and tagline from the case study, its chips, and the
+ * palette read from its `card.png`. The version is that image's hash, so a re-shot cover
+ * changes the card's address and platforms fetch it again. An item with no case study or no
+ * card image is left out, and its page keeps the site's own card.
+ */
+async function readCards(
+	kinds: Record<string, KindFacts>,
+): Promise<Record<string, SocialCard.ShowcaseFacts>> {
+	let cards: Record<string, SocialCard.ShowcaseFacts> = {};
+	for (let [slug, facts] of Object.entries(kinds).sort(([a], [b]) => a.localeCompare(b))) {
+		let study = join(CASE_STUDIES, `${slug}.md`);
+		let source = join(SHOTS, slug, "card.png");
+		if (!existsSync(study) || !existsSync(source)) continue;
+		let parsed = Markdown.frontmatter(read(study), { frontmatter: CASE_STUDY_FRONTMATTER });
+		if (isFailure(parsed)) continue;
+		let bytes = readFileSync(source);
+		let image = await decode(bytes);
+		if (isFailure(image)) continue;
+		let { accent, tagline, title } = parsed.data.frontmatter;
+		cards[slug] = {
+			title,
+			tagline,
+			chips: kindChips(facts),
+			source: `/showcase/${slug}/card.png`,
+			version: createHash("sha256").update(bytes).digest("hex").slice(0, 12),
+			...readPalette(image.data, accent === undefined ? undefined : channels(accent)),
+		};
+	}
+	return cards;
+}
+
+/** A CSS colour as 0–255 sRGB channels. */
+function channels(value: string): RGB {
+	let parsed = color(value);
+	return [parsed.r * 255, parsed.g * 255, parsed.b * 255];
 }
 
 /** Every screenshot's size, keyed by its address, such as `/showcase/keel/hero.webp`. */

@@ -2,6 +2,7 @@
 title: Overprint 2027
 headline: A conference page printed in two inks, with a live countdown, a schedule that filters by CSS and forms that confirm in place
 summary: A landing for an invented one-day web platform conference in Rotterdam, printed as a two-ink risograph poster with a live countdown.
+tagline: A conference printed as a risograph
 cover: hero
 shots:
   - id: hero

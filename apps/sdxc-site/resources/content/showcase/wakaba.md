@@ -2,6 +2,7 @@
 title: Wakaba
 headline: Selling a Japanese vocabulary app with real screens, four companions and a bonsai that grows in CSS
 summary: The marketing page, support desk and privacy policy for Wakaba, an iPhone and iPad app, server-rendered in English and Spanish from the @sdxc/ui landing kit.
+tagline: A Japanese vocabulary app's landing
 cover: hero
 shots:
   - id: hero

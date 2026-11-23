@@ -2,6 +2,7 @@
 title: Tuppence
 headline: A personal bank in four currencies where every amount is a value, every filter is an address, and no money moves
 summary: An invented personal bank with euro, pound, dollar and yen accounts, a statement by day, budgets, savings pots, bills, cards that freeze and a transfer flow, all with fake money.
+tagline: A bank in four currencies, fake money
 cover: home
 shots:
   - id: home

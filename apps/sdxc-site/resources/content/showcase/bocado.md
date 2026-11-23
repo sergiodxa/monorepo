@@ -2,6 +2,8 @@
 title: Bocado
 headline: A food delivery app whose dish dialogs, cart, checkout and courier tracking all run on plain forms
 summary: An invented food delivery app in Buenos Aires, with menus whose dishes ask for their picks, a cart in a cookie, checkout and live courier tracking on a real street map.
+tagline: Food delivery with live courier tracking
+accent: "oklch(0.5 0.19 355)"
 cover: home
 shots:
   - id: home
