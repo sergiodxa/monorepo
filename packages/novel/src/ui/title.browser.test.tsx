@@ -255,6 +255,91 @@ describe("NovelPlayer.Default with a title screen", () => {
 	});
 });
 
+/** Waits until the player shows `text` and waits for the reader, then advances with a click. */
+async function advanceFrom(result: RenderResult, text: string): Promise<void> {
+	await vi.waitFor(() => {
+		expect(result.$("[data-novel-line]")?.textContent).toBe(text);
+		expect((result.$("[data-novel-player]") as HTMLElement | null)?.dataset["phase"]).toBe(
+			"waiting",
+		);
+	});
+	(result.$("[data-novel-surface]") as HTMLElement).click();
+}
+
+/** Opens the title's chapter screen and picks the prologue once it is unlocked. */
+async function pickPrologue(result: RenderResult): Promise<void> {
+	button(result, "chapters")!.click();
+	let dialog = result.$("[data-novel-title] dialog[open]")!;
+	let pick = await vi.waitFor(() => {
+		let entry = dialog.querySelector<HTMLButtonElement>('[data-name="prologue"] button');
+		expect(entry?.disabled).toBe(false);
+		return entry!;
+	});
+	pick.click();
+}
+
+describe("NovelPlayer.Default returning to its title screen", () => {
+	test("shows the ending with a way back to the title, whose Continue and library reflect the play", async () => {
+		let { result } = mount(
+			<NovelPlayer.Default
+				novel={fixture()}
+				settings={{ textSpeed: 0 }}
+				start={{ persistent: {} }}
+				titleScreen={{ heading: "The Café" }}
+			/>,
+		);
+		expect(button(result, "continue")).toBeNull();
+		button(result, "new-game")!.click();
+		await advanceFrom(result, "Welcome.");
+		await advanceFrom(result, "I should say something.");
+		await vi.waitFor(() =>
+			expect(result.$("[data-novel-ending]")?.textContent).toBe("Good ending"),
+		);
+		expect(result.$("[data-novel-play-again]")).toBeNull();
+		let back = result.$("[data-novel-back-to-title]") as HTMLButtonElement;
+		expect(back.textContent).toBe("Back to title");
+
+		back.click();
+		await vi.waitFor(() => expect(result.$("[data-novel-title]")).not.toBeNull());
+		expect(result.$("[data-novel-player]")).toBeNull();
+		expect(button(result, "continue")).not.toBeNull();
+		await pickPrologue(result);
+		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
+	});
+
+	test("goes back to the title when the reader ends a replay begun there", async () => {
+		let { result } = mount(
+			<NovelPlayer.Default
+				novel={fixture()}
+				settings={{ textSpeed: 0 }}
+				start={{ persistent: STORED }}
+				titleScreen={{ heading: "The Café" }}
+			/>,
+		);
+		await pickPrologue(result);
+		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
+		(result.$('[data-novel-player] [data-action="endReplay"]') as HTMLButtonElement).click();
+		await vi.waitFor(() => expect(result.$("[data-novel-title]")).not.toBeNull());
+		expect(result.$("[data-novel-player]")).toBeNull();
+	});
+
+	test("goes back to the title when a replay begun there plays to its end", async () => {
+		let { result } = mount(
+			<NovelPlayer.Default
+				novel={fixture()}
+				settings={{ textSpeed: 0 }}
+				start={{ persistent: STORED }}
+				titleScreen={{ heading: "The Café" }}
+			/>,
+		);
+		await pickPrologue(result);
+		await advanceFrom(result, "Welcome.");
+		await advanceFrom(result, "I should say something.");
+		await vi.waitFor(() => expect(result.$("[data-novel-title]")).not.toBeNull());
+		expect(result.$("[data-novel-player]")).toBeNull();
+	});
+});
+
 /** An SVG image of `width`×`height` as a data URL, so it decodes without a server. */
 function svg(width: number, height: number): string {
 	return `data:image/svg+xml,${encodeURIComponent(

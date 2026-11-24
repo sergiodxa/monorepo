@@ -54,7 +54,7 @@ import { ChoiceMenu } from "./choice-menu.js";
 import { gamepadControls, keyboardControls, touchControls } from "./controls.js";
 import { Director } from "./director.js";
 import { EndingsList } from "./endings.js";
-import { NovelEndingEvent, NovelSaveEvent, NovelSettingsEvent } from "./events.js";
+import { NovelEndingEvent, NovelSaveEvent, NovelSettingsEvent, NovelTitleEvent } from "./events.js";
 import { Extras } from "./extras.js";
 import { Gallery } from "./gallery.js";
 import { Interaction } from "./interaction.js";
@@ -168,6 +168,8 @@ export namespace NovelPlayer {
 		readonly hidden: boolean;
 		/** True while the play is a replay, which never saves. */
 		readonly replaying: boolean;
+		/** True when the player hands the reader back to a title screen as `returnsToTitle` asks. */
+		readonly returnsToTitle: boolean;
 		/**
 		 * Persistent data as the play has updated it, or the stored value passed in `start`
 		 * before the play begins. It is one value per render, so a screen can key on it.
@@ -228,8 +230,13 @@ export namespace NovelPlayer {
 		toggleFullscreen(): void;
 		/** Closes the open dialog and replays `scene`, resuming this play when the replay ends. */
 		replay(scene: SceneDeclaration, scope: ReplayScope): Promise<void>;
-		/** Ends a replay, resuming the play it interrupted. */
+		/**
+		 * Ends a replay, resuming the play it interrupted; with nothing to resume, it finishes like
+		 * an ending, or returns to the title under `returnsToTitle`.
+		 */
 		endReplay(): Promise<void>;
+		/** Closes the open dialog and dispatches `novel:title` with the play's persistent data. */
+		toTitle(): void;
 		/** Opens one of the player's dialogs, when it is rendered. */
 		open(screen: Screen): void;
 		/** Asks for the first stop again after an error stopped the play before it. */
@@ -276,6 +283,12 @@ export namespace NovelPlayer {
 		 * @default 1
 		 */
 		prefetch?: number | false;
+		/**
+		 * Hands the reader back to a title screen: the ending's button returns there in place of
+		 * Play again, and a replay with no play to resume returns there as it ends, each through
+		 * `novel:title`.
+		 */
+		returnsToTitle?: boolean;
 		/** The parts the player is composed of; `NovelPlayer.Default` holds every one. */
 		children?: RemixNode;
 	}
@@ -285,9 +298,9 @@ export namespace NovelPlayer {
 		/** Drawn on the stage with the built-in parts, such as a `NovelPlayer.Interaction` part. */
 		children?: RemixNode;
 		/**
-		 * Opens on `NovelPlayer.Title` with this heading, art, footer and screens, and plays what
-		 * the reader starts there; `start` is what every such play extends. Without it the play
-		 * starts at once. `mix` applies to the title while it shows, then to the player.
+		 * Opens on `NovelPlayer.Title` with this heading, art, footer and screens, plays what the
+		 * reader starts there and returns there when it ends; `start` is what every such play
+		 * extends. Without it the play starts at once. `mix` applies to the title, then the player.
 		 *
 		 * @example titleScreen={{ heading: "The Café", art: <img src={keyArt} alt="" /> }}
 		 */
@@ -358,7 +371,10 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 				root?.querySelector("[data-novel-textbox], [data-novel-choices]")?.textContent?.trim() ??
 				"",
 			settings: () => settings.value,
-			onEnding: (ending) => root?.dispatchEvent(new NovelEndingEvent(ending)),
+			onEnding: (ending, replay) => {
+				root?.dispatchEvent(new NovelEndingEvent(ending));
+				if (replay && handle.props.returnsToTitle === true) toTitle();
+			},
 			changed: (what) => {
 				story = undefined;
 				context.dispatchEvent(new Event(what));
@@ -490,6 +506,12 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		if (state !== undefined) await director.load(state);
 	}
 
+	/** Hands the reader back to the title with persistent data as this play left it. */
+	function toTitle(): void {
+		openDialog()?.close();
+		root?.dispatchEvent(new NovelTitleEvent(director.persistent));
+	}
+
 	/** Shows or hides the interface; a hidden interface comes back on the next click or key. */
 	function hide(next = !hidden): void {
 		if (next === hidden) return;
@@ -547,6 +569,9 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		get replaying() {
 			return director.replaying;
 		},
+		get returnsToTitle() {
+			return handle.props.returnsToTitle === true;
+		},
 		get persistent() {
 			persistent ??= {
 				value: director.persistent ?? storedPersistent(handle.props.novel, handle.props.start),
@@ -596,6 +621,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			await director.replay(scene, scope);
 		},
 		endReplay: () => director.endReplay(),
+		toTitle,
 		open: (screen) => {
 			let dialog = root?.querySelector<HTMLDialogElement>(`#${ids[screen]}`);
 			if (dialog !== null && dialog !== undefined && !dialog.open) dialog.showModal();
@@ -631,6 +657,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			markup: _markup,
 			prefetch: _prefetch,
 			behaviors: _behaviors,
+			returnsToTitle: _returnsToTitle,
 			children,
 			mix,
 			...rest
@@ -713,25 +740,48 @@ NovelPlayer.Title = Title;
 /**
  * The whole player as one component: every part in the classic layout, the six library screens
  * in the extras menu, the notifications, and keyboard, touch and gamepad controls. Its children
- * are drawn on the stage; given `titleScreen`, it opens on the title until the reader starts.
+ * are drawn on the stage; given `titleScreen`, it opens on the title and returns there as a play ends.
  *
  * @example <NovelPlayer.Default novel={novel} settings={stored}><NovelPlayer.Interaction interactions={INTERACTIONS}>{(frame) => <Fishing input={frame.input} />}</NovelPlayer.Interaction></NovelPlayer.Default>
  */
 NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.DefaultProps>) {
-	/** The play the reader began on the title screen, once they have. */
+	/** The play the reader began on the title screen, until they return to the title. */
 	let chosen: StartOptions | undefined;
-	/** The settings the reader changed on the title screen, which the play then starts with. */
+	/**
+	 * The settings the reader changed, which the title and the next play start with until the app
+	 * passes new ones.
+	 */
 	let changed: StoredSettings | undefined;
+	/**
+	 * What plays made since mount left: saves by slot and the latest persistent data, so the title
+	 * a play returns to offers them. A new `saves` or `start` prop from the app replaces them.
+	 */
+	let since: { saves: Record<string, GameState>; persistent?: Persistent } = { saves: {} };
+	let seen = {
+		saves: handle.props.saves,
+		start: handle.props.start,
+		settings: handle.props.settings,
+	};
 	return () => {
 		let { children, mix, titleScreen, ...rest } = handle.props;
+		if (rest.saves !== seen.saves) since = { ...since, saves: {} };
+		if (rest.start !== seen.start) since = { saves: since.saves };
+		if (rest.settings !== seen.settings) changed = undefined;
+		seen = { saves: rest.saves, start: rest.start, settings: rest.settings };
 		if (titleScreen !== undefined && chosen === undefined) {
 			let { screens, ...look } = titleScreen;
+			let saves =
+				Object.keys(since.saves).length === 0 ? rest.saves : { ...rest.saves, ...since.saves };
+			let start =
+				since.persistent === undefined
+					? rest.start
+					: { ...rest.start, persistent: since.persistent };
 			return (
 				<Title
 					{...look}
 					novel={rest.novel}
-					saves={rest.saves}
-					start={rest.start}
+					saves={saves}
+					start={start}
 					settings={changed ?? rest.settings}
 					labels={rest.labels}
 					mix={[
@@ -754,7 +804,24 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 				{...rest}
 				start={chosen ?? rest.start}
 				settings={changed ?? rest.settings}
-				mix={[keyboardControls(), touchControls(), gamepadControls(), mix]}
+				returnsToTitle={titleScreen !== undefined}
+				mix={[
+					keyboardControls(),
+					touchControls(),
+					gamepadControls(),
+					on("novel:settings", (event) => {
+						changed = event.settings;
+					}),
+					on("novel:save", (event) => {
+						since.saves[event.slot] = event.state;
+					}),
+					on("novel:title", (event) => {
+						if (event.persistent !== undefined) since.persistent = event.persistent;
+						chosen = undefined;
+						void handle.update();
+					}),
+					mix,
+				]}
 			>
 				<Stage>
 					<Captions />

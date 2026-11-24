@@ -72,6 +72,7 @@ export {
 	NovelSaveEvent,
 	NovelSettingsEvent,
 	NovelStartEvent,
+	NovelTitleEvent,
 } from "./ui/events.js";
 export { Extras } from "./ui/extras.js";
 export { Gallery } from "./ui/gallery.js";

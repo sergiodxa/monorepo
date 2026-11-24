@@ -1,6 +1,6 @@
 /**
  * The DOM events of a player: a save, a settings change and an ending from its root, which an
- * app stores; an interaction's completion, which `NovelPlayer.Interaction` answers the frame
+ * app stores, and a return to the title; an interaction's completion, which `NovelPlayer.Interaction` answers the frame
  * with; and the library screens' picks, whose default a listener may prevent. They all bubble.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -10,6 +10,7 @@
 import type { InteractionDeclaration, SceneDeclaration } from "../declarations.js";
 import type { Ending, GameState, ReplayScope } from "../frames.js";
 import type { StartOptions } from "../novel.js";
+import type { Persistent } from "../persistent.js";
 import type { SchemaInput } from "../types.js";
 
 import type { MemoryLine } from "./library.js";
@@ -24,6 +25,7 @@ declare global {
 		"novel:replay": NovelReplayEvent;
 		"novel:replay-voice": NovelReplayVoiceEvent;
 		"novel:start": NovelStartEvent;
+		"novel:title": NovelTitleEvent;
 	}
 }
 
@@ -163,5 +165,22 @@ export class NovelStartEvent extends Event {
 	constructor(start: StartOptions) {
 		super("novel:start", { bubbles: true });
 		this.start = start;
+	}
+}
+
+/**
+ * Dispatched as `novel:title` by a player given `returnsToTitle` when the reader leaves an ending,
+ * or a replay with no play to resume ends. `NovelPlayer.Default` shows its title screen again.
+ *
+ * @example on("novel:title", (event) => showTitle(event.persistent))
+ */
+export class NovelTitleEvent extends Event {
+	/** Persistent data as the play left it, for the title's library screens; `undefined` before any play. */
+	readonly persistent: Persistent | undefined;
+
+	/** @param persistent - Persistent data as the play left it. */
+	constructor(persistent: Persistent | undefined) {
+		super("novel:title", { bubbles: true });
+		this.persistent = persistent;
 	}
 }

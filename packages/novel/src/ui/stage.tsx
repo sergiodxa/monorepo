@@ -309,8 +309,8 @@ interface OutcomeProps {
 
 /**
  * Once the play finishes, the ending's name (when it has one) over a dimmed stage with a button
- * that plays again from the start; and an alert with the play's error, offering a retry when
- * the error stopped the play before its first stop.
+ * that plays again, or returns to the title under `returnsToTitle`; and an alert with the play's
+ * error, offering a retry when the error stopped the play before its first stop.
  */
 function Outcome(handle: Handle<OutcomeProps>) {
 	return () => {
@@ -344,7 +344,8 @@ function Outcome(handle: Handle<OutcomeProps>) {
 						)}
 						<button
 							type="button"
-							data-novel-play-again=""
+							data-novel-play-again={player.returnsToTitle ? undefined : ""}
+							data-novel-back-to-title={player.returnsToTitle ? "" : undefined}
 							mix={[
 								css({
 									padding: "1cqh 3cqw",
@@ -356,10 +357,13 @@ function Outcome(handle: Handle<OutcomeProps>) {
 									borderRadius: "0.6cqh",
 									cursor: "pointer",
 								}),
-								on("click", () => void player.restart()),
+								on("click", () => {
+									if (player.returnsToTitle) player.toTitle();
+									else void player.restart();
+								}),
 							]}
 						>
-							{player.labels.playAgain}
+							{player.returnsToTitle ? player.labels.backToTitle : player.labels.playAgain}
 						</button>
 					</div>
 				)}

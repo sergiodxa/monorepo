@@ -92,6 +92,8 @@ export interface NovelLabels {
 	selfVoicing: string;
 	retry: string;
 	playAgain: string;
+	/** The ending's button that returns to the title screen, in place of Play again. */
+	backToTitle: string;
 	timeLeft: string;
 	extras: string;
 	memories: string;
@@ -161,6 +163,7 @@ export const DEFAULT_LABELS: NovelLabels = {
 	selfVoicing: "Read text aloud",
 	retry: "Try again",
 	playAgain: "Play again",
+	backToTitle: "Back to title",
 	timeLeft: "Time left",
 	extras: "Extras",
 	memories: "Memories",

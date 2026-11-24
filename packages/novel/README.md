@@ -442,6 +442,7 @@ Owns a play and publishes it to the parts inside it; it draws nothing but its ch
 - `markup`: Line markup elements or `Trans.MarkupComponent`s beside `b`, `i`, `shake`, `speed` and `pause`
 - `behaviors`: Replaces any of the reader's behaviors (`reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`) with your own implementation of its interface; read once, at mount
 - `prefetch`: How many jumps ahead to prefetch modules, images, sounds, voices and music as the play enters a scene, or `false` (default `1`)
+- `returnsToTitle`: Hands the reader back to a title screen: the ending's button reads **Back to title** in place of Play again, and it, or a replay with no play to resume ending, dispatches `novel:title`
 - `children`: The parts
 
 ```tsx
@@ -480,7 +481,7 @@ The whole player in one component: every part below, notifications included, the
 </NovelPlayer.Default>
 ```
 
-Given `titleScreen={{ heading, background?, art?, footer?, screens? }}` it opens on `NovelPlayer.Title` and plays what the reader starts there, with the settings changed on the title; `start` is what every such play extends, and `mix` applies to the title while it shows.
+Given `titleScreen={{ heading, background?, art?, footer?, screens? }}` it opens on `NovelPlayer.Title` and plays what the reader starts there, with the settings changed on the title; `start` is what every such play extends, and `mix` applies to the title while it shows. When a play ends, the ending screen's button returns to the title, as does a replay begun there when it ends; the title then offers the saves and persistent data the play left, so Continue resumes the newest save and the library shows what was unlocked.
 
 ```tsx
 <NovelPlayer.Default
@@ -516,9 +517,9 @@ A save's scene title and the date it was saved in the reader's locale, as the sa
 
 What `handle.context.get(NovelPlayer)` answers inside a player: one stable object whose getters always read the current play, so a part or mixin can keep it from setup. It is a `TypedEventTarget` that dispatches `frame`, `phase` and `ending` as soon as each changes; the events carry no data, so a listener reads the getters.
 
-- State: `novel`, `element` (the root), `dialog` (the open dialog, or `null`), `frame`, `phase`, `ending`, `stage` (what the stage draws: the frame's, then the stage the story finished on), `state` (the story state at the current stop, extension slices included, one value per stop), `error`, `stalled`, `instant` (true while skipping or under reduced motion), `hidden`, `replaying`, `persistent`, `labels`, `locale`, `markup`, `ids` (each screen's dialog id) and `anchor` (the CSS anchor name on the root)
+- State: `novel`, `element` (the root), `dialog` (the open dialog, or `null`), `frame`, `phase`, `ending`, `stage` (what the stage draws: the frame's, then the stage the story finished on), `state` (the story state at the current stop, extension slices included, one value per stop), `error`, `stalled`, `instant` (true while skipping or under reduced motion), `hidden`, `replaying`, `returnsToTitle`, `persistent`, `labels`, `locale`, `markup`, `ids` (each screen's dialog id) and `anchor` (the CSS anchor name on the root)
 - Behaviors, typed by their interfaces: `reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`, plus `mixer` (`AudioMixer`) and `prefetcher` (`Prefetcher`)
-- Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument), `toggleFullscreen()`, `replay(scene, scope)`, `endReplay()`, `open(screen)`, `retry()` and `restart()` (a new play from the first scene, keeping persistent data)
+- Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument), `toggleFullscreen()`, `replay(scene, scope)`, `endReplay()`, `toTitle()` (dispatches `novel:title` with the play's persistent data), `open(screen)`, `retry()` and `restart()` (a new play from the first scene, keeping persistent data)
 
 ```tsx
 import type { Handle } from "remix/component";
@@ -550,7 +551,7 @@ function PhoneChoices(handle: Handle) {
 }
 ```
 
-#### Events: `NovelSaveEvent`, `NovelSettingsEvent`, `NovelEndingEvent`, `InteractionCompleteEvent`, `NovelReplayEvent`, `NovelReplayVoiceEvent` and `NovelStartEvent`
+#### Events: `NovelSaveEvent`, `NovelSettingsEvent`, `NovelEndingEvent`, `InteractionCompleteEvent`, `NovelReplayEvent`, `NovelReplayVoiceEvent`, `NovelStartEvent` and `NovelTitleEvent`
 
 The player dispatches the first three from its root, an interaction's component dispatches `novel:interaction:complete`, and the library screens dispatch the last two; they all bubble, so `on()` on the component or any ancestor hears them with typed fields. No component takes a callback prop:
 
@@ -560,6 +561,7 @@ The player dispatches the first three from its root, an interaction's component 
 - `novel:interaction:complete` (`interaction`, `output`): `new InteractionCompleteEvent(declaration, output)` finishes an interaction, with `output` typed by its schema; `NovelPlayer.Interaction` answers the frame with it once
 - `novel:replay` (`scene`, `scope`): The reader picked a chapter or scene in `ChapterSelect` or `SceneReplay`; inside a player the replay starts unless a listener calls `preventDefault()`
 - `novel:start` (`start`): The reader began a play on `NovelPlayer.Title`; `start` is the `StartOptions` to mount a player with
+- `novel:title` (`persistent`): A player given `returnsToTitle` hands the reader back to the title, with persistent data as the play left it
 - `novel:replay-voice` (`line`): The reader replayed a line's voice in `Memories`; it plays through the player's mixer, or outside one through the screen's own, unless a listener calls `preventDefault()`
 
 ```tsx
@@ -594,7 +596,7 @@ Input as mixins on the player, so a game applies only the controls it wants. Eac
 
 Each part is a member of `NovelPlayer` and is also exported under its own name. Every one renders a real element that takes `mix`, and renders nothing while it has nothing to show.
 
-- `NovelPlayer.Stage` (`Stage`): The 16:9 stage, letterboxed inside any box, with its children above the characters; a click finishes a transition, then the line being typed, then advances. `focus` (default `true`) enlarges and raises the speaker and dims everyone else. Given a `stage` prop it draws that still stage instead of the play, which is how `SlotThumbnail` works. Once the play finishes it shows the ending's name over the dimmed stage with a **Play again** button (`labels.playAgain`, `--novel-ending-button-*`) that calls `restart()`
+- `NovelPlayer.Stage` (`Stage`): The 16:9 stage, letterboxed inside any box, with its children above the characters; a click finishes a transition, then the line being typed, then advances. `focus` (default `true`) enlarges and raises the speaker and dims everyone else. Given a `stage` prop it draws that still stage instead of the play, which is how `SlotThumbnail` works. Once the play finishes it shows the ending's name over the dimmed stage with a **Play again** button (`labels.playAgain`, `--novel-ending-button-*`, `data-novel-play-again`) that calls `restart()`, or under `returnsToTitle` a **Back to title** one (`labels.backToTitle`, `data-novel-back-to-title`) that calls `toTitle()`
 - `NovelPlayer.Textbox` (`Textbox`): The line's box, a live region holding the whole line from the start; without children it draws `NamePlate`, `Line` and `NextIndicator`, and with children it draws those. The box and its line carry `data-novel-read` on a line read in an earlier playthrough
 - `NovelPlayer.NamePlate` (`NamePlate`), `NovelPlayer.Line` (`Line`) and `NovelPlayer.NextIndicator` (`NextIndicator`): The speaker's name in their color, the typed line with its markup, and the sign that the line is complete
 - `NovelPlayer.Captions` (`Captions`): The captions of the frame's sounds
@@ -688,7 +690,7 @@ interface NovelSettings {
 }
 ```
 
-`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`), the title screen (`newGame`, `continue`, `titleMenu`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`, `unknownName`).
+`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`), the title screen (`newGame`, `continue`, `titleMenu`, `backToTitle`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`, `unknownName`).
 
 #### `KEYMAP` and `gamepadActions(previous: readonly boolean[], current: readonly boolean[]): GamepadAction[]`
 
@@ -1106,7 +1108,7 @@ Place `<PulseProvider>` inside the player, around the parts that read `handle.co
 
 ## Pattern: A Title Screen
 
-`NovelPlayer.Default` opens on a title screen when given `titleScreen`, with the author's art, and swaps to the play the reader starts: a new game, Continue from the newest save, or a chapter replay. Restyle it through the `--novel-title-*` variables:
+`NovelPlayer.Default` opens on a title screen when given `titleScreen`, with the author's art, and swaps to the play the reader starts: a new game, Continue from the newest save, or a chapter replay. An ending, or the end of a replay begun there, brings the reader back to the title. Restyle it through the `--novel-title-*` variables:
 
 ```tsx
 import { NovelPlayer } from "@sdxc/novel/ui";
@@ -1123,7 +1125,7 @@ import { css } from "remix/component";
 />;
 ```
 
-A game that mounts its own player renders `NovelPlayer.Title` and starts a player from each `novel:start`, whose `start` holds the save to resume or the chapter to replay.
+A game that mounts its own player renders `NovelPlayer.Title` and starts a player from each `novel:start`, whose `start` holds the save to resume or the chapter to replay, and gives that player `returnsToTitle` to show the title again on each `novel:title`.
 
 ## Pattern: Achievements That Last Across Playthroughs
 

@@ -51,7 +51,8 @@ export interface DirectorHost {
 	/** The text the textbox shows, for auto mode's length and self-voicing. */
 	text(): string;
 	settings(): NovelSettings;
-	onEnding(ending: Ending): void;
+	/** Called once a play ends; `replay` is true when it was a replay with no play to resume. */
+	onEnding(ending: Ending, replay: boolean): void;
 	/** Called as soon as `frame`, `phase` or `ending` takes a new value, before the next render. */
 	changed(what: "frame" | "phase" | "ending"): void;
 	/** How many jumps ahead to prefetch on entering a scene, or `false` to prefetch nothing. */
@@ -240,7 +241,7 @@ export class Director {
 			this.phase = "idle";
 			this.reveal.clear();
 			await this.#host.render();
-			this.#host.onEnding(this.ending);
+			this.#host.onEnding(this.ending, true);
 			return;
 		}
 		let persistent = this.#play?.persistent;
@@ -394,13 +395,14 @@ export class Director {
 				await this.endReplay();
 				return;
 			}
+			let replayed = this.replaying;
 			this.replaying = false;
 			this.#endStage = play.stage;
 			this.ending = result.value;
 			this.phase = "idle";
 			this.reveal.clear();
 			await this.#host.render();
-			this.#host.onEnding(result.value);
+			this.#host.onEnding(result.value, replayed);
 			return;
 		}
 		let frame = result.value;
