@@ -1,113 +1,89 @@
 ---
 title: Saves, settings and unlocks
-description: Keep the reader's saves, settings and persistent data in the browser, hand them back to the player, and unlock an option on a second playthrough.
+description: Keep the reader's saves, settings and persistent data in the browser, open on a title screen, and unlock an option on a second playthrough.
 section:
     title: Visual novels
     order: 4.7
 order: 2
-lastUpdated: 2026-11-19
+lastUpdated: 2026-11-24
 outcomes:
-    - "Where the player hands you saves, settings and persistent data, and how to give them back"
+    - "How to keep saves, settings and persistent data in the browser, and open on a title screen"
     - "How to lock a menu option until an earlier playthrough reached an ending"
     - "When to raise the novel's version so older saves upgrade"
 ---
 
 The novel stores nothing: it emits JSON and your app decides where the reader's games live. This
 guide keeps the café's saves, settings and persistent data (lines read, endings reached, unlocked
-pictures and music) in `localStorage`, and uses that data to offer regulars "the usual" once they
-have reached the good ending.
+pictures and music) in `localStorage`, opens the café on a title screen, and uses that data to
+offer regulars "the usual" once they have reached the good ending.
 
 ```bash
 npm add @sdxc/novel @sdxc/result remix
 ```
 
-## Store what the player hands you
+## Keep it in the browser
 
 The player dispatches a bubbling `novel:save` event when the reader saves or the play autosaves,
-and `novel:settings` when a setting changes. The novel emits `persist` whenever its persistent
-data changes. This module keeps all three:
-
-```typescript {% title="resources/novel/storage.ts" %}
-import type { GameState } from "@sdxc/novel";
-import type { NovelSettings, StoredSettings } from "@sdxc/novel/ui";
-
-import { novel } from "~/app/initializers/novel";
-
-export interface Stored {
-	saves: Record<string, GameState>;
-	persistent: unknown;
-	settings: StoredSettings | undefined;
-}
-
-function read(key: string): unknown {
-	return JSON.parse(localStorage.getItem(key) ?? "null") ?? undefined;
-}
-
-function write(key: string, value: unknown) {
-	localStorage.setItem(key, JSON.stringify(value));
-}
-
-export function readStored(): Stored {
-	return {
-		saves: (read("novel:saves") ?? {}) as Record<string, GameState>,
-		persistent: read("novel:persistent"),
-		settings: read("novel:settings") as StoredSettings | undefined,
-	};
-}
-
-export function storeSave(slot: string, state: GameState) {
-	write("novel:saves", { ...readStored().saves, [slot]: state });
-}
-
-export function storeSettings(settings: NovelSettings) {
-	write("novel:settings", settings);
-}
-
-novel.on("persist", (persistent) => write("novel:persistent", persistent));
-```
-
-## Hand it back to the player
-
-The game reads storage once it runs in the browser, then passes it back through `start`, `saves`
-and `settings`, and listens to the player's events with `on()`:
+and `novel:settings` when a setting changes; the novel emits `persist` whenever its persistent
+data changes. `LocalStorageStore` keeps all three in `localStorage`: `read()` answers the player's
+`saves`, `settings` and `start`, and the `sync()` mixin stores every change from then on.
 
 ```tsx {% title="resources/components/game.tsx" %}
 import type { Handle } from "remix/component";
 
+import { LocalStorageStore } from "@sdxc/novel/storage/local-storage";
 import { NovelPlayer } from "@sdxc/novel/ui";
-import { on } from "remix/component";
 
 import { novel } from "~/app/initializers/novel";
-import type { Stored } from "~/resources/novel/storage";
-import { readStored, storeSave, storeSettings } from "~/resources/novel/storage";
+
+const STORAGE = new LocalStorageStore({ prefix: "cafe" });
 
 export function StoredGame(handle: Handle) {
-	let stored: Stored | undefined;
+	let stored: LocalStorageStore.Stored | undefined;
 	handle.queueTask(() => {
-		stored = readStored();
+		stored = STORAGE.read();
 		void handle.update();
 	});
 
 	return () =>
 		stored === undefined ? null : (
-			<NovelPlayer.Default
-				novel={novel}
-				start={{ persistent: stored.persistent }}
-				saves={stored.saves}
-				settings={stored.settings}
-				mix={[
-					on("novel:save", (event) => storeSave(event.slot, event.state)),
-					on("novel:settings", (event) => storeSettings(event.settings)),
-				]}
-			/>
+			<NovelPlayer.Default novel={novel} {...stored} mix={STORAGE.sync()} />
 		);
 }
 ```
 
 Render `StoredGame` inside the `IntlProvider` of the `Game` entry from
-[Make your first novel](/docs/visual-novels/first-novel). `start={{ from: stored.saves.quick }}`
-resumes the quick save instead of starting over. The player reads `start` once, so mount a new
-player, with a new `key`, to start another play.
+[Make your first novel](/docs/visual-novels/first-novel). It reads storage once the game runs in
+the browser, since the server has none. A private window or a full quota reads as nothing stored
+and the play goes on unsaved. The player reads `start` once, so mount a new player, with a new
+`key`, to start another play.
+
+## Open on a title screen
+
+Give `NovelPlayer.Default` a `titleScreen` and it opens on a title: your heading over your art,
+**New game**, **Continue** from the newest save once one exists, chapter select, the gallery,
+memories and the settings. It swaps to the play the reader starts, with any setting they changed
+there:
+
+```tsx {% title="resources/components/game.tsx" %}
+<NovelPlayer.Default
+	novel={novel}
+	{...stored}
+	titleScreen={{ heading: "The Café", art: <img src={keyArt} alt="" /> }}
+	mix={[
+		STORAGE.sync(),
+		css({
+			"--novel-title-heading-color": "#f6e6bd",
+			"--novel-title-button-radius": "0",
+		}),
+	]}
+/>
+```
+
+Every color, size and position on the title is a `--novel-title-*` variable, and its words are
+the `newGame`, `continue` and `titleMenu` labels. A game that mounts its own player renders
+`NovelPlayer.Title` and starts a player from each `novel:start` event, whose `start` holds the
+save to resume or the chapter to replay.
 
 > [!NOTE]
 > Storage is untrusted. A play started from a save validates it against your state schema first,
