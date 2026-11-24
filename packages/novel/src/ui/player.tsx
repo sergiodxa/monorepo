@@ -647,6 +647,8 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 						blockSize: "100%",
 						background: themeVar("--novel-letterbox"),
 						color: themeVar("--novel-color"),
+						userSelect: "none",
+						WebkitUserSelect: "none",
 						'&[data-dyslexia="true"]': {
 							"--novel-text-font": DYSLEXIA_FONT,
 							"--novel-text-tracking": "0.05em",

@@ -438,6 +438,16 @@ describe("NovelPlayer", () => {
 		expect(player.result.$('[data-id="ren"]')!.dataset["speaking"]).toBe("false");
 	});
 
+	test("selects no text when the reader clicks through quickly or drags across it", async () => {
+		let player = mount();
+		await shows(player, "Welcome to the café.");
+		let selection = window.getSelection()!;
+		selection.selectAllChildren(player.root());
+
+		expect(selection.toString().trim()).toBe("");
+		selection.removeAllRanges();
+	});
+
 	test("draws the next-line indicator clear of every quick menu button", async () => {
 		let player = mount();
 		await shows(player, "Welcome to the café.");

@@ -293,7 +293,7 @@ export function Stage(handle: Handle<Stage.Props>) {
  */
 function playerStage(player: NovelPlayer.Context) {
 	return [
-		css({ cursor: "pointer", userSelect: "none" }),
+		css({ cursor: "pointer" }),
 		on<HTMLElement, "click">("click", (event) => {
 			if ((event.target as Element).closest(INTERACTIVE) !== null) return;
 			if (player.hidden) player.hide(false);
