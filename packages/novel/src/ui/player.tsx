@@ -395,7 +395,9 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		document.addEventListener(
 			"visibilitychange",
 			() => {
-				if (document.hidden && director.auto.enabled) director.auto.toggle();
+				if (!document.hidden) return;
+				if (director.auto.enabled) director.auto.toggle();
+				autosave.leave?.();
 			},
 			{ signal: listenerSignal(handle) },
 		);

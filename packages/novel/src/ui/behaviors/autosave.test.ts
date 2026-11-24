@@ -46,4 +46,18 @@ describe(AutosaveModel, () => {
 		autosave.line();
 		expect(save).toHaveBeenCalledOnce();
 	});
+
+	test("saves when the reader leaves with lines shown since the last save", () => {
+		let autosave = new AutosaveModel({ every: 20 });
+		let save = vi.fn();
+		autosave.addEventListener("save", save);
+		autosave.leave();
+		expect(save).not.toHaveBeenCalled();
+		autosave.line();
+		autosave.leave();
+		expect(save).toHaveBeenCalledOnce();
+		expect(autosave.pending).toBe(0);
+		autosave.leave();
+		expect(save).toHaveBeenCalledOnce();
+	});
 });

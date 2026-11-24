@@ -235,6 +235,25 @@ describe("NovelPlayer behaviors", () => {
 		});
 	});
 
+	test("autosaves the line on screen when the tab is hidden", async () => {
+		let player = mount({ behaviors: { autosave: new AutosaveModel({ every: 20 }) } });
+		await shows(player, "One.");
+		player.click();
+		await shows(player, "Two.");
+		expect(player.saves).toHaveBeenCalledTimes(1);
+
+		Object.defineProperty(document, "hidden", { configurable: true, value: true });
+		try {
+			document.dispatchEvent(new Event("visibilitychange"));
+		} finally {
+			Reflect.deleteProperty(document, "hidden");
+		}
+
+		await vi.waitFor(() => expect(player.saves).toHaveBeenCalledTimes(2));
+		expect(player.saves.mock.lastCall?.[0]).toBe("auto");
+		expect(player.saves.mock.lastCall?.[1].position.line).toBe("opening.both");
+	});
+
 	test("lists the autosave on the load screen and keeps it load-only on the save screen", async () => {
 		let player = mount();
 		await shows(player, "One.");

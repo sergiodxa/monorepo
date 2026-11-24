@@ -27,6 +27,8 @@ export interface AutosaveBehavior extends TypedEventTarget<AutosaveBehavior.Even
 	chapter(): void;
 	/** Called as each line takes the stage. */
 	line(): void;
+	/** Called when the reader leaves the page, such as by switching tabs; it may ask for a save. */
+	leave?(): void;
 }
 
 export namespace AutosaveBehavior {
@@ -95,6 +97,11 @@ export class AutosaveModel
 	}
 
 	/** Starts the count over and asks the player to save. */
+	/** Saves when lines have shown since the last save, so the reader returns to the line they left. */
+	leave(): void {
+		if (this.#lines > 0) this.#save();
+	}
+
 	#save(): void {
 		this.#lines = 0;
 		this.dispatchEvent(new Event("save"));
