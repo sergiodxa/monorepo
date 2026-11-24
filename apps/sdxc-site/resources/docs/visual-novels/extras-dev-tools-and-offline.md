@@ -1,13 +1,13 @@
 ---
 title: Extras, dev tools and offline
-description: Put chapter select and the gallery on a title screen, edit scenes with hot reload in the dev tools, and let readers keep playing without a connection.
+description: Put chapter select and the gallery on a title screen, show the cast, edit scenes with hot reload in the dev tools, and let readers keep playing without a connection.
 section:
     title: Visual novels
     order: 4.7
 order: 12
 lastUpdated: 2026-11-24
 outcomes:
-    - "How a title screen places the library screens and starts a chapter replay"
+    - "How a title screen places the library screens, starts a chapter replay and shows the cast"
     - "How to run the dev tools beside the player in development only"
     - "What the offline worker caches, and how a page registers it"
 ---
@@ -22,8 +22,8 @@ npm add @sdxc/novel remix
 
 ## Show the extras on a title screen
 
-The player's Extras menu holds Memories, the gallery, the music room, the endings list, chapter
-select and scene replay, all read from persistent data. Each is also a component a title screen
+The player's Extras menu holds Memories, the gallery, the characters screen, the music room, the
+endings list, chapter select and scene replay, all read from persistent data. Each is also a component a title screen
 places itself, given the novel and the stored `persistent` value. Picking a chapter dispatches a
 bubbling `novel:replay` event with the `scene` to start and its `scope`:
 
@@ -66,6 +66,25 @@ export function TitleScreen(handle: Handle<{ persistent: unknown }>) {
 A replay finishes when the story leaves the chapter, saves nothing and shows no notifications.
 It names every character the reader met in any playthrough from its first line.
 Keep one `persistent` value while the screen shows, since the screens read it once per render.
+
+## Show the cast
+
+The Characters screen lists the cast beside the chosen character's portrait, name and
+description. Give a character a `description` message key for it to show:
+
+```typescript {% title="resources/novel/declarations.ts" %}
+export const CAST = cast({
+	mika: character({
+		name: "cast.mika",
+		description: "cast.mikaAbout",
+		sprites: { smile: mikaSmile, laugh: mikaLaugh },
+	}),
+});
+```
+
+A character stays `???` on the screen until they are `known` or a scene introduces them, and
+each sprite stays locked until the stage shows the character in it once, in any playthrough.
+In the player, a named speaker's name on the textbox opens the screen on them.
 
 ## Edit scenes with the dev tools
 
