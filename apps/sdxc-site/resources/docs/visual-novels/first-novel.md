@@ -195,6 +195,9 @@ export default createScene(SCENES.prologue.counter, (ctx) => [
   earlier playthrough read, chose and reached.
 - **An option** is a list of directives, or an object with `when`, `do` and more, which
   [Saves, settings and unlocks](/docs/visual-novels/saves-and-settings) uses.
+- **`exit(character)`** takes one character off stage, and `clear()` takes every character off
+  at once, each with the same optional transition (`ctx.clear({ transition: "fade" })`), so a
+  chapter's last scene hands the next one an empty stage.
 - **`ending(key)`** records the ending and finishes the play; `call(scene)` plays another scene
   and comes back.
 
