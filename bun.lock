@@ -2818,6 +2818,7 @@
   "patchedDependencies": {
     "@pitlane/assets@0.1.0": "patches/@pitlane%2Fassets@0.1.0.patch",
     "@vitest/browser@4.1.11": "patches/@vitest%2Fbrowser@4.1.11.patch",
+    "@remix-run/component@1.2.0": "patches/@remix-run%2Fcomponent@1.2.0.patch",
   },
   "overrides": {
     "miniflare": "5.20260926.0-alpha",

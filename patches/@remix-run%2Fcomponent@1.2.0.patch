@@ -1,0 +1,37 @@
+diff --git a/dist/runtime/mixins/mixin.js b/dist/runtime/mixins/mixin.js
+index 717817d29726750f68b13732f177da6a7ec0d165..7e6620fbce370173ecf450ba971e4780baaab607 100644
+--- a/dist/runtime/mixins/mixin.js
++++ b/dist/runtime/mixins/mixin.js
+@@ -29,7 +29,8 @@ export function createMixin(type, options = {}) {
+ export function resolveMixedProps(input) {
+     let state = input.state ?? createMixinRuntimeState();
+     let hostType = input.hostType;
+-    state.handle ??= new MixinHandleImpl(state, hostType, input.frame, input.scheduler, input.getContext ?? (() => undefined));
++    state.getContext = input.getContext;
++    state.handle ??= new MixinHandleImpl(state, hostType, input.frame, input.scheduler, (type) => state.getContext?.(type));
+     let handle = state.handle;
+     let runnerCount = 0;
+     let props = composeMixedProps(hostType, input.props, (descriptor, index, mixinProps) => {
+diff --git a/dist/runtime/reconcile.js b/dist/runtime/reconcile.js
+index 012ede9333b829f1e8201be87f1537d2e263f52f..3b75ac5892dfbe09ae1d9599ddbee71a6abeab56 100644
+--- a/dist/runtime/reconcile.js
++++ b/dist/runtime/reconcile.js
+@@ -428,7 +428,9 @@ function commitHostNode(node, parent, svg, dom, resolved) {
+     applyResolvedHostProps(committed, resolved);
+     return committed;
+ }
++const COMPONENT_PARENTS = new WeakMap();
+ function beginComponentNode(node, parent, svg, handle, context) {
++    COMPONENT_PARENTS.set(handle, parent);
+     let mounting = node;
+     mounting._parent = parent;
+     mounting._svg = svg;
+@@ -886,7 +888,7 @@ function diffComponent(curr, next, domParent, vParent, context, svg, anchor, cur
+             id: componentId,
+             frame,
+             type: next.type,
+-            getContext: (type) => findContextFromAncestry(vParent, type),
++            getContext: (type) => findContextFromAncestry(COMPONENT_PARENTS.get(handle), type),
+             getFrameByName(name) {
+                 let runtime = getFrameRuntime(frame);
+                 return runtime?.namedFrames.get(name);

@@ -33,6 +33,13 @@ const CSSOM_ENTRY = createRequire(
 ).resolve("@acemir/cssom");
 
 /**
+ * Chromium flags that let a browser test measure its own heap: `--expose-gc` puts `gc()` on the
+ * page, and precise memory info keeps `performance.memory.usedJSHeapSize` from being bucketed and
+ * delayed, so a soak test can force a collection and compare the live heap before and after.
+ */
+const MEMORY_PROBE_FLAGS = ["--js-flags=--expose-gc", "--enable-precise-memory-info"];
+
+/**
  * A test that needs a DOM runs in a real Chromium page through Vitest Browser Mode, so layout,
  * nested CSS, cascade layers and platform APIs behave as they do for a visitor. Such a file is
  * named `*.browser.test.ts(x)`; this builds the project that collects them for one workspace,
@@ -78,7 +85,11 @@ function browserProject(
 				headless: true,
 				provider: playwright(),
 				instances: [
-					{ browser: "chromium", exclude: [...defaultExclude, "**/*.touch.browser.test.ts?(x)"] },
+					{
+						browser: "chromium",
+						exclude: [...defaultExclude, "**/*.touch.browser.test.ts?(x)"],
+						provider: playwright({ launchOptions: { args: MEMORY_PROBE_FLAGS } }),
+					},
 					{
 						browser: "chromium",
 						name: `${name}-touch`,
