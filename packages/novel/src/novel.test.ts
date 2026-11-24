@@ -826,6 +826,40 @@ describe("exits", () => {
 		expect(lucky?.stage.exits).toBeUndefined();
 		expect(lucky?.stage.characters.map((entry) => entry.at)).toEqual(["3/3"]);
 	});
+
+	test("clears every character from the stage at once, each leaving with the transition", async () => {
+		let play = createTestPlay(
+			oneScene((ctx) => [
+				ctx.enter(CAST.mika, { at: "left", expression: "smile" }),
+				ctx.enter(CAST.ren, { at: "right", layers: { body: "casual", face: "neutral" } }),
+				ctx.narrate("opening.welcome"),
+				ctx.clear({ transition: "fade" }),
+				ctx.narrate("opening.lucky"),
+				ctx.enter(CAST.mika, { at: "center" }),
+				ctx.clear(),
+				ctx.narrate("opening.unlucky"),
+			]),
+		);
+		await play.advance();
+		let lucky = await play.advance();
+		expect(lucky?.stage.characters).toEqual([]);
+		expect(lucky?.stage.exits?.map((entry) => [entry.id, entry.at, entry.transition])).toEqual([
+			["mika", "1/3", "fade"],
+			["ren", "3/3", "fade"],
+		]);
+		let unlucky = await play.advance();
+		expect(unlucky?.stage.characters).toEqual([]);
+		expect(unlucky?.stage.exits?.map((entry) => [entry.id, entry.transition])).toEqual([
+			["mika", undefined],
+		]);
+	});
+
+	test("clears an empty stage without recording an exit", async () => {
+		let play = createTestPlay(oneScene((ctx) => [ctx.clear(), ctx.narrate("opening.welcome")]));
+		let welcome = await play.advance();
+		expect(welcome?.stage.characters).toEqual([]);
+		expect(welcome?.stage.exits).toBeUndefined();
+	});
 });
 
 describe("the stage a play finishes on", () => {
@@ -1347,6 +1381,23 @@ describe("check", () => {
 			},
 			{ code: "unreachable-scene", severity: "warning", scene: "failing" },
 		]);
+	});
+
+	test("frees every column a cleared stage held", async () => {
+		let story = scenes({ start: scene() });
+		let novel = createNovel({ scenes: story, cast: CAST, state: STATE, initial: story.start });
+		novel.map(
+			story.start,
+			createScene(story.start, (ctx) => [
+				ctx.enter(CAST.mika, { at: "left" }),
+				ctx.narrate("opening.welcome"),
+				ctx.clear(),
+				ctx.enter(CAST.ren, { at: "left", layers: { body: "school", face: "grin" } }),
+				ctx.narrate("opening.lucky"),
+			]),
+		);
+		let report = await check(novel);
+		expect(report.problems).toEqual([]);
 	});
 });
 

@@ -784,6 +784,9 @@ export class PlayEngine {
 			case "exit":
 				leave(stage, directive.character.id, directive.transition);
 				return;
+			case "clear":
+				for (let standing of stage.characters) leave(stage, standing.id, directive.transition);
+				return;
 			case "express":
 				stage.characters = stage.characters.map((entry) => {
 					if (entry.id !== directive.character.id) return entry;

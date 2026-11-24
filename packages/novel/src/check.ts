@@ -156,6 +156,9 @@ function walkList(list: readonly Directive[], walk: SceneWalk, slots: Map<string
 				declared(walk, directive.character);
 				slots.delete(directive.character.id);
 				break;
+			case "clear":
+				slots.clear();
+				break;
 			case "express":
 				declared(walk, directive.character);
 				break;

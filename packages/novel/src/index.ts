@@ -46,6 +46,7 @@ export type {
 	CallBuilder,
 	ChoiceOptions,
 	ChooseDirective,
+	ClearDirective,
 	CustomDirective,
 	Directive,
 	EndingDirective,

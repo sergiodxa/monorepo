@@ -69,6 +69,12 @@ export interface ExitDirective {
 	transition?: CharacterTransition;
 }
 
+/** Takes every character off stage at once, each with the same transition. */
+export interface ClearDirective {
+	type: "clear";
+	transition?: CharacterTransition;
+}
+
 /** Changes the sprite or layers a character shows. */
 export interface ExpressDirective {
 	type: "express";
@@ -256,6 +262,7 @@ export type Directive =
 	| HideDirective
 	| EnterDirective
 	| ExitDirective
+	| ClearDirective
 	| ExpressDirective
 	| MoveDirective
 	| SayDirective
@@ -446,6 +453,11 @@ export interface SceneDirectives<State = NovelState, Tools = PlayTools> {
 	): EnterDirective;
 	/** Takes a character off stage. */
 	exit(character: StagedCharacter, options?: { transition?: CharacterTransition }): ExitDirective;
+	/**
+	 * Takes every character off stage at once, each leaving with `transition` as `exit` would, so
+	 * the next chapter or scene starts on an empty stage.
+	 */
+	clear(options?: { transition?: CharacterTransition }): ClearDirective;
 	/** Changes the sprite or layers a character shows. */
 	express<Character extends StagedCharacter>(
 		character: Character,
@@ -612,6 +624,9 @@ const builders: SceneDirectives = {
 	},
 	exit(character, options = {}) {
 		return withTransition({ type: "exit", character }, options.transition);
+	},
+	clear(options = {}) {
+		return withTransition({ type: "clear" }, options.transition);
 	},
 	express(character, options) {
 		let picked = options as {
