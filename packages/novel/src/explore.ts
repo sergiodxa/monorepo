@@ -263,11 +263,15 @@ function sink(walk: Walk, path: ExplorePath, picker: Picker): PlaySink {
 	};
 }
 
-/** Records a scene a path entered, and checks its title and chapter title against the catalogs. */
+/** Records a scene a path entered, and checks its title, chapter and arc titles against the catalogs. */
 function enter(walk: Walk, scene: string): void {
 	walk.scenes.add(scene);
 	let declaration = walk.internals.scenes.get(scene);
-	translated(walk, [declaration?.title, declaration?.chapter?.title]);
+	translated(walk, [
+		declaration?.title,
+		declaration?.chapter?.title,
+		declaration?.chapter?.arc?.title,
+	]);
 }
 
 /**

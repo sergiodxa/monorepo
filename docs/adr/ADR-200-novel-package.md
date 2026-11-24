@@ -1245,6 +1245,14 @@ Made while opening the engine and the player to a game's own code:
   line always offers its voice; no prop switches a piece of a screen on or off. `onSelect` and `onReplayVoice` were
   removed, and internal parts use native events (`toggle` on a screen's `<dialog>`, `input`
   bubbling from `RangeSetting`'s slider) through `mix` instead of `onToggle` and `onInput`.
+- **A chapter inside a chapter makes the outer one an arc.** `scenes()` gives each chapter
+  declared inside another an `arc` (the nearest enclosing chapter's name and title), so a long
+  story groups its chapters ("First Year" holding chapters 1–12) without a new declaration. Only
+  the nearest enclosing chapter counts, and scenes an arc declares outside its chapters keep the
+  arc as their chapter. The chapter's own name still drives the `chapter` event, the persistent
+  `chapters` record and chapter replays, so a story without arcs plays and saves as before.
+  `readLibrary` adds `arcs`, the chapters grouped by arc, and `ChapterSelect`, `SceneReplay` and
+  `Memories` head each arc with its title (`data-arc`), locked until one of its chapters is reached.
 
 ### Blob sources, runtime picks, lasting data and player conveniences decisions
 

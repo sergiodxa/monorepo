@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 
 import { isFailure } from "@sdxc/result";
 
-import type { AssetSource, ChapterInfo, SceneDeclaration } from "../declarations.js";
+import type { ArcInfo, AssetSource, ChapterInfo, SceneDeclaration } from "../declarations.js";
 import type { Directive } from "../directives.js";
 import type { Speaker } from "../frames.js";
 import type { Novel } from "../novel.js";
@@ -58,6 +58,15 @@ export interface LibraryChapter {
 	scenes: LibraryScene[];
 }
 
+/** Consecutive chapters grouped by the arc they were declared in, in declaration order. */
+export interface LibraryArc {
+	/** The arc, or `null` for chapters (and loose scenes) declared outside every arc. */
+	arc: ArcInfo | null;
+	/** True once the reader has reached one of its chapters. */
+	reached: boolean;
+	chapters: LibraryChapter[];
+}
+
 /** A declared CG or music track, and whether the reader has unlocked it. */
 export interface LibraryAsset {
 	/** The asset's id (`images.letter`). */
@@ -77,6 +86,8 @@ export interface LibraryEnding {
 export interface NovelLibrary {
 	persistent: Persistent;
 	chapters: LibraryChapter[];
+	/** The same chapters grouped by arc; a story without arcs has one group whose `arc` is `null`. */
+	arcs: LibraryArc[];
 	images: LibraryAsset[];
 	music: LibraryAsset[];
 	/** Every ending key the mapped scenes hold, then any reached one they no longer hold. */
@@ -193,10 +204,27 @@ export async function readLibrary(
 	return {
 		persistent: record,
 		chapters,
+		arcs: groupArcs(chapters),
 		images: unlocks(internals.assets.values(), "image", record.unlocked.images),
 		music: unlocks(internals.assets.values(), "music", record.unlocked.music),
 		endings: [...endings].map((key) => ({ key, reached: record.endings.includes(key) })),
 	};
+}
+
+/** Groups consecutive chapters that share an arc, each group reached when one of its chapters is. */
+function groupArcs(chapters: readonly LibraryChapter[]): LibraryArc[] {
+	let arcs: LibraryArc[] = [];
+	for (let chapter of chapters) {
+		let arc = chapter.chapter?.arc ?? null;
+		let group = arcs.at(-1);
+		if (group === undefined || group.arc?.name !== arc?.name) {
+			group = { arc, reached: false, chapters: [] };
+			arcs.push(group);
+		}
+		group.chapters.push(chapter);
+		group.reached ||= chapter.reached;
+	}
+	return arcs;
 }
 
 /** Reports whether the reader read a line or took an option in a scene. */

@@ -9,6 +9,7 @@
  */
 
 export type {
+	ArcInfo,
 	AssetDeclaration,
 	AssetKind,
 	AssetMap,

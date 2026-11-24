@@ -182,6 +182,7 @@ export async function missingMessages(internals: NovelInternals): Promise<Missin
 	for (let declaration of internals.scenes.values()) {
 		report(declaration.title);
 		report(declaration.chapter?.title);
+		report(declaration.chapter?.arc?.title);
 	}
 	for (let declaration of internals.characters.values()) report(declaration.name);
 	for (let declaration of internals.assets.values()) report(declaration.caption);

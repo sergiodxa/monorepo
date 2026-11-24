@@ -27,6 +27,7 @@ export type { SkipBehavior } from "./ui/behaviors/skip.js";
 export type { Column } from "./ui/layout.js";
 export type { GamepadAction } from "./ui/input.js";
 export type {
+	LibraryArc,
 	LibraryAsset,
 	LibraryChapter,
 	LibraryEnding,

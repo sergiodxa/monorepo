@@ -158,6 +158,59 @@ describe(readLibrary, () => {
 		]);
 	});
 
+	test("groups chapters by arc, an arc reached once one of its chapters is", async () => {
+		let story = scenes({
+			y1: chapter({
+				title: "chapters.prologue",
+				scenes: {
+					ch01: chapter({ title: "titles.opening", scenes: { s1: scene() } }),
+					ch02: chapter({ scenes: { s1: scene() } }),
+				},
+			}),
+			y2: chapter({
+				title: "titles.cafe",
+				scenes: { ch03: chapter({ scenes: { s1: scene() } }) },
+			}),
+			epilogue: scene(),
+		});
+		let novel = createNovel({ scenes: story, cast: CAST, state: STATE, initial: story.y1.ch01.s1 });
+		for (let declared of [story.y1.ch01.s1, story.y1.ch02.s1, story.y2.ch03.s1, story.epilogue]) {
+			novel.map(
+				declared,
+				createScene(declared, (ctx) => [ctx.narrate("opening.welcome")]),
+			);
+		}
+		let library = await readLibrary(
+			novel,
+			{ ...persistent, seen: { "y1.ch02.s1:opening.welcome": {} }, chapters: ["y1.ch02"] },
+			"en",
+		);
+		expect(
+			library.arcs.map((group) => ({
+				arc: group.arc,
+				reached: group.reached,
+				chapters: group.chapters.map((entry) => [entry.chapter?.name ?? null, entry.reached]),
+			})),
+		).toEqual([
+			{
+				arc: { name: "y1", title: "chapters.prologue" },
+				reached: true,
+				chapters: [
+					["y1.ch01", false],
+					["y1.ch02", true],
+				],
+			},
+			{ arc: { name: "y2", title: "titles.cafe" }, reached: false, chapters: [["y2.ch03", false]] },
+			{ arc: null, reached: false, chapters: [[null, false]] },
+		]);
+		expect(library.arcs.flatMap((group) => group.chapters)).toEqual(library.chapters);
+	});
+
+	test("puts every chapter of a story without arcs in one arc-less group", async () => {
+		let library = await readLibrary(fixture(), persistent, "en");
+		expect(library.arcs).toEqual([{ arc: null, reached: true, chapters: library.chapters }]);
+	});
+
 	test("marks unlocked images and tracks, and every known ending reached or not", async () => {
 		let library = await readLibrary(fixture(), persistent, "ja-JP");
 		expect(library.images).toEqual([

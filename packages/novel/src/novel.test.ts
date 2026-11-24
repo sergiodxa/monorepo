@@ -34,6 +34,7 @@ import {
 	assets,
 	cast,
 	chapter,
+	chapterOf,
 	character,
 	createNovel,
 	createScene,
@@ -273,6 +274,35 @@ describe("declarations", () => {
 			title: "chapters.prologue",
 		});
 		expectTypeOf(SCENES.prologue.cafe.name).toEqualTypeOf<"prologue.cafe">();
+	});
+
+	test("makes a chapter that holds chapters their arc, the nearest one when nested deeper", () => {
+		let story = scenes({
+			y1: chapter({
+				title: "chapters.prologue",
+				scenes: {
+					opening: scene(),
+					ch01: chapter({ title: "titles.opening", scenes: { s1: scene() } }),
+					term: { ch02: chapter({ scenes: { s1: scene() } }) },
+					ch03: chapter({
+						title: "titles.cafe",
+						scenes: { trip: chapter({ title: "titles.opening", scenes: { s1: scene() } }) },
+					}),
+				},
+			}),
+		});
+		let arc = { name: "y1", title: "chapters.prologue" };
+		expect(story.y1.ch01.s1.name).toBe("y1.ch01.s1");
+		expect(story.y1.ch01.s1.chapter).toEqual({ name: "y1.ch01", title: "titles.opening", arc });
+		expect(story.y1.term.ch02.s1.chapter).toEqual({ name: "y1.term.ch02", arc });
+		expect(story.y1.ch03.trip.s1.chapter).toEqual({
+			name: "y1.ch03.trip",
+			title: "titles.opening",
+			arc: { name: "y1.ch03", title: "titles.cafe" },
+		});
+		expect(story.y1.opening.chapter).toEqual(arc);
+		expect(chapterOf(story.y1.ch01)).toEqual(story.y1.ch01.s1.chapter);
+		expect(JSON.parse(JSON.stringify(story.y1.ch01.s1.chapter))).toEqual(story.y1.ch01.s1.chapter);
 	});
 
 	test("names characters and assets by their keys", () => {
@@ -1180,6 +1210,37 @@ describe("events", () => {
 		]);
 	});
 
+	test("reports a chapter with its arc and records the chapter by its own name", async () => {
+		let story = scenes({
+			y1: chapter({
+				title: "chapters.prologue",
+				scenes: { ch01: chapter({ title: "titles.opening", scenes: { s1: scene() } }) },
+			}),
+		});
+		let novel = createNovel({ scenes: story, cast: CAST, state: STATE, initial: story.y1.ch01.s1 });
+		novel.map(
+			story.y1.ch01.s1,
+			createScene(story.y1.ch01.s1, (ctx) => [ctx.narrate("opening.welcome")]),
+		);
+		let chapters: unknown[] = [];
+		novel.on("chapter", (payload) => {
+			chapters.push(payload);
+		});
+		let play = createTestPlay(novel);
+		await play.advance();
+		expect(chapters).toEqual([
+			{
+				chapter: {
+					name: "y1.ch01",
+					title: "titles.opening",
+					arc: { name: "y1", title: "chapters.prologue" },
+				},
+				scene: "y1.ch01.s1",
+			},
+		]);
+		expect(play.persistent.chapters).toEqual(["y1.ch01"]);
+	});
+
 	test("reports a jump to an unmapped scene", async () => {
 		let novel = fixture();
 		let log = record(novel);
@@ -1410,5 +1471,26 @@ describe("explore", () => {
 		await replay.follow(report.deadEndMenus[0]?.steps ?? []);
 		expect(replay.events.map((event) => event.type)).toContain("error");
 		expect(replay.ending?.key).toBe("endings.bad");
+	});
+
+	test("checks the title of a scene's arc against the catalogs", async () => {
+		let story = scenes({
+			y1: chapter({
+				title: "titles.cafe",
+				scenes: { ch01: chapter({ title: "chapters.prologue", scenes: { s1: scene() } }) },
+			}),
+		});
+		let novel = createNovel({ scenes: story, cast: CAST, state: STATE, initial: story.y1.ch01.s1 });
+		novel.map(
+			story.y1.ch01.s1,
+			createScene(story.y1.ch01.s1, (ctx) => [ctx.narrate("opening.welcome")]),
+		);
+		let report = await explore(novel, {
+			messages: {
+				en: EN,
+				ja: { chapters: { prologue: "プロローグ" }, opening: { welcome: "ようこそ" } },
+			},
+		});
+		expect(report.missingMessages).toEqual({ ja: ["titles.cafe"] });
 	});
 });

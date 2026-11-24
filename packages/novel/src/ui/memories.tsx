@@ -1,8 +1,8 @@
 /**
- * Memories: every scene the reader has reached, grouped by chapter, with the lines read in it in
- * the order the scene declares them, each shown with the values it was read with, its speakers,
- * and its voice to play again as a `novel:replay-voice` event. Lines never read stay hidden, so
- * the screen spoils nothing.
+ * Memories: every scene the reader has reached, grouped by chapter and arc, with the lines read
+ * in it in the order the scene declares them, each shown with the values it was read with, its
+ * speakers, and its voice to play again as a `novel:replay-voice` event. Lines never read stay
+ * hidden, so the screen spoils nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,6 +20,7 @@ import type { Novel } from "../novel.js";
 import type { MemoryLine } from "./library.js";
 import type { NovelLabels } from "./settings.js";
 
+import { ArcSection, LibraryHeading } from "./arc-section.js";
 import { AudioMixer } from "./audio.js";
 import { NovelReplayVoiceEvent } from "./events.js";
 import { libraryReader, librarySource } from "./library.js";
@@ -37,7 +38,7 @@ export namespace Memories {
 		 * while the screen shows, since a new value reads the library again.
 		 */
 		persistent?: unknown;
-		labels?: Partial<Pick<NovelLabels, "loading" | "noMemories" | "replayVoice">>;
+		labels?: Partial<Pick<NovelLabels, "loading" | "locked" | "noMemories" | "replayVoice">>;
 	}
 }
 
@@ -100,12 +101,17 @@ export function Memories(handle: Handle<Memories.Props>) {
 			scrolledToNewest = true;
 			handle.queueTask(scrollToNewest);
 		}
-		let chapters = (library?.chapters ?? [])
-			.map((group) => ({
-				...group,
-				scenes: group.scenes.filter((entry) => entry.lines.length > 0),
+		let arcs = (library?.arcs ?? [])
+			.map((arc) => ({
+				...arc,
+				chapters: arc.chapters
+					.map((group) => ({
+						...group,
+						scenes: group.scenes.filter((entry) => entry.lines.length > 0),
+					}))
+					.filter((group) => group.scenes.length > 0),
 			}))
-			.filter((group) => group.scenes.length > 0);
+			.filter((arc) => arc.chapters.length > 0);
 		return (
 			<div
 				{...rest}
@@ -120,74 +126,89 @@ export function Memories(handle: Handle<Memories.Props>) {
 				]}
 			>
 				{library === undefined ? <p>{labels.loading}</p> : null}
-				{library !== undefined && chapters.length === 0 ? <p>{labels.noMemories}</p> : null}
-				{chapters.map((group) => (
-					<section
-						key={group.chapter?.name ?? ""}
-						data-chapter={group.chapter?.name}
-						mix={css({ display: "grid", gap: "0.75rem" })}
-					>
-						{group.chapter?.title === undefined ? null : (
-							<h3 mix={css({ margin: 0 })}>
-								<Message i18nKey={group.chapter.title} />
-							</h3>
-						)}
-						{group.scenes.map((entry) => (
-							<section
-								key={entry.scene.name}
-								data-scene={entry.scene.name}
-								mix={css({ display: "grid", gap: "0.5rem" })}
-							>
-								{entry.scene.title === undefined ? null : (
-									<h4 mix={css({ margin: 0, opacity: 0.8 })}>
-										<Message i18nKey={entry.scene.title} />
-									</h4>
-								)}
-								<ol
-									mix={css({
-										margin: 0,
-										padding: 0,
-										listStyle: "none",
-										display: "grid",
-										gap: "0.5rem",
-									})}
+				{library !== undefined && arcs.length === 0 ? <p>{labels.noMemories}</p> : null}
+				{arcs.map((arc) => {
+					let depth = arc.arc === null ? 0 : 1;
+					let sections = arc.chapters.map((group) => (
+						<section
+							key={group.chapter?.name ?? ""}
+							data-chapter={group.chapter?.name}
+							mix={css({ display: "grid", gap: "0.75rem" })}
+						>
+							{group.chapter?.title === undefined ? null : (
+								<LibraryHeading level={depth === 0 ? 3 : 4}>
+									<Message i18nKey={group.chapter.title} />
+								</LibraryHeading>
+							)}
+							{group.scenes.map((entry) => (
+								<section
+									key={entry.scene.name}
+									data-scene={entry.scene.name}
+									mix={css({ display: "grid", gap: "0.5rem" })}
 								>
-									{entry.lines.map((line) => (
-										<li
-											key={line.key}
-											data-key={line.key}
-											mix={css({ display: "flex", gap: "0.75rem", alignItems: "start" })}
-										>
-											<div mix={css({ flex: 1 })}>
-												{line.speakers.length === 0 ? null : (
-													<strong mix={css({ display: "block" })}>
-														{line.speakers.map((speaker, index) => (
-															<span key={speaker.id} style={{ color: speaker.color }}>
-																{index > 0 ? " & " : null}
-																<Message i18nKey={speaker.name} />
-															</span>
-														))}
-													</strong>
+									{entry.scene.title === undefined ? null : (
+										<LibraryHeading level={depth === 0 ? 4 : 5} faded>
+											<Message i18nKey={entry.scene.title} />
+										</LibraryHeading>
+									)}
+									<ol
+										mix={css({
+											margin: 0,
+											padding: 0,
+											listStyle: "none",
+											display: "grid",
+											gap: "0.5rem",
+										})}
+									>
+										{entry.lines.map((line) => (
+											<li
+												key={line.key}
+												data-key={line.key}
+												mix={css({ display: "flex", gap: "0.75rem", alignItems: "start" })}
+											>
+												<div mix={css({ flex: 1 })}>
+													{line.speakers.length === 0 ? null : (
+														<strong mix={css({ display: "block" })}>
+															{line.speakers.map((speaker, index) => (
+																<span key={speaker.id} style={{ color: speaker.color }}>
+																	{index > 0 ? " & " : null}
+																	<Message i18nKey={speaker.name} />
+																</span>
+															))}
+														</strong>
+													)}
+													<Message i18nKey={line.key} values={line.values} />
+												</div>
+												{line.voice === null ? null : (
+													<Button
+														size="sm"
+														variant="ghost"
+														aria-label={labels.replayVoice}
+														mix={on("click", (event) => replayVoice(event.currentTarget, line))}
+													>
+														<Volume2Icon size={16} />
+													</Button>
 												)}
-												<Message i18nKey={line.key} values={line.values} />
-											</div>
-											{line.voice === null ? null : (
-												<Button
-													size="sm"
-													variant="ghost"
-													aria-label={labels.replayVoice}
-													mix={on("click", (event) => replayVoice(event.currentTarget, line))}
-												>
-													<Volume2Icon size={16} />
-												</Button>
-											)}
-										</li>
-									))}
-								</ol>
-							</section>
-						))}
-					</section>
-				))}
+											</li>
+										))}
+									</ol>
+								</section>
+							))}
+						</section>
+					));
+					return arc.arc === null ? (
+						sections
+					) : (
+						<ArcSection
+							key={arc.arc.name}
+							arc={arc.arc}
+							reached={arc.reached}
+							lockedLabel={labels.locked}
+						>
+							{sections}
+						</ArcSection>
+					);
+				})}
 			</div>
 		);
 	};

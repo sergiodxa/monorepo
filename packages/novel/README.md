@@ -226,9 +226,22 @@ Declares one scene. Its title is the message key save slots and scene replay sho
 
 Groups scenes into a chapter, which chapter select lists by its title and the `chapter` event reports. The chapter's key is part of every scene name under it.
 
+A chapter declared inside another makes the outer one its arc: every scene's `chapter` carries `arc` (the outer chapter's `name` and `title`), and the library screens head each arc's chapters with its title. Only the nearest enclosing chapter is the arc, so a chapter three levels deep names the middle one. Scenes an arc declares outside its chapters keep the arc as their chapter.
+
+```ts
+let story = scenes({
+	y1: chapter({
+		title: "years.y1",
+		scenes: { ch01: chapter({ title: "chapters.ch01", scenes: { s1: scene() } }) },
+	}),
+});
+
+story.y1.ch01.s1.chapter; // { name: "y1.ch01", title: "chapters.ch01", arc: { name: "y1", title: "years.y1" } }
+```
+
 #### `chapterOf(group: object): ChapterInfo | undefined`
 
-The chapter a group of a scene map was declared as, or `undefined` for a plain group.
+The chapter a group of a scene map was declared as, with its `arc` when it has one, or `undefined` for a plain group.
 
 #### `character(options: CharacterOptions & ({ sprites } | { layers } | {})): CharacterLeaf`
 
@@ -387,7 +400,7 @@ The one error the engine reports, on `error` frames, `error` events and failed `
 - `Extension`, `AnyExtension`, `ExtensionOptions`, `ExtensionBaseOptions`, `StatelessExtensionOptions`, `LastingOptions`, `ExtensionContext`, `ExtensionScope`, `ExtensionMethods`, `ExtensionListeners`, `ExtensionState`, `ExtensionLasting`, `ExtensionPersistent`, `ExtensionCalls`: An extension and what `extension()` takes (with or without a per-play slice, and its lasting slice), the context and state its directives are written with, and the slices and calls every declared extension adds.
 - `StateRecord`, `StatePath<State>`, `PathValue<State, Path>`, `PathAccepting<State, Value>`, `DeepPartial<Value>`: State as any record, the dotted paths `set` takes, the value at a path, the paths whose value accepts an interaction's output, and the partial state a play or test starts from.
 - `PlayTools`, `StateCallback<Value>`, `ValuesInput<Values>`, `StoredCallback<Value>`, `PickWeight<Scene>`, `StoredWeight`: What callbacks receive beside the state (`random`, and `persistent` with every lasting slice), a read-only callback of the state, message values inline or computed, a callback as a directive stores it, and a `oneOf` weight as written and as stored.
-- `SceneTree`, `SceneLeaf`, `ChapterLeaf`, `SceneMap`, `SceneDeclaration<Name>`, `ChapterInfo`, `ChapterMarker`: The scene tree before and after `scenes()` names it, a named scene with its optional title and chapter, and the chapter a group is branded with.
+- `SceneTree`, `SceneLeaf`, `ChapterLeaf`, `SceneMap`, `SceneDeclaration<Name>`, `ChapterInfo`, `ArcInfo`, `ChapterMarker`: The scene tree before and after `scenes()` names it, a named scene with its optional title and chapter, the arc a chapter declared inside another carries, and the chapter a group is branded with.
 - `CharacterOptions`, `CharacterLeaf`, `CharacterDeclaration`, `CastMap`, `CharacterImage`, `SpriteImage`, `LayerImage`, `NoImage`, `StagedCharacter`: A character before and after `cast()` names it, the three shapes its images take, and a character that can stand on stage.
 - `AssetSource`, `AssetKind`, `AssetTree`, `AssetMap`, `AssetDeclaration<Kind>`, `CaptionedSound`: A file's URL, Blob or locale map, the five kinds of media, and an asset before and after `assets()` names it.
 - `InteractionLeaf`, `InteractionDeclaration`, `InteractionMap`: An interaction before and after `interactions()` names it.
@@ -598,11 +611,11 @@ How the reader experiences the play, kept in the browser and never in the game s
 
 #### `Memories`, `Gallery`, `MusicRoom` and `EndingsList`
 
-The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, opening its scrolling box at the newest one, and replays a voiced line's voice through the player's mixer, or outside one a mixer it makes for itself (a `novel:replay-voice` listener may prevent that and play it another way); `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens.
+The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, opening its scrolling box at the newest one, and replays a voiced line's voice through the player's mixer, or outside one a mixer it makes for itself (a `novel:replay-voice` listener may prevent that and play it another way); `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens. When the story has arcs, `Memories` heads each arc's chapters with its title in a `section` carrying `data-arc`.
 
 #### `ChapterSelect` and `SceneReplay`
 
-`ChapterSelect` lists the titled chapters and `SceneReplay` the titled scenes under their chapters. Picking one dispatches `novel:replay` with the `scene` to start from and its `scope`, `"chapter"` or `"scene"`. Inside a player the replay starts unless a listener prevents it; outside one, start it with `replay: event.scope`.
+`ChapterSelect` lists the titled chapters and `SceneReplay` the titled scenes under their chapters. When the story has arcs, both head each arc's chapters with its title in a `section` carrying `data-arc` and `data-reached`; an arc with no reached chapter shows the locked label, as a locked chapter does. Picking one dispatches `novel:replay` with the `scene` to start from and its `scope`, `"chapter"` or `"scene"`. Inside a player the replay starts unless a listener prevents it; outside one, start it with `replay: event.scope`.
 
 #### `AudioMixer`
 
@@ -610,7 +623,7 @@ Mixes the music, ambience, sound and voice channels through one `AudioContext`, 
 
 #### `readLibrary(novel: Novel, persistent: unknown, locale: string): Promise<NovelLibrary>`
 
-Everything the library screens show, read from the declarations and stored `Persistent` data. Every mapped scene loads, and one that fails is listed with `loaded: false` rather than failing the library.
+Everything the library screens show, read from the declarations and stored `Persistent` data. Every mapped scene loads, and one that fails is listed with `loaded: false` rather than failing the library. `chapters` groups the scenes by chapter, and `arcs` groups those chapters by arc, a story without arcs having one group whose `arc` is `null`.
 
 #### `sceneLines(directives: readonly Directive[]): SceneLine[]` and `endingKeys(directives: readonly Directive[]): string[]`
 
@@ -662,7 +675,7 @@ The scenery transitions the player draws itself as View Transitions (any other n
 - `RevealStatus`: Where a line's reveal stands.
 - `NovelThemeVariable`: A `--novel-*` variable name.
 - `NovelSettings`, `StoredSettings`, `AudioChannel`, `SkipMode`, `NovelLabels`, `PlayerAction`, `GamepadAction`: The settings and labels above, and what a key or a gamepad button does.
-- `NovelLibrary`, `LibraryChapter`, `LibraryScene`, `LibraryAsset`, `LibraryEnding`, `SceneLine`, `MemoryLine`: What `readLibrary` and `sceneLines` answer.
+- `NovelLibrary`, `LibraryArc`, `LibraryChapter`, `LibraryScene`, `LibraryAsset`, `LibraryEnding`, `SceneLine`, `MemoryLine`: What `readLibrary` and `sceneLines` answer.
 - `BacklogEntry`: A line as the backlog keeps it, with its values, speakers and voice for the reader's locale.
 - `MixerSnapshot`: What the mixer plays now, for a test or a panel.
 - `Phase`: Where the player is in a frame (`idle`, `staging`, `typing`, `waiting`, `replying`), as `data-phase` shows it.

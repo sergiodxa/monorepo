@@ -61,8 +61,19 @@ export interface SceneTree {
 	readonly [key: string]: SceneLeaf | ChapterLeaf | SceneTree;
 }
 
-/** A chapter as its scenes carry it: its name and its title's message key. */
+/**
+ * A chapter as its scenes carry it: its name, its title's message key and, for a chapter declared
+ * inside another chapter, that arc. It is plain data, so events, saves and screens pass it as JSON.
+ */
 export interface ChapterInfo {
+	readonly name: string;
+	readonly title?: string;
+	/** The nearest chapter declared around this one, which groups it with its sibling chapters. */
+	readonly arc?: ArcInfo;
+}
+
+/** A chapter that holds chapters, as each of them carries it: its name and its title's message key. */
+export interface ArcInfo {
 	readonly name: string;
 	readonly title?: string;
 }
@@ -117,7 +128,8 @@ export function scene(options: { title?: LineKey } = {}): SceneLeaf {
 
 /**
  * Groups scenes into a chapter, which a chapter select lists by its title. The chapter's key
- * is part of every scene name under it.
+ * is part of every scene name under it. A chapter declared inside another makes the outer one its
+ * arc, which the library screens head its chapters with; only the nearest enclosing chapter counts.
  *
  * @param options - The title's message key and the chapter's scenes.
  * @returns A leaf for {@link scenes} to name.
@@ -156,15 +168,36 @@ function buildScenes(
 		if (SCENE_LEAF in value) {
 			map[key] = declareScene(name, value as SceneLeaf, info);
 		} else if (CHAPTER_LEAF in value) {
-			let leaf = value as ChapterLeaf;
-			let chapterInfo: ChapterInfo =
-				leaf.title === undefined ? { name } : { name, title: leaf.title };
-			map[key] = { ...buildScenes(leaf.scenes, `${name}.`, chapterInfo), [CHAPTER]: chapterInfo };
+			let chapterInfo = declareChapter(name, value as ChapterLeaf, info);
+			map[key] = {
+				...buildScenes((value as ChapterLeaf).scenes, `${name}.`, chapterInfo),
+				[CHAPTER]: chapterInfo,
+			};
 		} else {
 			map[key] = buildScenes(value as SceneTree, `${name}.`, info);
 		}
 	}
 	return map;
+}
+
+/**
+ * The chapter a `chapter()` leaf declares, with the chapter around it as its arc; the arc keeps
+ * only its name and title, so a chapter three levels deep names the middle one alone.
+ */
+function declareChapter(
+	name: string,
+	leaf: ChapterLeaf,
+	enclosing: ChapterInfo | undefined,
+): ChapterInfo {
+	let info: { -readonly [Key in keyof ChapterInfo]: ChapterInfo[Key] } = { name };
+	if (leaf.title !== undefined) info.title = leaf.title;
+	if (enclosing !== undefined) {
+		info.arc =
+			enclosing.title === undefined
+				? { name: enclosing.name }
+				: { name: enclosing.name, title: enclosing.title };
+	}
+	return info;
 }
 
 /** The declaration of one scene under the name its path spells. */

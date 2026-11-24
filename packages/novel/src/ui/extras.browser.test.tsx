@@ -143,6 +143,53 @@ const STORED: Persistent = {
 	unlocked: { images: ["images.letter"], music: ["music.chill"] },
 };
 
+/** A story whose chapters are grouped in two arcs, each chapter holding one titled scene. */
+const ARC_SCENES = scenes({
+	y1: chapter({
+		title: "chapters.prologue",
+		scenes: {
+			ch01: chapter({
+				title: "titles.opening",
+				scenes: { s1: scene({ title: "titles.opening" }) },
+			}),
+		},
+	}),
+	y2: chapter({
+		title: "titles.cafe",
+		scenes: {
+			ch02: chapter({ title: "titles.cafe", scenes: { s1: scene({ title: "titles.cafe" }) } }),
+		},
+	}),
+});
+
+/** A novel over {@link ARC_SCENES}, each scene narrating one line. */
+function arcFixture() {
+	let novel = createNovel({
+		scenes: ARC_SCENES,
+		cast: CAST,
+		state: STATE,
+		initial: ARC_SCENES.y1.ch01.s1,
+	});
+	novel.map(
+		ARC_SCENES.y1.ch01.s1,
+		createScene(ARC_SCENES.y1.ch01.s1, (ctx) => [ctx.narrate("opening.welcome")]),
+	);
+	novel.map(
+		ARC_SCENES.y2.ch02.s1,
+		createScene(ARC_SCENES.y2.ch02.s1, (ctx) => [ctx.narrate("opening.lucky")]),
+	);
+	return novel;
+}
+
+/** A reader who read the first arc's only line. */
+const ARC_STORED: Persistent = {
+	seen: { "y1.ch01.s1:opening.welcome": {} },
+	chosen: [],
+	endings: [],
+	chapters: ["y1.ch01"],
+	unlocked: { images: [], music: [] },
+};
+
 let mounted: RenderResult | undefined;
 
 afterEach(() => {
@@ -231,6 +278,23 @@ describe("Memories", () => {
 		);
 	});
 
+	test("heads the chapters of each arc with the arc's title", async () => {
+		let result = mount(<Memories novel={arcFixture()} persistent={ARC_STORED} />);
+		let screen = await loaded(result, "[data-novel-memories]");
+		let arc = screen.querySelector<HTMLElement>('[data-arc="y1"]')!;
+		expect(arc.querySelector("h3")!.textContent).toBe("Prologue");
+		expect(arc.querySelector('[data-chapter="y1.ch01"] h4')!.textContent).toBe("Opening");
+		expect(arc.querySelector('[data-scene="y1.ch01.s1"] li')!.textContent).toBe("Welcome.");
+		expect(screen.querySelector('[data-arc="y2"]')).toBeNull();
+	});
+
+	test("lists the chapters of a story without arcs under no arc heading", async () => {
+		let result = mount(<Memories novel={fixture()} persistent={STORED} />);
+		let screen = await loaded(result, "[data-novel-memories]");
+		expect(screen.querySelector("[data-arc]")).toBeNull();
+		expect(screen.querySelector(':scope > [data-chapter="prologue"]')).not.toBeNull();
+	});
+
 	test("says there is nothing to remember on a first playthrough", async () => {
 		let result = mount(<Memories novel={fixture()} persistent={undefined} />);
 		let screen = await loaded(result, "[data-novel-memories]");
@@ -307,6 +371,51 @@ describe("ChapterSelect and SceneReplay", () => {
 		expect(cafe.textContent).toBe("Locked");
 		scenesList.querySelector<HTMLButtonElement>('[data-name="prologue.opening"] button')!.click();
 		expect(chosen).toHaveBeenLastCalledWith(SCENES.prologue.opening, "scene");
+	});
+
+	test("heads each arc's chapters and scenes with its title, locked until one is reached", async () => {
+		let chosen = vi.fn<(scene: unknown, scope: string) => void>();
+		let result = mount(
+			<div mix={on("novel:replay", (event) => chosen(event.scene, event.scope))}>
+				<ChapterSelect novel={arcFixture()} persistent={ARC_STORED} />
+				<SceneReplay novel={arcFixture()} persistent={ARC_STORED} />
+			</div>,
+		);
+		for (let selector of ["[data-novel-chapters]", "[data-novel-scenes]"]) {
+			let screen = await loaded(result, selector);
+			let reached = screen.querySelector<HTMLElement>('[data-arc="y1"]')!;
+			let locked = screen.querySelector<HTMLElement>('[data-arc="y2"]')!;
+			expect(reached.dataset["reached"]).toBe("true");
+			expect(reached.querySelector("h3")!.textContent).toBe("Prologue");
+			expect(locked.dataset["reached"]).toBe("false");
+			expect(locked.querySelector("h3")!.textContent).toBe("Locked");
+			expect(locked.querySelector<HTMLButtonElement>("button")!.disabled).toBe(true);
+		}
+		let chapters = result.$("[data-novel-chapters]")!;
+		chapters
+			.querySelector<HTMLButtonElement>('[data-arc="y1"] [data-name="y1.ch01"] button')!
+			.click();
+		expect(chosen).toHaveBeenLastCalledWith(ARC_SCENES.y1.ch01.s1, "chapter");
+		let scenesList = result.$("[data-novel-scenes]")!;
+		expect(scenesList.querySelector('[data-arc="y1"] h4')!.textContent).toBe("Opening");
+		scenesList.querySelector<HTMLButtonElement>('[data-name="y1.ch01.s1"] button')!.click();
+		expect(chosen).toHaveBeenLastCalledWith(ARC_SCENES.y1.ch01.s1, "scene");
+		expect(result.$("[data-novel-chapters] > ol")).toBeNull();
+	});
+
+	test("lists a story without arcs under no arc heading", async () => {
+		let result = mount(
+			<div>
+				<ChapterSelect novel={fixture()} persistent={STORED} />
+				<SceneReplay novel={fixture()} persistent={STORED} />
+			</div>,
+		);
+		let chapters = await loaded(result, "[data-novel-chapters]");
+		let scenesList = await loaded(result, "[data-novel-scenes]");
+		expect(chapters.querySelector("[data-arc]")).toBeNull();
+		expect(chapters.querySelector(':scope > ol [data-name="prologue"]')).not.toBeNull();
+		expect(scenesList.querySelector("[data-arc]")).toBeNull();
+		expect(scenesList.querySelector(":scope > section > h3")!.textContent).toBe("Prologue");
 	});
 });
 

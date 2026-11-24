@@ -16,8 +16,10 @@ import type { SceneDeclaration } from "../declarations.js";
 import type { ReplayScope } from "../frames.js";
 import type { Novel } from "../novel.js";
 
+import type { LibraryChapter } from "./library.js";
 import type { NovelLabels } from "./settings.js";
 
+import { ArcSection, LibraryHeading } from "./arc-section.js";
 import { NovelReplayEvent } from "./events.js";
 import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
@@ -101,8 +103,8 @@ function Entry(handle: Handle<EntryProps>) {
 }
 
 /**
- * Lists the titled chapters; picking a reached one dispatches `novel:replay` with its first
- * mapped scene and the `"chapter"` scope.
+ * Lists the titled chapters, under a heading per arc when the story has arcs; picking a reached
+ * one dispatches `novel:replay` with its first mapped scene and the `"chapter"` scope.
  *
  * @example <ChapterSelect novel={novel} persistent={stored} mix={on("novel:replay", (event) => start(event.scene))} />
  */
@@ -115,42 +117,75 @@ export function ChapterSelect(handle: Handle<ChapterSelect.Props>) {
 		if (source === undefined) return null;
 		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
 		let library = read(source.novel, source.persistent, intl(handle).locale);
-		let chapters = (library?.chapters ?? []).flatMap((group) => {
-			let first = group.scenes[0];
-			let title = group.chapter?.title;
-			return group.chapter === null || title === undefined || first === undefined
-				? []
-				: [{ name: group.chapter.name, title, reached: group.reached, scene: first.scene }];
-		});
+		let arcs = (library?.arcs ?? [])
+			.map((arc) => ({ ...arc, chapters: titledChapters(arc.chapters) }))
+			.filter((arc) => arc.chapters.length > 0);
 		return (
 			<div
 				{...rest}
 				data-novel-chapters=""
 				aria-busy={library === undefined ? "true" : undefined}
-				mix={mix}
+				mix={[css({ display: "grid", gap: "1rem" }), mix]}
 			>
 				{library === undefined ? <p>{labels.loading}</p> : null}
-				<ol mix={css({ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: "0.5rem" })}>
-					{chapters.map((chapter) => (
-						<Entry
-							key={chapter.name}
-							title={chapter.title}
-							name={chapter.name}
-							reached={chapter.reached}
+				{arcs.map((group) => {
+					let list = (
+						<ol
+							mix={css({
+								margin: 0,
+								padding: 0,
+								listStyle: "none",
+								display: "grid",
+								gap: "0.5rem",
+							})}
+						>
+							{group.chapters.map((chapter) => (
+								<Entry
+									key={chapter.name}
+									title={chapter.title}
+									name={chapter.name}
+									reached={chapter.reached}
+									lockedLabel={labels.locked}
+									scene={chapter.scene}
+									scope="chapter"
+								/>
+							))}
+						</ol>
+					);
+					return group.arc === null ? (
+						list
+					) : (
+						<ArcSection
+							key={group.arc.name}
+							arc={group.arc}
+							reached={group.reached}
 							lockedLabel={labels.locked}
-							scene={chapter.scene}
-							scope="chapter"
-						/>
-					))}
-				</ol>
+						>
+							{list}
+						</ArcSection>
+					);
+				})}
 			</div>
 		);
 	};
 }
 
+/** The chapters of a library group with a title and a mapped scene, each with its first scene. */
+function titledChapters(
+	chapters: readonly LibraryChapter[],
+): { name: string; title: string; reached: boolean; scene: SceneDeclaration }[] {
+	return chapters.flatMap((group) => {
+		let first = group.scenes[0];
+		let title = group.chapter?.title;
+		return group.chapter === null || title === undefined || first === undefined
+			? []
+			: [{ name: group.chapter.name, title, reached: group.reached, scene: first.scene }];
+	});
+}
+
 /**
- * Lists the titled scenes under their chapters; picking a reached one dispatches `novel:replay`
- * with it and the `"scene"` scope.
+ * Lists the titled scenes under their chapters, and those under their arcs; picking a reached one
+ * dispatches `novel:replay` with it and the `"scene"` scope.
  *
  * @example <SceneReplay novel={novel} persistent={stored} mix={on("novel:replay", (event) => start(event.scene))} />
  */
@@ -163,12 +198,17 @@ export function SceneReplay(handle: Handle<SceneReplay.Props>) {
 		if (source === undefined) return null;
 		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
 		let library = read(source.novel, source.persistent, intl(handle).locale);
-		let groups = (library?.chapters ?? [])
-			.map((group) => ({
-				chapter: group.chapter,
-				scenes: group.scenes.filter((entry) => entry.scene.title !== undefined),
+		let arcs = (library?.arcs ?? [])
+			.map((arc) => ({
+				...arc,
+				chapters: arc.chapters
+					.map((group) => ({
+						chapter: group.chapter,
+						scenes: group.scenes.filter((entry) => entry.scene.title !== undefined),
+					}))
+					.filter((group) => group.scenes.length > 0),
 			}))
-			.filter((group) => group.scenes.length > 0);
+			.filter((arc) => arc.chapters.length > 0);
 		return (
 			<div
 				{...rest}
@@ -177,36 +217,50 @@ export function SceneReplay(handle: Handle<SceneReplay.Props>) {
 				mix={[css({ display: "grid", gap: "1rem" }), mix]}
 			>
 				{library === undefined ? <p>{labels.loading}</p> : null}
-				{groups.map((group) => (
-					<section key={group.chapter?.name ?? ""} mix={css({ display: "grid", gap: "0.5rem" })}>
-						{group.chapter?.title === undefined ? null : (
-							<h3 mix={css({ margin: 0 })}>
-								<Message i18nKey={group.chapter.title} />
-							</h3>
-						)}
-						<ol
-							mix={css({
-								margin: 0,
-								padding: 0,
-								listStyle: "none",
-								display: "grid",
-								gap: "0.5rem",
-							})}
+				{arcs.map((arc) => {
+					let sections = arc.chapters.map((group) => (
+						<section key={group.chapter?.name ?? ""} mix={css({ display: "grid", gap: "0.5rem" })}>
+							{group.chapter?.title === undefined ? null : (
+								<LibraryHeading level={arc.arc === null ? 3 : 4}>
+									<Message i18nKey={group.chapter.title} />
+								</LibraryHeading>
+							)}
+							<ol
+								mix={css({
+									margin: 0,
+									padding: 0,
+									listStyle: "none",
+									display: "grid",
+									gap: "0.5rem",
+								})}
+							>
+								{group.scenes.map((entry) => (
+									<Entry
+										key={entry.scene.name}
+										title={entry.scene.title as string}
+										name={entry.scene.name}
+										reached={entry.reached}
+										lockedLabel={labels.locked}
+										scene={entry.scene}
+										scope="scene"
+									/>
+								))}
+							</ol>
+						</section>
+					));
+					return arc.arc === null ? (
+						sections
+					) : (
+						<ArcSection
+							key={arc.arc.name}
+							arc={arc.arc}
+							reached={arc.reached}
+							lockedLabel={labels.locked}
 						>
-							{group.scenes.map((entry) => (
-								<Entry
-									key={entry.scene.name}
-									title={entry.scene.title as string}
-									name={entry.scene.name}
-									reached={entry.reached}
-									lockedLabel={labels.locked}
-									scene={entry.scene}
-									scope="scene"
-								/>
-							))}
-						</ol>
-					</section>
-				))}
+							{sections}
+						</ArcSection>
+					);
+				})}
 			</div>
 		);
 	};
