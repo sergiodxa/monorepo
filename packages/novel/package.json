@@ -9,6 +9,7 @@
 		"./dev": "./src/dev.tsx",
 		"./offline": "./src/offline.ts",
 		"./offline/worker": "./src/offline/worker.ts",
+		"./storage/local-storage": "./src/storage/local-storage.ts",
 		"./test": "./src/test.ts",
 		"./ui": "./src/ui.tsx"
 	},

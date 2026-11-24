@@ -821,48 +821,37 @@ The cache policy as pure functions: a version's cache name (`sdxc-novel:<version
 - `OfflineOptions`: The options above.
 - `Strategy`, `PolicyInput`, `PolicyRequest`, `CachedEntry`: A strategy, what the policy reads, and a cached file with its `size` and last `used` stamp.
 
+### `@sdxc/novel/storage/local-storage`
+
+#### `LocalStorageStore`
+
+`new LocalStorageStore({ prefix? })` keeps a novel's saves, settings and persistent record in `localStorage` under `<prefix>:saves`, `<prefix>:settings` and `<prefix>:persistent` (`prefix` defaults to `"novel"`). `read()` answers `{ saves, settings, start }` to spread onto a player, `sync()` is the player mixin that stores each `novel:save`, `novel:settings` and `persist`, `putSave(slot, state)`, `putSettings(settings)` and `putPersistent(value)` store one value, and `clear()` removes all three. Every access is guarded: blocked or full storage reads as nothing stored and a write answers `false`.
+
 ## Pattern: Storing Saves, Settings And Persistent Data
 
-The novel stores nothing: it emits JSON and the app keeps it. Store saves from the `save` event and persistent data from `persist`, hand them back on the next start, and store settings from the player's `novel:settings` event. Storage is read once the entry runs in the browser.
+The novel stores nothing: it emits JSON and the app keeps it. `LocalStorageStore` keeps it in the browser: `read()` answers the player's `saves`, `settings` and `start`, and `sync()` stores every save, settings change and `persist` from then on. Read it once the entry runs in the browser.
 
 ```tsx
-import type { GameState } from "@sdxc/novel";
-import type { StoredSettings } from "@sdxc/novel/ui";
 import type { Handle } from "remix/component";
 
 import { NovelPlayer } from "@sdxc/novel/ui";
-import { clientEntry, on } from "remix/component";
+import { LocalStorageStore } from "@sdxc/novel/storage/local-storage";
+import { clientEntry } from "remix/component";
 
 import { novel } from "./novel.js";
 
-function read(key: string): unknown {
-	return JSON.parse(localStorage.getItem(key) ?? "null") ?? undefined;
-}
-
-novel.on("save", ({ slot, state }) => {
-	let saves = (read("saves") ?? {}) as Record<string, GameState>;
-	localStorage.setItem("saves", JSON.stringify({ ...saves, [slot]: state }));
-});
-novel.on("persist", (persistent) => localStorage.setItem("persistent", JSON.stringify(persistent)));
+let storage = new LocalStorageStore({ prefix: "cafe" });
 
 export let Game = clientEntry("/app/game.tsx#Game", function Game(handle: Handle) {
-	let saves: Record<string, GameState> | undefined;
+	let stored: LocalStorageStore.Stored | undefined;
 	handle.queueTask(() => {
-		saves = (read("saves") ?? {}) as Record<string, GameState>;
+		stored = storage.read();
 		void handle.update();
 	});
 
 	return () =>
-		saves === undefined ? null : (
-			<NovelPlayer.Default
-				novel={novel}
-				start={{ from: saves.quick, persistent: read("persistent") }}
-				saves={saves}
-				settings={read("settings") as StoredSettings | undefined}
-				mix={on("novel:settings", (event) =>
-					localStorage.setItem("settings", JSON.stringify(event.settings)),
-				)}
-			/>
+		stored === undefined ? null : (
+			<NovelPlayer.Default novel={novel} {...stored} mix={storage.sync()} />
 		);
 });
 ```
