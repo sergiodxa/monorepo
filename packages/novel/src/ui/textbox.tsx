@@ -136,7 +136,7 @@ export function NamePlate(handle: Handle<Textbox.PartProps>) {
 				{frame.speakers.map((speaker, index) => (
 					<span key={speaker.id} style={{ color: speaker.color }}>
 						{index > 0 ? " & " : null}
-						<Message i18nKey={speaker.name} />
+						{speaker.introduced ? <Message i18nKey={speaker.name} /> : player.labels.unknownName}
 					</span>
 				))}
 			</p>

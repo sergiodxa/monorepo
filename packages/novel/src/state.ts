@@ -125,6 +125,7 @@ export interface SavedGame {
 	state: unknown;
 	random: RandomState;
 	taken: string[];
+	introduced: string[];
 	meta: { scene: string; savedAt: string; playTime: number };
 }
 
@@ -160,6 +161,7 @@ export const SAVED_GAME_SCHEMA: Schema<unknown, SavedGame> = s.object({
 	state: s.any(),
 	random: RANDOM_STATE_SCHEMA,
 	taken: s.defaulted(s.array(s.string()), []),
+	introduced: s.defaulted(s.array(s.string()), []),
 	meta: s.object({
 		scene: s.string(),
 		savedAt: s.string(),

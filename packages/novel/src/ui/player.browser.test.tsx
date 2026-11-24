@@ -105,6 +105,7 @@ const CAST = cast({
 	mika: character({
 		name: "cast.mika",
 		color: "#e86a92",
+		known: true,
 		sprites: { smile: svg("pink"), neutral: svg("hotpink") },
 	}),
 	ren: character({
@@ -137,6 +138,7 @@ const OPENING = createScene(SCENES.prologue.opening, (ctx) => [
 	ctx.narrate("opening.welcome"),
 	ctx.say(CAST.mika, "opening.hello", { name: "Ada" }),
 	ctx.say([CAST.mika, CAST.ren], "opening.both"),
+	ctx.introduce(CAST.ren),
 	ctx.wait(150),
 	ctx.play(ASSETS.sounds.door),
 	ctx.say(CAST.ren, "opening.thinking"),
@@ -646,6 +648,27 @@ describe("NovelPlayer", () => {
 		expect(items[0]!.querySelector("button")).toBeNull();
 		await userEvent.keyboard(" ");
 		expect(player.line()).toBe("Hello, Ada!");
+	});
+
+	test("names each backlog line's speakers as that line showed them", async () => {
+		let player = mount();
+		await shows(player, "Welcome to the café.");
+		clickStage(player);
+		await shows(player, "Hello, Ada!");
+		clickStage(player);
+		await shows(player, "Together!");
+		expect(player.result.$("[data-novel-speaker]")!.textContent).toBe("Mika & ???");
+		clickStage(player);
+		await shows(player, "I should say something.");
+		expect(player.result.$("[data-novel-speaker]")!.textContent).toBe("Ren");
+		await userEvent.keyboard("l");
+		let backlog = (player.result.$("[data-novel-backlog]") as HTMLDialogElement)!;
+		await vi.waitFor(() => expect(backlog.open).toBe(true));
+		expect([...backlog.querySelectorAll("li strong")].map((name) => name.textContent)).toEqual([
+			"Mika",
+			"Mika & ???",
+			"Ren",
+		]);
 	});
 
 	test("quick saves through novel:save and quick loads the saved line", async () => {

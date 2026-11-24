@@ -97,8 +97,14 @@ describe(sceneLines, () => {
 	test("lists every line in document order with its speakers, branches included", () => {
 		expect(sceneLines(OPENING.directives)).toEqual([
 			{ key: "opening.welcome", speakers: [] },
-			{ key: "opening.hello", speakers: [{ id: "mika", name: "cast.mika", color: "#e86a92" }] },
-			{ key: "opening.lucky", speakers: [{ id: "mika", name: "cast.mika", color: "#e86a92" }] },
+			{
+				key: "opening.hello",
+				speakers: [{ id: "mika", name: "cast.mika", color: "#e86a92", introduced: true }],
+			},
+			{
+				key: "opening.lucky",
+				speakers: [{ id: "mika", name: "cast.mika", color: "#e86a92", introduced: true }],
+			},
 			{ key: "opening.unlucky", speakers: [] },
 			{ key: "opening.done", speakers: [] },
 		]);
@@ -152,7 +158,7 @@ describe(readLibrary, () => {
 			{ key: "opening.welcome", speakers: [], values: {}, voice: null },
 			{
 				key: "opening.hello",
-				speakers: [{ id: "mika", name: "cast.mika", color: "#e86a92" }],
+				speakers: [{ id: "mika", name: "cast.mika", color: "#e86a92", introduced: true }],
 				values: { name: "Ada" },
 				voice: "/voice/opening.hello.ogg",
 			},

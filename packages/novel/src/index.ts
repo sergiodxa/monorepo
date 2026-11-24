@@ -59,6 +59,7 @@ export type {
 	GotoBuilder,
 	GotoDirective,
 	HideDirective,
+	IntroduceDirective,
 	MenuOptions,
 	MoveDirective,
 	NarrateDirective,

@@ -474,7 +474,14 @@ function choices(
 
 /** Identifies a stop with the state that decides what follows it. */
 function visitKey(game: GameState): string {
-	return JSON.stringify([game.position, game.stack, game.state, game.taken, game.random]);
+	return JSON.stringify([
+		game.position,
+		game.stack,
+		game.state,
+		game.taken,
+		game.introduced,
+		game.random,
+	]);
 }
 
 /** Records a finished path and counts it toward `maxPaths`. */

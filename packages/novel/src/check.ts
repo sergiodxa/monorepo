@@ -35,6 +35,7 @@ export type CheckProblem =
 			characters: string[];
 	  }
 	| { code: "dead-end-menu"; severity: "warning"; scene: string; menu: string }
+	| { code: "known-introduced"; severity: "warning"; scene: string; character: string }
 	| { code: "unreachable-scene"; severity: "warning"; scene: string };
 
 /** What `check()` found. */
@@ -64,8 +65,8 @@ interface SceneWalk {
  * Checks every mapped scene: message keys used twice in a scene (which saves cannot tell
  * apart), `goto` and `call` (every candidate of a pick) to scenes with no module, notification
  * keys a catalog lacks, assets and characters the novel does not
- * declare, two characters in one column at once, menus whose every option is conditional, and
- * declared scenes the initial scene never reaches.
+ * declare, two characters in one column at once, menus whose every option is conditional, an
+ * `introduce` of a character declared `known`, and declared scenes the initial scene never reaches.
  *
  * @param novel - The novel, with its scenes mapped; lazy modules are loaded.
  * @returns The findings.
@@ -158,6 +159,17 @@ function walkList(list: readonly Directive[], walk: SceneWalk, slots: Map<string
 				break;
 			case "clear":
 				slots.clear();
+				break;
+			case "introduce":
+				declared(walk, directive.character);
+				if (directive.character.known) {
+					walk.problems.push({
+						code: "known-introduced",
+						severity: "warning",
+						scene: walk.scene,
+						character: directive.character.id,
+					});
+				}
 				break;
 			case "express":
 				declared(walk, directive.character);

@@ -1253,6 +1253,11 @@ Made while opening the engine and the player to a game's own code:
   the persistent `chapters` record and chapter replays. `readLibrary` adds `arcs`, the chapters
   grouped by arc, and `ChapterSelect`, `SceneReplay` and `Memories` head each arc with its title
   (`data-arc`), locked until one of its chapters is reached.
+- **Characters are unnamed until the story introduces them.** The textbox and backlog show the
+  `unknownName` label until `ctx.introduce(character)` runs, and `character({ known: true })`
+  names one from the first line. The ids introduced live in `GameState.introduced`, so saves,
+  loads and rollbacks agree, and each frame's `Speaker.introduced` records the name as that line
+  showed it, which the backlog keeps. `check()` warns about introducing a `known` character.
 
 ### Blob sources, runtime picks, lasting data and player conveniences decisions
 

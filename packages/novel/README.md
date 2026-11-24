@@ -31,7 +31,7 @@ import {
 
 let SCENES = scenes({ opening: scene(), cafe: scene({ title: "scenes.cafe" }) });
 let CAST = cast({
-	mika: character({ name: "cast.mika", sprites: { smile: "/mika/smile.webp" } }),
+	mika: character({ name: "cast.mika", known: true, sprites: { smile: "/mika/smile.webp" } }),
 });
 let ASSETS = assets({ backgrounds: { street: "/bg/street.webp" } });
 
@@ -252,7 +252,10 @@ The chapter a group of a scene map was declared as, with its `arc` when it has o
 
 Declares a character by its name's message key and an optional `color`, with a flat set of `sprites` (one shows at a time), `layers` drawn bottom to top (one variant each), or no image for a voice that never stands on stage.
 
+A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. `known: true` names a character from the first line, as the player, their family or anyone the reader already knows.
+
 ```typescript
+character({ name: "cast.you", known: true });
 character({
 	name: "cast.ren",
 	layers: { body: { school: "/ren/body.webp" }, face: { grin: "/ren/grin.webp" } },
@@ -320,6 +323,7 @@ Builds a scene's directives once, when its module loads. The scene is plain data
 - `hide(asset, { transition? })`: removes the full-screen image
 - `enter(character, { at, expression? | layers, transition? })`: puts a character in a column, showing a named sprite (the first by default) or a variant for every layer
 - `exit(character, { transition? })`: takes a character off stage
+- `introduce(character)`: names a character from the next line on; earlier lines showed the `unknownName` label. The play's state keeps the characters introduced, so saves, loads, rollbacks and the backlog show each line's speakers as they were
 - `clear({ transition? })`: takes every character off stage at once, each leaving with the transition, so a chapter's last scene can hand the next one an empty stage
 - `express(character, { expression | layers, transition? })`: changes the sprite, or any of the layers
 - `move(character, { at, transition? })`: moves a character to another column
@@ -410,10 +414,10 @@ The one error the engine reports, on `error` frames, `error` events and failed `
 - `CharacterOptions`, `CharacterLeaf`, `CharacterDeclaration`, `CastMap`, `CharacterImage`, `SpriteImage`, `LayerImage`, `NoImage`, `StagedCharacter`: A character before and after `cast()` names it, the three shapes its images take, and a character that can stand on stage.
 - `AssetSource`, `AssetKind`, `AssetTree`, `AssetMap`, `AssetDeclaration<Kind>`, `CaptionedSound`: A file's URL, Blob or locale map, the five kinds of media, and an asset before and after `assets()` names it.
 - `InteractionLeaf`, `InteractionDeclaration`, `InteractionMap`: An interaction before and after `interactions()` names it.
-- `SceneContext`, `SceneDirectives`, `SceneModule`, `GotoBuilder`, `CallBuilder`, `Directive`, and each directive (`ExtensionDirective`, `ShowDirective`, `HideDirective`, `EnterDirective`, `ExitDirective`, `ClearDirective`, `ExpressDirective`, `MoveDirective`, `SayDirective`, `NarrateDirective`, `ChooseDirective`, `WhenDirective`, `SetDirective`, `GotoDirective`, `CallDirective`, `PickDirective`, `BackDirective`, `WaitDirective`, `PlayDirective`, `StopDirective`, `CustomDirective`, `EndingDirective`, `NotifyDirective`, `RememberDirective`): The builder a scene receives, its callable `goto` and `call` with their `oneOf`, the module it returns, and the plain data each directive is.
+- `SceneContext`, `SceneDirectives`, `SceneModule`, `GotoBuilder`, `CallBuilder`, `Directive`, and each directive (`ExtensionDirective`, `ShowDirective`, `HideDirective`, `EnterDirective`, `ExitDirective`, `ClearDirective`, `IntroduceDirective`, `ExpressDirective`, `MoveDirective`, `SayDirective`, `NarrateDirective`, `ChooseDirective`, `WhenDirective`, `SetDirective`, `GotoDirective`, `CallDirective`, `PickDirective`, `BackDirective`, `WaitDirective`, `PlayDirective`, `StopDirective`, `CustomDirective`, `EndingDirective`, `NotifyDirective`, `RememberDirective`): The builder a scene receives, its callable `goto` and `call` with their `oneOf`, the module it returns, and the plain data each directive is.
 - `EnterOptions<Character>`, `ExpressOptions<Character>`, `ChoiceOptions`, `ChoiceOption`, `ChoiceOptionDirective`, `MenuOptions<Options>`: The options `enter`, `express` and `choose` take, typed from the character's images and the menu's keys, and an option as the directive stores it.
-- `Frame`, `StopFrame`, `FrameBase`, `LineFrame`, `ChoiceFrame`, `FrameOption`, `PauseFrame`, `CustomFrame`, `InteractionFrame`, `ErrorFrame`, `Speaker`, `Reply`: What a play yields. Every stop carries its complete stage and audio; a line knows its speakers, voice and whether the reader has `seen` it; a reply comes only from the frame's `advance()`, `choose()` or `complete()`, and one from any other frame is refused. An error frame carries the stop to answer, or `null` when `next()` retries.
-- `Ending`, `ReplayScope`, `StoryPosition`, `GameState`: How a play finished, how far a replay plays, a position anchored on a message key, and the play as JSON with its version, stack, stage, audio, state, random stream and play time.
+- `Frame`, `StopFrame`, `FrameBase`, `LineFrame`, `ChoiceFrame`, `FrameOption`, `PauseFrame`, `CustomFrame`, `InteractionFrame`, `ErrorFrame`, `Speaker`, `Reply`: What a play yields. Every stop carries its complete stage and audio; a line knows its speakers (each with whether it was `introduced`), voice and whether the reader has `seen` it; a reply comes only from the frame's `advance()`, `choose()` or `complete()`, and one from any other frame is refused. An error frame carries the stop to answer, or `null` when `next()` retries.
+- `Ending`, `ReplayScope`, `StoryPosition`, `GameState`: How a play finished, how far a replay plays, a position anchored on a message key, and the play as JSON with its version, stack, stage, audio, state, random stream, the characters introduced (`introduced`) and play time.
 - `Stage`, `StageScenery`, `StageCharacter`, `FrameStage`, `FrameCharacter`, `Position`, `Fraction`, `PositionAlias`, `SceneryTransition`, `CharacterTransition`: The stage as saved and as a frame shows it (with `speaking` focus and the characters that just left), columns as `n/d` or an alias, and the transition names; any name beyond the built-in ones is a CSS class the app styles.
 - `Audio`, `AudioTrack`, `AudioSound`: What each channel plays at a stop: one music loop, layered ambience, the one-shots since the previous stop, and the line's voice.
 - `Persistent`, `NovelPersistent`: What outlives a playthrough: lines read (with their values), options taken, endings, chapters and unlocked images and music, and that record with every extension's lasting slice.
@@ -651,7 +655,7 @@ interface NovelSettings {
 }
 ```
 
-`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`).
+`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`, `unknownName`).
 
 #### `KEYMAP` and `gamepadActions(previous: readonly boolean[], current: readonly boolean[]): GamepadAction[]`
 
@@ -705,7 +709,7 @@ Starts a play a test drives by naming each reply, from the initial scene or from
 
 #### `check(novel: Novel): Promise<CheckReport>`
 
-Reads every mapped scene without playing a line. Errors break a play or a save: a key used twice in a scene, a jump to a scene with no module, an undeclared asset or character, a module that fails to load. Warnings may be intended: two characters in one column, a menu whose every option is conditional, a scene the initial one never reaches. Every `oneOf` candidate counts as reachable and is checked for a module, and a `notify` key a catalog lacks is a `missing-message` error scoped to its scene and locale. `ok` is true when no problem is an error.
+Reads every mapped scene without playing a line. Errors break a play or a save: a key used twice in a scene, a jump to a scene with no module, an undeclared asset or character, a module that fails to load. Warnings may be intended: two characters in one column, a menu whose every option is conditional, an `introduce` of a character declared `known` (`known-introduced`), a scene the initial one never reaches. Every `oneOf` candidate counts as reachable and is checked for a module, and a `notify` key a catalog lacks is a `missing-message` error scoped to its scene and locale. `ok` is true when no problem is an error.
 
 #### `explore(novel: Novel, options?: ExploreOptions): Promise<ExploreReport>`
 

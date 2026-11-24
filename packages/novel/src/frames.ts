@@ -45,6 +45,11 @@ export interface Speaker {
 	/** The name's message key. */
 	name: string;
 	color?: string;
+	/**
+	 * True once the story introduced the character, and always for a `known` one; otherwise the
+	 * textbox shows the unknown-name label. A backlog entry keeps it as the line showed it.
+	 */
+	introduced: boolean;
 }
 
 /** A line of dialogue or narration. */
@@ -188,6 +193,8 @@ export interface GameState {
 	random: RandomState;
 	/** Options taken in this play, as `<scene>:<option>`, which `once` options read. */
 	taken: string[];
+	/** The ids of the characters `introduce` named in this play, in the order it named them. */
+	introduced: string[];
 	meta: {
 		/** The scene's title key, or its name when it has no title, for a save slot to show. */
 		scene: string;

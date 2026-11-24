@@ -98,7 +98,11 @@ export function Backlog(handle: Handle<Backlog.Props>) {
 										{entry.speakers.map((speaker, index) => (
 											<span key={speaker.id} style={{ color: speaker.color }}>
 												{index > 0 ? " & " : null}
-												<Message i18nKey={speaker.name} />
+												{speaker.introduced ? (
+													<Message i18nKey={speaker.name} />
+												) : (
+													labels.unknownName
+												)}
 											</span>
 										))}
 									</strong>

@@ -115,6 +115,7 @@ export interface Live {
 	state: StateRecord;
 	random: GameState["random"];
 	taken: string[];
+	introduced: string[];
 }
 
 /** A stop the play reached: the play as it stood before the stop was evaluated, and its frame. */
@@ -236,6 +237,7 @@ export class PlayEngine {
 			state: live.state as NovelState,
 			random: live.random,
 			taken: live.taken,
+			introduced: live.introduced,
 			meta: {
 				scene: scene?.title ?? live.cursor.scene,
 				savedAt: new Date().toISOString(),
@@ -611,6 +613,12 @@ export class PlayEngine {
 			case "remember":
 				this.#remember(directive.extension, directive.update, work.state, tools);
 				return null;
+			case "introduce":
+				this.#declared(directive.character);
+				if (!work.introduced.includes(directive.character.id)) {
+					work.introduced = [...work.introduced, directive.character.id];
+				}
+				return null;
 			case "notify": {
 				let values =
 					typeof directive.values === "function"
@@ -860,7 +868,14 @@ export class PlayEngine {
 					stage: frameStage(work.stage, ids),
 					audio: copyKeepingFiles({ ...work.audio, voice }),
 					speakers: speakers.map((speaker) =>
-						withDefined({ id: speaker.id, name: speaker.name }, { color: speaker.color }),
+						withDefined(
+							{
+								id: speaker.id,
+								name: speaker.name,
+								introduced: speaker.known || work.introduced.includes(speaker.id),
+							},
+							{ color: speaker.color },
+						),
 					),
 					key: directive.key,
 					values: shown,

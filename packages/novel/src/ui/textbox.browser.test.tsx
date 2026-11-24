@@ -22,6 +22,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { ChoiceFrame, FrameOption, LineFrame, Reply, StopFrame } from "../frames.js";
 import type { Novel } from "../novel.js";
 
+import type { NovelLabels } from "./settings.js";
+
 import { timeoutOption } from "./behaviors/countdown.js";
 import { NovelPlayer } from "./player.js";
 import { Captions } from "./textbox.js";
@@ -86,9 +88,13 @@ function stub(frames: StopFrame[]): Novel {
 }
 
 /** Plays `frames` in a player holding a stage with the textbox and the choice menu. */
-function play(frames: StopFrame[], textSpeed: number): RenderResult {
+function play(
+	frames: StopFrame[],
+	textSpeed: number,
+	labels: Partial<NovelLabels> = {},
+): RenderResult {
 	return mount(
-		<NovelPlayer novel={stub(frames)} settings={{ textSpeed }} prefetch={false}>
+		<NovelPlayer novel={stub(frames)} settings={{ textSpeed }} labels={labels} prefetch={false}>
 			<NovelPlayer.Stage>
 				<NovelPlayer.Textbox />
 				<NovelPlayer.Choices />
@@ -142,8 +148,8 @@ describe("Textbox", () => {
 				line("line.named", {
 					values: { name: "Ada" },
 					speakers: [
-						{ id: "mika", name: "cast.mika", color: "#e86a92" },
-						{ id: "ren", name: "cast.ren" },
+						{ id: "mika", name: "cast.mika", color: "#e86a92", introduced: true },
+						{ id: "ren", name: "cast.ren", introduced: true },
 					],
 				}),
 			],
@@ -155,6 +161,21 @@ describe("Textbox", () => {
 		expect(text.textContent).toBe("Hi, Ada!");
 		expect(result.$("[data-novel-textbox]")!.getAttribute("aria-live")).toBe("polite");
 		expect(result.$("[data-novel-next]")).not.toBeNull();
+	});
+
+	test("names a speaker the story has not introduced with the unknown-name label", async () => {
+		let speakers = [
+			{ id: "mika", name: "cast.mika", color: "#e86a92", introduced: false },
+			{ id: "ren", name: "cast.ren", introduced: true },
+		];
+		let unknown = play([line("line.plain", { speakers })], 0);
+		await waiting(unknown);
+		expect(unknown.$("[data-novel-speaker]")!.textContent).toBe("??? & Ren");
+		expect(unknown.$("[data-novel-speaker] span")!.style.color).toBe("rgb(232, 106, 146)");
+		mounted?.cleanup();
+		let relabeled = play([line("line.plain", { speakers })], 0, { unknownName: "Stranger" });
+		await waiting(relabeled);
+		expect(relabeled.$("[data-novel-speaker]")!.textContent).toBe("Stranger & Ren");
 	});
 
 	test("maps b, i and shake markup onto elements", async () => {

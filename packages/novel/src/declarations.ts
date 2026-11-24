@@ -312,6 +312,8 @@ export interface CharacterLeaf<Image extends CharacterImage = CharacterImage> {
 	readonly name: string;
 	/** The name's color, for a textbox that tints the speaker. */
 	readonly color?: string;
+	/** True for a character the textbox names from the first line, before any introduction. */
+	readonly known: boolean;
 	readonly image: Image;
 }
 
@@ -329,6 +331,11 @@ export interface CharacterDeclaration<
 	readonly id: Id;
 	readonly name: string;
 	readonly color?: string;
+	/**
+	 * True for a character the textbox names from the first line; any other shows as unknown until
+	 * a scene runs `introduce` for it.
+	 */
+	readonly known: boolean;
 	readonly image: Image;
 }
 
@@ -337,6 +344,12 @@ export interface CharacterOptions {
 	/** The name's message key. */
 	name: LineKey;
 	color?: string;
+	/**
+	 * Names the character from the first line, as the player, their family or anyone the reader
+	 * already knows; any other character shows as unknown until a scene runs `introduce`.
+	 * @default false
+	 */
+	known?: boolean;
 }
 
 /**
@@ -377,7 +390,12 @@ export function character(
 	let image: CharacterImage = { kind: "none" };
 	if (options.sprites !== undefined) image = { kind: "sprites", sprites: options.sprites };
 	else if (options.layers !== undefined) image = { kind: "layers", layers: options.layers };
-	let leaf: CharacterLeaf = { [CHARACTER]: "leaf", name: options.name, image };
+	let leaf: CharacterLeaf = {
+		[CHARACTER]: "leaf",
+		name: options.name,
+		known: options.known === true,
+		image,
+	};
 	return options.color === undefined ? leaf : { ...leaf, color: options.color };
 }
 

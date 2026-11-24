@@ -104,6 +104,8 @@ export interface NovelLabels {
 	locked: string;
 	/** Shown in place of an ending's name until the reader reaches it. */
 	unknownEnding: string;
+	/** Shown in place of a speaker's name until the story introduces them. */
+	unknownName: string;
 	/** What Memories says before the reader has read a line. */
 	noMemories: string;
 	play: string;
@@ -164,6 +166,7 @@ export const DEFAULT_LABELS: NovelLabels = {
 	loading: "Loading…",
 	locked: "Locked",
 	unknownEnding: "???",
+	unknownName: "???",
 	noMemories: "Nothing to remember yet.",
 	play: "Play",
 	stop: "Stop",

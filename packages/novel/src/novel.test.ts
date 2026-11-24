@@ -110,6 +110,7 @@ const CAST = cast({
 	mika: character({
 		name: "cast.mika",
 		color: "#e86a92",
+		known: true,
 		sprites: { smile: "/mika/smile.webp", neutral: "/mika/neutral.webp" },
 	}),
 	ren: character({
@@ -119,7 +120,7 @@ const CAST = cast({
 			face: { neutral: "/ren/face-neutral.webp", grin: "/ren/face-grin.webp" },
 		},
 	}),
-	player: character({ name: "cast.player" }),
+	player: character({ name: "cast.player", known: true }),
 });
 
 const ASSETS = assets({
@@ -397,7 +398,9 @@ describe("playing through the generator", () => {
 		expect(welcome.audio.music).toEqual({ id: "music.chill", src: "/music/chill.ogg" });
 
 		let hello = line(await advance(play, welcome));
-		expect(hello.speakers).toEqual([{ id: "mika", name: "cast.mika", color: "#e86a92" }]);
+		expect(hello.speakers).toEqual([
+			{ id: "mika", name: "cast.mika", color: "#e86a92", introduced: true },
+		]);
 		expect(hello.values).toEqual({ name: "Ada" });
 		expect(hello.voice).toBe("/voice/mika/opening.hello.ogg");
 		expect(hello.audio.voice).toBe("/voice/mika/opening.hello.ogg");
@@ -859,6 +862,60 @@ describe("exits", () => {
 		let welcome = await play.advance();
 		expect(welcome?.stage.characters).toEqual([]);
 		expect(welcome?.stage.exits).toBeUndefined();
+	});
+});
+
+describe("introductions", () => {
+	/** A scene where Ren speaks once unnamed, is introduced, then speaks twice by name. */
+	function introducing() {
+		return oneScene((ctx) => [
+			ctx.say(CAST.ren, "opening.welcome"),
+			ctx.introduce(CAST.ren),
+			ctx.say([CAST.ren, CAST.player], "opening.lucky"),
+			ctx.say(CAST.ren, "opening.unlucky"),
+		]);
+	}
+
+	test("names a character once the story introduces them, and a known one from the start", async () => {
+		let play = createTestPlay(introducing());
+		let welcome = line((await play.advance()) as Frame);
+		expect(welcome.speakers).toEqual([{ id: "ren", name: "cast.ren", introduced: false }]);
+		expect(play.play.state.introduced).toEqual([]);
+
+		let lucky = line((await play.advance()) as Frame);
+		expect(lucky.speakers.map((speaker) => [speaker.id, speaker.introduced])).toEqual([
+			["ren", true],
+			["player", true],
+		]);
+		expect(play.play.state.introduced).toEqual(["ren"]);
+	});
+
+	test("keeps introductions in saves and takes them back on a rollback", async () => {
+		let play = createTestPlay(introducing());
+		await play.advance();
+		await play.advance();
+		let saved = JSON.parse(JSON.stringify(play.play.state)) as GameState;
+		expect(saved.introduced).toEqual(["ren"]);
+
+		let resumed = unwrap(introducing().start({ from: saved }));
+		let lucky = line(frameOf(await resumed.next()));
+		expect(lucky.speakers[0]?.introduced).toBe(true);
+
+		let welcome = await play.play.rollback();
+		expect(welcome?.type === "line" && welcome.speakers[0]?.introduced).toBe(false);
+		expect(play.play.state.introduced).toEqual([]);
+	});
+
+	test("loads a save from before introductions with every character still unnamed", async () => {
+		let play = createTestPlay(introducing());
+		await play.advance();
+		await play.advance();
+		let { introduced: _introduced, ...older } = JSON.parse(
+			JSON.stringify(play.play.state),
+		) as GameState;
+		let resumed = unwrap(introducing().start({ from: older }));
+		let lucky = line(frameOf(await resumed.next()));
+		expect(lucky.speakers.map((speaker) => speaker.introduced)).toEqual([false, true]);
 	});
 });
 
@@ -1398,6 +1455,24 @@ describe("check", () => {
 		);
 		let report = await check(novel);
 		expect(report.problems).toEqual([]);
+	});
+
+	test("warns about introducing a character declared known", async () => {
+		let story = scenes({ start: scene() });
+		let novel = createNovel({ scenes: story, cast: CAST, state: STATE, initial: story.start });
+		novel.map(
+			story.start,
+			createScene(story.start, (ctx) => [
+				ctx.introduce(CAST.ren),
+				ctx.introduce(CAST.player),
+				ctx.narrate("opening.welcome"),
+			]),
+		);
+		let report = await check(novel);
+		expect(report.ok).toBe(true);
+		expect(report.problems).toEqual([
+			{ code: "known-introduced", severity: "warning", scene: "start", character: "player" },
+		]);
 	});
 });
 

@@ -468,6 +468,7 @@ export class Novel {
 			state: state.data,
 			random: createRandom(options.seed ?? systemSeed()).state(),
 			taken: [],
+			introduced: [],
 		};
 		return success({ live, playTime: 0 });
 	}
@@ -503,6 +504,7 @@ export class Novel {
 			state: state.data,
 			random: game.random,
 			taken: game.taken,
+			introduced: game.introduced,
 		};
 		return success({ live, playTime: game.meta.playTime });
 	}

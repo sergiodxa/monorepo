@@ -75,6 +75,12 @@ export interface ClearDirective {
 	transition?: CharacterTransition;
 }
 
+/** Makes the story introduce a character, whose name the textbox shows from then on. */
+export interface IntroduceDirective {
+	type: "introduce";
+	character: CharacterDeclaration;
+}
+
 /** Changes the sprite or layers a character shows. */
 export interface ExpressDirective {
 	type: "express";
@@ -263,6 +269,7 @@ export type Directive =
 	| EnterDirective
 	| ExitDirective
 	| ClearDirective
+	| IntroduceDirective
 	| ExpressDirective
 	| MoveDirective
 	| SayDirective
@@ -458,6 +465,11 @@ export interface SceneDirectives<State = NovelState, Tools = PlayTools> {
 	 * the next chapter or scene starts on an empty stage.
 	 */
 	clear(options?: { transition?: CharacterTransition }): ClearDirective;
+	/**
+	 * Introduces a character: lines after it show the character's name, where earlier lines showed
+	 * the unknown-name label. The play's state keeps it, so saves, loads and rollbacks agree.
+	 */
+	introduce(character: CharacterDeclaration): IntroduceDirective;
 	/** Changes the sprite or layers a character shows. */
 	express<Character extends StagedCharacter>(
 		character: Character,
@@ -627,6 +639,9 @@ const builders: SceneDirectives = {
 	},
 	clear(options = {}) {
 		return withTransition({ type: "clear" }, options.transition);
+	},
+	introduce(character) {
+		return { type: "introduce", character };
 	},
 	express(character, options) {
 		let picked = options as {

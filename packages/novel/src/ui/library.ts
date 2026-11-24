@@ -26,7 +26,10 @@ import { resolveSource } from "./source.js";
 /** A line as a scene's array declares it: its key and who says it, before anyone reads it. */
 export interface SceneLine {
 	key: string;
-	/** The characters saying it, none for narration. */
+	/**
+	 * The characters saying it, none for narration; each one named, since the library lists lines
+	 * the reader has already read.
+	 */
 	speakers: Speaker[];
 }
 
@@ -111,8 +114,8 @@ export function sceneLines(directives: readonly Directive[]): SceneLine[] {
 		if (directive.type === "say" && !lines.has(directive.key)) {
 			let speakers = directive.speakers.map((speaker) =>
 				speaker.color === undefined
-					? { id: speaker.id, name: speaker.name }
-					: { id: speaker.id, name: speaker.name, color: speaker.color },
+					? { id: speaker.id, name: speaker.name, introduced: true }
+					: { id: speaker.id, name: speaker.name, color: speaker.color, introduced: true },
 			);
 			lines.set(directive.key, { key: directive.key, speakers });
 		}
