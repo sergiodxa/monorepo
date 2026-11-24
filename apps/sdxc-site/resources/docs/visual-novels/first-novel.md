@@ -95,9 +95,10 @@ export const CAST = cast({
 	mika: character({
 		name: "cast.mika",
 		color: "#e86a92",
+		known: true,
 		sprites: { smile: mikaSmile, laugh: mikaLaugh },
 	}),
-	you: character({ name: "cast.you" }),
+	you: character({ name: "cast.you", known: true }),
 });
 
 export const ASSETS = assets({
@@ -121,7 +122,8 @@ declare module "@sdxc/novel" {
 ```
 
 A `chapter` groups scenes for the chapter select, and a character without `sprites` (like
-`you`) speaks without standing on stage. `NovelTypes` types every scene from your state and
+`you`) speaks without standing on stage. A character shows as `???` until a scene runs
+`ctx.introduce(CAST.mika)`; `known: true` names one from the first line, as both are here. `NovelTypes` types every scene from your state and
 catalog: `set` takes only paths the state has, and `say` asks for exactly the values a message
 declares.
 

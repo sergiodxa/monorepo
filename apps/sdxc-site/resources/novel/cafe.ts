@@ -92,12 +92,13 @@ export const CAFE_CAST = cast({
 	mika: character({
 		name: "cast.mika",
 		color: "#e86a92",
+		known: true,
 		sprites: {
 			smile: mika(`<path d="M170 390q30 24 60 0" stroke="#3b2230" stroke-width="7" fill="none"/>`),
 			laugh: mika(`<path d="M165 385q35 50 70 0z" fill="#3b2230"/>`),
 		},
 	}),
-	you: character({ name: "cast.you" }),
+	you: character({ name: "cast.you", known: true }),
 });
 
 export const CAFE_ASSETS = assets({ backgrounds: { cafe: CAFE } });
