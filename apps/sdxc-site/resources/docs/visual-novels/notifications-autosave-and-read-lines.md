@@ -90,7 +90,8 @@ labels, which the `labels` prop replaces like any other.
 ## Keep an autosave
 
 The play saves into the `"auto"` slot (`AUTO_SLOT`) when a chapter starts, a new game's first
-chapter included, and every 20 lines. It saves through the player's own save path, so each
+chapter included, every 20 lines, and when the reader switches away from the tab with lines read
+since the last autosave. It saves through the player's own save path, so each
 autosave reaches your `novel:save` listener with `event.slot === "auto"`, and the storage from
 [Saves, settings and unlocks](/docs/visual-novels/saves-and-settings) keeps it with no change. A
 replay never autosaves.
