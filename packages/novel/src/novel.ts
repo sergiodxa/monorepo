@@ -164,8 +164,8 @@ export interface StartOptions {
 	persistent?: unknown;
 	/**
 	 * Plays a replay of the scene, or its chapter, the play starts in: it finishes at a `goto`
-	 * past that bound and records only the lines it shows, so `chosen`, `endings`, `chapters` and
-	 * `unlocked` stay as they were and their events stay silent.
+	 * past that bound, names everyone in `introduced`, and records only the lines it shows, so
+	 * the rest of `persistent` stays as it was and its events stay silent.
 	 */
 	replay?: ReplayScope;
 }

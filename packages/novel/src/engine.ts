@@ -135,6 +135,7 @@ type Effect =
 	| { type: "scene"; scene: string }
 	| { type: "chapter"; chapter: ChapterInfo; scene: string }
 	| { type: "unlock"; kind: "image" | "music"; id: string }
+	| { type: "introduce"; id: string }
 	| { type: "line"; line: LineEvent }
 	| { type: "notify"; notify: NotifyEvent }
 	| { type: "remember"; extension: string; value: unknown }
@@ -177,7 +178,8 @@ export class PlayEngine {
 	 * @param live - Where the play starts.
 	 * @param playTime - Milliseconds already played, carried over from a save.
 	 * @param persistent - What earlier playthroughs left; the engine updates it in place.
-	 * @param replay - Plays as a replay bounded by this scope, recording only the lines it shows.
+	 * @param replay - Plays as a replay bounded by this scope, recording only the lines it shows
+	 *   and naming every character an earlier play introduced.
 	 */
 	constructor(
 		runtime: NovelRuntime,
@@ -190,6 +192,9 @@ export class PlayEngine {
 		this.#live = live;
 		this.#playTime = playTime;
 		this.#persistent = persistent;
+		if (replay !== undefined) {
+			live.introduced = [...new Set([...live.introduced, ...persistent.introduced])];
+		}
 		let scene = live.cursor.scene;
 		this.#replay =
 			replay === undefined
@@ -347,6 +352,8 @@ export class PlayEngine {
 				if (added) this.#runtime.emit("unlock", { kind: effect.kind, id: effect.id });
 				return added;
 			}
+			case "introduce":
+				return addOnce(persistent.introduced, effect.id);
 			case "line": {
 				let id = recordKey(effect.line.scene, effect.line.key);
 				let values = structuredClone(effect.line.values ?? {}) as Persistent["seen"][string];
@@ -618,6 +625,7 @@ export class PlayEngine {
 				if (!work.introduced.includes(directive.character.id)) {
 					work.introduced = [...work.introduced, directive.character.id];
 				}
+				this.#pending.push({ type: "introduce", id: directive.character.id });
 				return null;
 			case "notify": {
 				let values =

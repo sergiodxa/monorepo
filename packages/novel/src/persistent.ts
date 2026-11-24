@@ -1,6 +1,6 @@
 /**
- * `Persistent`: what outlives a playthrough (lines read, options taken, endings, chapters and
- * unlocks). A play updates its own copy and the novel emits the whole value on `persist`, so the
+ * `Persistent`: what outlives a playthrough (lines read, options taken, endings, chapters,
+ * unlocks and characters met). A play updates its own copy and the novel emits the whole value on `persist`, so the
  * app stores it wherever it likes and hands it back to the next `novel.start({ persistent })`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -31,6 +31,8 @@ export interface Persistent {
 	chapters: string[];
 	/** The ids of the images shown and the music played, for a gallery and a music room. */
 	unlocked: { images: string[]; music: string[] };
+	/** The id of every character a play introduced, so a replay names everyone the reader met. */
+	introduced: string[];
 }
 
 /** `Persistent` as stored JSON is checked; every field defaults to empty. */
@@ -46,6 +48,7 @@ const PERSISTENT_SCHEMA: Schema<unknown, Persistent> = s.object({
 		}),
 		{ images: [], music: [] },
 	),
+	introduced: s.defaulted(s.array(s.string()), []),
 }) as Schema<unknown, Persistent>;
 
 /**
@@ -54,7 +57,14 @@ const PERSISTENT_SCHEMA: Schema<unknown, Persistent> = s.object({
  * @returns An empty record.
  */
 export function emptyPersistent(): Persistent {
-	return { seen: {}, chosen: [], endings: [], chapters: [], unlocked: { images: [], music: [] } };
+	return {
+		seen: {},
+		chosen: [],
+		endings: [],
+		chapters: [],
+		unlocked: { images: [], music: [] },
+		introduced: [],
+	};
 }
 
 /**

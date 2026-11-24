@@ -71,6 +71,7 @@ const STORED: Persistent = {
 	endings: [],
 	chapters: ["prologue"],
 	unlocked: { images: [], music: [] },
+	introduced: [],
 };
 
 /** A save-shaped value stamped `savedAt`, told apart by its `scene`. */

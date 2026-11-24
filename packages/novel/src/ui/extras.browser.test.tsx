@@ -142,6 +142,7 @@ const STORED: Persistent = {
 	endings: ["endings.bad"],
 	chapters: ["prologue"],
 	unlocked: { images: ["images.letter"], music: ["music.chill"] },
+	introduced: [],
 };
 
 /** A story whose chapters are grouped in two arcs, each chapter holding one titled scene. */
@@ -189,6 +190,7 @@ const ARC_STORED: Persistent = {
 	endings: [],
 	chapters: ["y1.ch01"],
 	unlocked: { images: [], music: [] },
+	introduced: [],
 };
 
 let mounted: RenderResult | undefined;

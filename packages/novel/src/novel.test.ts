@@ -917,6 +917,51 @@ describe("introductions", () => {
 		let lucky = line(frameOf(await resumed.next()));
 		expect(lucky.speakers.map((speaker) => speaker.introduced)).toEqual([false, true]);
 	});
+
+	test("records each introduction once in persistent data and emits persist", async () => {
+		let novel = introducing();
+		let log = record(novel);
+		let play = createTestPlay(novel, { persistent: { introduced: ["mika"] } });
+		await play.advance();
+		expect(play.persistent.introduced).toEqual(["mika"]);
+		await play.advance();
+		expect(play.persistent.introduced).toEqual(["mika", "ren"]);
+		expect(log.filter((entry) => entry.name === "persist").at(-1)?.payload).toMatchObject({
+			introduced: ["mika", "ren"],
+		});
+		await play.advance();
+		expect(play.persistent.introduced).toEqual(["mika", "ren"]);
+	});
+
+	test("starts a replay naming everyone met in any play, and a normal play naming no one", async () => {
+		let persistent = { introduced: ["ren"] };
+		let replay = createTestPlay(introducing(), { replay: "scene", persistent });
+		let welcome = line((await replay.advance()) as Frame);
+		expect(welcome.speakers[0]?.introduced).toBe(true);
+
+		let fresh = createTestPlay(introducing(), { persistent });
+		let first = line((await fresh.advance()) as Frame);
+		expect(first.speakers[0]?.introduced).toBe(false);
+	});
+
+	test("keeps a replay's introductions out of persistent data", async () => {
+		let replay = createTestPlay(introducing(), { replay: "scene" });
+		let welcome = line((await replay.advance()) as Frame);
+		expect(welcome.speakers[0]?.introduced).toBe(false);
+		let lucky = line((await replay.advance()) as Frame);
+		expect(lucky.speakers[0]?.introduced).toBe(true);
+		expect(replay.persistent.introduced).toEqual([]);
+	});
+
+	test("reads persistent data from before introductions as no one met", async () => {
+		let replay = createTestPlay(introducing(), {
+			replay: "scene",
+			persistent: { endings: ["endings.bad"] },
+		});
+		let welcome = line((await replay.advance()) as Frame);
+		expect(welcome.speakers[0]?.introduced).toBe(false);
+		expect(replay.persistent.introduced).toEqual([]);
+	});
 });
 
 describe("the stage a play finishes on", () => {
@@ -1104,6 +1149,7 @@ describe("persistent data", () => {
 			endings: [],
 			chapters: [],
 			unlocked: { images: [], music: [] },
+			introduced: [],
 		});
 	});
 

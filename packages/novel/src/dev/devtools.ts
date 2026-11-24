@@ -91,6 +91,8 @@ export interface ResetOptions {
 	unlocked?: boolean;
 	endings?: boolean;
 	chapters?: boolean;
+	/** Characters met, whom a replay names from its first line. */
+	introduced?: boolean;
 }
 
 /** Every problem the tools find without playing: `check()`'s report and missing messages. */
@@ -261,6 +263,7 @@ export class DevTools {
 		if (all || options.unlocked === true) persistent.unlocked = { images: [], music: [] };
 		if (all || options.endings === true) persistent.endings = [];
 		if (all || options.chapters === true) persistent.chapters = [];
+		if (all || options.introduced === true) persistent.introduced = [];
 		return success(this.#restart({ from: play.state, persistent }));
 	}
 
