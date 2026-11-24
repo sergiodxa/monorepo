@@ -252,7 +252,7 @@ The chapter a group of a scene map was declared as, with its `arc` when it has o
 
 Declares a character by its name's message key and an optional `color`, with a flat set of `sprites` (one shows at a time), `layers` drawn bottom to top (one variant each), or no image for a voice that never stands on stage.
 
-A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. `known: true` names a character from the first line, as the player, their family or anyone the reader already knows.
+A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. Persistent data keeps everyone introduced in any play, so a scene or chapter replay names them from its first line. `known: true` names a character from the first line, as the player, their family or anyone the reader already knows.
 
 ```typescript
 character({ name: "cast.you", known: true });
@@ -313,7 +313,7 @@ let achievements = extension("achievements", {
 });
 ```
 
-A scene records each call as data, and the novel replaces it with the method's directives when it loads the scene; a call to an extension the novel lacks fails with `load-failed`. `remember` validates the new value and reports one its schema refuses on `error` (`invalid-state`, with the extension's name as subject), keeping the slice as it was. Later directives of the same run read the new value, and the play emits `persist` at its next stop. A rollback keeps lasting data, so a `remember` passed again after one applies again: write updaters that give the same result when repeated. A replay never changes it. An extension that keeps lasting data cannot take the name of a persistent field (`seen`, `chosen`, `endings`, `chapters`, `unlocked`).
+A scene records each call as data, and the novel replaces it with the method's directives when it loads the scene; a call to an extension the novel lacks fails with `load-failed`. `remember` validates the new value and reports one its schema refuses on `error` (`invalid-state`, with the extension's name as subject), keeping the slice as it was. Later directives of the same run read the new value, and the play emits `persist` at its next stop. A rollback keeps lasting data, so a `remember` passed again after one applies again: write updaters that give the same result when repeated. A replay never changes it. An extension that keeps lasting data cannot take the name of a persistent field (`seen`, `chosen`, `endings`, `chapters`, `unlocked`, `introduced`).
 
 #### `createScene(declaration: SceneDeclaration, build: (ctx: SceneContext) => Directive[]): SceneModule`
 
@@ -380,7 +380,7 @@ One novel serves every play: it holds the declarations, the module mapped onto e
 - `novel.on(name, listener): () => void` and `novel.off(name, listener)`: listen to an event of every play; a listener receives the payload and the play, and one that throws or rejects is reported on `error`
 - `novel.use(plugin): Novel`: installs a function that registers listeners, so plugins chain
 
-`StartOptions` takes `from` (a stored `GameState`, migrated and validated before the play resumes), `scene` and `state` for a new play (missing fields take their schema defaults), `seed` for the random stream, `persistent` (stored `Persistent` data; anything the schema refuses starts empty), and `replay: "scene" | "chapter"`, which finishes the play when it leaves that scene or chapter, saves nothing, and records only the lines it shows.
+`StartOptions` takes `from` (a stored `GameState`, migrated and validated before the play resumes), `scene` and `state` for a new play (missing fields take their schema defaults), `seed` for the random stream, `persistent` (stored `Persistent` data; anything the schema refuses starts empty), and `replay: "scene" | "chapter"`, which finishes the play when it leaves that scene or chapter, saves nothing, names every character in the persistent `introduced` list, and records only the lines it shows.
 
 A `Play` is the generator itself, with `play.state` (the play as JSON at the current stop), `play.stage` (the current stop's stage, or after the end the stage the story finished on, with anyone who left after the last stop in `exits`), `play.persistent`, `play.save(slot)` (emits `save` and answers the state) and `play.rollback()` (returns to the previous stop, restoring its state, stage and random draws, or answers `null`).
 
@@ -420,7 +420,7 @@ The one error the engine reports, on `error` frames, `error` events and failed `
 - `Ending`, `ReplayScope`, `StoryPosition`, `GameState`: How a play finished, how far a replay plays, a position anchored on a message key, and the play as JSON with its version, stack, stage, audio, state, random stream, the characters introduced (`introduced`) and play time.
 - `Stage`, `StageScenery`, `StageCharacter`, `FrameStage`, `FrameCharacter`, `Position`, `Fraction`, `PositionAlias`, `SceneryTransition`, `CharacterTransition`: The stage as saved and as a frame shows it (with `speaking` focus and the characters that just left), columns as `n/d` or an alias, and the transition names; any name beyond the built-in ones is a CSS class the app styles.
 - `Audio`, `AudioTrack`, `AudioSound`: What each channel plays at a stop: one music loop, layered ambience, the one-shots since the previous stop, and the line's voice.
-- `Persistent`, `NovelPersistent`: What outlives a playthrough: lines read (with their values), options taken, endings, chapters and unlocked images and music, and that record with every extension's lasting slice.
+- `Persistent`, `NovelPersistent`: What outlives a playthrough: lines read (with their values), options taken, endings, chapters, unlocked images and music, and the characters introduced (`introduced`), and that record with every extension's lasting slice.
 - `Play`, `StartOptions`, `NovelOptions`, `VoiceLine`, `Migration`, `SavedObject`, `MessageCatalog`, `Lazy`: The play and the options above, and the shapes their callbacks and catalogs take.
 - `NovelLink`, `ReachOptions`, `ReachedScene`, `SceneAsset`: What `links()` and `reachable()` take and answer.
 - `NovelEvents`, `NovelEventName`, `NovelListener<Name>`, `NovelPlugin`, `SceneEvent`, `LineEvent`, `ChoiceEvent`, `UnlockEvent`, `ChapterEvent`, `SaveEvent`, `NotifyEvent`: The events above and their listeners.
@@ -779,7 +779,7 @@ Follows the last play an event fired for, or one handed to `attach(play)`.
 - `subscribe(listener): () => void` and `clear()`: hear every change, and empty the log
 - `jump(scene, state): Result<StartOptions, NovelError>`: starts a play at the top of a mapped scene with state checked against the schema, keeping the persistent data
 - `reload(modules): Result<ReloadResult, NovelError>`: swaps in hot-reloaded scene modules and restarts the followed play from its own save, on the same line when it still exists
-- `reset({ seen?, chosen?, unlocked?, endings?, chapters? })`: clears parts of persistent data (all of it when empty) and restarts the play
+- `reset({ seen?, chosen?, unlocked?, endings?, chapters?, introduced? })`: clears parts of persistent data (all of it when empty) and restarts the play
 - `problems(): Promise<DevProblems>` and `graph(): Promise<SceneGraph>`: `check()`'s report with the missing messages, and the scene graph
 - `dispose()`: stops listening to the novel
 
