@@ -252,7 +252,7 @@ The chapter a group of a scene map was declared as, with its `arc` when it has o
 
 Declares a character by its name's message key and an optional `color`, with a flat set of `sprites` (one shows at a time), `layers` drawn bottom to top (one variant each), or no image for a voice that never stands on stage.
 
-A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. Persistent data keeps everyone introduced in any play, so a scene or chapter replay names them from its first line. `known: true` names a character from the first line, as the player, their family or anyone the reader already knows.
+A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. Persistent data keeps everyone introduced in any play, so a scene or chapter replay names them from its first line. `known: true` names a character from the first line, as the player, their family or anyone the reader already knows. `description` is a message key the characters screen shows beside their portrait.
 
 ```typescript
 character({ name: "cast.you", known: true });
@@ -420,7 +420,7 @@ The one error the engine reports, on `error` frames, `error` events and failed `
 - `Ending`, `ReplayScope`, `StoryPosition`, `GameState`: How a play finished, how far a replay plays, a position anchored on a message key, and the play as JSON with its version, stack, stage, audio, state, random stream, the characters introduced (`introduced`) and play time.
 - `Stage`, `StageScenery`, `StageCharacter`, `FrameStage`, `FrameCharacter`, `Position`, `Fraction`, `PositionAlias`, `SceneryTransition`, `CharacterTransition`: The stage as saved and as a frame shows it (with `speaking` focus and the characters that just left), columns as `n/d` or an alias, and the transition names; any name beyond the built-in ones is a CSS class the app styles.
 - `Audio`, `AudioTrack`, `AudioSound`: What each channel plays at a stop: one music loop, layered ambience, the one-shots since the previous stop, and the line's voice.
-- `Persistent`, `NovelPersistent`: What outlives a playthrough: lines read (with their values), options taken, endings, chapters, unlocked images and music, and the characters introduced (`introduced`), and that record with every extension's lasting slice.
+- `Persistent`, `NovelPersistent`: What outlives a playthrough: lines read (with their values), options taken, endings, chapters, unlocked images, music and character looks (`unlocked.sprites`, keyed `<character>:<sprite>` or `<character>:<layer>=<variant>,…`), and the characters introduced (`introduced`), and that record with every extension's lasting slice.
 - `Play`, `StartOptions`, `NovelOptions`, `VoiceLine`, `Migration`, `SavedObject`, `MessageCatalog`, `Lazy`: The play and the options above, and the shapes their callbacks and catalogs take.
 - `NovelLink`, `ReachOptions`, `ReachedScene`, `SceneAsset`: What `links()` and `reachable()` take and answer.
 - `NovelEvents`, `NovelEventName`, `NovelListener<Name>`, `NovelPlugin`, `SceneEvent`, `LineEvent`, `ChoiceEvent`, `UnlockEvent`, `ChapterEvent`, `SaveEvent`, `NotifyEvent`: The events above and their listeners.
@@ -471,7 +471,7 @@ The root carries `data-novel-player` with `data-phase`, `data-auto`, `data-skip`
 
 #### `NovelPlayer.Default`
 
-The whole player in one component: every part below, notifications included, the six library screens under an Extras menu, and the three input mixins. It takes the provider's props, and its children (such as `NovelPlayer.Interaction`) are drawn on the stage. A game that needs a different slot count, no speaker focus or music titles composes its own player instead.
+The whole player in one component: every part below, notifications included, the seven library screens under an Extras menu, and the three input mixins. It takes the provider's props, and its children (such as `NovelPlayer.Interaction`) are drawn on the stage. A game that needs a different slot count, no speaker focus or music titles composes its own player instead.
 
 ```tsx
 <NovelPlayer.Default novel={novel} settings={stored} saves={saves}>
@@ -493,7 +493,7 @@ Given `titleScreen={{ heading, background?, art?, footer?, screens? }}` it opens
 
 #### `NovelPlayer.Title`
 
-The title screen, filling its box: `heading` (text, or a logo `<img>`/`<svg>` scaled to `--novel-title-logo-*`), a full-bleed `background` (or the `--novel-title-background` variable), a foreground `art` anchored at `--novel-title-art-inset`, New game, Continue from the newest of `saves` with that save's scene and date (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Gallery`, `Memories`), the settings screen, and a `footer` under the menu. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable, and every part carries a `data-novel-title-*` attribute (`heading`, `menu`, `button` with `data-action`, `label`, `detail`, `footer`, `background`, `art`) that the title's own `mix` can decorate:
+The title screen, filling its box: `heading` (text, or a logo `<img>`/`<svg>` scaled to `--novel-title-logo-*`), a full-bleed `background` (or the `--novel-title-background` variable), a foreground `art` anchored at `--novel-title-art-inset`, New game, Continue from the newest of `saves` with that save's scene and date (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Gallery`, `Characters`, `Memories`), the settings screen, and a `footer` under the menu. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable, and every part carries a `data-novel-title-*` attribute (`heading`, `menu`, `button` with `data-action`, `label`, `detail`, `footer`, `background`, `art`) that the title's own `mix` can decorate:
 
 ```tsx
 <NovelPlayer.Title
@@ -598,7 +598,7 @@ Each part is a member of `NovelPlayer` and is also exported under its own name. 
 
 - `NovelPlayer.Stage` (`Stage`): The 16:9 stage, letterboxed inside any box, with its children above the characters; a click finishes a transition, then the line being typed, then advances. `focus` (default `true`) enlarges and raises the speaker and dims everyone else. Given a `stage` prop it draws that still stage instead of the play, which is how `SlotThumbnail` works. Once the play finishes it shows the ending's name over the dimmed stage with a **Play again** button (`labels.playAgain`, `--novel-ending-button-*`, `data-novel-play-again`) that calls `restart()`, or under `returnsToTitle` a **Back to title** one (`labels.backToTitle`, `data-novel-back-to-title`) that calls `toTitle()`
 - `NovelPlayer.Textbox` (`Textbox`): The line's box, a live region holding the whole line from the start; without children it draws `NamePlate`, `Line` and `NextIndicator`, and with children it draws those. The box and its line carry `data-novel-read` on a line read in an earlier playthrough
-- `NovelPlayer.NamePlate` (`NamePlate`), `NovelPlayer.Line` (`Line`) and `NovelPlayer.NextIndicator` (`NextIndicator`): The speaker's name in their color, the typed line with its markup, and the sign that the line is complete
+- `NovelPlayer.NamePlate` (`NamePlate`), `NovelPlayer.Line` (`Line`) and `NovelPlayer.NextIndicator` (`NextIndicator`): The speaker's name in their color, the typed line with its markup, and the sign that the line is complete. When the player offers the characters screen, a named speaker's name is a button that opens it on them through `showCharacter(id)`
 - `NovelPlayer.Captions` (`Captions`): The captions of the frame's sounds
 - `NovelPlayer.Choices` (`ChoiceMenu`): A menu, with a locked option disabled with its reason, a taken one marked `data-chosen`, and a timed menu counting down
 - `NovelPlayer.Interaction` (`Interaction`): `interactions` (your `interactions()` map) and a children function of the custom frame, narrowed by `frame.interaction`, drawn over the stage while the play stops at one of those interactions; it answers the frame when `novel:interaction:complete` reaches it
@@ -657,6 +657,10 @@ How the reader experiences the play, kept in the browser and never in the game s
 #### `Memories`, `Gallery`, `MusicRoom` and `EndingsList`
 
 The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, opening its scrolling box at the newest one, and replays a voiced line's voice through the player's mixer, or outside one a mixer it makes for itself (a `novel:replay-voice` listener may prevent that and play it another way); `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens. When the story has arcs, `Memories` heads each arc's chapters with its title in a `section` carrying `data-arc`.
+
+#### `Characters`
+
+The cast in declaration order, as a scrolling list beside the chosen character's portrait, name, `description` and looks. A character shows as the `unknownName` label, and cannot be picked, until they are `known` or a play introduces them; a sprite stays a locked placeholder until the stage draws the character in it once, and a layered character lists each combination of variants the stage drew. Inside a player it opens on the character `showCharacter()` asked for, and its dialog is wider than the other screens'. It takes the same `novel`, `persistent` and `labels` props as the screens above; `characterLooks` names the strip of looks.
 
 #### `ChapterSelect` and `SceneReplay`
 

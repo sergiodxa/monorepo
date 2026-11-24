@@ -36,6 +36,7 @@ import {
 
 import { AudioMixer } from "./audio.js";
 import { ChapterSelect, SceneReplay } from "./chapters.js";
+import { Characters } from "./characters.js";
 import { EndingsList } from "./endings.js";
 import { Gallery } from "./gallery.js";
 import { Memories } from "./memories.js";
@@ -59,7 +60,12 @@ const STATE = s.object({
 
 /** The catalog the screens translate through. */
 const MESSAGES = {
-	cast: { mika: "Mika", ren: "Ren" },
+	cast: {
+		mika: "Mika",
+		ren: "Ren",
+		kai: "Kai",
+		mikaAbout: "Runs the café by the station.",
+	},
 	chapters: { prologue: "Prologue" },
 	titles: { opening: "Opening", cafe: "The café" },
 	opening: {
@@ -81,7 +87,12 @@ const SCENES = scenes({
 });
 
 const CAST = cast({
-	mika: character({ name: "cast.mika", color: "#e86a92", sprites: { smile: svg("pink") } }),
+	mika: character({
+		name: "cast.mika",
+		color: "#e86a92",
+		description: "cast.mikaAbout",
+		sprites: { smile: svg("pink") },
+	}),
 });
 
 const ASSETS = assets({
@@ -97,6 +108,7 @@ const OPENING = createScene(SCENES.prologue.opening, (ctx) => [
 	ctx.show(ASSETS.backgrounds.room),
 	ctx.enter(CAST.mika, { at: "left", expression: "smile" }),
 	ctx.narrate("opening.welcome"),
+	ctx.introduce(CAST.mika),
 	ctx.say(CAST.mika, "opening.hello", { name: "Ada" }),
 	ctx.exit(CAST.mika, { transition: "slide" }),
 	ctx.narrate("opening.thinking"),
@@ -141,7 +153,7 @@ const STORED: Persistent = {
 	chosen: ["prologue.opening:cafe.leave"],
 	endings: ["endings.bad"],
 	chapters: ["prologue"],
-	unlocked: { images: ["images.letter"], music: ["music.chill"] },
+	unlocked: { images: ["images.letter"], music: ["music.chill"], sprites: [] },
 	introduced: [],
 };
 
@@ -189,7 +201,7 @@ const ARC_STORED: Persistent = {
 	chosen: [],
 	endings: [],
 	chapters: ["y1.ch01"],
-	unlocked: { images: [], music: [] },
+	unlocked: { images: [], music: [], sprites: [] },
 	introduced: [],
 };
 
@@ -323,6 +335,67 @@ describe("Gallery", () => {
 		);
 		await userEvent.keyboard("{Escape}");
 		await vi.waitFor(() => expect(lightbox.open).toBe(false));
+	});
+});
+
+describe("Characters", () => {
+	/** A cast of a described character, a known layered one, and one never introduced. */
+	const PEOPLE = cast({
+		mika: character({
+			name: "cast.mika",
+			description: "cast.mikaAbout",
+			sprites: { smile: svg("pink"), sad: svg("blue") },
+		}),
+		ren: character({
+			name: "cast.ren",
+			known: true,
+			layers: { body: { school: svg("gray") }, face: { grin: svg("yellow") } },
+		}),
+		kai: character({ name: "cast.kai", sprites: { neutral: svg("black") } }),
+	});
+
+	test("hides who the reader has not met and every look the stage never drew", async () => {
+		let novel = createNovel({
+			scenes: SCENES,
+			cast: PEOPLE,
+			state: STATE,
+			initial: SCENES.prologue.opening,
+		});
+		let stored = {
+			introduced: ["mika"],
+			unlocked: { sprites: ["mika:sad", "ren:body=school,face=grin"] },
+		};
+		let result = mount(<Characters novel={novel} persistent={stored} />);
+		let screen = await loaded(result, "[data-novel-characters]");
+		let entries = [...screen.querySelectorAll<HTMLButtonElement>("[data-character] button")];
+		expect(entries.map((entry) => [entry.textContent, entry.disabled])).toEqual([
+			["Mika", false],
+			["Ren", false],
+			["???", true],
+		]);
+		expect(entries[2]!.closest("[data-character]")!.getAttribute("data-character")).toBe("");
+
+		let detail = () => screen.querySelector("[data-novel-character-detail]")!;
+		expect(detail().querySelector("h3")!.textContent).toBe("Mika");
+		expect(detail().querySelector("[data-novel-character-description]")!.textContent).toBe(
+			"Runs the café by the station.",
+		);
+		let portrait = () =>
+			[...detail().querySelectorAll("[data-novel-character-portrait] img")].map((img) =>
+				img.getAttribute("src"),
+			);
+		expect(portrait()).toEqual([svg("blue")]);
+		let looks = [...detail().querySelectorAll("[data-look]")];
+		expect(
+			looks.map((look) => [look.getAttribute("data-look"), look.querySelector("img") !== null]),
+		).toEqual([
+			["", false],
+			["mika:sad", true],
+		]);
+
+		entries[1]!.click();
+		await vi.waitFor(() => expect(detail().querySelector("h3")!.textContent).toBe("Ren"));
+		expect(portrait()).toEqual([svg("gray"), svg("yellow")]);
 	});
 });
 
@@ -488,6 +561,24 @@ describe("NovelPlayer extras", () => {
 		await shows(view, "I should say something.");
 		expect(getComputedStyle(mika).opacity).toBe("0");
 		expect(getComputedStyle(mika).translate).not.toBe("none");
+	});
+
+	test("opens the characters screen on a speaker from their name, once the story names them", async () => {
+		let view = player();
+		await shows(view, "Welcome.");
+		view.next();
+		await shows(view, "Hello, Ada!");
+		let name = view.result.$(
+			'[data-novel-speaker] button[data-character="mika"]',
+		) as HTMLButtonElement;
+		name.click();
+		await vi.waitFor(() =>
+			expect(
+				view.result.$("[data-novel-characters] [data-novel-character-detail] h3")?.textContent,
+			).toBe("Mika"),
+		);
+		expect(view.result.$("[data-novel-characters]")!.closest("dialog")!.open).toBe(true);
+		expect(view.line()).toBe("Hello, Ada!");
 	});
 
 	test("opens Memories from the extras menu with the lines read in this play", async () => {

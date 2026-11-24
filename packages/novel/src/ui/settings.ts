@@ -98,6 +98,9 @@ export interface NovelLabels {
 	extras: string;
 	memories: string;
 	gallery: string;
+	characters: string;
+	/** The accessible name of a character's looks on the characters screen. */
+	characterLooks: string;
 	musicRoom: string;
 	endings: string;
 	chapterSelect: string;
@@ -168,6 +171,8 @@ export const DEFAULT_LABELS: NovelLabels = {
 	extras: "Extras",
 	memories: "Memories",
 	gallery: "Gallery",
+	characters: "Characters",
+	characterLooks: "Looks",
 	musicRoom: "Music room",
 	endings: "Endings",
 	chapterSelect: "Chapters",

@@ -50,6 +50,7 @@ import { SaveSlots } from "./behaviors/save-slots.js";
 import { SettingsModel } from "./behaviors/settings.js";
 import { SkipModel } from "./behaviors/skip.js";
 import { ChapterSelect, SceneReplay } from "./chapters.js";
+import { Characters } from "./characters.js";
 import { ChoiceMenu } from "./choice-menu.js";
 import { gamepadControls, keyboardControls, touchControls } from "./controls.js";
 import { Director } from "./director.js";
@@ -84,6 +85,7 @@ export namespace NovelPlayer {
 		| "settings"
 		| "memories"
 		| "gallery"
+		| "characters"
 		| "music"
 		| "endings"
 		| "chapters"
@@ -239,6 +241,10 @@ export namespace NovelPlayer {
 		toTitle(): void;
 		/** Opens one of the player's dialogs, when it is rendered. */
 		open(screen: Screen): void;
+		/** The character the characters screen opens on, as `showCharacter()` last asked. */
+		readonly character: string | undefined;
+		/** Opens the characters screen on `id`, when the player offers one. */
+		showCharacter(id: string): void;
 		/** Asks for the first stop again after an error stopped the play before it. */
 		retry(): void;
 		/**
@@ -347,6 +353,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 				"settings",
 				"memories",
 				"gallery",
+				"characters",
 				"music",
 				"endings",
 				"chapters",
@@ -355,6 +362,13 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		).map((screen) => [screen, `${handle.id}-${screen}`.replace(/[^\w-]/g, "-")]),
 	) as Record<NovelPlayer.Screen, string>;
 	let anchor = `--novel-${handle.id.replace(/[^\w-]/g, "-")}`;
+	let shownCharacter: string | undefined;
+
+	/** Opens one of the player's dialogs, when it is rendered. */
+	function open(screen: NovelPlayer.Screen): void {
+		let dialog = root?.querySelector<HTMLDialogElement>(`#${ids[screen]}`);
+		if (dialog !== null && dialog !== undefined && !dialog.open) dialog.showModal();
+	}
 
 	/** Declared before the director, whose callbacks dispatch on it; its members are set below. */
 	let context = new TypedEventTarget<NovelPlayer.EventMap>() as NovelPlayer.Context;
@@ -622,9 +636,13 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		},
 		endReplay: () => director.endReplay(),
 		toTitle,
-		open: (screen) => {
-			let dialog = root?.querySelector<HTMLDialogElement>(`#${ids[screen]}`);
-			if (dialog !== null && dialog !== undefined && !dialog.open) dialog.showModal();
+		open,
+		get character() {
+			return shownCharacter;
+		},
+		showCharacter: (id) => {
+			shownCharacter = id;
+			open("characters");
 		},
 		retry: () => director.retry(),
 		restart: async () => {
@@ -738,7 +756,7 @@ NovelPlayer.Notifications = Notifications;
 NovelPlayer.Title = Title;
 
 /**
- * The whole player as one component: every part in the classic layout, the six library screens
+ * The whole player as one component: every part in the classic layout, the seven library screens
  * in the extras menu, the notifications, and keyboard, touch and gamepad controls. Its children
  * are drawn on the stage; given `titleScreen`, it opens on the title and returns there as a play ends.
  *
@@ -832,6 +850,7 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 						<Extras>
 							<Memories />
 							<Gallery />
+							<Characters />
 							<MusicRoom />
 							<EndingsList />
 							<ChapterSelect />

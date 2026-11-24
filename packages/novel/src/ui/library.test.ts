@@ -131,7 +131,7 @@ describe(readLibrary, () => {
 		chosen: [],
 		endings: ["endings.bad", "endings.removed"],
 		chapters: ["prologue"],
-		unlocked: { images: ["images.letter"], music: ["music.theme"] },
+		unlocked: { images: ["images.letter"], music: ["music.theme"], sprites: [] },
 	};
 
 	test("groups mapped scenes by chapter with their read lines in scene order", async () => {
@@ -257,5 +257,62 @@ describe(readLibrary, () => {
 		novel.map(SCENES.prologue.opening, OPENING);
 		let library = await readLibrary(novel, persistent, "ja-JP");
 		expect(library.chapters[0]?.scenes[0]?.lines[1]?.voice).toBe("/voice/ja/opening.hello.ogg");
+	});
+	test("lists the cast with who the reader met and the looks they saw", async () => {
+		let people = cast({
+			mika: character({
+				name: "cast.mika",
+				description: "cast.mikaAbout",
+				sprites: { smile: "/mika/smile.webp", sad: "/mika/sad.webp" },
+			}),
+			ren: character({
+				name: "cast.ren",
+				known: true,
+				layers: {
+					body: { school: "/ren/school.webp" },
+					face: { neutral: "/ren/neutral.webp", grin: "/ren/grin.webp" },
+				},
+			}),
+			kai: character({ name: "cast.kai" }),
+		});
+		let novel = createNovel({
+			scenes: SCENES,
+			cast: people,
+			state: STATE,
+			initial: SCENES.prologue.opening,
+		});
+		let library = await readLibrary(
+			novel,
+			{
+				introduced: ["mika"],
+				unlocked: {
+					sprites: ["mika:sad", "ren:body=school,face=grin", "ren:body=gone,face=grin"],
+				},
+			},
+			"en",
+		);
+		expect(
+			library.characters.map((entry) => ({
+				id: entry.character.id,
+				met: entry.met,
+				looks: entry.looks.map((look) => [look.key, look.seen, look.images]),
+			})),
+		).toEqual([
+			{
+				id: "mika",
+				met: true,
+				looks: [
+					["mika:smile", false, ["/mika/smile.webp"]],
+					["mika:sad", true, ["/mika/sad.webp"]],
+				],
+			},
+			{
+				id: "ren",
+				met: true,
+				looks: [["ren:body=school,face=grin", true, ["/ren/school.webp", "/ren/grin.webp"]]],
+			},
+			{ id: "kai", met: false, looks: [] },
+		]);
+		expect(library.characters[0]?.character.description).toBe("cast.mikaAbout");
 	});
 });

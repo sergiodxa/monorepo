@@ -260,7 +260,8 @@ export class DevTools {
 		let persistent = structuredClone(play.persistent);
 		if (all || options.seen === true) persistent.seen = {};
 		if (all || options.chosen === true) persistent.chosen = [];
-		if (all || options.unlocked === true) persistent.unlocked = { images: [], music: [] };
+		if (all || options.unlocked === true)
+			persistent.unlocked = { images: [], music: [], sprites: [] };
 		if (all || options.endings === true) persistent.endings = [];
 		if (all || options.chapters === true) persistent.chapters = [];
 		if (all || options.introduced === true) persistent.introduced = [];

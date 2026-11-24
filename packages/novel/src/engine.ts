@@ -52,7 +52,7 @@ import { directiveAt, enterOption, menuAnchor, nextPath, optionOf } from "./anch
 import { NovelError } from "./errors.js";
 import { copyKeepingFiles } from "./files.js";
 import { REPLY } from "./frames.js";
-import { recordKey } from "./persistent.js";
+import { lookKey, recordKey } from "./persistent.js";
 import { getPath, setPath, validate } from "./state.js";
 
 /** The tools a callback receives, as the engine builds them over its own persistent record. */
@@ -136,6 +136,7 @@ type Effect =
 	| { type: "chapter"; chapter: ChapterInfo; scene: string }
 	| { type: "unlock"; kind: "image" | "music"; id: string }
 	| { type: "introduce"; id: string }
+	| { type: "look"; id: string }
 	| { type: "line"; line: LineEvent }
 	| { type: "notify"; notify: NotifyEvent }
 	| { type: "remember"; extension: string; value: unknown }
@@ -354,6 +355,8 @@ export class PlayEngine {
 			}
 			case "introduce":
 				return addOnce(persistent.introduced, effect.id);
+			case "look":
+				return addOnce(persistent.unlocked.sprites, effect.id);
 			case "line": {
 				let id = recordKey(effect.line.scene, effect.line.key);
 				let values = structuredClone(effect.line.values ?? {}) as Persistent["seen"][string];
@@ -793,6 +796,7 @@ export class PlayEngine {
 					},
 				);
 				let placed = drawCharacter(directive.character, entering);
+				this.#saw(directive.character, placed);
 				stage.characters = [...stage.characters.filter((entry) => entry.id !== placed.id), placed];
 				forgetExit(stage, placed.id);
 				return;
@@ -817,7 +821,9 @@ export class PlayEngine {
 							transition: directive.transition,
 						},
 					);
-					return drawCharacter(directive.character, changed);
+					let drawn = drawCharacter(directive.character, changed);
+					this.#saw(directive.character, drawn);
+					return drawn;
 				});
 				return;
 			case "move":
@@ -833,6 +839,13 @@ export class PlayEngine {
 			default:
 				break;
 		}
+	}
+
+	/** Records the look a character was drawn in, for the characters screen. */
+	#saw(character: CharacterDeclaration, drawn: StageCharacter): void {
+		let look = character.image.kind === "layers" ? drawn.layers : drawn.expression;
+		if (character.image.kind === "none" || look === undefined || drawn.images.length === 0) return;
+		this.#pending.push({ type: "look", id: lookKey(character.id, look) });
 	}
 
 	/** Builds the frame for a stop, or `null` for a menu with no option to take. */

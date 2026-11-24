@@ -314,6 +314,8 @@ export interface CharacterLeaf<Image extends CharacterImage = CharacterImage> {
 	readonly color?: string;
 	/** True for a character the textbox names from the first line, before any introduction. */
 	readonly known: boolean;
+	/** The description's message key, which the characters screen shows. */
+	readonly description?: string;
 	readonly image: Image;
 }
 
@@ -336,6 +338,8 @@ export interface CharacterDeclaration<
 	 * a scene runs `introduce` for it.
 	 */
 	readonly known: boolean;
+	/** The description's message key, which the characters screen shows once the reader met them. */
+	readonly description?: string;
 	readonly image: Image;
 }
 
@@ -350,6 +354,8 @@ export interface CharacterOptions {
 	 * @default false
 	 */
 	known?: boolean;
+	/** The description's message key, which the characters screen shows once the reader met them. */
+	description?: LineKey;
 }
 
 /**
@@ -396,6 +402,7 @@ export function character(
 		known: options.known === true,
 		image,
 	};
+	if (options.description !== undefined) leaf = { ...leaf, description: options.description };
 	return options.color === undefined ? leaf : { ...leaf, color: options.color };
 }
 

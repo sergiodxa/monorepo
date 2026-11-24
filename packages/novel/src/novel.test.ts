@@ -56,7 +56,13 @@ const STATE = s.object({
 
 /** The fixture's English bundle, whose literal text types every key and its values. */
 const EN = {
-	cast: { mika: "Mika", ren: "Ren", player: "You" },
+	cast: {
+		mika: "Mika",
+		ren: "Ren",
+		kai: "Kai",
+		player: "You",
+		mikaAbout: "Runs the café by the station.",
+	},
 	chapters: { prologue: "Prologue" },
 	titles: { opening: "Opening", cafe: "The café" },
 	opening: {
@@ -865,6 +871,59 @@ describe("exits", () => {
 	});
 });
 
+describe("sprites seen", () => {
+	test("records each sprite and layered look the stage shows, once, in persistent data", async () => {
+		let play = createTestPlay(
+			oneScene((ctx) => [
+				ctx.enter(CAST.mika, { at: "left", expression: "smile" }),
+				ctx.enter(CAST.ren, { at: "right", layers: { body: "casual", face: "neutral" } }),
+				ctx.narrate("opening.welcome"),
+				ctx.express(CAST.mika, { expression: "neutral" }),
+				ctx.express(CAST.mika, { expression: "smile" }),
+				ctx.express(CAST.ren, { layers: { face: "grin" } }),
+				ctx.narrate("opening.lucky"),
+			]),
+		);
+		await play.advance();
+		expect(play.persistent.unlocked.sprites).toEqual([
+			"mika:smile",
+			"ren:body=casual,face=neutral",
+		]);
+		await play.advance();
+		expect(play.persistent.unlocked.sprites).toEqual([
+			"mika:smile",
+			"ren:body=casual,face=neutral",
+			"mika:neutral",
+			"ren:body=casual,face=grin",
+		]);
+	});
+
+	test("records no sprite in a replay", async () => {
+		let replay = createTestPlay(
+			oneScene((ctx) => [
+				ctx.enter(CAST.mika, { at: "left", expression: "smile" }),
+				ctx.narrate("opening.welcome"),
+			]),
+			{ replay: "scene" },
+		);
+		await replay.advance();
+		expect(replay.persistent.unlocked.sprites).toEqual([]);
+	});
+
+	test("reads stored persistent data from before sprites with none seen", async () => {
+		let play = createTestPlay(
+			oneScene((ctx) => [ctx.narrate("opening.welcome")]),
+			{ persistent: { unlocked: { images: ["images.letter"], music: [] } } },
+		);
+		await play.advance();
+		expect(play.persistent.unlocked).toEqual({
+			images: ["images.letter"],
+			music: [],
+			sprites: [],
+		});
+	});
+});
+
 describe("introductions", () => {
 	/** A scene where Ren speaks once unnamed, is introduced, then speaks twice by name. */
 	function introducing() {
@@ -1018,7 +1077,7 @@ describe("replay", () => {
 			chosen: [],
 			endings: ["endings.bad"],
 			chapters: [],
-			unlocked: { images: [], music: [] },
+			unlocked: { images: [], music: [], sprites: [] },
 		});
 		let names = new Set(log.map((entry) => entry.name));
 		expect(names).toEqual(new Set(["scene", "line", "persist"]));
@@ -1122,7 +1181,11 @@ describe("persistent data", () => {
 		]);
 		expect(persistent.endings).toEqual(["endings.good"]);
 		expect(persistent.chapters).toEqual(["prologue"]);
-		expect(persistent.unlocked).toEqual({ images: ["images.letter"], music: ["music.chill"] });
+		expect(persistent.unlocked).toEqual({
+			images: ["images.letter"],
+			music: ["music.chill"],
+			sprites: ["mika:smile", "ren:body=school,face=grin", "mika:neutral"],
+		});
 	});
 
 	test("marks lines read and options taken in an earlier playthrough", async () => {
@@ -1148,7 +1211,7 @@ describe("persistent data", () => {
 			chosen: [],
 			endings: [],
 			chapters: [],
-			unlocked: { images: [], music: [] },
+			unlocked: { images: [], music: [], sprites: [] },
 			introduced: [],
 		});
 	});

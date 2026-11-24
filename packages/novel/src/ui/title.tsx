@@ -20,6 +20,7 @@ import type { NovelLabels, StoredSettings } from "./settings.js";
 
 import { SettingsModel } from "./behaviors/settings.js";
 import { ChapterSelect } from "./chapters.js";
+import { Characters } from "./characters.js";
 import { NovelSettingsEvent, NovelStartEvent } from "./events.js";
 import { offeredScreens, ScreenDialog } from "./extras.js";
 import { Gallery } from "./gallery.js";
@@ -55,7 +56,7 @@ export namespace Title {
 		/**
 		 * The library screens the menu offers, in order, like `NovelPlayer.Extras`' children.
 		 *
-		 * @default <ChapterSelect /><Gallery /><Memories />
+		 * @default <ChapterSelect /><Gallery /><Characters /><Memories />
 		 */
 		screens?: RemixNode;
 	}
@@ -76,7 +77,7 @@ export namespace Title {
 		/**
 		 * The library screens the menu offers, in order, like `NovelPlayer.Extras`' children.
 		 *
-		 * @default <ChapterSelect /><Gallery /><Memories />
+		 * @default <ChapterSelect /><Gallery /><Characters /><Memories />
 		 */
 		children?: RemixNode;
 	}
@@ -182,6 +183,7 @@ export function Title(handle: Handle<Title.Props>) {
 				: offeredScreens([
 						<ChapterSelect key="chapters" />,
 						<Gallery key="gallery" />,
+						<Characters key="characters" />,
 						<Memories key="memories" />,
 					]);
 		let settingsId = `${prefix}-settings`;
@@ -357,6 +359,7 @@ export function Title(handle: Handle<Title.Props>) {
 							title={labels[label]}
 							closeLabel={labels.close}
 							open={open === screen}
+							wide={screen === "characters"}
 							mix={on("toggle", (event) =>
 								toggle(screen, (event as ToggleEvent).newState === "open"),
 							)}

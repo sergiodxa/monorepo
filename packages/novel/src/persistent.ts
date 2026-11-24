@@ -29,8 +29,11 @@ export interface Persistent {
 	endings: string[];
 	/** The name of every chapter reached. */
 	chapters: string[];
-	/** The ids of the images shown and the music played, for a gallery and a music room. */
-	unlocked: { images: string[]; music: string[] };
+	/**
+	 * The ids of the images shown and the music played, for a gallery and a music room, and every
+	 * look of a character the stage drew, as {@link lookKey} names it, for the characters screen.
+	 */
+	unlocked: { images: string[]; music: string[]; sprites: string[] };
 	/** The id of every character a play introduced, so a replay names everyone the reader met. */
 	introduced: string[];
 }
@@ -45,8 +48,9 @@ const PERSISTENT_SCHEMA: Schema<unknown, Persistent> = s.object({
 		s.object({
 			images: s.defaulted(s.array(s.string()), []),
 			music: s.defaulted(s.array(s.string()), []),
+			sprites: s.defaulted(s.array(s.string()), []),
 		}),
-		{ images: [], music: [] },
+		{ images: [], music: [], sprites: [] },
 	),
 	introduced: s.defaulted(s.array(s.string()), []),
 }) as Schema<unknown, Persistent>;
@@ -62,7 +66,7 @@ export function emptyPersistent(): Persistent {
 		chosen: [],
 		endings: [],
 		chapters: [],
-		unlocked: { images: [], music: [] },
+		unlocked: { images: [], music: [], sprites: [] },
 		introduced: [],
 	};
 }
@@ -116,4 +120,22 @@ export function readPersistent(
  */
 export function recordKey(scene: string, key: string): string {
 	return `${scene}:${key}`;
+}
+
+/**
+ * The key a character's look is recorded under: `<character>:<sprite>` for a sprite, and
+ * `<character>:<layer>=<variant>,…` in the layers' declared order for a layered character.
+ *
+ * @param character - The character's id.
+ * @param look - The sprite's name, or the variant drawn on each layer.
+ * @returns The key.
+ * @example lookKey("ren", { body: "school", face: "grin" }); // "ren:body=school,face=grin"
+ */
+export function lookKey(
+	character: string,
+	look: string | Readonly<Record<string, string>>,
+): string {
+	if (typeof look === "string") return `${character}:${look}`;
+	let parts = Object.entries(look).map(([layer, variant]) => `${layer}=${variant}`);
+	return `${character}:${parts.join(",")}`;
 }

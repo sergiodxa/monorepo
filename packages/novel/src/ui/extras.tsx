@@ -15,6 +15,7 @@ import { css, on } from "remix/component";
 import type { NovelLabels } from "./settings.js";
 
 import { ChapterSelect, SceneReplay } from "./chapters.js";
+import { Characters } from "./characters.js";
 import { EndingsList } from "./endings.js";
 import { Gallery } from "./gallery.js";
 import { Memories } from "./memories.js";
@@ -26,14 +27,14 @@ import { dialogSurface } from "./theme.js";
 /** A library screen the extras menu offers. */
 export type LibraryScreen = Extract<
 	NovelPlayer.Screen,
-	"memories" | "gallery" | "music" | "endings" | "chapters" | "scenes"
+	"memories" | "gallery" | "characters" | "music" | "endings" | "chapters" | "scenes"
 >;
 
 export namespace Extras {
 	/** Props {@link Extras} accepts. */
 	export interface Props extends Omit<TagProps<"span">, "children"> {
 		/**
-		 * The screens to offer, in menu order: `Memories`, `Gallery`, `MusicRoom`, `EndingsList`,
+		 * The screens to offer, in menu order: `Memories`, `Gallery`, `Characters`, `MusicRoom`, `EndingsList`,
 		 * `ChapterSelect` and `SceneReplay`, each with the props it needs, such as a music room's
 		 * `titles`. Other children are left out.
 		 */
@@ -48,6 +49,8 @@ export interface ScreenDialogProps extends Pick<Dialog.Props, "mix"> {
 	closeLabel: string;
 	/** True while the dialog is open, which is when its content renders and loads. */
 	open: boolean;
+	/** Widens the dialog to fit a screen that shows art beside a list, as the characters screen does. */
+	wide?: boolean;
 	children?: RemixNode;
 }
 
@@ -62,6 +65,7 @@ export interface OfferedScreen {
 function screenOf(type: unknown): Pick<OfferedScreen, "screen" | "label"> | undefined {
 	if (type === Memories) return { screen: "memories", label: "memories" };
 	if (type === Gallery) return { screen: "gallery", label: "gallery" };
+	if (type === Characters) return { screen: "characters", label: "characters" };
 	if (type === MusicRoom) return { screen: "music", label: "musicRoom" };
 	if (type === EndingsList) return { screen: "endings", label: "endings" };
 	if (type === ChapterSelect) return { screen: "chapters", label: "chapterSelect" };
@@ -138,6 +142,7 @@ export function Extras(handle: Handle<Extras.Props>) {
 						title={labels[label]}
 						closeLabel={labels.close}
 						open={open === screen}
+						wide={screen === "characters"}
 						mix={on("toggle", (event) =>
 							toggle(screen, (event as ToggleEvent).newState === "open"),
 						)}
@@ -156,13 +161,17 @@ export function Extras(handle: Handle<Extras.Props>) {
  */
 export function ScreenDialog(handle: Handle<ScreenDialogProps>) {
 	return () => {
-		let { id, title, closeLabel, open, mix, children } = handle.props;
+		let { id, title, closeLabel, open, wide, mix, children } = handle.props;
 		return (
 			<Dialog
 				id={id}
 				aria-labelledby={`${id}-title`}
 				data-novel-screen=""
-				style={dialogSurface()}
+				style={
+					wide === true
+						? { ...dialogSurface(), maxInlineSize: "none", inlineSize: "min(64rem, 96vw)" }
+						: dialogSurface()
+				}
 				mix={[
 					css({
 						inlineSize: "min(48rem, 94vw)",

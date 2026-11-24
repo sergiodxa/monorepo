@@ -75,6 +75,7 @@ export {
 	NovelTitleEvent,
 } from "./ui/events.js";
 export { Extras } from "./ui/extras.js";
+export { Characters } from "./ui/characters.js";
 export { Gallery } from "./ui/gallery.js";
 export { gamepadActions } from "./ui/input.js";
 export { Interaction } from "./ui/interaction.js";

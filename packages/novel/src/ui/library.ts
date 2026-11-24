@@ -12,14 +12,20 @@ import type { Handle } from "remix/component";
 
 import { isFailure } from "@sdxc/result";
 
-import type { ArcInfo, AssetSource, ChapterInfo, SceneDeclaration } from "../declarations.js";
+import type {
+	ArcInfo,
+	AssetSource,
+	ChapterInfo,
+	CharacterDeclaration,
+	SceneDeclaration,
+} from "../declarations.js";
 import type { Directive } from "../directives.js";
 import type { Speaker } from "../frames.js";
 import type { Novel } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 
 import { INTERNALS } from "../novel.js";
-import { recordKey } from "../persistent.js";
+import { lookKey, recordKey } from "../persistent.js";
 
 import { resolveSource } from "./source.js";
 
@@ -78,6 +84,28 @@ export interface LibraryAsset {
 	unlocked: boolean;
 }
 
+/** One look of a character: a sprite, or a combination of layer variants the stage drew. */
+export interface LibraryLook {
+	/** The look's key, as `lookKey` names it (`mika:smile`, `ren:body=school,face=grin`). */
+	key: string;
+	/** The images drawn for it, bottom to top. */
+	images: AssetSource[];
+	/** True once the stage drew the character in this look. */
+	seen: boolean;
+}
+
+/** A declared character, whether the reader met them, and the looks the stage drew them in. */
+export interface LibraryCharacter {
+	character: CharacterDeclaration;
+	/** True for a character declared `known`, or one a play introduced. */
+	met: boolean;
+	/**
+	 * Every declared sprite in declaration order, or for a layered character every combination the
+	 * stage drew, in the order the reader saw them; none for a character with no image.
+	 */
+	looks: LibraryLook[];
+}
+
 /** An ending known from the scenes, or reached in an earlier playthrough. */
 export interface LibraryEnding {
 	/** The ending's message key. */
@@ -93,6 +121,8 @@ export interface NovelLibrary {
 	arcs: LibraryArc[];
 	images: LibraryAsset[];
 	music: LibraryAsset[];
+	/** The cast in declaration order. */
+	characters: LibraryCharacter[];
 	/** Every ending key the mapped scenes hold, then any reached one they no longer hold. */
 	endings: LibraryEnding[];
 }
@@ -210,6 +240,11 @@ export async function readLibrary(
 		arcs: groupArcs(chapters),
 		images: unlocks(internals.assets.values(), "image", record.unlocked.images),
 		music: unlocks(internals.assets.values(), "music", record.unlocked.music),
+		characters: [...internals.characters.values()].map((character) => ({
+			character,
+			met: character.known || record.introduced.includes(character.id),
+			looks: looks(character, record.unlocked.sprites),
+		})),
 		endings: [...endings].map((key) => ({ key, reached: record.endings.includes(key) })),
 	};
 }
@@ -290,6 +325,35 @@ function unlocks(
 		assets.push({ id: asset.id, src: asset.src, unlocked: unlocked.includes(asset.id) });
 	}
 	return assets;
+}
+
+/**
+ * A character's looks: each declared sprite marked seen or not, or each layered combination the
+ * record lists whose variants the character still declares.
+ */
+function looks(character: CharacterDeclaration, seen: readonly string[]): LibraryLook[] {
+	let image = character.image;
+	if (image.kind === "sprites") {
+		return Object.entries(image.sprites).map(([name, src]) => {
+			let key = lookKey(character.id, name);
+			return { key, images: [src], seen: seen.includes(key) };
+		});
+	}
+	if (image.kind === "none") return [];
+	let prefix = lookKey(character.id, "");
+	let found: LibraryLook[] = [];
+	for (let key of seen) {
+		if (!key.startsWith(prefix)) continue;
+		let images: AssetSource[] = [];
+		for (let part of key.slice(prefix.length).split(",")) {
+			let [layer = "", variant = ""] = part.split("=");
+			let src = image.layers[layer]?.[variant];
+			if (src === undefined) break;
+			images.push(src);
+		}
+		if (images.length === Object.keys(image.layers).length) found.push({ key, images, seen: true });
+	}
+	return found;
 }
 
 /**

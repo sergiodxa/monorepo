@@ -11,8 +11,9 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { typewriterText } from "@sdxc/ui/styles";
 import { Typewriter } from "@sdxc/ui/utils";
-import { css, ref } from "remix/component";
+import { css, on, ref } from "remix/component";
 
+import type { Speaker } from "../frames.js";
 import type { AudioSound } from "../stage.js";
 
 import { Message } from "./message.js";
@@ -99,7 +100,7 @@ export function Textbox(handle: Handle<Textbox.Props>) {
 
 /**
  * The speakers of the current line, each in their color and joined with "&"; narration has none,
- * so nothing renders.
+ * so nothing renders. A named speaker opens the characters screen on them when the player offers one.
  *
  * @example <NovelPlayer.NamePlate mix={css({ "--novel-nameplate-offset": "0 -120%" })} />
  */
@@ -109,6 +110,8 @@ export function NamePlate(handle: Handle<Textbox.PartProps>) {
 		let { mix, ...rest } = handle.props;
 		let frame = player.frame;
 		if (frame?.type !== "line" || frame.speakers.length === 0) return null;
+		let offersCharacters =
+			player.element?.querySelector(`#${player.ids.characters}`) instanceof HTMLDialogElement;
 		return (
 			<p
 				{...rest}
@@ -136,10 +139,47 @@ export function NamePlate(handle: Handle<Textbox.PartProps>) {
 				{frame.speakers.map((speaker, index) => (
 					<span key={speaker.id} style={{ color: speaker.color }}>
 						{index > 0 ? " & " : null}
-						{speaker.introduced ? <Message i18nKey={speaker.name} /> : player.labels.unknownName}
+						<SpeakerName speaker={speaker} opens={offersCharacters} />
 					</span>
 				))}
 			</p>
+		);
+	};
+}
+
+/** Props of {@link SpeakerName}. */
+interface SpeakerNameProps {
+	speaker: Speaker;
+	/** True when the player offers a characters screen for the name to open. */
+	opens: boolean;
+}
+
+/** One speaker's name, or the unknown-name label until the story introduces them. */
+function SpeakerName(handle: Handle<SpeakerNameProps>) {
+	let player = handle.context.get(NovelPlayer);
+	return () => {
+		let { speaker, opens } = handle.props;
+		if (!speaker.introduced) return <>{player.labels.unknownName}</>;
+		if (!opens) return <Message i18nKey={speaker.name} />;
+		return (
+			<button
+				type="button"
+				data-character={speaker.id}
+				mix={[
+					css({
+						padding: 0,
+						border: 0,
+						background: "none",
+						color: "inherit",
+						font: "inherit",
+						cursor: "pointer",
+						"&:hover": { textDecoration: "underline" },
+					}),
+					on("click", () => player.showCharacter(speaker.id)),
+				]}
+			>
+				<Message i18nKey={speaker.name} />
+			</button>
 		);
 	};
 }
