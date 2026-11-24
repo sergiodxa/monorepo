@@ -565,6 +565,23 @@ describe("NovelPlayer", () => {
 		await vi.waitFor(() => expect(player.line()).toBe("Together!"), { timeout: 5000 });
 	});
 
+	test("auto mode turns off when the tab is hidden", async () => {
+		let player = mount({ settings: { textSpeed: 0, autoDelay: 50 } });
+		await shows(player, "Welcome to the café.");
+		(player.result.$('[data-action="auto"]') as HTMLButtonElement)!.click();
+		await vi.waitFor(() => expect(player.root().dataset["auto"]).toBe("true"));
+
+		Object.defineProperty(document, "hidden", { configurable: true, value: true });
+		try {
+			document.dispatchEvent(new Event("visibilitychange"));
+		} finally {
+			Reflect.deleteProperty(document, "hidden");
+		}
+
+		await vi.waitFor(() => expect(player.root().dataset["auto"]).toBe("false"));
+		expect(player.result.$('[data-action="auto"]')!.getAttribute("aria-pressed")).toBe("false");
+	});
+
 	test("skip in read-only mode stops at a line not read yet", async () => {
 		let player = mount();
 		await shows(player, "Welcome to the café.");

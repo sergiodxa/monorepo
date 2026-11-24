@@ -216,6 +216,7 @@ export namespace NovelPlayer {
 		load(slot: string): Promise<void>;
 		/** Replaces every setting; the change leaves as `novel:settings`. */
 		setSettings(next: NovelSettings): void;
+		/** Turns auto mode on or off; hiding the tab turns it off, so the play waits for the reader. */
 		toggleAuto(): void;
 		toggleSkip(): void;
 		/** Skips while `held` is true, the way held Control does. */
@@ -390,6 +391,15 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		},
 		{ signal: listenerSignal(handle) },
 	);
+	if (typeof document !== "undefined") {
+		document.addEventListener(
+			"visibilitychange",
+			() => {
+				if (document.hidden && director.auto.enabled) director.auto.toggle();
+			},
+			{ signal: listenerSignal(handle) },
+		);
+	}
 	listenToNovel();
 	handle.signal.addEventListener("abort", () => {
 		director.dispose();
