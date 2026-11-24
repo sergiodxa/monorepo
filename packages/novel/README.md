@@ -480,7 +480,7 @@ The whole player in one component: every part below, notifications included, the
 </NovelPlayer.Default>
 ```
 
-Given `titleScreen={{ heading, art?, screens? }}` it opens on `NovelPlayer.Title` and plays what the reader starts there, with the settings changed on the title; `start` is what every such play extends, and `mix` applies to the title while it shows.
+Given `titleScreen={{ heading, background?, art?, footer?, screens? }}` it opens on `NovelPlayer.Title` and plays what the reader starts there, with the settings changed on the title; `start` is what every such play extends, and `mix` applies to the title while it shows.
 
 ```tsx
 <NovelPlayer.Default
@@ -492,7 +492,25 @@ Given `titleScreen={{ heading, art?, screens? }}` it opens on `NovelPlayer.Title
 
 #### `NovelPlayer.Title`
 
-The title screen, filling its box: `heading` over the `art` slot (or `--novel-title-background`), New game, Continue from the newest of `saves` (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Gallery`, `Memories`) and the settings screen, each in a modal dialog. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable.
+The title screen, filling its box: `heading` (text, or a logo `<img>`/`<svg>` scaled to `--novel-title-logo-*`), a full-bleed `background` (or the `--novel-title-background` variable), a foreground `art` anchored at `--novel-title-art-inset`, New game, Continue from the newest of `saves` with that save's scene and date (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Gallery`, `Memories`), the settings screen, and a `footer` under the menu. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable, and every part carries a `data-novel-title-*` attribute (`heading`, `menu`, `button` with `data-action`, `label`, `detail`, `footer`, `background`, `art`) that the title's own `mix` can decorate:
+
+```tsx
+<NovelPlayer.Title
+	novel={novel}
+	heading={<img src={logo} alt="The Café" />}
+	mix={css({
+		"& [data-novel-title-button]::before": {
+			content: '"◆"',
+			position: "absolute",
+			insetInlineStart: "-0.5em",
+		},
+	})}
+/>
+```
+
+#### `SaveSummary`
+
+A save's scene title and the date it was saved in the reader's locale, as the save slots and Continue show it: `<SaveSummary state={save} locale={locale} />`.
 
 #### `NovelPlayer.Context`
 
@@ -695,7 +713,7 @@ The scenery transitions the player draws itself as View Transitions (any other n
 - `RevealBehavior`, `AutoBehavior`, `SkipBehavior`, `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`, `AutosaveBehavior`, `NotificationsBehavior`, `ReadBehavior`: What the player relies on from each behavior.
 - `NotificationInput`, `NotificationText`, `NotificationMessage`, `NovelNotification`: A toast as `push()` takes it, as plain text or a message to translate, and as the queue holds it.
 - `Interaction.Props<Map>`, `Interaction.Map`, `Interaction.Frame<Map>`, `Interaction.Rendered`: An interaction part's props, the map it takes, the custom frame of each interaction in it, and what the children function returns.
-- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Extras.Props`, `Title.Props`, `Title.Options`, `Notifications.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
+- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Extras.Props`, `Title.Props`, `Title.Options`, `SaveScreen.SummaryProps`, `Notifications.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
 - `keyboardControls.Options`: The keymap the keyboard mixin takes.
 - `RevealStatus`: Where a line's reveal stands.
 - `NovelThemeVariable`: A `--novel-*` variable name.

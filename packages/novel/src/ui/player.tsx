@@ -285,7 +285,7 @@ export namespace NovelPlayer {
 		/** Drawn on the stage with the built-in parts, such as a `NovelPlayer.Interaction` part. */
 		children?: RemixNode;
 		/**
-		 * Opens on `NovelPlayer.Title` with this heading, art and library screens, and plays what
+		 * Opens on `NovelPlayer.Title` with this heading, art, footer and screens, and plays what
 		 * the reader starts there; `start` is what every such play extends. Without it the play
 		 * starts at once. `mix` applies to the title while it shows, then to the player.
 		 *
@@ -725,11 +725,11 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 	return () => {
 		let { children, mix, titleScreen, ...rest } = handle.props;
 		if (titleScreen !== undefined && chosen === undefined) {
+			let { screens, ...look } = titleScreen;
 			return (
 				<Title
+					{...look}
 					novel={rest.novel}
-					heading={titleScreen.heading}
-					art={titleScreen.art}
 					saves={rest.saves}
 					start={rest.start}
 					settings={changed ?? rest.settings}
@@ -745,7 +745,7 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 						mix,
 					]}
 				>
-					{titleScreen.screens}
+					{screens}
 				</Title>
 			);
 		}

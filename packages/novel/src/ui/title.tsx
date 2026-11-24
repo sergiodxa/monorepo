@@ -1,14 +1,15 @@
 /**
- * The title screen a novel opens on: its heading over the author's art, New game, Continue from
- * the newest save, the library screens and the settings, each in a modal dialog. It starts
- * nothing itself; a play the reader begins leaves as `novel:start` for its owner to mount.
+ * The title screen a novel opens on: its heading over the author's background and art, New game,
+ * Continue from the newest save, the library screens and the settings, each in a modal dialog.
+ * It starts nothing itself; a play the reader begins leaves as `novel:start` for its owner.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/component";
+import type { Handle, Props as TagProps, RemixElement, RemixNode } from "remix/component";
 
+import { intl } from "@sdxc/i18n/ui";
 import { css, on, ref } from "remix/component";
 
 import type { GameState } from "../frames.js";
@@ -23,6 +24,7 @@ import { NovelSettingsEvent, NovelStartEvent } from "./events.js";
 import { offeredScreens, ScreenDialog } from "./extras.js";
 import { Gallery } from "./gallery.js";
 import { Memories } from "./memories.js";
+import { SaveSummary } from "./saves.js";
 import { SettingsScreen } from "./settings-screen.js";
 import { DEFAULT_LABELS } from "./settings.js";
 import { listenerSignal } from "./signal.js";
@@ -31,13 +33,25 @@ import { themeVar } from "./theme.js";
 export namespace Title {
 	/** What a title screen shows beside the novel's data, which `NovelPlayer.Default` takes too. */
 	export interface Options {
-		/** The novel's title, as text or the author's own markup. */
+		/**
+		 * The novel's title: text, the author's markup, or a logo as an `<img>`, `<svg>` or
+		 * `<picture>`, scaled to the `--novel-title-logo-*` bounds; a logo's alt text names it.
+		 */
 		heading: RemixNode;
 		/**
-		 * Drawn behind the heading and the menu, filling the screen: key art as an `<img>`, a
-		 * `<picture>` or any markup. Without it the screen shows `--novel-title-background`.
+		 * Full-bleed behind everything: an `<img>`, `<picture>` or `<video>` covers the screen,
+		 * through `--novel-title-background-filter`. Without it the screen shows the
+		 * `--novel-title-background` variable.
+		 */
+		background?: RemixNode;
+		/**
+		 * A foreground illustration such as a portrait, drawn over the background and under the
+		 * menu at `--novel-title-art-inset` and `--novel-title-art-block-size`, keeping its ratio.
+		 * It is hidden from assistive technology unless its element carries alt text.
 		 */
 		art?: RemixNode;
+		/** Drawn under the menu in the same column, for a disclaimer or credits. */
+		footer?: RemixNode;
 		/**
 		 * The library screens the menu offers, in order, like `NovelPlayer.Extras`' children.
 		 *
@@ -46,11 +60,9 @@ export namespace Title {
 		screens?: RemixNode;
 	}
 
-	/** Props {@link Title} accepts. */
-	export interface Props extends Omit<TagProps<"div">, "children"> {
+	/** Props {@link Title} accepts; `mix` styles the parts through their `data-novel-title-*` attributes. */
+	export interface Props extends Omit<TagProps<"div">, "children">, Omit<Options, "screens"> {
 		novel: Novel;
-		heading: RemixNode;
-		art?: RemixNode;
 		/** The reader's saves by slot; Continue resumes the newest and shows only when one exists. */
 		saves?: Readonly<Record<string, GameState>>;
 		/**
@@ -88,12 +100,24 @@ function newestSave(saves: Readonly<Record<string, GameState>> | undefined): Gam
 	return newest;
 }
 
+/** True when `node` is an element carrying a non-empty `alt` or `aria-label` for its reader. */
+function describes(node: RemixNode): boolean {
+	if (typeof node !== "object" || node === null || Array.isArray(node) || !("props" in node)) {
+		return false;
+	}
+	let props = (node as RemixElement).props as Record<string, unknown>;
+	return [props["alt"], props["aria-label"]].some(
+		(text) => typeof text === "string" && text.trim() !== "",
+	);
+}
+
 /**
  * The title screen, filling its box. New game, Continue and a chapter or scene picked from a
  * library screen each dispatch `novel:start` with the options to mount a player with; a setting
  * changed here leaves as `novel:settings`. Every visual decision is a `--novel-title-*` variable.
  *
  * @example <NovelPlayer.Title novel={novel} heading="The Café" art={<img src={art} alt="" />} saves={saves} mix={on("novel:start", (event) => play(event.start))} />
+ * @example mix={css({ "& [data-novel-title-button]::before": { content: '"◆"', position: "absolute", insetInlineStart: "-0.5em" } })}
  */
 export function Title(handle: Handle<Title.Props>) {
 	let root: HTMLElement | undefined;
@@ -134,7 +158,9 @@ export function Title(handle: Handle<Title.Props>) {
 		let {
 			novel,
 			heading,
+			background,
 			art,
+			footer,
 			saves,
 			start,
 			settings: stored,
@@ -188,29 +214,55 @@ export function Title(handle: Handle<Title.Props>) {
 					mix,
 				]}
 			>
+				{background === undefined ? null : (
+					<div
+						data-novel-title-background=""
+						mix={css({
+							position: "absolute",
+							inset: 0,
+							filter: themeVar("--novel-title-background-filter"),
+							"& > img, & > video, & > picture, & > picture > img": {
+								display: "block",
+								inlineSize: "100%",
+								blockSize: "100%",
+								objectFit: "cover",
+								objectPosition: themeVar("--novel-title-background-position"),
+							},
+						})}
+					>
+						{background}
+					</div>
+				)}
 				<div
-					data-novel-title-art=""
-					mix={css({
-						position: "absolute",
-						inset: 0,
-						display: "grid",
-						"& > img, & > picture, & > video": {
-							inlineSize: "100%",
-							blockSize: "100%",
-							objectFit: "cover",
-						},
-					})}
-				>
-					{art}
-				</div>
-				<div
+					data-novel-title-overlay=""
 					mix={css({
 						position: "absolute",
 						inset: 0,
 						background: themeVar("--novel-title-overlay"),
 					})}
 				/>
+				{art === undefined ? null : (
+					<div
+						data-novel-title-art=""
+						aria-hidden={describes(art) ? undefined : "true"}
+						mix={css({
+							position: "absolute",
+							inset: themeVar("--novel-title-art-inset"),
+							blockSize: themeVar("--novel-title-art-block-size"),
+							display: "flex",
+							filter: themeVar("--novel-title-art-filter"),
+							"& > img, & > svg, & > picture, & > picture > img": {
+								display: "block",
+								blockSize: "100%",
+								inlineSize: "auto",
+							},
+						})}
+					>
+						{art}
+					</div>
+				)}
 				<div
+					data-novel-title-content=""
 					mix={css({
 						position: "absolute",
 						inset: themeVar("--novel-title-inset"),
@@ -223,6 +275,7 @@ export function Title(handle: Handle<Title.Props>) {
 				>
 					<h1
 						id={`${prefix}-heading`}
+						data-novel-title-heading=""
 						mix={css({
 							margin: 0,
 							fontFamily: themeVar("--novel-title-heading-font"),
@@ -231,12 +284,21 @@ export function Title(handle: Handle<Title.Props>) {
 							lineHeight: 1,
 							color: themeVar("--novel-title-heading-color"),
 							textShadow: themeVar("--novel-title-heading-shadow"),
+							"& img, & svg, & picture": {
+								display: "block",
+								inlineSize: "auto",
+								blockSize: "auto",
+								maxInlineSize: themeVar("--novel-title-logo-max-inline-size"),
+								maxBlockSize: themeVar("--novel-title-logo-max-block-size"),
+								filter: themeVar("--novel-title-logo-filter"),
+							},
 						})}
 					>
 						{heading}
 					</h1>
 					<nav
 						aria-label={labels.titleMenu}
+						data-novel-title-menu=""
 						mix={css({
 							display: "flex",
 							flexDirection: "column",
@@ -254,6 +316,7 @@ export function Title(handle: Handle<Title.Props>) {
 						{resume === undefined ? null : (
 							<TitleButton
 								action="continue"
+								detail={<SaveSummary state={resume} locale={intl(handle).locale} />}
 								mix={on("click", (event) => begin(event.currentTarget, { ...start, from: resume }))}
 							>
 								{labels.continue}
@@ -268,6 +331,21 @@ export function Title(handle: Handle<Title.Props>) {
 							{labels.settings}
 						</TitleButton>
 					</nav>
+					{footer === undefined ? null : (
+						<div
+							data-novel-title-footer=""
+							mix={css({
+								marginBlockStart: themeVar("--novel-title-footer-gap"),
+								maxInlineSize: themeVar("--novel-title-footer-max-inline-size"),
+								fontSize: themeVar("--novel-title-footer-font-size"),
+								color: themeVar("--novel-title-footer-color"),
+								textAlign: themeVar("--novel-title-footer-align") as "start",
+								lineHeight: 1.45,
+							})}
+						>
+							{footer}
+						</div>
+					)}
 				</div>
 				{screens.map(({ screen, label, element }) => {
 					let Screen = element.type as (handle: Handle<LibraryProps>) => () => RemixNode;
@@ -304,40 +382,73 @@ interface TitleButtonProps extends Pick<TagProps<"button">, "mix"> {
 	action: string;
 	/** The id of the modal dialog it opens. */
 	opens?: string;
+	/** A second line under the label, such as the save Continue resumes. */
+	detail?: RemixNode;
 	children?: RemixNode;
 }
 
-/** One entry of the title menu, styled through the `--novel-title-button-*` variables. */
+/**
+ * One entry of the title menu, styled through the `--novel-title-button-*` variables. It is
+ * positioned, so an author's `::before` and `::after` ornaments anchor to its edges.
+ */
 function TitleButton(handle: Handle<TitleButtonProps>) {
 	return () => {
-		let { action, opens, mix, children } = handle.props;
+		let { action, opens, detail, mix, children } = handle.props;
 		let invoke = opens === undefined ? {} : { commandfor: opens, command: "show-modal" as const };
 		return (
 			<button
 				type="button"
+				data-novel-title-button=""
 				data-action={action}
 				{...invoke}
 				mix={[
 					css({
+						position: "relative",
 						padding: themeVar("--novel-title-button-padding"),
 						border: themeVar("--novel-title-button-border"),
 						borderRadius: themeVar("--novel-title-button-radius"),
 						background: themeVar("--novel-title-button-background"),
+						boxShadow: themeVar("--novel-title-button-shadow"),
 						color: themeVar("--novel-title-button-color"),
-						font: "inherit",
+						fontFamily: themeVar("--novel-title-button-font-family"),
 						fontSize: themeVar("--novel-title-button-font-size"),
+						fontWeight: themeVar("--novel-title-button-font-weight"),
+						fontVariant: themeVar("--novel-title-button-font-variant"),
+						letterSpacing: themeVar("--novel-title-button-letter-spacing"),
+						textTransform: themeVar("--novel-title-button-text-transform") as "none",
 						cursor: "pointer",
-						transition: "background-color 160ms ease, border-color 160ms ease",
+						transition:
+							"background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
 						"&:hover, &:focus-visible": {
 							background: themeVar("--novel-title-button-hover"),
 							borderColor: themeVar("--novel-title-button-hover-border-color"),
+							boxShadow: themeVar("--novel-title-button-hover-shadow"),
 						},
 						"@media (prefers-reduced-motion: reduce)": { transition: "none" },
 					}),
 					mix,
 				]}
 			>
-				{children}
+				<span data-novel-title-label="" mix={css({ display: "block" })}>
+					{children}
+				</span>
+				{detail === undefined ? null : (
+					<span
+						data-novel-title-detail=""
+						mix={css({
+							display: "block",
+							marginBlockStart: "0.4em",
+							fontFamily: themeVar("--novel-title-detail-font-family"),
+							fontSize: themeVar("--novel-title-detail-font-size"),
+							color: themeVar("--novel-title-detail-color"),
+							letterSpacing: themeVar("--novel-title-detail-letter-spacing"),
+							textTransform: themeVar("--novel-title-detail-text-transform") as "none",
+							"& time": { color: themeVar("--novel-title-detail-time-color") },
+						})}
+					>
+						{detail}
+					</span>
+				)}
 			</button>
 		);
 	};

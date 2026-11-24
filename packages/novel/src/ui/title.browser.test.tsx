@@ -17,7 +17,7 @@ import { css, on } from "remix/component";
 import { render } from "remix/component/test";
 import * as s from "remix/data-schema";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { userEvent } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 
 import type { GameState } from "../frames.js";
 import type { StartOptions } from "../novel.js";
@@ -251,5 +251,171 @@ describe("NovelPlayer.Default with a title screen", () => {
 		await vi.waitFor(() =>
 			expect(result.$("[data-novel-player]")?.dataset["dyslexia"]).toBe("true"),
 		);
+	});
+});
+
+/** An SVG image of `width`×`height` as a data URL, so it decodes without a server. */
+function svg(width: number, height: number): string {
+	return `data:image/svg+xml,${encodeURIComponent(
+		`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="teal"/></svg>`,
+	)}`;
+}
+
+/** Waits until every image under `root` has decoded, so its box has its natural ratio. */
+async function decoded(root: Element): Promise<void> {
+	await vi.waitFor(() => {
+		for (let image of root.querySelectorAll("img")) expect(image.naturalWidth).toBeGreaterThan(0);
+	});
+}
+
+describe("NovelPlayer.Title's look", () => {
+	test("shows under Continue the newest save's scene and when it was saved, in the locale", () => {
+		let savedAt = "2026-03-01T15:30:00.000Z";
+		let { result } = mount(
+			<div style={{ display: "contents", "--novel-title-detail-color": "rgb(7, 8, 9)" }}>
+				<Title
+					novel={fixture()}
+					heading="The Café"
+					saves={{ "1": save("titles.opening", savedAt) }}
+				/>
+			</div>,
+		);
+		let detail = result.$('[data-action="continue"] [data-novel-title-detail]')!;
+		expect(result.$('[data-action="continue"] [data-novel-title-label]')!.textContent).toBe(
+			"Continue",
+		);
+		expect(detail.querySelector("[data-novel-save-scene]")!.textContent).toBe("Opening");
+		expect(detail.querySelector("time")!.textContent).toBe(
+			new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
+				new Date(savedAt),
+			),
+		);
+		expect(getComputedStyle(detail).color).toBe("rgb(7, 8, 9)");
+	});
+
+	test("draws a footer under the menu, in the same column, styled by its variables", () => {
+		let { result } = mount(
+			<div style={{ display: "contents", "--novel-title-footer-color": "rgb(9, 9, 9)" }}>
+				<Title novel={fixture()} heading="The Café" footer="A fan work." />
+			</div>,
+		);
+		let footer = result.$("[data-novel-title-content] > [data-novel-title-footer]")!;
+		expect(footer.textContent).toBe("A fan work.");
+		expect(footer.previousElementSibling!.matches("[data-novel-title-menu]")).toBe(true);
+		expect(getComputedStyle(footer).color).toBe("rgb(9, 9, 9)");
+	});
+
+	test("lets the author ornament every button through its own mix and variables", () => {
+		let { result } = mount(
+			<div
+				style={{
+					display: "contents",
+					"--novel-title-button-letter-spacing": "3px",
+					"--novel-title-button-text-transform": "uppercase",
+					"--novel-title-button-shadow": "rgb(1, 1, 1) 0px 0px 0px 2px inset",
+				}}
+			>
+				<Title
+					novel={fixture()}
+					heading="The Café"
+					mix={css({
+						"& [data-novel-title-button]::before": {
+							content: '"◆"',
+							position: "absolute",
+							insetInlineStart: "-0.5em",
+						},
+					})}
+				/>
+			</div>,
+		);
+		let newGame = button(result, "new-game")!;
+		expect(newGame.matches("[data-novel-title-button]")).toBe(true);
+		expect(getComputedStyle(newGame, "::before").content).toBe('"◆"');
+		expect(getComputedStyle(newGame).position).toBe("relative");
+		expect(getComputedStyle(newGame).letterSpacing).toBe("3px");
+		expect(getComputedStyle(newGame).textTransform).toBe("uppercase");
+		expect(getComputedStyle(newGame).boxShadow).toBe("rgb(1, 1, 1) 0px 0px 0px 2px inset");
+		expect(result.$("[data-novel-title-heading]")).not.toBeNull();
+		expect(result.$("[data-novel-title-menu]")).not.toBeNull();
+	});
+
+	test("caps an image logo by its variables and names the heading by its alt text", async () => {
+		let { result } = mount(
+			<div
+				style={{
+					display: "contents",
+					"--novel-title-logo-max-inline-size": "300px",
+					"--novel-title-logo-max-block-size": "100px",
+				}}
+			>
+				<Title novel={fixture()} heading={<img src={svg(2000, 1000)} alt="The Café" />} />
+			</div>,
+		);
+		let logo = result.$("[data-novel-title-heading] img")!;
+		await decoded(logo.parentElement!);
+		let box = logo.getBoundingClientRect();
+		expect(box.width).toBeLessThanOrEqual(300);
+		expect(box.height).toBeLessThanOrEqual(100);
+		expect(box.width / box.height).toBeCloseTo(2, 1);
+		await expect.element(page.getByRole("heading", { name: "The Café" })).toBeInTheDocument();
+		expect(page.getByRole("region", { name: "The Café" }).query()).not.toBeNull();
+	});
+
+	test("covers the screen with the background, through its filter", async () => {
+		let { result } = mount(
+			<div style={{ display: "contents", "--novel-title-background-filter": "blur(6px)" }}>
+				<Title
+					novel={fixture()}
+					heading="The Café"
+					background={<img src={svg(400, 400)} alt="" />}
+				/>
+			</div>,
+		);
+		let layer = result.$("[data-novel-title-background]")!;
+		await decoded(layer);
+		let image = layer.querySelector("img")!;
+		let root = result.$("[data-novel-title]")!.getBoundingClientRect();
+		let box = image.getBoundingClientRect();
+		expect(getComputedStyle(layer).filter).toBe("blur(6px)");
+		expect(getComputedStyle(image).objectFit).toBe("cover");
+		expect([box.width, box.height]).toEqual([root.width, root.height]);
+	});
+
+	test("anchors the art at the bottom right, keeping its ratio, hidden unless it has alt text", async () => {
+		let { result } = mount(
+			<Title novel={fixture()} heading="The Café" art={<img src={svg(320, 640)} alt="" />} />,
+		);
+		let layer = result.$("[data-novel-title-art]")!;
+		await decoded(layer);
+		let root = result.$("[data-novel-title]")!.getBoundingClientRect();
+		let box = layer.querySelector("img")!.getBoundingClientRect();
+		expect(box.height).toBeCloseTo(root.height * 0.95, 0);
+		expect(box.width).toBeCloseTo(box.height / 2, 0);
+		expect(box.bottom).toBeCloseTo(root.bottom, 0);
+		expect(box.right).toBeCloseTo(root.right - root.width * 0.04, 0);
+		expect(layer.getAttribute("aria-hidden")).toBe("true");
+		mounted?.cleanup();
+
+		let named = mount(
+			<Title novel={fixture()} heading="The Café" art={<img src={svg(320, 640)} alt="Mika" />} />,
+		);
+		expect(named.result.$("[data-novel-title-art]")!.hasAttribute("aria-hidden")).toBe(false);
+	});
+
+	test("passes the background, art and footer through NovelPlayer.Default", () => {
+		let { result } = mount(
+			<NovelPlayer.Default
+				novel={fixture()}
+				titleScreen={{
+					heading: "The Café",
+					background: <img data-backdrop="" alt="" />,
+					art: <img data-portrait="" alt="" />,
+					footer: "Credits",
+				}}
+			/>,
+		);
+		expect(result.$("[data-novel-title-background] [data-backdrop]")).not.toBeNull();
+		expect(result.$("[data-novel-title-art] [data-portrait]")).not.toBeNull();
+		expect(result.$("[data-novel-title-footer]")!.textContent).toBe("Credits");
 	});
 });

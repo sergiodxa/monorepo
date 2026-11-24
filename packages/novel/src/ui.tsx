@@ -86,7 +86,7 @@ export { Notifications } from "./ui/notifications.js";
 export { NovelPlayer } from "./ui/player.js";
 export { QuickMenu } from "./ui/quick-menu.js";
 export { Prefetcher } from "./ui/prefetch.js";
-export { SaveScreen, SlotThumbnail } from "./ui/saves.js";
+export { SaveScreen, SaveSummary, SlotThumbnail } from "./ui/saves.js";
 export { DEFAULT_LABELS, DEFAULT_SETTINGS, KEYMAP, resolveSettings } from "./ui/settings.js";
 export { RangeSetting, SettingsScreen } from "./ui/settings-screen.js";
 export { resolveSource } from "./ui/source.js";

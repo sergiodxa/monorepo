@@ -40,6 +40,13 @@ export namespace SaveScreen {
 		state: GameState;
 		locale: string;
 	}
+
+	/** Props {@link SaveSummary} accepts. */
+	export interface SummaryProps {
+		state: GameState;
+		/** The locale the date is formatted in. */
+		locale: string;
+	}
 }
 
 /** Props of one of the two slot dialogs. */
@@ -83,7 +90,6 @@ function SlotDialog(handle: Handle<SlotDialogProps>) {
 		let { mode, slots } = handle.props;
 		let { labels, locale } = player;
 		let id = mode === "save" ? player.ids.save : player.ids.load;
-		let date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
 		return (
 			<Dialog
 				id={id}
@@ -154,13 +160,7 @@ function SlotDialog(handle: Handle<SlotDialogProps>) {
 									{saved === undefined ? (
 										<span>{labels.emptySlot}</span>
 									) : (
-										<span>
-											<Message i18nKey={saved.meta.scene} />
-											{" · "}
-											<time dateTime={saved.meta.savedAt}>
-												{date.format(new Date(saved.meta.savedAt))}
-											</time>
-										</span>
+										<SaveSummary state={saved} locale={locale} />
 									)}
 								</button>
 							</li>
@@ -178,6 +178,30 @@ function slotName(slot: string, autosave: string, labels: NovelLabels): string {
 	if (slot === autosave) return labels.autosave;
 	if (slot === QUICK_SLOT) return labels.quickSave;
 	return `${labels.slot} ${slot}`;
+}
+
+/**
+ * What a save holds, as every screen that offers one shows it: the scene's title, then when it was
+ * saved in the reader's locale, in `data-novel-save-scene` and `data-novel-save-time` for styling.
+ *
+ * @example <SaveSummary state={saves["1"]} locale="en" />
+ */
+export function SaveSummary(handle: Handle<SaveScreen.SummaryProps>) {
+	return () => {
+		let { state, locale } = handle.props;
+		let date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+		return (
+			<span data-novel-save-summary="">
+				<span data-novel-save-scene="">
+					<Message i18nKey={state.meta.scene} />
+				</span>
+				{" · "}
+				<time data-novel-save-time="" dateTime={state.meta.savedAt}>
+					{date.format(new Date(state.meta.savedAt))}
+				</time>
+			</span>
+		);
+	};
 }
 
 /**
