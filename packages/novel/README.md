@@ -222,21 +222,26 @@ Names every scene by its dotted path, so `scenes({ spring: { cafe: scene() } })`
 
 Declares one scene. Its title is the message key save slots and scene replay show; a scene without one is a beat no menu lists.
 
-#### `chapter(options: { title?: LineKey; scenes: SceneTree }): ChapterLeaf`
+#### `chapter(options: { title?: LineKey; scenes: ChapterTree }): ChapterLeaf`
 
-Groups scenes into a chapter, which chapter select lists by its title and the `chapter` event reports. The chapter's key is part of every scene name under it.
+Groups scenes into a chapter, which chapter select lists by its title and the `chapter` event reports. The chapter's key is part of every scene name under it. A chapter holds scenes and groups of scenes; chapters are grouped by `arc()`.
 
-A chapter declared inside another makes the outer one its arc: every scene's `chapter` carries `arc` (the outer chapter's `name` and `title`), and the library screens head each arc's chapters with its title. Only the nearest enclosing chapter is the arc, so a chapter three levels deep names the middle one. Scenes an arc declares outside its chapters keep the arc as their chapter.
+#### `arc(options: { title?: LineKey; chapters: ArcChapters }): ArcLeaf`
+
+Groups chapters into an arc ("First Year" holding chapters 1–12). The arc's key is part of every scene name under it, every chapter in it carries `arc` (the arc's `name` and `title`), and the library screens head each arc's chapters with its title.
 
 ```ts
 let story = scenes({
-	y1: chapter({
-		title: "years.y1",
-		scenes: { ch01: chapter({ title: "chapters.ch01", scenes: { s1: scene() } }) },
+	arc1: arc({
+		title: "arcs.first",
+		chapters: {
+			ch1: chapter({ title: "chapters.one", scenes: { s1: scene(), s2: scene() } }),
+		},
 	}),
 });
 
-story.y1.ch01.s1.chapter; // { name: "y1.ch01", title: "chapters.ch01", arc: { name: "y1", title: "years.y1" } }
+story.arc1.ch1.s1.name; // "arc1.ch1.s1"
+story.arc1.ch1.s1.chapter; // { name: "arc1.ch1", title: "chapters.one", arc: { name: "arc1", title: "arcs.first" } }
 ```
 
 #### `chapterOf(group: object): ChapterInfo | undefined`
@@ -400,7 +405,7 @@ The one error the engine reports, on `error` frames, `error` events and failed `
 - `Extension`, `AnyExtension`, `ExtensionOptions`, `ExtensionBaseOptions`, `StatelessExtensionOptions`, `LastingOptions`, `ExtensionContext`, `ExtensionScope`, `ExtensionMethods`, `ExtensionListeners`, `ExtensionState`, `ExtensionLasting`, `ExtensionPersistent`, `ExtensionCalls`: An extension and what `extension()` takes (with or without a per-play slice, and its lasting slice), the context and state its directives are written with, and the slices and calls every declared extension adds.
 - `StateRecord`, `StatePath<State>`, `PathValue<State, Path>`, `PathAccepting<State, Value>`, `DeepPartial<Value>`: State as any record, the dotted paths `set` takes, the value at a path, the paths whose value accepts an interaction's output, and the partial state a play or test starts from.
 - `PlayTools`, `StateCallback<Value>`, `ValuesInput<Values>`, `StoredCallback<Value>`, `PickWeight<Scene>`, `StoredWeight`: What callbacks receive beside the state (`random`, and `persistent` with every lasting slice), a read-only callback of the state, message values inline or computed, a callback as a directive stores it, and a `oneOf` weight as written and as stored.
-- `SceneTree`, `SceneLeaf`, `ChapterLeaf`, `SceneMap`, `SceneDeclaration<Name>`, `ChapterInfo`, `ArcInfo`, `ChapterMarker`: The scene tree before and after `scenes()` names it, a named scene with its optional title and chapter, the arc a chapter declared inside another carries, and the chapter a group is branded with.
+- `SceneTree`, `SceneLeaf`, `ChapterLeaf`, `ChapterTree`, `ArcLeaf`, `ArcChapters`, `SceneMap`, `SceneDeclaration<Name>`, `ChapterInfo`, `ArcInfo`, `ChapterMarker`: The scene tree before and after `scenes()` names it, a chapter's scenes and an arc's chapters, a named scene with its optional title and chapter, the arc a chapter in an arc carries, and the chapter a group is branded with.
 - `CharacterOptions`, `CharacterLeaf`, `CharacterDeclaration`, `CastMap`, `CharacterImage`, `SpriteImage`, `LayerImage`, `NoImage`, `StagedCharacter`: A character before and after `cast()` names it, the three shapes its images take, and a character that can stand on stage.
 - `AssetSource`, `AssetKind`, `AssetTree`, `AssetMap`, `AssetDeclaration<Kind>`, `CaptionedSound`: A file's URL, Blob or locale map, the five kinds of media, and an asset before and after `assets()` names it.
 - `InteractionLeaf`, `InteractionDeclaration`, `InteractionMap`: An interaction before and after `interactions()` names it.

@@ -11,6 +11,7 @@ import * as s from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 
 import {
+	arc,
 	assets,
 	cast,
 	chapter,
@@ -160,16 +161,16 @@ describe(readLibrary, () => {
 
 	test("groups chapters by arc, an arc reached once one of its chapters is", async () => {
 		let story = scenes({
-			y1: chapter({
+			y1: arc({
 				title: "chapters.prologue",
-				scenes: {
+				chapters: {
 					ch01: chapter({ title: "titles.opening", scenes: { s1: scene() } }),
 					ch02: chapter({ scenes: { s1: scene() } }),
 				},
 			}),
-			y2: chapter({
+			y2: arc({
 				title: "titles.cafe",
-				scenes: { ch03: chapter({ scenes: { s1: scene() } }) },
+				chapters: { ch03: chapter({ scenes: { s1: scene() } }) },
 			}),
 			epilogue: scene(),
 		});

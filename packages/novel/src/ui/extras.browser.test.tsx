@@ -22,6 +22,7 @@ import { userEvent } from "vitest/browser";
 import type { Persistent } from "../persistent.js";
 
 import {
+	arc,
 	assets,
 	cast,
 	chapter,
@@ -145,18 +146,18 @@ const STORED: Persistent = {
 
 /** A story whose chapters are grouped in two arcs, each chapter holding one titled scene. */
 const ARC_SCENES = scenes({
-	y1: chapter({
+	y1: arc({
 		title: "chapters.prologue",
-		scenes: {
+		chapters: {
 			ch01: chapter({
 				title: "titles.opening",
 				scenes: { s1: scene({ title: "titles.opening" }) },
 			}),
 		},
 	}),
-	y2: chapter({
+	y2: arc({
 		title: "titles.cafe",
-		scenes: {
+		chapters: {
 			ch02: chapter({ title: "titles.cafe", scenes: { s1: scene({ title: "titles.cafe" }) } }),
 		},
 	}),

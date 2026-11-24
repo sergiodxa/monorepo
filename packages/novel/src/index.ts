@@ -9,7 +9,9 @@
  */
 
 export type {
+	ArcChapters,
 	ArcInfo,
+	ArcLeaf,
 	AssetDeclaration,
 	AssetKind,
 	AssetMap,
@@ -20,6 +22,7 @@ export type {
 	ChapterInfo,
 	ChapterLeaf,
 	ChapterMarker,
+	ChapterTree,
 	CharacterDeclaration,
 	CharacterImage,
 	CharacterLeaf,
@@ -171,6 +174,7 @@ export type {
 } from "./types.js";
 
 export {
+	arc,
 	assets,
 	cast,
 	chapter,
