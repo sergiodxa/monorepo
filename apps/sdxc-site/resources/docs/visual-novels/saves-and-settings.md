@@ -60,30 +60,19 @@ and the play goes on unsaved. The player reads `start` once, so mount a new play
 
 ## Open on a title screen
 
-Give `NovelPlayer.Default` a `titleScreen` and it opens on a title: your heading over your art,
-**New game**, **Continue** from the newest save once one exists, chapter select, the gallery,
-memories and the settings. It swaps to the play the reader starts, with any setting they changed
-there:
+Give `NovelPlayer.Default` a `titleScreen` and it opens on a title whose **Continue** resumes the
+newest stored save:
 
 ```tsx {% title="resources/components/game.tsx" %}
 <NovelPlayer.Default
 	novel={novel}
 	{...stored}
-	titleScreen={{ heading: "The Café", art: <img src={keyArt} alt="" /> }}
-	mix={[
-		STORAGE.sync(),
-		css({
-			"--novel-title-heading-color": "#f6e6bd",
-			"--novel-title-button-radius": "0",
-		}),
-	]}
+	mix={STORAGE.sync()}
+	titleScreen={{ heading: "The Café" }}
 />
 ```
 
-Every color, size and position on the title is a `--novel-title-*` variable, and its words are
-the `newGame`, `continue` and `titleMenu` labels. A game that mounts its own player renders
-`NovelPlayer.Title` and starts a player from each `novel:start` event, whose `start` holds the
-save to resume or the chapter to replay.
+[A title screen](/docs/visual-novels/title-screen) adds your logo, art and styling.
 
 > [!NOTE]
 > Storage is untrusted. A play started from a save validates it against your state schema first,
@@ -174,8 +163,10 @@ test("a regular can order the usual", async () => {
 
 ## Where to go next
 
-- [Test your story](/docs/visual-novels/test-your-story) — the next guide: reach every ending
-  and replay each path.
+- [A title screen](/docs/visual-novels/title-screen) — the next guide: your logo, art and menu
+  over the saves stored here.
+- [Test your story](/docs/visual-novels/test-your-story) — reach every ending and replay each
+  path.
 - [Notifications, autosave and read lines](/docs/visual-novels/notifications-autosave-and-read-lines)
   — the autosave slot your `novel:save` listener already stores.
 - [Make your first novel](/docs/visual-novels/first-novel) — the previous guide, where the café
