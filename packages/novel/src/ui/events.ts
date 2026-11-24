@@ -9,6 +9,7 @@
 
 import type { InteractionDeclaration, SceneDeclaration } from "../declarations.js";
 import type { Ending, GameState, ReplayScope } from "../frames.js";
+import type { StartOptions } from "../novel.js";
 import type { SchemaInput } from "../types.js";
 
 import type { MemoryLine } from "./library.js";
@@ -22,6 +23,7 @@ declare global {
 		"novel:interaction:complete": InteractionCompleteEvent;
 		"novel:replay": NovelReplayEvent;
 		"novel:replay-voice": NovelReplayVoiceEvent;
+		"novel:start": NovelStartEvent;
 	}
 }
 
@@ -143,5 +145,23 @@ export class NovelReplayVoiceEvent extends Event {
 	constructor(line: MemoryLine) {
 		super("novel:replay-voice", { bubbles: true, cancelable: true });
 		this.line = line;
+	}
+}
+
+/**
+ * Dispatched as `novel:start` by `NovelPlayer.Title` when the reader begins a play: a new game,
+ * Continue from the newest save, or a chapter or scene replay. `start` is what to mount a
+ * player with; `NovelPlayer.Default` swaps its title screen for that play by itself.
+ *
+ * @example on("novel:start", (event) => play(event.start))
+ */
+export class NovelStartEvent extends Event {
+	/** The title's `start` with the save to resume, or the scene and scope to replay. */
+	readonly start: StartOptions;
+
+	/** @param start - What the play starts from. */
+	constructor(start: StartOptions) {
+		super("novel:start", { bubbles: true });
+		this.start = start;
 	}
 }

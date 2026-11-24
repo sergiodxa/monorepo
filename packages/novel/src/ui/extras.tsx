@@ -24,7 +24,7 @@ import { quickMenuButton } from "./quick-menu.js";
 import { dialogSurface } from "./theme.js";
 
 /** A library screen the extras menu offers. */
-type LibraryScreen = Extract<
+export type LibraryScreen = Extract<
 	NovelPlayer.Screen,
 	"memories" | "gallery" | "music" | "endings" | "chapters" | "scenes"
 >;
@@ -42,7 +42,7 @@ export namespace Extras {
 }
 
 /** Props of one screen's dialog; `mix` lands on the `<dialog>`, whose `toggle` reports it opening. */
-interface ScreenDialogProps extends Pick<Dialog.Props, "mix"> {
+export interface ScreenDialogProps extends Pick<Dialog.Props, "mix"> {
 	id: string;
 	title: string;
 	closeLabel: string;
@@ -52,7 +52,7 @@ interface ScreenDialogProps extends Pick<Dialog.Props, "mix"> {
 }
 
 /** One screen among the children: which one it is, its menu label, and the element to render. */
-interface OfferedScreen {
+export interface OfferedScreen {
 	screen: LibraryScreen;
 	label: keyof NovelLabels;
 	element: RemixElement;
@@ -70,7 +70,7 @@ function screenOf(type: unknown): Pick<OfferedScreen, "screen" | "label"> | unde
 }
 
 /** The library screens among `children`, in order, flattening arrays and fragments of them. */
-function offeredScreens(children: RemixNode): OfferedScreen[] {
+export function offeredScreens(children: RemixNode): OfferedScreen[] {
 	if (Array.isArray(children)) return children.flatMap((child) => offeredScreens(child));
 	if (typeof children !== "object" || children === null || !("type" in children)) return [];
 	let element = children as RemixElement;
@@ -154,7 +154,7 @@ export function Extras(handle: Handle<Extras.Props>) {
  * A library screen's modal dialog. Its content renders only while it is open, so a screen loads
  * the scenes it reads when the reader opens it.
  */
-function ScreenDialog(handle: Handle<ScreenDialogProps>) {
+export function ScreenDialog(handle: Handle<ScreenDialogProps>) {
 	return () => {
 		let { id, title, closeLabel, open, mix, children } = handle.props;
 		return (

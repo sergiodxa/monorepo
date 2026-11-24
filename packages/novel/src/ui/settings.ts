@@ -121,6 +121,12 @@ export interface NovelLabels {
 	musicUnlocked: string;
 	/** The toast shown on reaching an ending, followed by how many of all endings were reached. */
 	endingReached: string;
+	/** The title screen's button that starts a play from the beginning. */
+	newGame: string;
+	/** The title screen's button that resumes the newest save. */
+	continue: string;
+	/** The title screen menu's accessible name. */
+	titleMenu: string;
 }
 
 /** English labels, each replaced by the matching key of the player's `labels` prop. */
@@ -176,6 +182,9 @@ export const DEFAULT_LABELS: NovelLabels = {
 	imageUnlocked: "CG unlocked",
 	musicUnlocked: "Track unlocked",
 	endingReached: "Ending",
+	newGame: "New game",
+	continue: "Continue",
+	titleMenu: "Title menu",
 };
 
 /** What a key does in the player. */

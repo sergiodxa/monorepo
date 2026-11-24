@@ -480,6 +480,20 @@ The whole player in one component: every part below, notifications included, the
 </NovelPlayer.Default>
 ```
 
+Given `titleScreen={{ heading, art?, screens? }}` it opens on `NovelPlayer.Title` and plays what the reader starts there, with the settings changed on the title; `start` is what every such play extends, and `mix` applies to the title while it shows.
+
+```tsx
+<NovelPlayer.Default
+	novel={novel}
+	saves={saves}
+	titleScreen={{ heading: "The Café", art: <img src={keyArt} alt="" /> }}
+/>
+```
+
+#### `NovelPlayer.Title`
+
+The title screen, filling its box: `heading` over the `art` slot (or `--novel-title-background`), New game, Continue from the newest of `saves` (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Gallery`, `Memories`) and the settings screen, each in a modal dialog. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable.
+
 #### `NovelPlayer.Context`
 
 What `handle.context.get(NovelPlayer)` answers inside a player: one stable object whose getters always read the current play, so a part or mixin can keep it from setup. It is a `TypedEventTarget` that dispatches `frame`, `phase` and `ending` as soon as each changes; the events carry no data, so a listener reads the getters.
@@ -518,7 +532,7 @@ function PhoneChoices(handle: Handle) {
 }
 ```
 
-#### Events: `NovelSaveEvent`, `NovelSettingsEvent`, `NovelEndingEvent`, `InteractionCompleteEvent`, `NovelReplayEvent` and `NovelReplayVoiceEvent`
+#### Events: `NovelSaveEvent`, `NovelSettingsEvent`, `NovelEndingEvent`, `InteractionCompleteEvent`, `NovelReplayEvent`, `NovelReplayVoiceEvent` and `NovelStartEvent`
 
 The player dispatches the first three from its root, an interaction's component dispatches `novel:interaction:complete`, and the library screens dispatch the last two; they all bubble, so `on()` on the component or any ancestor hears them with typed fields. No component takes a callback prop:
 
@@ -527,6 +541,7 @@ The player dispatches the first three from its root, an interaction's component 
 - `novel:ending` (`ending`): The play reached an ending or ran out of story
 - `novel:interaction:complete` (`interaction`, `output`): `new InteractionCompleteEvent(declaration, output)` finishes an interaction, with `output` typed by its schema; `NovelPlayer.Interaction` answers the frame with it once
 - `novel:replay` (`scene`, `scope`): The reader picked a chapter or scene in `ChapterSelect` or `SceneReplay`; inside a player the replay starts unless a listener calls `preventDefault()`
+- `novel:start` (`start`): The reader began a play on `NovelPlayer.Title`; `start` is the `StartOptions` to mount a player with
 - `novel:replay-voice` (`line`): The reader replayed a line's voice in `Memories`; it plays through the player's mixer, or outside one through the screen's own, unless a listener calls `preventDefault()`
 
 ```tsx
@@ -655,7 +670,7 @@ interface NovelSettings {
 }
 ```
 
-`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`, `unknownName`).
+`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`), the title screen (`newGame`, `continue`, `titleMenu`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`, `unknownName`).
 
 #### `KEYMAP` and `gamepadActions(previous: readonly boolean[], current: readonly boolean[]): GamepadAction[]`
 
@@ -680,7 +695,7 @@ The scenery transitions the player draws itself as View Transitions (any other n
 - `RevealBehavior`, `AutoBehavior`, `SkipBehavior`, `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`, `AutosaveBehavior`, `NotificationsBehavior`, `ReadBehavior`: What the player relies on from each behavior.
 - `NotificationInput`, `NotificationText`, `NotificationMessage`, `NovelNotification`: A toast as `push()` takes it, as plain text or a message to translate, and as the queue holds it.
 - `Interaction.Props<Map>`, `Interaction.Map`, `Interaction.Frame<Map>`, `Interaction.Rendered`: An interaction part's props, the map it takes, the custom frame of each interaction in it, and what the children function returns.
-- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Extras.Props`, `Notifications.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
+- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Extras.Props`, `Title.Props`, `Title.Options`, `Notifications.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
 - `keyboardControls.Options`: The keymap the keyboard mixin takes.
 - `RevealStatus`: Where a line's reveal stands.
 - `NovelThemeVariable`: A `--novel-*` variable name.
@@ -1071,36 +1086,26 @@ export function PulseProvider(handle: Handle<{ children?: RemixNode }, Pulse>) {
 
 Place `<PulseProvider>` inside the player, around the parts that read `handle.context.get(PulseProvider)`.
 
-## Pattern: A Title Screen With Chapter Select
+## Pattern: A Title Screen
 
-The library screens are components a title screen can place itself. A chosen chapter starts as a replay, which saves nothing and finishes when the story leaves the chapter.
+`NovelPlayer.Default` opens on a title screen when given `titleScreen`, with the author's art, and swaps to the play the reader starts: a new game, Continue from the newest save, or a chapter replay. Restyle it through the `--novel-title-*` variables:
 
 ```tsx
-import type { StartOptions } from "@sdxc/novel";
-import type { Handle } from "remix/component";
+import { NovelPlayer } from "@sdxc/novel/ui";
+import { css } from "remix/component";
 
-import { ChapterSelect, NovelPlayer } from "@sdxc/novel/ui";
-import { on } from "remix/component";
-
-import { novel } from "./novel.js";
-
-function Title(handle: Handle<{ persistent: unknown }>) {
-	let start: StartOptions | undefined;
-	return () => {
-		if (start !== undefined) return <NovelPlayer.Default novel={novel} start={start} />;
-		return (
-			<ChapterSelect
-				novel={novel}
-				persistent={handle.props.persistent}
-				mix={on("novel:replay", (event) => {
-					start = { scene: event.scene, replay: event.scope, persistent: handle.props.persistent };
-					void handle.update();
-				})}
-			/>
-		);
-	};
-}
+<NovelPlayer.Default
+	novel={novel}
+	{...storage.read()}
+	titleScreen={{ heading: "The Café", art: <img src={keyArt} alt="" /> }}
+	mix={[
+		storage.sync(),
+		css({ "--novel-title-heading-color": "#f6e6bd", "--novel-title-button-radius": "0" }),
+	]}
+/>;
 ```
+
+A game that mounts its own player renders `NovelPlayer.Title` and starts a player from each `novel:start`, whose `start` holds the save to resume or the chapter to replay.
 
 ## Pattern: Achievements That Last Across Playthroughs
 

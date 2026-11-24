@@ -12,14 +12,23 @@ import type { Handle } from "remix/component";
 import { Dialog, Select, Slider, Switch } from "@sdxc/ui";
 import { css, on } from "remix/component";
 
-import type { NovelSettings, SkipMode } from "./settings.js";
+import type { SettingsBehavior } from "./behaviors/settings.js";
+import type { NovelLabels, NovelSettings, SkipMode } from "./settings.js";
 
 import { NovelPlayer } from "./player.js";
+import { DEFAULT_LABELS } from "./settings.js";
 import { dialogSurface } from "./theme.js";
 
 export namespace SettingsScreen {
 	/** Props {@link SettingsScreen} accepts. */
-	export interface Props extends Omit<Dialog.Props, "id" | "children"> {}
+	export interface Props extends Omit<Dialog.Props, "children"> {
+		/** The dialog's id; inside a player it is always the player's settings id. */
+		id?: string;
+		/** The settings to show and change; inside a player it defaults to the player's. */
+		settings?: SettingsBehavior;
+		/** Replaces any label; inside a player it defaults to the player's. */
+		labels?: Partial<NovelLabels>;
+	}
 
 	/** Props {@link RangeSetting} accepts; `mix` lands on the slider's root. */
 	export interface RangeProps extends Pick<Slider.Props, "mix"> {
@@ -34,28 +43,37 @@ export namespace SettingsScreen {
 
 /**
  * Lets the reader change every presentation setting through the player's `settings` model, in
- * a modal dialog the quick menu or Escape opens; each change leaves as `novel:settings`.
+ * a modal dialog the quick menu or Escape opens; each change leaves as `novel:settings`. Outside
+ * a player it changes the `settings` model it is given, whose owner reports the change.
  *
  * @example <NovelPlayer.Settings />
  */
 export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
-	let player = handle.context.get(NovelPlayer);
+	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
+	let fallbackId = `${handle.id}-settings`.replace(/[^\w-]/g, "-");
+
+	/** The settings model the screen changes: the prop's, else the player's. */
+	function model(): SettingsBehavior | undefined {
+		return handle.props.settings ?? player?.settings;
+	}
 
 	/** Applies `patch` to the settings. */
 	function change(patch: Partial<NovelSettings>): void {
-		player.settings.update(patch);
+		model()?.update(patch);
 	}
 
 	/** Changes one channel's volume. */
 	function volume(channel: keyof NovelSettings["volume"], value: number): void {
-		player.settings.setVolume(channel, value);
+		model()?.setVolume(channel, value);
 	}
 
 	return () => {
-		let { mix, ...rest } = handle.props;
-		let { labels } = player;
-		let settings = player.settings.value;
-		let id = player.ids.settings;
+		let { mix, id: givenId, settings: _settings, labels: overrides, ...rest } = handle.props;
+		let current = model();
+		if (current === undefined) return null;
+		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
+		let settings = current.value;
+		let id = player?.ids.settings ?? givenId ?? fallbackId;
 		let volumes = [
 			["master", labels.volumeMaster],
 			["music", labels.volumeMusic],

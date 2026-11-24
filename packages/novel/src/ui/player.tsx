@@ -70,6 +70,7 @@ import { listenerSignal } from "./signal.js";
 import { Stage } from "./stage.js";
 import { Captions, Line, NamePlate, NextIndicator, Textbox } from "./textbox.js";
 import { themeVar } from "./theme.js";
+import { Title } from "./title.js";
 
 /** A typeface stack with dyslexia-friendly faces first; the app loads the web font it prefers. */
 const DYSLEXIA_FONT = '"OpenDyslexic", "Atkinson Hyperlegible", "Lexend", Verdana, sans-serif';
@@ -283,6 +284,14 @@ export namespace NovelPlayer {
 	export interface DefaultProps extends Omit<Props, "children"> {
 		/** Drawn on the stage with the built-in parts, such as a `NovelPlayer.Interaction` part. */
 		children?: RemixNode;
+		/**
+		 * Opens on `NovelPlayer.Title` with this heading, art and library screens, and plays what
+		 * the reader starts there; `start` is what every such play extends. Without it the play
+		 * starts at once. `mix` applies to the title while it shows, then to the player.
+		 *
+		 * @example titleScreen={{ heading: "The Café", art: <img src={keyArt} alt="" /> }}
+		 */
+		titleScreen?: Title.Options;
 	}
 }
 
@@ -699,19 +708,54 @@ NovelPlayer.Saves = SaveScreen;
 NovelPlayer.Settings = SettingsScreen;
 NovelPlayer.Extras = Extras;
 NovelPlayer.Notifications = Notifications;
+NovelPlayer.Title = Title;
 
 /**
  * The whole player as one component: every part in the classic layout, the six library screens
- * in the extras menu, the notifications, and keyboard, touch and gamepad controls. Its children are drawn on the
- * stage, which is where a game's `NovelPlayer.Interaction` part goes.
+ * in the extras menu, the notifications, and keyboard, touch and gamepad controls. Its children
+ * are drawn on the stage; given `titleScreen`, it opens on the title until the reader starts.
  *
  * @example <NovelPlayer.Default novel={novel} settings={stored}><NovelPlayer.Interaction interactions={INTERACTIONS}>{(frame) => <Fishing input={frame.input} />}</NovelPlayer.Interaction></NovelPlayer.Default>
  */
 NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.DefaultProps>) {
+	/** The play the reader began on the title screen, once they have. */
+	let chosen: StartOptions | undefined;
+	/** The settings the reader changed on the title screen, which the play then starts with. */
+	let changed: StoredSettings | undefined;
 	return () => {
-		let { children, mix, ...rest } = handle.props;
+		let { children, mix, titleScreen, ...rest } = handle.props;
+		if (titleScreen !== undefined && chosen === undefined) {
+			return (
+				<Title
+					novel={rest.novel}
+					heading={titleScreen.heading}
+					art={titleScreen.art}
+					saves={rest.saves}
+					start={rest.start}
+					settings={changed ?? rest.settings}
+					labels={rest.labels}
+					mix={[
+						on("novel:settings", (event) => {
+							changed = event.settings;
+						}),
+						on("novel:start", (event) => {
+							chosen = event.start;
+							void handle.update();
+						}),
+						mix,
+					]}
+				>
+					{titleScreen.screens}
+				</Title>
+			);
+		}
 		return (
-			<NovelPlayer {...rest} mix={[keyboardControls(), touchControls(), gamepadControls(), mix]}>
+			<NovelPlayer
+				{...rest}
+				start={chosen ?? rest.start}
+				settings={changed ?? rest.settings}
+				mix={[keyboardControls(), touchControls(), gamepadControls(), mix]}
+			>
 				<Stage>
 					<Captions />
 					<Textbox />

@@ -71,6 +71,7 @@ export {
 	NovelReplayVoiceEvent,
 	NovelSaveEvent,
 	NovelSettingsEvent,
+	NovelStartEvent,
 } from "./ui/events.js";
 export { Extras } from "./ui/extras.js";
 export { Gallery } from "./ui/gallery.js";
@@ -92,4 +93,5 @@ export { resolveSource } from "./ui/source.js";
 export { CharacterSprite, Scenery, Stage } from "./ui/stage.js";
 export { Captions, Line, NamePlate, NextIndicator, Textbox } from "./ui/textbox.js";
 export { NOVEL_THEME_VARIABLES } from "./ui/theme.js";
+export { Title } from "./ui/title.js";
 export { BUILT_IN_TRANSITIONS, prefersReducedMotion } from "./ui/transitions.js";
