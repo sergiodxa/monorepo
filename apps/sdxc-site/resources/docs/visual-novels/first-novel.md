@@ -5,7 +5,7 @@ section:
     title: Visual novels
     order: 4.7
 order: 1
-lastUpdated: 2026-11-19
+lastUpdated: 2026-11-24
 outcomes:
     - "How to declare a novel's scenes, cast and assets, typed from your state and messages"
     - "How to write a scene as a list of directives and map it onto its declaration"
@@ -123,7 +123,8 @@ declare module "@sdxc/novel" {
 
 A `chapter` groups scenes for the chapter select, and a character without `sprites` (like
 `you`) speaks without standing on stage. A character shows as `???` until a scene runs
-`ctx.introduce(CAST.mika)`; `known: true` names one from the first line, as both are here. `NovelTypes` types every scene from your state and
+`ctx.introduce(CAST.mika)`, and a replay names everyone met in any playthrough; `known: true`
+names one from the first line, as both are here. `NovelTypes` types every scene from your state and
 catalog: `set` takes only paths the state has, and `say` asks for exactly the values a message
 declares.
 

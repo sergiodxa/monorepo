@@ -5,7 +5,7 @@ section:
     title: Visual novels
     order: 4.7
 order: 12
-lastUpdated: 2026-11-19
+lastUpdated: 2026-11-24
 outcomes:
     - "How a title screen places the library screens and starts a chapter replay"
     - "How to run the dev tools beside the player in development only"
@@ -64,6 +64,7 @@ export function TitleScreen(handle: Handle<{ persistent: unknown }>) {
 ```
 
 A replay finishes when the story leaves the chapter, saves nothing and shows no notifications.
+It names every character the reader met in any playthrough from its first line.
 Keep one `persistent` value while the screen shows, since the screens read it once per render.
 
 ## Edit scenes with the dev tools

@@ -7,14 +7,15 @@ section:
 order: 2.5
 lastUpdated: 2026-11-24
 outcomes:
-    - "How to open the novel on a title screen and play what the reader starts there"
+    - "How to open the novel on a title screen, play what the reader starts and return after it ends"
     - "Where the logo, the background, the portrait and the footer go"
     - "How to restyle and ornament the menu through variables and data attributes"
 ---
 
 A visual novel usually opens on a title screen: the logo over key art, **New game**,
 **Continue**, the extras and the settings. `NovelPlayer.Default` draws one when you give it a
-`titleScreen`, and swaps to the play the reader starts. This guide builds the café's.
+`titleScreen`, swaps to the play the reader starts, and comes back when that play ends. This
+guide builds the café's.
 
 ```bash
 npm add @sdxc/novel remix
@@ -54,6 +55,13 @@ unlocked, and a setting changed on the title carries into the play:
 
 The buttons read the player's `labels`, so `newGame`, `continue` and `titleMenu` translate with
 the rest of the interface.
+
+## Come back after an ending
+
+When the reader reaches an ending, the ending screen shows its name with a **Back to title**
+button (`labels.backToTitle`). A chapter or scene replay begun on the title goes back to it as
+soon as it ends. The title then reflects the play: **Continue** resumes the newest save,
+autosaves included, and the library screens show what the play unlocked.
 
 ## Restyle it with variables
 
@@ -105,7 +113,8 @@ css({
 
 A game that composes its own player renders `NovelPlayer.Title` instead and mounts a player from
 each `novel:start` event. Its `start` holds what the reader picked: a new game, the save to
-resume, or the chapter to replay:
+resume, or the chapter to replay. Give that player `returnsToTitle`, and its `novel:title` event
+brings the title back with the persistent data the play left:
 
 ```tsx {% title="resources/components/game.tsx" %}
 import type { StartOptions } from "@sdxc/novel";
@@ -116,18 +125,34 @@ import { on } from "remix/component";
 
 export function TitledGame(handle: Handle) {
 	let start: StartOptions | undefined;
+	let persistent: unknown = STORAGE.read().start.persistent;
 	return () =>
 		start === undefined ? (
 			<NovelPlayer.Title
 				novel={novel}
 				heading="The Café"
+				start={{ persistent }}
 				mix={on("novel:start", (event) => {
 					start = event.start;
 					void handle.update();
 				})}
 			/>
 		) : (
-			<MyPlayer start={start} />
+			<NovelPlayer
+				novel={novel}
+				start={start}
+				returnsToTitle
+				mix={on("novel:title", (event) => {
+					persistent = event.persistent;
+					start = undefined;
+					void handle.update();
+				})}
+			>
+				<NovelPlayer.Stage>
+					<NovelPlayer.Textbox />
+					<NovelPlayer.Choices />
+				</NovelPlayer.Stage>
+			</NovelPlayer>
 		);
 }
 ```
