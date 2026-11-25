@@ -35,6 +35,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/app/table": () => import("@sdxc/ui/app/table"),
 	"@sdxc/ui/app/toasts": () => import("@sdxc/ui/app/toasts"),
 	"@sdxc/ui/confirm": () => import("@sdxc/ui/confirm"),
+	"@sdxc/ui/lightbox": () => import("@sdxc/ui/lightbox"),
 	"@sdxc/ui/relative-time": () => import("@sdxc/ui/relative-time"),
 	"@sdxc/ui/docs/copy-button": () => import("@sdxc/ui/docs/copy-button"),
 };

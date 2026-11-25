@@ -15,6 +15,7 @@ import type { AppContext } from "~/app/initializers/router";
 
 import { pageRenderer } from "~/app/test/renderer";
 import { APP_STORE } from "~/config/malfoid";
+import { LANDING_COPY } from "~/resources/content/malfoid/landing";
 import { STICKERS } from "~/resources/content/malfoid/stickers";
 import { malfoidMeta } from "~/resources/layouts/malfoid";
 import routes from "~/routes/web";
@@ -46,7 +47,7 @@ describe("GET /apps/malfoid", () => {
 		expect(html).toMatch(/<html lang="en" class="system malfoid/);
 		expect(headingCount(html)).toBe(1);
 		expect(html).toMatch(
-			/<h1[^>]*>[\s\S]*A little cute\. A little dramatic\. A lot of attitude\.[\s\S]*<\/h1>/,
+			/<h1[^>]*>[\s\S]*A little cute\. A little dramatic\. A lot of attitude\.[\s\S]*Cute\. Dramatic\. All attitude\.[\s\S]*<\/h1>/,
 		);
 		expect(html).toMatch(
 			/<title[^>]*>Malfoid Stickers: Cute &amp; Sassy Reactions for iMessage<\/title>/,
@@ -78,13 +79,15 @@ describe("GET /apps/malfoid", () => {
 		expect(html).not.toContain('name="apple-itunes-app"');
 	});
 
-	test("shows every one of the 60 stickers with its own alt text", async () => {
+	test("opens every one of the 60 stickers in the viewer, named by its alt text", async () => {
 		let html = await (await fetchPage("/apps/malfoid")).text();
 
 		expect(STICKERS).toHaveLength(60);
 		for (let sticker of STICKERS) {
 			expect(html).toContain(`srcset="/apps/malfoid/stickers/${sticker.id}-240.webp 240w`);
-			expect(html).toContain(`alt="${sticker.alt.replaceAll("'", "&#39;")}"`);
+			expect(html).toContain(
+				`aria-label="Open sticker: ${sticker.alt.en.replaceAll("'", "&#39;")}"`,
+			);
 		}
 	});
 
@@ -125,11 +128,76 @@ describe("GET /apps/malfoid", () => {
 	});
 });
 
+describe("the sticker viewer", () => {
+	test("shows each sticker answering a friend's message, with its description", async () => {
+		let html = await (await fetchPage("/apps/malfoid")).text();
+
+		expect(html).toMatch(/<dialog[^>]*id="malfoid-stickers"/);
+		expect(html).toContain('commandfor="malfoid-stickers"');
+		expect(html).toContain("I ate the last slice of your cake.");
+		expect(html).toContain("Should I text my ex?");
+		expect(html).toContain(
+			"A friend writes “Should I text my ex?” and the reply is a sticker: Malfoid gives a dramatic thumbs-down.",
+		);
+		expect(html).toContain("1 / 60");
+	});
+
+	test("gives every sticker a message in both languages", () => {
+		for (let sticker of STICKERS) {
+			expect(sticker.prompt.en.length).toBeGreaterThan(0);
+			expect(sticker.prompt["es-AR"].length).toBeGreaterThan(0);
+			expect(sticker.alt["es-AR"].length).toBeGreaterThan(0);
+		}
+	});
+});
+
+describe("GET /apps/malfoid in Spanish", () => {
+	test("answers a Spanish reader in Spanish, alt text and viewer included", async () => {
+		let response = await fetchPage("/apps/malfoid", { "accept-language": "es-MX,es;q=0.9" });
+		let html = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(response.headers.get("vary")).toContain("Accept-Language");
+		expect(html).toMatch(/<html lang="es-AR" class="system malfoid/);
+		expect(headingCount(html)).toBe(1);
+		expect(html).toMatch(
+			/<h1[^>]*>[\s\S]*Un poco tierna\. Un poco dramática\. Mucha actitud\.[\s\S]*Tierna\. Dramática\. Con actitud\.[\s\S]*<\/h1>/,
+		);
+		expect(html).toContain("Muy pronto en la");
+		expect(html).toContain("Abrir sticker: Malfoid sonríe con aire de superioridad");
+		expect(html).toContain("¿Le escribo a mi ex?");
+		expect(html).toContain('property="og:locale" content="es_AR"');
+	});
+
+	test("lets ?lang= override the browser and lists both languages for search engines", async () => {
+		let html = await (
+			await fetchPage("/apps/malfoid?lang=en", { "accept-language": "es-AR" })
+		).text();
+
+		expect(html).toMatch(/<html lang="en"/);
+		expect(html).toContain('hreflang="es" href="https://sergiodxa.com/apps/malfoid?lang=es-AR"');
+		expect(html).toContain('hreflang="x-default" href="https://sergiodxa.com/apps/malfoid"');
+	});
+
+	test("marks the English support and privacy pages as English", async () => {
+		let html = await (await fetchPage("/apps/malfoid?lang=es-AR")).text();
+
+		expect(html).toMatch(
+			/href="\/apps\/malfoid\/support" hreflang="en"|hreflang="en"[^>]*href="\/apps\/malfoid\/support"/,
+		);
+		expect(html).toContain('href="/apps/malfoid?lang=es-AR"');
+	});
+});
+
 describe("malfoidMeta", () => {
 	test("adds the smart banner once the listing has an id", () => {
-		let tags = malfoidMeta("Malfoid", "About", "https://sergiodxa.com/apps/malfoid", {
-			id: "6740000000",
-		});
+		let tags = malfoidMeta(
+			"Malfoid",
+			"About",
+			"https://sergiodxa.com/apps/malfoid",
+			LANDING_COPY.en,
+			{ id: "6740000000" },
+		);
 
 		expect(tags).toContainEqual({ name: "apple-itunes-app", content: "app-id=6740000000" });
 	});

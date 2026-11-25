@@ -17,9 +17,12 @@ import { maxIs, mi, pb, pi } from "@sdxc/u/size";
 import { focusVisible } from "@sdxc/u/state";
 import { font, text, weight } from "@sdxc/u/typography";
 
+import type { PageLocale } from "~/app/services/page-locale";
+import type { LandingCopy } from "~/resources/content/malfoid/landing";
 import type { StickerId } from "~/resources/content/malfoid/stickers";
 
 import { appStoreUrl } from "~/config/malfoid";
+import { LANDING_COPY } from "~/resources/content/malfoid/landing";
 import { STICKER_CATALOG } from "~/resources/content/malfoid/stickers";
 import { AppStoreBadge } from "~/resources/views/app-pages/app-store-badge";
 import { QuietLink } from "~/resources/views/app-pages/footer";
@@ -38,6 +41,8 @@ namespace StickerImage {
 		eager?: boolean;
 		/** Empty alt text, for a sticker whose meaning the text beside it already carries. */
 		decorative?: boolean;
+		/** The language of the alt text. English by default. */
+		locale?: PageLocale;
 	}
 }
 
@@ -51,14 +56,14 @@ namespace StickerImage {
  */
 export function StickerImage(handle: Handle<StickerImage.Props>) {
 	return () => {
-		let { decorative, eager, id, sizes } = handle.props;
+		let { decorative, eager, id, locale = "en", sizes } = handle.props;
 		let base = `${MALFOID_ASSETS}/stickers/${id}`;
 		return (
 			<img
 				src={`${base}-480.webp`}
 				srcSet={`${base}-240.webp 240w, ${base}-480.webp 480w`}
 				sizes={sizes}
-				alt={decorative ? "" : STICKER_CATALOG[id].alt}
+				alt={decorative ? "" : STICKER_CATALOG[id].alt[locale]}
 				width={480}
 				height={480}
 				loading={eager ? "eager" : "lazy"}
@@ -75,6 +80,8 @@ namespace AppStoreCall {
 	export interface Props {
 		/** The listing's URL; the configured one by default, or `null` before release. */
 		href?: string | null;
+		/** The page's words, English by default. */
+		copy?: LandingCopy;
 	}
 }
 
@@ -88,26 +95,47 @@ namespace AppStoreCall {
 export function AppStoreCall(handle: Handle<AppStoreCall.Props>) {
 	return () => {
 		let href = handle.props.href === undefined ? appStoreUrl() : handle.props.href;
+		let copy = handle.props.copy ?? LANDING_COPY.en;
 		return (
 			<AppStoreBadge
 				href={href}
-				label={href ? "Download on the App Store" : "Coming soon to the"}
-				language="en-us"
+				label={href ? copy.appStore.available : copy.appStore.soon}
+				language={copy.locale === "es-AR" ? "es-mx" : "en-us"}
 			/>
 		);
 	};
 }
 
 /**
- * The wordmark linking home: Malfoid's smug face in a small emerald-ringed circle beside the
- * pack's name in the display serif.
+ * The landing's address in `locale`: bare for English, with `?lang=` for any other language.
  *
+ * @param locale The language to link.
+ * @returns The landing's path.
+ */
+export function landingHref(locale: PageLocale = "en"): string {
+	let href = routes.malfoid.landing.href();
+	return locale === "en" ? href : `${href}?lang=${locale}`;
+}
+
+namespace Chrome {
+	/** Props of the header and wordmark. */
+	export interface Props {
+		/** The page's words, English by default. */
+		copy?: LandingCopy;
+	}
+}
+
+/**
+ * The wordmark linking home in the page's language: Malfoid's smug face in a small
+ * emerald-ringed circle beside the pack's name in the display serif.
+ *
+ * @param handle Runtime handle carrying the page's words.
  * @returns The render function producing the link.
  */
-export function Wordmark() {
+export function Wordmark(handle: Handle<Chrome.Props>) {
 	return () => (
 		<a
-			href={routes.malfoid.landing.href()}
+			href={landingHref(handle.props.copy?.locale)}
 			mix={[
 				hstack({ gap: 2.5, align: "center" }),
 				fg("neutral.emphasis"),
@@ -135,7 +163,7 @@ export function Wordmark() {
 			/>
 			<span>
 				Malfoid
-				<span mix={[raw({ "@media (max-width: 22rem)": { display: "none" } })]}> Stickers</span>
+				<span mix={[raw({ "@media (max-width: 26rem)": { display: "none" } })]}> Stickers</span>
 			</span>
 		</a>
 	);
@@ -143,28 +171,42 @@ export function Wordmark() {
 
 /**
  * The header: the wordmark home, then Support and Privacy, which fit beside it at 320px
- * without a menu.
+ * without a menu. Support and the policy are written in English, so a page in another
+ * language marks those links as English.
  *
+ * @param handle Runtime handle carrying the page's words.
  * @returns The render function producing the header.
  */
-export function MalfoidHeader() {
-	return () => (
-		<header mix={[pi(4), at("md", pi(6))]}>
-			<nav
-				aria-label="Malfoid Stickers"
-				mix={[
-					hstack({ gap: 4, align: "center", justify: "between" }),
-					maxIs("72rem"),
-					mi("auto"),
-					pb(4),
-				]}
-			>
-				<Wordmark />
-				<span mix={[hstack({ gap: 5, align: "center" }), text("sm")]}>
-					<QuietLink href={routes.malfoid.support.index.href()} label="Support" />
-					<QuietLink href={routes.malfoid.privacy.href()} label="Privacy" />
-				</span>
-			</nav>
-		</header>
-	);
+export function MalfoidHeader(handle: Handle<Chrome.Props>) {
+	return () => {
+		let copy = handle.props.copy ?? LANDING_COPY.en;
+		let hrefLang = copy.locale === "en" ? undefined : "en";
+		return (
+			<header mix={[pi(4), at("md", pi(6))]}>
+				<nav
+					aria-label={copy.chrome.navLabel}
+					mix={[
+						hstack({ gap: 4, align: "center", justify: "between" }),
+						maxIs("72rem"),
+						mi("auto"),
+						pb(4),
+					]}
+				>
+					<Wordmark copy={copy} />
+					<span mix={[hstack({ gap: 5, align: "center" }), text("sm")]}>
+						<QuietLink
+							href={routes.malfoid.support.index.href()}
+							label={copy.chrome.support}
+							hrefLang={hrefLang}
+						/>
+						<QuietLink
+							href={routes.malfoid.privacy.href()}
+							label={copy.chrome.privacy}
+							hrefLang={hrefLang}
+						/>
+					</span>
+				</nav>
+			</header>
+		);
+	};
 }

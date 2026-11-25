@@ -72,6 +72,20 @@ describe("MalfoidLandingContent", () => {
 	});
 });
 
+describe("Sticker viewer", () => {
+	test("opens at the tapped sticker as a modal", () => {
+		let host = mountLanding(1024);
+		let tile = host.querySelector<HTMLButtonElement>('[aria-label^="Open sticker: Malfoid rolls"]');
+		tile?.click();
+
+		let viewer = host.querySelector<HTMLDialogElement>("#malfoid-stickers");
+		expect(viewer?.open).toBe(true);
+		expect(viewer?.textContent).toContain("Brb, just one more episode.");
+		viewer?.close();
+		host.remove();
+	});
+});
+
 describe("AppStoreCall", () => {
 	test("reads as a status before release and links the listing after", () => {
 		mounted = render(<AppStoreCall href={null} />);
