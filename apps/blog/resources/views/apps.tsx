@@ -21,6 +21,7 @@ import type { AppsPage } from "~/app/services/apps-page";
 import { BlogLayout } from "~/resources/layouts/blog";
 import {
 	EncoreStage,
+	MalfoidStage,
 	ReaderStage,
 	UptimeStage,
 	WakabaStage,
@@ -74,6 +75,8 @@ function mediaFor(app: AppsPage.App, page: AppsPage): RemixNode {
 					pauseLabel={page.labels.pause}
 				/>
 			);
+		case "malfoid":
+			return <MalfoidStage locale={page.locale} label={page.labels.stages.malfoid} />;
 		case "uptime":
 			return <UptimeStage pauseLabel={page.labels.pause} />;
 		case "reader":

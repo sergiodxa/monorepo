@@ -12,6 +12,7 @@ import routes from "~/routes/web";
 export const APP_LINKS = {
 	wakaba: routes.wakaba.landing.href(),
 	encore: routes.encore.landing.href(),
+	malfoid: routes.malfoid.landing.href(),
 	uptime: "https://uptime.sergiodxa.com",
 	reader: "https://reader.sergiodxa.com",
 } as const;

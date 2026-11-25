@@ -37,6 +37,7 @@ export namespace AppsPage {
 		stages: {
 			wakaba: string;
 			encore: string;
+			malfoid: string;
 		};
 		/** Pause control on each looping stage (WCAG 2.2.2). */
 		pause: string;

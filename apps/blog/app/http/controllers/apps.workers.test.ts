@@ -48,11 +48,14 @@ describe("GET /apps", () => {
 		expect(html).toContain(">built<");
 		expect(html).toContain("App Store and the web");
 		expect(html).not.toContain("See the apps");
-		for (let name of ["Wakaba", "Encore", "Uptime", "Reader"]) {
+		for (let name of ["Wakaba", "Encore", "Malfoid Stickers", "Uptime", "Reader"]) {
 			expect(html).toContain(name);
 		}
 		expect(html).toContain('href="/apps/wakaba"');
 		expect(html).toContain('href="/apps/encore"');
+		expect(html).toContain('href="/apps/malfoid"');
+		expect(html).toContain("/apps/malfoid/stickers/smug-480.webp");
+		expect(html).toContain("App Store · Coming soon");
 		expect(html).toContain('href="https://uptime.sergiodxa.com"');
 		expect(html).toContain('href="https://reader.sergiodxa.com"');
 		expect(html).toContain("/apps/wakaba/screenshots/en/path-progress-light.webp");
@@ -103,6 +106,7 @@ describe("GET /apps.md", () => {
 		expect(body).toMatch(/^# Apps I built\n/);
 		expect(body).toContain("## [Wakaba](/apps/wakaba)");
 		expect(body).toContain("## [Encore](/apps/encore)");
+		expect(body).toContain("## [Malfoid Stickers](/apps/malfoid)");
 		expect(body).toContain("## [Uptime](https://uptime.sergiodxa.com)");
 		expect(body).toContain("## [Reader](https://reader.sergiodxa.com)");
 		expect(body).toContain("_App Store_");

@@ -25,6 +25,7 @@ const ES_AR: AppsPage = {
 		stages: {
 			wakaba: "Wakaba en iPhone: camino de aprendizaje, flashcards y práctica",
 			encore: "Encore en iPhone: carta de desafío, dorso y swipe",
+			malfoid: "Tres stickers de Malfoid: sonrojada, con aire de superioridad y llorando con drama",
 		},
 		pause: "Pausar la animación",
 	},
@@ -56,6 +57,20 @@ const ES_AR: AppsPage = {
 				"Control remoto en Apple Watch",
 			],
 			cta: "Abrir Encore",
+		},
+		{
+			id: "malfoid",
+			name: "Malfoid Stickers",
+			href: APP_LINKS.malfoid,
+			platform: "App Store · Muy pronto",
+			blurb:
+				"Reacciones tiernas y atrevidas para iMessage en iPhone y iPad: 60 stickers sin texto de Malfoid, orgullosa, sarcástica y secretamente cariñosa. Gratis, sin anuncios y sin recopilar datos.",
+			highlights: [
+				"60 stickers en seis estados de ánimo",
+				"Sin texto, así que funcionan en cualquier idioma",
+				"Sin anuncios, rastreo ni recopilación de datos",
+			],
+			cta: "Conocé a Malfoid",
 		},
 		{
 			id: "uptime",

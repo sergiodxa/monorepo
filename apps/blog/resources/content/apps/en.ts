@@ -15,7 +15,7 @@ const EN: AppsPage = {
 	locale: "en",
 	title: "Apps",
 	description:
-		"Apps Sergio Xalambrí built: Japanese vocabulary, a music party game, uptime monitoring and a feed reader.",
+		"Apps Sergio Xalambrí built: Japanese vocabulary, a music party game, iMessage stickers, uptime monitoring and a feed reader.",
 	heading: "Apps I built",
 	accent: "built",
 	eyebrow: "App Store and the web",
@@ -25,6 +25,7 @@ const EN: AppsPage = {
 		stages: {
 			wakaba: "Wakaba on iPhone: learning path, flashcards and practice",
 			encore: "Encore on iPhone: challenge card, card back and swipe",
+			malfoid: "Three Malfoid stickers: blushing, smug and crying dramatically",
 		},
 		pause: "Pause the animation",
 	},
@@ -56,6 +57,20 @@ const EN: AppsPage = {
 				"Apple Watch remote for the room",
 			],
 			cta: "Open Encore",
+		},
+		{
+			id: "malfoid",
+			name: "Malfoid Stickers",
+			href: APP_LINKS.malfoid,
+			platform: "App Store · Coming soon",
+			blurb:
+				"Cute & sassy reactions for iMessage on iPhone and iPad: 60 textless stickers of Malfoid, proud, sarcastic and secretly affectionate. Free, with no ads and no data collection.",
+			highlights: [
+				"60 stickers in six moods",
+				"No text, so they work in any language",
+				"No ads, tracking or data collection",
+			],
+			cta: "Meet Malfoid",
 		},
 		{
 			id: "uptime",

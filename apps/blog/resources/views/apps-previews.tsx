@@ -29,6 +29,10 @@ import { bs, is, p } from "@sdxc/u/size";
 import { font, text, truncate, weight } from "@sdxc/u/typography";
 import { MotionLoop, PhoneFan, PhoneFrame, ProductFrame, screenCorners } from "@sdxc/ui/landing";
 
+import type { PageLocale } from "~/app/services/page-locale";
+
+import { StickerImage } from "~/resources/views/malfoid/parts";
+
 /** A hairline matching the product frames on the Uptime and Reader landings. */
 const HAIRLINE = "1px solid var(--ui-landing-hairline, var(--ui-neutral-border))";
 
@@ -245,6 +249,60 @@ export function EncoreStage(handle: Handle<EncoreStage.Props>) {
 					alt: "Encore swipe for the next challenge",
 				}}
 			/>
+		);
+	};
+}
+
+namespace MalfoidStage {
+	export interface Props {
+		locale: PageLocale;
+		label: string;
+	}
+}
+
+/**
+ * Malfoid Stickers' band media: three of the pack's real stickers overlapping on a tinted
+ * panel, the smug one raised in the middle, the way the pack's own landing opens.
+ *
+ * @returns The render function producing the stage.
+ */
+export function MalfoidStage(handle: Handle<MalfoidStage.Props>) {
+	return () => {
+		let { label, locale } = handle.props;
+		return (
+			<figure
+				aria-label={label}
+				mix={[
+					hstack({ gap: 0, align: "end", justify: "center" }),
+					bg("neutral.tint"),
+					is("full"),
+					p(4),
+					raw({ margin: 0, borderRadius: "2rem", paddingBlockStart: "3rem" }),
+				]}
+			>
+				{(
+					[
+						["blushing-look-away", -6, "0"],
+						["smug", 0, "2rem"],
+						["dramatic-crying", 6, "0"],
+					] as const
+				).map(([id, tilt, lift]) => (
+					<span
+						key={id}
+						mix={[
+							block(),
+							raw({
+								flex: id === "smug" ? "0 1 40%" : "0 1 32%",
+								marginInline: "-3%",
+								marginBlockEnd: lift,
+								rotate: `${tilt}deg`,
+							}),
+						]}
+					>
+						<StickerImage id={id} locale={locale} sizes="(min-width: 64rem) 240px, 40vw" />
+					</span>
+				))}
+			</figure>
 		);
 	};
 }
