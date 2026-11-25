@@ -154,8 +154,9 @@ the request has a session (or, with no session middleware, any cookie) and eithe
 `public` or a valid targeted field lacks `private` and `no-store`, the response is downgraded
 to `NON_CACHEABLE_POLICY` with no tags or targeted fields and a
 `cache.downgraded` warning. In
-development (`NODE_ENV`, or a request to a local host) it throws `UnsafeCachePolicyError`
-instead.
+development (`NODE_ENV`, or a request to a local host) a declared response carrying `Set-Cookie`
+throws `UnsafeCachePolicyError` instead; a session refusal downgrades the same way in every mode,
+so a signed-in developer still sees the public pages.
 
 ### Constants
 
@@ -170,7 +171,7 @@ are the sets the middleware checks.
 - `CacheTagError`: an invalid tag or tag list; `tag` holds the rejected value.
 - `PurgeError`: a purge that did not take effect; `selector` names what stayed cached and
   `cause` holds the platform's error or issues.
-- `UnsafeCachePolicyError` (from `./middleware`): a refused declaration in development, with
+- `UnsafeCachePolicyError` (from `./middleware`): a declared response carrying `Set-Cookie` in development, with
   `reason` (`CacheRefusalReason`: `"set-cookie" | "session-with-public-policy" |
 "session-with-shared-targeted-policy"`) and `policy`.
 

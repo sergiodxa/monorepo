@@ -359,10 +359,9 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 		context.cache = declaration;
 
 		/**
-		 * Refuses a declaration: the response is downgraded so nothing stores it,
-		 * the refusal degrades the invocation's log with `cache.downgraded` set so
-		 * it can be filtered for, and development additionally throws because the
-		 * route asked for something unsafe.
+		 * Refuses a declaration: the response is downgraded so nothing stores it and the log
+		 * records `cache.downgraded`. Development also throws when the route's own response set
+		 * a cookie; a session the visitor brought is downgraded quietly, as the route is sound.
 		 */
 		function refuse(
 			response: Response,
@@ -373,7 +372,7 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 				?.set({ cache: { downgraded: true, refusal: reason } })
 				.warn(DOWNGRADE_EVENT, { reason, policy: declaredPolicy });
 
-			if (isDevelopment(context)) {
+			if (reason === "set-cookie" && isDevelopment(context)) {
 				throw new UnsafeCachePolicyError(reason, declaredPolicy, context.url.pathname);
 			}
 

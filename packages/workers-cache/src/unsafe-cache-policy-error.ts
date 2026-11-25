@@ -1,8 +1,7 @@
 /**
- * The error a refused declaration throws in development. Production downgrades
- * the response and logs, but locally a route that asked to cache something
- * unsafe should stop the request, because the alternative is a log line nobody
- * reads until the content leaks between visitors in production.
+ * The error a route that caches a response carrying its own `Set-Cookie` throws in
+ * development. Production downgrades and logs; locally the route stops, since that
+ * log line goes unread until one visitor's cookie reaches another in production.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,7 +22,7 @@ const REASON_DESCRIPTIONS: Record<CacheRefusalReason, string> = {
 };
 
 /**
- * Error thrown in development when a cache declaration is refused, naming the
+ * Error thrown in development when a declared response sets a cookie, naming the
  * route and the policy so the offending declaration is findable from the stack.
  */
 export class UnsafeCachePolicyError extends Error {

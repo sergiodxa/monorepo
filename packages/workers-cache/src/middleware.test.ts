@@ -82,8 +82,8 @@ function countHeader(response: Response, name: string): number {
 }
 
 /**
- * Refusals log in production and throw in development, so pin the mode and
- * let the tests that care about the throw opt into it.
+ * A route that sets a cookie on a declared response throws in development, so pin
+ * production and let the tests that care about the throw opt into it.
  */
 beforeEach(() => {
 	process.env.NODE_ENV = "production";
@@ -483,6 +483,42 @@ describe("cache middleware refusals", () => {
 		await expect(run).rejects.toThrow(UnsafeCachePolicyError);
 	});
 
+	test("downgrades a public page requested with a session cookie on a local host without throwing", async () => {
+		delete process.env.NODE_ENV;
+		let { log, record } = openLog();
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = new RequestContext(
+			new Request("http://localhost:3011/apps", { headers: { Cookie: "session=abc" } }),
+		);
+
+		let response = await log.run(() =>
+			middleware(context, async () => {
+				context.cache(PUBLIC_PAGE, TAGS.postList());
+				return new Response("page");
+			}),
+		);
+
+		expect(await response.text()).toBe("page");
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
+		expect(record()["cache.downgraded"]).toBe(true);
+		expect(record()["cache.refusal"]).toBe("session-with-public-policy");
+	});
+
+	test("downgrades a public page on a signed-in request in development without throwing", async () => {
+		process.env.NODE_ENV = "development";
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext("/", { headers: { Cookie: "session=abc" } });
+
+		let response = await middleware(context, async () => {
+			context.cache(PUBLIC_PAGE, TAGS.postList());
+			return new Response("page");
+		});
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
+	});
+
 	test("still downgrades, without throwing, when no log is current", async () => {
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
 		let context = makeContext();
@@ -842,20 +878,22 @@ describe("cache middleware targeted fields", () => {
 		expect(response.headers.has(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER)).toBe(false);
 	});
 
-	test("throws in development naming the refused targeted policy", async () => {
+	test("downgrades a shared targeted policy on a session-bearing request in development without throwing", async () => {
 		process.env.NODE_ENV = "development";
+		let { log, record } = openLog();
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
 		let context = makeSignedInContext();
 
-		let run = middleware(context, async () => {
-			context.cache({ policy: PRIVATE_PAGE, cloudflare: "max-age=600" });
-			return new Response("ok");
-		});
+		let response = await log.run(() =>
+			middleware(context, async () => {
+				context.cache({ policy: PRIVATE_PAGE, cloudflare: "max-age=600" });
+				return new Response("ok");
+			}),
+		);
 
-		await expect(run).rejects.toMatchObject({
-			reason: "session-with-shared-targeted-policy",
-			policy: "max-age=600",
-		});
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(response.headers.has(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER)).toBe(false);
+		expect(record()["cache.refusal"]).toBe("session-with-shared-targeted-policy");
 	});
 
 	test("keeps an undeclared response's own targeted field and closes browsers off", async () => {
