@@ -394,6 +394,22 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		lazy(() => import("~/app/http/controllers/wakaba-privacy").then((it) => it.markdownPage)),
 	);
 	router.map(
+		routes.malfoid.landing,
+		lazy(() => import("~/app/http/controllers/malfoid")),
+	);
+	router.map(
+		routes.malfoid.support,
+		lazy(() => import("~/app/http/controllers/malfoid-support"), contactGuards),
+	);
+	router.map(
+		routes.malfoid.privacy,
+		lazy(() => import("~/app/http/controllers/malfoid-privacy")),
+	);
+	router.map(
+		routes.malfoid.privacyMarkdown,
+		lazy(() => import("~/app/http/controllers/malfoid-privacy").then((it) => it.markdownPage)),
+	);
+	router.map(
 		routes.press,
 		lazy(() => import("~/app/http/controllers/press"), contactGuards),
 	);

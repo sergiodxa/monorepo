@@ -118,6 +118,22 @@ export default route({
 	wakabaPrivacy: get("/apps/wakaba/privacy"),
 	wakabaPrivacyMarkdown: get("/apps/wakaba/privacy.md"),
 
+	malfoid: {
+		/**
+		 * Malfoid Stickers' landing, the Marketing URL of its App Store listing, drawn in the
+		 * sticker pack's own emerald-and-ivory look around its real artwork.
+		 */
+		landing: get("/apps/malfoid"),
+		/**
+		 * The Malfoid Stickers support page, its listing's Support URL: the form on `GET`, a support
+		 * request on `POST` at the same address, so a failed submission re-renders where the visitor is.
+		 */
+		support: form("/apps/malfoid/support"),
+		/** Malfoid Stickers' privacy policy, plus the same policy as Markdown on its own route. */
+		privacy: get("/apps/malfoid/privacy"),
+		privacyMarkdown: get("/apps/malfoid/privacy.md"),
+	},
+
 	/**
 	 * The press kit sent to events and podcasts that need the author's bio and photos, which
 	 * takes invitations on `POST` at the same address, plus the same kit as Markdown, which

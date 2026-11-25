@@ -63,6 +63,7 @@ export default createAction(
 			wakabaSupport: { index: true },
 			wakabaPrivacy: true,
 			wakabaPrivacyMarkdown: false,
+			malfoid: { landing: true, support: { index: true }, privacy: true, privacyMarkdown: false },
 			press: { index: true },
 			pressMarkdown: false,
 			about: true,

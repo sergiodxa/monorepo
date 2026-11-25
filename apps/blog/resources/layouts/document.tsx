@@ -25,6 +25,7 @@ import "@sdxc/highlight/styles.css";
 import "~/resources/css/highlight.css";
 import "~/resources/css/encore.css";
 import "~/resources/css/wakaba.css";
+import "~/resources/css/malfoid.css";
 
 /**
  * The profiles `rel="me"` claims as the site owner's, which is how an IndieWeb reader

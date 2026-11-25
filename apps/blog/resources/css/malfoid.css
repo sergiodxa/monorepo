@@ -1,0 +1,134 @@
+/*
+ * Malfoid Stickers' pages: the pack's palette, faces and landing tokens, applied when the
+ * document renders with the `malfoid` scope on <html>. The theme layer derives every semantic
+ * `--ui-*` token from these ramps in both schemes, so the stickers sit on the blog's components
+ * in a look of their own.
+ *
+ * The anchors are the character's: in light, a cool silver-mint ground #ECEFED, cooler than the
+ * creams other app pages sit on, with warm ivory #F9F6EF cards, charcoal #252529 ink and deep
+ * emerald #154B3D as the accent; charcoal #202024 with ivory ink and a lifted emerald in
+ * dark, where the accent text reads #7FC9A8. Platinum cream #F1DFCE tints the bands, silver gray
+ * #BFC3C8 draws the quiet lines and soft blush #EFB5B6 is kept for small decorations.
+ *
+ * Emerald on the ground reads 9:1, and white on the emerald button 10:1; secondary text, step 600 in
+ * light and 300 in dark, keeps 5.5:1 or more on its ground.
+ */
+
+:root.malfoid {
+	--ui-color-brand-50: #eef6f2;
+	--ui-color-brand-100: #d8ebe2;
+	--ui-color-brand-200: #b2d7c6;
+	--ui-color-brand-300: #84bca4;
+	--ui-color-brand-400: #4f9a7d;
+	--ui-color-brand-500: #2a7259;
+	--ui-color-brand-600: #154b3d;
+	--ui-color-brand-700: #113f33;
+	--ui-color-brand-800: #0e3329;
+	--ui-color-brand-900: #0a261f;
+	--ui-color-brand-950: #061813;
+
+	--ui-color-neutral-50: #eceeed;
+	--ui-color-neutral-100: #e2e6e4;
+	--ui-color-neutral-200: #d5dad8;
+	--ui-color-neutral-300: #c2c7c6;
+	--ui-color-neutral-400: #a9a9ab;
+	--ui-color-neutral-500: #85868b;
+	--ui-color-neutral-600: #606167;
+	--ui-color-neutral-700: #48494f;
+	--ui-color-neutral-800: #36363b;
+	--ui-color-neutral-900: #252529;
+	--ui-color-neutral-950: #161619;
+
+	/* The composed, slightly superior serif for headlines: New York on Apple platforms */
+	--ui-font-display:
+		ui-serif, "New York", "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+
+	/* Cards, the form and sticker tiles sit on warm ivory above the cool ground */
+	--ui-surface-raised: #f9f6ef;
+
+	--ui-radius-sm: 0.5rem;
+	--ui-radius-md: 0.75rem;
+	--ui-radius-lg: 1rem;
+	--ui-radius-xl: 1.5rem;
+
+	--ui-landing-display-weight: 600;
+	--ui-landing-display-tracking: -0.02em;
+	--ui-landing-display-max: 4.5rem;
+	--ui-landing-section-space-hero: clamp(2rem, 1rem + 4cqi, 4rem);
+	--ui-landing-chapter-tracking: -0.015em;
+	--ui-landing-cta-radius: 9999px;
+	--ui-landing-cta-height: 3rem;
+	--ui-landing-cta-weight: 600;
+	--ui-button-radius: 9999px;
+	--ui-landing-eyebrow-font: var(--ui-font-sans);
+	--ui-landing-eyebrow-color: var(--ui-brand-fg);
+	--ui-landing-radius-surface: 1.5rem;
+	--ui-landing-card-radius-outer: 1.5rem;
+	--ui-landing-card-radius-inner: 1.5rem;
+	--ui-landing-band-radius: 2rem;
+	--ui-landing-band-tint: #f1dfce;
+	--ui-landing-band-glow: none;
+	--ui-landing-hairline: color-mix(in srgb, #bfc3c8 70%, transparent);
+	--ui-shadow-surface:
+		0 0 0 1px rgb(37 37 41 / 0.05), 0 1px 2px rgb(37 37 41 / 0.05),
+		0 8px 24px -12px rgb(37 37 41 / 0.12);
+	--ui-shadow-stage:
+		0 0 0 1px rgb(37 37 41 / 0.05), 0 2px 4px rgb(37 37 41 / 0.04),
+		0 24px 48px -20px rgb(37 37 41 / 0.22);
+
+	/* The surfaces every app page's shared pieces paint with */
+	--app-card: var(--ui-surface-raised);
+	--app-stage: #f1dfce;
+	--app-accent: var(--ui-brand-bg-solid);
+	--app-rail: var(--ui-neutral-border);
+	--app-bezel: #161619;
+
+	/* Pack-only paints: the blush accent, the silver line and a tile behind every sticker */
+	--malfoid-blush: #efb5b6;
+	--malfoid-silver: #bfc3c8;
+	--malfoid-tile: #f9f6ef;
+	--malfoid-emerald: #154b3d;
+	--malfoid-on-emerald: #f6f2e9;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root.malfoid {
+		--ui-color-brand-50: #effaf5;
+		--ui-color-brand-100: #d7f1e5;
+		--ui-color-brand-200: #b0e2cc;
+		--ui-color-brand-300: #93d4b8;
+		--ui-color-brand-400: #7fc9a8;
+		--ui-color-brand-500: #3f9a78;
+		--ui-color-brand-600: #1d6a53;
+		--ui-color-brand-700: #185a47;
+		--ui-color-brand-800: #134838;
+		--ui-color-brand-900: #0f3a2e;
+		--ui-color-brand-950: #0b2a22;
+
+		--ui-color-neutral-50: #f6f2e9;
+		--ui-color-neutral-100: #ece8df;
+		--ui-color-neutral-200: #d6d3cc;
+		--ui-color-neutral-300: #bfc3c8;
+		--ui-color-neutral-400: #a2a5ab;
+		--ui-color-neutral-500: #85878d;
+		--ui-color-neutral-600: #6a6b71;
+		--ui-color-neutral-700: #525358;
+		--ui-color-neutral-800: #424247;
+		--ui-color-neutral-900: #333338;
+		--ui-color-neutral-950: #202024;
+
+		--ui-surface-raised: #36363c;
+		--ui-landing-band-tint: #2a2a2f;
+		--ui-landing-hairline: color-mix(in srgb, #bfc3c8 18%, transparent);
+		--ui-shadow-surface: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 1px rgb(255 255 255 / 0.07);
+		--ui-shadow-stage:
+			inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 1px rgb(255 255 255 / 0.07),
+			0 24px 48px -20px rgb(0 0 0 / 0.6);
+		--app-stage: #2c2a2c;
+		--app-bezel: #0d0d0f;
+
+		--malfoid-tile: #2e2e33;
+		--malfoid-emerald: #154b3d;
+		--malfoid-on-emerald: #f6f2e9;
+	}
+}

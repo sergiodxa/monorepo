@@ -23,7 +23,7 @@ const DIGEST_ITEM = s.object({
 	editUrl: s.string(),
 });
 
-/** A validated Encore or Wakaba support request, as the form's validator produced it. */
+/** A validated Encore, Wakaba or Malfoid Stickers support request, as the form's validator produced it. */
 const SUPPORT_REQUEST = s.object({
 	name: s.string(),
 	email: s.string(),
@@ -74,6 +74,12 @@ export default emails({
 	},
 	wakaba: {
 		/** One Wakaba support request, delivered to the support inbox. */
+		support: email({
+			props: s.object({ request: SUPPORT_REQUEST, flagged: s.optional(SPAM_DOUBT) }),
+		}),
+	},
+	malfoid: {
+		/** One Malfoid Stickers support request, delivered to the support inbox. */
 		support: email({
 			props: s.object({ request: SUPPORT_REQUEST, flagged: s.optional(SPAM_DOUBT) }),
 		}),

@@ -27,6 +27,10 @@ mail.map(
 	lazy(() => import("~/app/emails/wakaba/support")),
 );
 mail.map(
+	emails.malfoid.support,
+	lazy(() => import("~/app/emails/malfoid/support")),
+);
+mail.map(
 	emails.press.contact,
 	lazy(() => import("~/app/emails/press/contact")),
 );
