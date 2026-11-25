@@ -38,7 +38,7 @@ import type { StickerId } from "~/resources/content/malfoid/stickers";
 import { LANDING_COPY, MOOD_COVERS } from "~/resources/content/malfoid/landing";
 import { STICKER_CATEGORIES, STICKERS } from "~/resources/content/malfoid/stickers";
 import { MalfoidLayout } from "~/resources/layouts/malfoid";
-import { AppStoreCall, StickerImage } from "~/resources/views/malfoid/parts";
+import { AppStoreCall, inLocale, StickerImage } from "~/resources/views/malfoid/parts";
 import routes from "~/routes/web";
 
 /** The id of the viewer every gallery tile opens. */
@@ -580,7 +580,7 @@ function Details(handle: Handle<BandProps>) {
 
 /**
  * Privacy as plain facts on an ivory card, with Malfoid's arms crossed on its corner: she
- * isn't interested in your data. The policy is English, so another language marks the link.
+ * isn't interested in your data.
  *
  * @param handle Runtime handle carrying the page's words.
  * @returns The render function producing the band.
@@ -603,10 +603,7 @@ function Privacy(handle: Handle<BandProps>) {
 						description={
 							<>
 								{t.privacyLine} {t.privacy.extra}{" "}
-								<Link
-									href={routes.malfoid.privacy.href()}
-									hrefLang={t.locale === "en" ? undefined : "en"}
-								>
+								<Link href={inLocale(routes.malfoid.privacy.href(), t.locale)}>
 									{t.privacy.link}
 								</Link>
 							</>
@@ -672,10 +669,7 @@ function Install(handle: Handle<BandProps>) {
 						description={
 							<>
 								{t.install.lead}{" "}
-								<Link
-									href={routes.malfoid.support.index.href()}
-									hrefLang={t.locale === "en" ? undefined : "en"}
-								>
+								<Link href={inLocale(routes.malfoid.support.index.href(), t.locale)}>
 									{t.install.helpLink}
 								</Link>
 								.
@@ -822,11 +816,7 @@ function Download(handle: Handle<BandProps>) {
 				actions={
 					<span mix={[vstack({ gap: 4, align: "center" })]}>
 						<AppStoreCall copy={t} />
-						<Link
-							href={routes.malfoid.support.index.href()}
-							hrefLang={t.locale === "en" ? undefined : "en"}
-							mix={[text("sm")]}
-						>
+						<Link href={inLocale(routes.malfoid.support.index.href(), t.locale)} mix={[text("sm")]}>
 							{t.closing.support}
 						</Link>
 					</span>

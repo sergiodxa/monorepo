@@ -19,16 +19,19 @@ import { is, m, maxIs, mi, pbe, pbs, pi } from "@sdxc/u/size";
 import { font, overflowWrap, text } from "@sdxc/u/typography";
 import { Accordion, Form, Heading, Link, Typeset } from "@sdxc/ui";
 
+import type { PageLocale } from "~/app/services/page-locale";
+
 import {
 	MALFOID_SUPPORT_LIMITS,
 	MALFOID_SUPPORT_MESSAGE_MIN,
 	MALFOID_SUPPORT_PLATFORMS,
 	MALFOID_SUPPORT_TOPICS,
 } from "~/app/http/validators/malfoid-support";
-import { SUPPORT, TROUBLESHOOTING } from "~/resources/content/malfoid/copy";
+import { SUPPORT_COPY } from "~/resources/content/malfoid/copy";
+import { LANDING_COPY } from "~/resources/content/malfoid/landing";
 import { MalfoidLayout } from "~/resources/layouts/malfoid";
 import { SupportForm } from "~/resources/views/app-pages/support-form";
-import { StickerImage } from "~/resources/views/malfoid/parts";
+import { inLocale, landingHref, StickerImage } from "~/resources/views/malfoid/parts";
 import routes from "~/routes/web";
 
 /** Types used by the support page renderer. */
@@ -47,6 +50,8 @@ export namespace MalfoidSupportView {
 		issues: ReadonlyArray<Form.Issue>;
 		/** Freshly issued trap fields; `sent` renders no form and needs none. */
 		honeypot?: Honeypot.Fields;
+		/** The language the page is written in. English by default. */
+		locale?: PageLocale;
 	}
 }
 
@@ -59,10 +64,14 @@ export namespace MalfoidSupportView {
 export function MalfoidSupportView() {
 	return ({ model, assets }: { model: MalfoidSupportView.Model; assets: DocumentAssets }) => {
 		let { state, values, issues, honeypot } = model;
+		let locale = model.locale ?? "en";
+		let SUPPORT = SUPPORT_COPY[locale];
 
 		return (
 			<MalfoidLayout
 				assets={assets}
+				copy={LANDING_COPY[locale]}
+				bilingual
 				title={SUPPORT.title}
 				description={SUPPORT.description}
 				path={routes.malfoid.support.index.href()}
@@ -113,21 +122,18 @@ export function MalfoidSupportView() {
 								raw({ gridColumn: "1 / -1", "@media (min-width: 48rem)": { gridColumn: "1" } }),
 							]}
 						>
-							<p>
-								Malfoid acting up? Most problems have a quick fix below. If yours doesn’t, write to
-								me and I’ll reply by email.
-							</p>
+							<p>{SUPPORT.intro}</p>
 						</Typeset>
 					</header>
 
 					<section aria-labelledby="quick-fixes" mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<Heading level={2} id="quick-fixes" mix={[m(0), font("display"), text("2xl")]}>
-							Quick fixes
+							{SUPPORT.quickFixes}
 						</Heading>
 						<Accordion
 							mix={[vstack({ gap: 3, align: "stretch" }), raw({ borderBlockStartWidth: "0" })]}
 						>
-							{TROUBLESHOOTING.map(([problem, fix]) => (
+							{SUPPORT.troubleshooting.map(([problem, fix]) => (
 								<Accordion.Item
 									key={problem}
 									mix={[
@@ -146,11 +152,8 @@ export function MalfoidSupportView() {
 							))}
 						</Accordion>
 						<p mix={[m(0), text("sm")]}>
-							New to the pack?{" "}
-							<Link href={`${routes.malfoid.landing.href()}#install`}>
-								See how to send your first sticker
-							</Link>
-							.
+							{SUPPORT.newToPack}{" "}
+							<Link href={`${landingHref(locale)}#install`}>{SUPPORT.installLink}</Link>.
 						</p>
 					</section>
 
@@ -166,9 +169,9 @@ export function MalfoidSupportView() {
 						)}
 						limits={MALFOID_SUPPORT_LIMITS}
 						messageMin={MALFOID_SUPPORT_MESSAGE_MIN}
-						action={routes.malfoid.support.action.href()}
-						againHref={routes.malfoid.support.index.href()}
-						privacyHref={routes.malfoid.privacy.href()}
+						action={inLocale(routes.malfoid.support.action.href(), locale)}
+						againHref={inLocale(routes.malfoid.support.index.href(), locale)}
+						privacyHref={inLocale(routes.malfoid.privacy.href(), locale)}
 					/>
 				</main>
 			</MalfoidLayout>

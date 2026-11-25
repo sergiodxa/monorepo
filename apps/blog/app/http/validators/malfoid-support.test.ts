@@ -10,7 +10,10 @@
 import { parseSafe } from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 
-import { MalfoidSupportRequestSchema } from "~/app/http/validators/malfoid-support";
+import {
+	MalfoidSupportRequestSchema,
+	malfoidSupportSchema,
+} from "~/app/http/validators/malfoid-support";
 
 /** A valid submission with any field replaced, as the form posts it. */
 function submission(fields: Record<string, string> = {}): FormData {
@@ -88,5 +91,19 @@ describe("MalfoidSupportRequestSchema", () => {
 		expect(issuesFor(submission({ name: "Ada\nLovelace" }), "name")).toEqual([
 			"This field must fit on one line.",
 		]);
+	});
+
+	test("reports field messages in Spanish for a Spanish page", () => {
+		let result = parseSafe(
+			malfoidSupportSchema("es-AR"),
+			submission({ email: "", message: "Hola" }),
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			let messages = result.issues.map((issue) => issue.message);
+			expect(messages).toContain("Escribe tu correo electrónico para que pueda responderte.");
+			expect(messages).toContain("Tu mensaje debe tener al menos 10 caracteres.");
+		}
 	});
 });

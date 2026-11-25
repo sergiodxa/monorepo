@@ -107,14 +107,25 @@ export function AppStoreCall(handle: Handle<AppStoreCall.Props>) {
 }
 
 /**
- * The landing's address in `locale`: bare for English, with `?lang=` for any other language.
+ * `href` in `locale`: bare for English, with `?lang=` for any other language, so a reader who
+ * picked Spanish stays in Spanish as they move between the pack's pages.
+ *
+ * @param href The page's path.
+ * @param locale The language to link.
+ * @returns The path in that language.
+ */
+export function inLocale(href: string, locale: PageLocale = "en"): string {
+	return locale === "en" ? href : `${href}?lang=${locale}`;
+}
+
+/**
+ * The landing's address in `locale`.
  *
  * @param locale The language to link.
  * @returns The landing's path.
  */
 export function landingHref(locale: PageLocale = "en"): string {
-	let href = routes.malfoid.landing.href();
-	return locale === "en" ? href : `${href}?lang=${locale}`;
+	return inLocale(routes.malfoid.landing.href(), locale);
 }
 
 namespace Chrome {
@@ -171,8 +182,7 @@ export function Wordmark(handle: Handle<Chrome.Props>) {
 
 /**
  * The header: the wordmark home, then Support and Privacy, which fit beside it at 320px
- * without a menu. Support and the policy are written in English, so a page in another
- * language marks those links as English.
+ * without a menu, each in the page's language.
  *
  * @param handle Runtime handle carrying the page's words.
  * @returns The render function producing the header.
@@ -180,7 +190,6 @@ export function Wordmark(handle: Handle<Chrome.Props>) {
 export function MalfoidHeader(handle: Handle<Chrome.Props>) {
 	return () => {
 		let copy = handle.props.copy ?? LANDING_COPY.en;
-		let hrefLang = copy.locale === "en" ? undefined : "en";
 		return (
 			<header mix={[pi(4), at("md", pi(6))]}>
 				<nav
@@ -195,14 +204,12 @@ export function MalfoidHeader(handle: Handle<Chrome.Props>) {
 					<Wordmark copy={copy} />
 					<span mix={[hstack({ gap: 5, align: "center" }), text("sm")]}>
 						<QuietLink
-							href={routes.malfoid.support.index.href()}
+							href={inLocale(routes.malfoid.support.index.href(), copy.locale)}
 							label={copy.chrome.support}
-							hrefLang={hrefLang}
 						/>
 						<QuietLink
-							href={routes.malfoid.privacy.href()}
+							href={inLocale(routes.malfoid.privacy.href(), copy.locale)}
 							label={copy.chrome.privacy}
-							hrefLang={hrefLang}
 						/>
 					</span>
 				</nav>

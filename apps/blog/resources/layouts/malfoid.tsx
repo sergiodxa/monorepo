@@ -28,6 +28,7 @@ import { LANDING_COPY } from "~/resources/content/malfoid/landing";
 import DocumentLayout from "~/resources/layouts/document";
 import { AppFooter } from "~/resources/views/app-pages/footer";
 import {
+	inLocale,
 	landingHref,
 	MALFOID_ASSETS,
 	MalfoidHeader,
@@ -107,17 +108,19 @@ const ICONS: Array<DocumentShell.IconLink> = [
 
 /**
  * The footer's columns in the page's language: the pack's own pages, the author's other apps,
- * and where to find him. Support and the policy are English, so another language marks them.
+ * and where to find him.
  */
 function footerColumns(copy: LandingCopy): Array<FooterColumn> {
-	let hrefLang = copy.locale === "en" ? undefined : "en";
 	return [
 		{
 			title: "Malfoid Stickers",
 			links: [
 				{ href: `${landingHref(copy.locale)}#download`, label: copy.chrome.download },
-				{ href: routes.malfoid.support.index.href(), label: copy.chrome.support, hrefLang },
-				{ href: routes.malfoid.privacy.href(), label: copy.chrome.privacy, hrefLang },
+				{
+					href: inLocale(routes.malfoid.support.index.href(), copy.locale),
+					label: copy.chrome.support,
+				},
+				{ href: inLocale(routes.malfoid.privacy.href(), copy.locale), label: copy.chrome.privacy },
 			],
 		},
 		{

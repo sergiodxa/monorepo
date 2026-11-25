@@ -419,7 +419,7 @@ const ES: LandingCopy = {
 			],
 			[
 				"La instalé, pero no la encuentro.",
-				"En Mensajes, toca + junto al campo de texto, luego Stickers, y busca a Malfoid entre tus packs. La página de soporte (en inglés) tiene más soluciones.",
+				"En Mensajes, toca + junto al campo de texto, luego Stickers, y busca a Malfoid entre tus packs. La página de soporte tiene más soluciones.",
 			],
 		],
 	},

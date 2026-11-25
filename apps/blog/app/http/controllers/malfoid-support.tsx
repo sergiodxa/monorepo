@@ -1,6 +1,6 @@
 /**
  * HTTP controller for the public Malfoid Stickers support page, the Support URL of the pack's
- * App Store listing. It renders the quick fixes and the contact form with honeypot fields, and
+ * App Store listing, in English or Spanish. It renders the quick fixes and the contact form with honeypot fields, and
  * on submission reads their check, validates, rate-limits and mails the request, redirecting to
  * a confirmation once it is sent.
  *
@@ -15,8 +15,11 @@ import { createController } from "remix/router";
 import { Session } from "remix/session";
 
 import type { AppContext } from "~/app/initializers/router";
+import type { PageLocale } from "~/app/services/page-locale";
 
-import { MalfoidSupportRequestSchema } from "~/app/http/validators/malfoid-support";
+import { malfoidSupportSchema } from "~/app/http/validators/malfoid-support";
+import { resolvePageLocale } from "~/app/services/page-locale";
+import { inLocale } from "~/resources/views/malfoid/parts";
 import { MalfoidSupportView } from "~/resources/views/malfoid/support";
 import routes from "~/routes/web";
 
@@ -58,7 +61,20 @@ async function renderForm(
 	init?: ResponseInit,
 ): Promise<Response> {
 	let honeypot = unwrap(await ctx.honeypot.issue());
-	return ctx.render(MalfoidSupportView, { ...model, honeypot }, init);
+	return ctx.render(MalfoidSupportView, { ...model, honeypot }, withLanguage(model.locale, init));
+}
+
+/** The request's language, from `?lang=` or `Accept-Language`. */
+function localeOf(ctx: AppContext): PageLocale {
+	return resolvePageLocale(ctx.url, ctx.request.headers.get("Accept-Language"));
+}
+
+/** A response's init carrying the page's language and the header its choice varied on. */
+function withLanguage(locale: PageLocale = "en", init?: ResponseInit): ResponseInit {
+	let headers = new Headers(init?.headers);
+	headers.set("Content-Language", locale);
+	headers.set("Vary", "Accept-Language");
+	return { ...init, headers };
 }
 
 /**
@@ -74,10 +90,15 @@ export default createController(routes.malfoid.support, {
 		 * @returns The support page.
 		 */
 		index: async (ctx) => {
+			let locale = localeOf(ctx);
 			if (ctx.get(Session).get(SENT_FLASH) === true) {
-				return ctx.render(MalfoidSupportView, { state: "sent", values: {}, issues: [] });
+				return ctx.render(
+					MalfoidSupportView,
+					{ state: "sent", values: {}, issues: [], locale },
+					withLanguage(locale),
+				);
 			}
-			return renderForm(ctx, { state: "idle", values: {}, issues: [] });
+			return renderForm(ctx, { state: "idle", values: {}, issues: [], locale });
 		},
 
 		/**
@@ -88,7 +109,8 @@ export default createController(routes.malfoid.support, {
 		 * @returns A See Other redirect to the confirmation, or the form with a 4xx/5xx status.
 		 */
 		action: async (ctx) => {
-			let confirmation = routes.malfoid.support.index.href();
+			let locale = localeOf(ctx);
+			let confirmation = inLocale(routes.malfoid.support.index.href(), locale);
 			let form = ctx.get(FormData);
 			let values = submittedValues(form);
 			let session = ctx.get(Session);
@@ -100,7 +122,7 @@ export default createController(routes.malfoid.support, {
 					session.flash(SENT_FLASH, true);
 					return redirect(confirmation, { status: redirect.Status.SeeOther });
 				}
-				return renderForm(ctx, { state: "resubmit", values, issues: [] }, { status: 400 });
+				return renderForm(ctx, { state: "resubmit", values, issues: [], locale }, { status: 400 });
 			}
 
 			let admitted = await ctx.supportDesk.admit(
@@ -110,17 +132,17 @@ export default createController(routes.malfoid.support, {
 				ctx.log.set({ support: { outcome: "rate_limited" } });
 				return renderForm(
 					ctx,
-					{ state: "rate-limited", values, issues: [] },
+					{ state: "rate-limited", values, issues: [], locale },
 					{ status: 429, headers: { "retry-after": "60" } },
 				);
 			}
 
-			let parsed = await validate(form ?? new FormData(), MalfoidSupportRequestSchema);
+			let parsed = await validate(form ?? new FormData(), malfoidSupportSchema(locale));
 			if (isFailure(parsed)) {
 				ctx.log.set({ support: { outcome: "invalid" } });
 				return renderForm(
 					ctx,
-					{ state: "invalid", values, issues: parsed.error.issues },
+					{ state: "invalid", values, issues: parsed.error.issues, locale },
 					{ status: 400 },
 				);
 			}
@@ -149,7 +171,7 @@ export default createController(routes.malfoid.support, {
 			let delivered = await ctx.supportDesk.deliverMalfoid(parsed.data, assessment);
 			if (isFailure(delivered)) {
 				ctx.log.warn("support.delivery_failed", { reason: delivered.error.reason });
-				return renderForm(ctx, { state: "failed", values, issues: [] }, { status: 503 });
+				return renderForm(ctx, { state: "failed", values, issues: [], locale }, { status: 503 });
 			}
 
 			ctx.log.set({ support: { outcome: "delivered", topic: parsed.data.topic } });

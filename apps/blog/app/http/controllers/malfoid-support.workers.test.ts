@@ -211,6 +211,40 @@ describe("GET /apps/malfoid/support", () => {
 	});
 });
 
+describe("/apps/malfoid/support in Spanish", () => {
+	test("renders the form in Spanish for a Spanish reader, posting the same values", async () => {
+		let response = await load(undefined, { "accept-language": "es-MX" });
+		let html = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(html).toMatch(/<html lang="es-AR"/);
+		expect(html).toContain("Soporte de Malfoid Stickers");
+		expect(html).toContain("Soluciones rápidas");
+		expect(html).toContain('<option value="Stickers not showing"');
+		expect(html).toContain("Los stickers no aparecen");
+		expect(html).toContain('href="/apps/malfoid/privacy?lang=es-AR"');
+	});
+
+	test("reports invalid fields in Spanish and keeps ?lang= on the confirmation", async () => {
+		let invalid = await submit(await submission({ email: "" }), {
+			headers: { "accept-language": "es-AR" },
+		});
+		expect(invalid.status).toBe(400);
+		expect(await invalid.text()).toContain(
+			"Escribe tu correo electrónico para que pueda responderte.",
+		);
+
+		let transport = new MemoryTransport();
+		let sent = await submit(await submission(), {
+			transport,
+			headers: { "accept-language": "es-AR" },
+		});
+		expect(sent.status).toBe(303);
+		expect(sent.headers.get("location")).toBe(`${PATH}?lang=es-AR`);
+		expect(transport.last?.subject).toBe("[Malfoid Stickers] Bug report on iPhone");
+	});
+});
+
 describe("POST /apps/malfoid/support", () => {
 	test("mails the request to the inbox, replying to the visitor, then confirms once", async () => {
 		let transport = new MemoryTransport();

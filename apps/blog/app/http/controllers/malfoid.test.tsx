@@ -179,13 +179,13 @@ describe("GET /apps/malfoid in Spanish", () => {
 		expect(html).toContain('hreflang="x-default" href="https://sergiodxa.com/apps/malfoid"');
 	});
 
-	test("marks the English support and privacy pages as English", async () => {
+	test("keeps a Spanish reader in Spanish on the support and privacy links", async () => {
 		let html = await (await fetchPage("/apps/malfoid?lang=es-AR")).text();
 
-		expect(html).toMatch(
-			/href="\/apps\/malfoid\/support" hreflang="en"|hreflang="en"[^>]*href="\/apps\/malfoid\/support"/,
-		);
+		expect(html).toContain('href="/apps/malfoid/support?lang=es-AR"');
+		expect(html).toContain('href="/apps/malfoid/privacy?lang=es-AR"');
 		expect(html).toContain('href="/apps/malfoid?lang=es-AR"');
+		expect(html).not.toMatch(/<a [^>]*hreflang=/);
 	});
 });
 
@@ -223,6 +223,31 @@ describe("GET /apps/malfoid/privacy", () => {
 
 		expect(response.headers.get("content-type")).toContain("text/markdown");
 		expect(await response.text()).toContain("## The app collects no data");
+	});
+});
+
+describe("GET /apps/malfoid/privacy in Spanish", () => {
+	test("answers a Spanish reader with the Spanish policy, in the pack's Spanish shell", async () => {
+		let response = await fetchPage("/apps/malfoid/privacy", { "accept-language": "es" });
+		let html = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(html).toMatch(/<html lang="es-AR"/);
+		expect(headingCount(html)).toBe(1);
+		expect(html).toMatch(/<title[^>]*>Política de privacidad de Malfoid Stickers<\/title>/);
+		expect(html).toContain("La app no recopila datos");
+		expect(html).toContain('href="/apps/malfoid/privacy.md?lang=es-AR"');
+		expect(html).toContain('href="https://sergiodxa.com/apps/malfoid/support?lang=es-AR"');
+	});
+
+	test("serves the Spanish Markdown at the .md route with ?lang=", async () => {
+		let response = await fetchPage("/apps/malfoid/privacy.md?lang=es-AR");
+		let body = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(body).toContain("Última actualización: 24 de noviembre de 2026");
+		expect(body).toContain("## A qué puede acceder la app");
+		expect(body).not.toContain("title: Política de privacidad");
 	});
 });
 
