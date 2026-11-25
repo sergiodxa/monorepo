@@ -75,7 +75,8 @@ export function malfoidMeta(
 	copy: LandingCopy = LANDING_COPY.en,
 	listing: AppStoreListing = APP_STORE,
 ): Array<DocumentShell.MetaTag> {
-	let image = new URL(`${MALFOID_ASSETS}/branding/social-card.png`, PROFILE.canonical.origin).href;
+	let card = copy.locale === "en" ? "social-card.png" : `social-card.${copy.locale}.png`;
+	let image = new URL(`${MALFOID_ASSETS}/branding/${card}`, PROFILE.canonical.origin).href;
 	let tags: Array<DocumentShell.MetaTag> = [
 		{ property: "og:type", content: "website" },
 		{ property: "og:site_name", content: "Malfoid Stickers" },

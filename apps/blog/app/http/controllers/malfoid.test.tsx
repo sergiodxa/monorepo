@@ -167,6 +167,10 @@ describe("GET /apps/malfoid in Spanish", () => {
 		expect(html).toContain("Abrir sticker: Malfoid sonríe con aire de superioridad");
 		expect(html).toContain("¿Le escribo a mi ex?");
 		expect(html).toContain('property="og:locale" content="es_AR"');
+		expect(html).toContain(
+			'property="og:image" content="https://sergiodxa.com/apps/malfoid/branding/social-card.es-AR.png"',
+		);
+		expect(html).toContain("Malfoid Stickers, reacciones tiernas y atrevidas");
 	});
 
 	test("lets ?lang= override the browser and lists both languages for search engines", async () => {

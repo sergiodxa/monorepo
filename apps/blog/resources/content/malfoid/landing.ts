@@ -268,7 +268,7 @@ const ES: LandingCopy = {
 		description:
 			"Conoce a Malfoid, tu rubia gruñona favorita con mucha actitud: 60 stickers gratis y sin texto para iMessage en iPhone y iPad. Sin anuncios, sin suscripciones, sin recopilar datos.",
 		socialCardAlt:
-			"Malfoid Stickers, Cute & Sassy Reactions: tres stickers de Malfoid sonriendo con superioridad, llorando con drama y abrazando un corazón rosa.",
+			"Malfoid Stickers, reacciones tiernas y atrevidas: tres stickers de Malfoid sonriendo con superioridad, llorando con drama y abrazando un corazón rosa.",
 	},
 	chrome: {
 		navLabel: "Malfoid Stickers",
