@@ -420,7 +420,7 @@ export const STICKER_CATALOG = {
 	exhausted: {
 		category: "sadness-and-exhaustion",
 		alt: { en: "Malfoid droops with exhaustion.", "es-AR": "Malfoid está rendida de cansancio." },
-		prompt: { en: "How was your Monday?", "es-AR": "¿Qué tal tu lunes?" },
+		prompt: { en: "How was your day?", "es-AR": "¿Qué tal tu día?" },
 	},
 	sleeping: {
 		category: "sadness-and-exhaustion",
@@ -444,7 +444,7 @@ export const STICKER_CATALOG = {
 			en: "Malfoid slumps down, emotionally defeated.",
 			"es-AR": "Malfoid se desploma, sin ánimos.",
 		},
-		prompt: { en: "Your branch has 47 merge conflicts.", "es-AR": "Tu rama tiene 47 conflictos." },
+		prompt: { en: "Tomorrow is Monday again.", "es-AR": "Mañana es lunes otra vez." },
 	},
 	"under-blanket": {
 		category: "sadness-and-exhaustion",
