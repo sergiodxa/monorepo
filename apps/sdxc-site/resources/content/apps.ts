@@ -100,4 +100,10 @@ export const PRODUCTION_LANDINGS: ProductionLandingDefinition[] = [
 		folder: "resources/views/encore",
 		href: "https://sergiodxa.com/apps/encore",
 	},
+	{
+		slug: "malfoid",
+		application: "blog",
+		folder: "resources/views/malfoid",
+		href: "https://sergiodxa.com/apps/malfoid",
+	},
 ];

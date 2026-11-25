@@ -40,6 +40,7 @@ describe("GET /showcase", () => {
 
 		expect(production).toContain('href="/showcase/wakaba"');
 		expect(production).toContain('href="/showcase/encore"');
+		expect(production).toContain('href="/showcase/malfoid"');
 		expect(body).not.toMatch(/id="items"[\s\S]*href="\/showcase\/wakaba"/);
 	});
 
