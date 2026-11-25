@@ -340,7 +340,7 @@ describe("Gallery", () => {
 
 describe("Characters", () => {
 	/** A cast of a described character, a known layered one, and one never introduced. */
-	const PEOPLE = cast({
+	let people = cast({
 		mika: character({
 			name: "cast.mika",
 			description: "cast.mikaAbout",
@@ -357,7 +357,7 @@ describe("Characters", () => {
 	test("hides who the reader has not met and every look the stage never drew", async () => {
 		let novel = createNovel({
 			scenes: SCENES,
-			cast: PEOPLE,
+			cast: people,
 			state: STATE,
 			initial: SCENES.prologue.opening,
 		});
