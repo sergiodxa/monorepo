@@ -135,7 +135,8 @@ ancestor; the `border-image-*` variables frame a box with your own artwork:
 ```
 
 The variables cover the stage, speaker focus, the text, the textbox, the name plate, the
-next-line indicator, the choices, the quick menu, the dialogs, captions, read lines and the
+next-line indicator, the choices, the quick menu, the dialogs, the settings screen, captions,
+read lines and the
 notifications. The root also carries `data-novel-player` with `data-phase`, `data-auto`,
 `data-skip` and `data-hidden`, for a rule that depends on what the player is doing.
 
