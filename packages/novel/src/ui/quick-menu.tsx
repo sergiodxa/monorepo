@@ -46,7 +46,8 @@ export function quickMenuButton(): CSSMixinDescriptor {
 
 /**
  * Draws the quick menu while the interface shows. A replay swaps saving for an "End replay"
- * button. The buttons open the player's dialogs, so a dialog left out of the layout opens nothing.
+ * button, and a player with a title screen offers a way back to it. The buttons open the
+ * player's dialogs, so a dialog left out of the layout opens nothing.
  *
  * @example <NovelPlayer.QuickMenu><NovelPlayer.Extras>…</NovelPlayer.Extras></NovelPlayer.QuickMenu>
  */
@@ -73,6 +74,7 @@ export function QuickMenu(handle: Handle<QuickMenu.Props>) {
 			["quickLoad", labels.quickLoad],
 			["hide", labels.hide],
 			["fullscreen", labels.fullscreen],
+			...(player.returnsToTitle && !replaying ? ([["toTitle", labels.toTitle]] as const) : []),
 		] as const;
 		return (
 			<nav

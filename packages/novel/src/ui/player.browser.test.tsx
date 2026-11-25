@@ -752,22 +752,47 @@ describe("NovelPlayer", () => {
 		await userEvent.keyboard("{Escape}");
 		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
 		await vi.waitFor(() => expect(screen.open).toBe(true));
+		await userEvent.click(screen.querySelector('[data-novel-settings-tab="accessibility"]')!);
 		let dyslexia = screen.querySelector<HTMLInputElement>('input[name="dyslexiaFont"]')!;
 		await userEvent.click(dyslexia);
 		expect(changed).toHaveBeenLastCalledWith(
 			expect.objectContaining({ dyslexiaFont: true, fontSize: 1.5 }),
 		);
 		expect(getComputedStyle(line).fontFamily).toContain("OpenDyslexic");
+		await userEvent.click(screen.querySelector('[data-novel-settings-tab="text"]')!);
 		let speed = screen.querySelector<HTMLInputElement>('input[name="textSpeed"]')!;
 		speed.value = "80";
 		speed.dispatchEvent(new Event("input", { bubbles: true }));
 		expect(changed).toHaveBeenLastCalledWith(expect.objectContaining({ textSpeed: 80 }));
+		await userEvent.click(screen.querySelector('[data-novel-settings-tab="sound"]')!);
 		let music = screen.querySelector<HTMLInputElement>('input[name="volume.music"]')!;
 		music.value = "20";
 		music.dispatchEvent(new Event("input", { bubbles: true }));
 		expect(changed).toHaveBeenLastCalledWith(
 			expect.objectContaining({ volume: expect.objectContaining({ music: 0.2, master: 1 }) }),
 		);
+	});
+
+	test("shows each setting's value and restores the defaults", async () => {
+		let player = mount({ settings: { textSpeed: 0, volume: { music: 0.3 } } });
+		let changed = player.events.settings;
+		await shows(player, "Welcome to the café.");
+		await userEvent.keyboard("{Escape}");
+		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
+		await vi.waitFor(() => expect(screen.open).toBe(true));
+		let readout = screen.querySelector("[data-novel-setting-readout]")!;
+		expect(readout.textContent).toBe("Instant");
+		await userEvent.click(screen.querySelector('[data-novel-settings-tab="sound"]')!);
+		let music = screen.querySelector<HTMLInputElement>('input[name="volume.music"]')!;
+		expect(music.checkVisibility()).toBe(true);
+		expect(screen.querySelector('input[name="textSpeed"]')!.checkVisibility()).toBe(false);
+		await userEvent.click(screen.querySelector("[data-novel-settings-reset]")!);
+		expect(changed).toHaveBeenLastCalledWith(
+			expect.objectContaining({ textSpeed: 40, volume: expect.objectContaining({ music: 0.8 }) }),
+		);
+		await vi.waitFor(() => expect(music.value).toBe("80"));
+		await userEvent.click(screen.querySelector("[data-novel-settings-back]")!);
+		await vi.waitFor(() => expect(screen.open).toBe(false));
 	});
 
 	test("dispatches typed, bubbling events an ancestor catches through on()", async () => {

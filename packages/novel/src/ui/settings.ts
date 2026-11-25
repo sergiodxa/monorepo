@@ -90,6 +90,22 @@ export interface NovelLabels {
 	fontSize: string;
 	dyslexiaFont: string;
 	selfVoicing: string;
+	/** The settings screen's tab of text and pacing settings. */
+	settingsText: string;
+	/** The settings screen's tab of volumes. */
+	settingsSound: string;
+	/** The settings screen's tab of reading aids. */
+	settingsAccessibility: string;
+	/** The line the settings screen types at the chosen text speed. */
+	textPreview: string;
+	/** The text speed's readout when lines show at once. */
+	textInstant: string;
+	/** The settings screen's button that restores every default. */
+	resetSettings: string;
+	/** The settings screen's button that closes it. */
+	back: string;
+	/** The quick menu's button that leaves the play for the title screen. */
+	toTitle: string;
 	retry: string;
 	playAgain: string;
 	/** The ending's button that returns to the title screen, in place of Play again. */
@@ -164,6 +180,14 @@ export const DEFAULT_LABELS: NovelLabels = {
 	fontSize: "Text size",
 	dyslexiaFont: "Dyslexia-friendly font",
 	selfVoicing: "Read text aloud",
+	settingsText: "Text",
+	settingsSound: "Sound",
+	settingsAccessibility: "Accessibility",
+	textPreview: "This is how quickly each line appears.",
+	textInstant: "Instant",
+	resetSettings: "Reset settings",
+	back: "Back",
+	toTitle: "Title",
 	retry: "Try again",
 	playAgain: "Play again",
 	backToTitle: "Back to title",
@@ -209,7 +233,8 @@ export type PlayerAction =
 	| "save"
 	| "load"
 	| "settings"
-	| "endReplay";
+	| "endReplay"
+	| "toTitle";
 
 /**
  * The keyboard map, by `KeyboardEvent.key`. Holding Control also skips for as long as it is

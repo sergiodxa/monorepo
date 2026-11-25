@@ -90,7 +90,7 @@ export { QuickMenu } from "./ui/quick-menu.js";
 export { Prefetcher } from "./ui/prefetch.js";
 export { SaveScreen, SaveSummary, SlotThumbnail } from "./ui/saves.js";
 export { DEFAULT_LABELS, DEFAULT_SETTINGS, KEYMAP, resolveSettings } from "./ui/settings.js";
-export { RangeSetting, SettingsScreen } from "./ui/settings-screen.js";
+export { RangeSetting, SettingRow, SettingsScreen } from "./ui/settings-screen.js";
 export { resolveSource } from "./ui/source.js";
 export { CharacterSprite, Scenery, Stage } from "./ui/stage.js";
 export { Captions, Line, NamePlate, NextIndicator, Textbox } from "./ui/textbox.js";

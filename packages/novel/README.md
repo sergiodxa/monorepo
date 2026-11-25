@@ -602,10 +602,10 @@ Each part is a member of `NovelPlayer` and is also exported under its own name. 
 - `NovelPlayer.Captions` (`Captions`): The captions of the frame's sounds
 - `NovelPlayer.Choices` (`ChoiceMenu`): A menu, with a locked option disabled with its reason, a taken one marked `data-chosen`, and a timed menu counting down
 - `NovelPlayer.Interaction` (`Interaction`): `interactions` (your `interactions()` map) and a children function of the custom frame, narrowed by `frame.interaction`, drawn over the stage while the play stops at one of those interactions; it answers the frame when `novel:interaction:complete` reaches it
-- `NovelPlayer.QuickMenu` (`QuickMenu`): The buttons over the stage (auto, skip, backlog, save, load, quick save and load, settings, hide, full screen, and End replay during a replay), then its children
+- `NovelPlayer.QuickMenu` (`QuickMenu`): The buttons over the stage (auto, skip, backlog, save, load, quick save and load, settings, hide, full screen, End replay during a replay, and Title when the player has a title screen), then its children
 - `NovelPlayer.Backlog` (`Backlog`): A modal dialog of the lines read, oldest first, each with a button that replays its voice; an entry read before it showed carries `data-novel-read`
 - `NovelPlayer.Saves` (`SaveScreen`): The save and load dialogs, with the autosave slot first (load-only), then the quick one and `slots` numbered slots (default `6`); a replay offers no saving
-- `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting
+- `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting, in Text, Sound and Accessibility tabs (`data-novel-settings-tab`), each row showing the setting's current value beside its control, with a line typed at the chosen text speed, Reset settings and Back
 - `NovelPlayer.Extras` (`Extras`): An Extras menu offering the library screens given as its children, each in its own modal dialog
 - `NovelPlayer.Notifications` (`Notifications`): The `notifications` queue as toasts in a `popover="manual"` element, so they sit in the top layer over dialogs and full screen, anchored to the player so `--novel-notification-inset` measures from its edges; a polite live region whose toasts each leave after `duration` milliseconds (default `4000`) and carry `data-kind`. Reduced motion drops their entrance
 
@@ -628,7 +628,7 @@ Every color, image, size and timing the parts draw is a `--novel-*` custom prope
 />
 ```
 
-The variables cover the player and stage (`letterbox`, `color`, `accent`, `stage-background`, transitions, character height), speaker focus (`focus-scale`, `focus-lift`, `focus-filter`, `dim-brightness`, `dim-filter`), the text (font, size, leading, tracking, color, shadow), the textbox (background, border, `border-image-*`, padding, radius, shadow, backdrop filter, position, inset, sizes), the name plate (background, `border-image-*`, font, color, offset), the next-line indicator (`next-content`, `next-image`, size, `next-inset`, color, animation), the choices (gap, prompt, option background, border, `border-image-*`, hover, focus and disabled states, the countdown bar), the quick menu, the dialogs (background, color, `border-image-*`), captions, the ending overlay, errors, read lines (`read-color`, `inherit` by default) and the notifications (`notification-inset`, `-gap`, `-background`, `-color`, `-border`, `-radius`, `-padding`, `-font`, `-font-size`, `-shadow`, `-animation`).
+The variables cover the player and stage (`letterbox`, `color`, `accent`, `stage-background`, transitions, character height), speaker focus (`focus-scale`, `focus-lift`, `focus-filter`, `dim-brightness`, `dim-filter`), the text (font, size, leading, tracking, color, shadow), the textbox (background, border, `border-image-*`, padding, radius, shadow, backdrop filter, position, inset, sizes), the name plate (background, `border-image-*`, font, color, offset), the next-line indicator (`next-content`, `next-image`, size, `next-inset`, color, animation), the choices (gap, prompt, option background, border, `border-image-*`, hover, focus and disabled states, the countdown bar), the quick menu, the dialogs (background, color, `border-image-*`), the settings screen (`settings-panel-*`, `-divider`, `-readout-color`, `-tab-*` for its tabs and buttons, `-preview-*`), captions, the ending overlay, errors, read lines (`read-color`, `inherit` by default) and the notifications (`notification-inset`, `-gap`, `-background`, `-color`, `-border`, `-radius`, `-padding`, `-font`, `-font-size`, `-shadow`, `-animation`).
 
 #### Behaviors
 
@@ -650,9 +650,9 @@ How the reader experiences the play, kept in the browser and never in the game s
 
 `<Message i18nKey values? markup?>` renders a message with the built-in line effects plus any `markup` adds or replaces. `lineMarkup()` answers a fresh map of those built-in effects for `Trans`.
 
-#### `SlotThumbnail` and `RangeSetting`
+#### `SlotThumbnail`, `SettingRow` and `RangeSetting`
 
-`<SlotThumbnail state locale>` draws a saved stage as a miniature, and `<RangeSetting label name value min max step>` one labeled slider whose `<input>` fires a native `input` event as the reader drags, heard with `on("input", …)` in its `mix`.
+`<SlotThumbnail state locale>` draws a saved stage as a miniature, `<SettingRow label readout>` one settings row around a control, and `<RangeSetting label name value min max step readout>` a row with a slider whose `<input>` fires a native `input` event as the reader drags, heard with `on("input", …)` in its `mix`.
 
 #### `Memories`, `Gallery`, `MusicRoom` and `EndingsList`
 
@@ -719,7 +719,7 @@ The scenery transitions the player draws itself as View Transitions (any other n
 - `RevealBehavior`, `AutoBehavior`, `SkipBehavior`, `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`, `AutosaveBehavior`, `NotificationsBehavior`, `ReadBehavior`: What the player relies on from each behavior.
 - `NotificationInput`, `NotificationText`, `NotificationMessage`, `NovelNotification`: A toast as `push()` takes it, as plain text or a message to translate, and as the queue holds it.
 - `Interaction.Props<Map>`, `Interaction.Map`, `Interaction.Frame<Map>`, `Interaction.Rendered`: An interaction part's props, the map it takes, the custom frame of each interaction in it, and what the children function returns.
-- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `QuickMenu.Props`, `Extras.Props`, `Title.Props`, `Title.Options`, `SaveScreen.SummaryProps`, `Notifications.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
+- `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `SettingsScreen.RowProps`, `SettingsScreen.Tab`, `QuickMenu.Props`, `Extras.Props`, `Title.Props`, `Title.Options`, `SaveScreen.SummaryProps`, `Notifications.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
 - `keyboardControls.Options`: The keymap the keyboard mixin takes.
 - `RevealStatus`: Where a line's reveal stands.
 - `NovelThemeVariable`: A `--novel-*` variable name.

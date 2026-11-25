@@ -63,7 +63,9 @@ export function perform(player: NovelPlayer.Context, action: PlayerAction): void
 	else if (action === "quickSave") player.save(QUICK_SLOT);
 	else if (action === "quickLoad") void player.load(QUICK_SLOT);
 	else if (action === "endReplay") void player.endReplay();
-	else player.open(action);
+	else if (action === "toTitle") {
+		if (player.returnsToTitle) player.toTitle();
+	} else player.open(action);
 }
 
 /** The player a mixin sits under, or `undefined` outside one. */

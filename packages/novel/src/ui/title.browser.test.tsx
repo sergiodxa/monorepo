@@ -188,6 +188,7 @@ describe("NovelPlayer.Title", () => {
 		button(result, "settings")!.click();
 		let dialog = result.$("[data-novel-title] [data-novel-settings]") as HTMLDialogElement;
 		await vi.waitFor(() => expect(dialog.open).toBe(true));
+		await userEvent.click(dialog.querySelector('[data-novel-settings-tab="accessibility"]')!);
 		await userEvent.click(dialog.querySelector('input[name="dyslexiaFont"]')!);
 		expect(settings).toHaveBeenLastCalledWith(
 			expect.objectContaining({ dyslexiaFont: true, fontSize: 1.5 }),
@@ -229,6 +230,27 @@ describe("NovelPlayer.Default with a title screen", () => {
 		expect(result.$("[data-novel-title]")).toBeNull();
 	});
 
+	test("leaves a play for the title from the quick menu", async () => {
+		let { result } = mount(
+			<NovelPlayer.Default
+				novel={fixture()}
+				settings={{ textSpeed: 0 }}
+				titleScreen={{ heading: "The Café" }}
+			/>,
+		);
+		button(result, "new-game")!.click();
+		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
+		await userEvent.click(result.$('[data-novel-menu] [data-action="toTitle"]')!);
+		await vi.waitFor(() => expect(result.$("[data-novel-title]")).not.toBeNull());
+		expect(result.$("[data-novel-player]")).toBeNull();
+	});
+
+	test("offers no way to the title in a player without a title screen", async () => {
+		let { result } = mount(<NovelPlayer.Default novel={fixture()} settings={{ textSpeed: 0 }} />);
+		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
+		expect(result.$('[data-novel-menu] [data-action="toTitle"]')).toBeNull();
+	});
+
 	test("keeps a setting changed on the title through the store and applies it to the play", async () => {
 		let store = new LocalStorageStore({ prefix: "title" });
 		store.putSettings({ textSpeed: 0 });
@@ -243,6 +265,7 @@ describe("NovelPlayer.Default with a title screen", () => {
 		button(result, "settings")!.click();
 		let dialog = result.$("[data-novel-title] [data-novel-settings]") as HTMLDialogElement;
 		await vi.waitFor(() => expect(dialog.open).toBe(true));
+		await userEvent.click(dialog.querySelector('[data-novel-settings-tab="accessibility"]')!);
 		await userEvent.click(dialog.querySelector('input[name="dyslexiaFont"]')!);
 		expect(store.read().settings).toEqual(
 			expect.objectContaining({ dyslexiaFont: true, textSpeed: 0 }),
