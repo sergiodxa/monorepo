@@ -22,8 +22,8 @@ import privacyPage, { markdownPage } from "./encore-privacy";
 async function fetchPage(path: string, headers: Record<string, string> = {}): Promise<Response> {
 	let router = createRouter<AppContext>({ middleware: pageRenderer() });
 	router.map(routes.searchFrame, blankSearchFrame);
-	router.map(routes.encorePrivacy, privacyPage);
-	router.map(routes.encorePrivacyMarkdown, markdownPage);
+	router.map(routes.encore.privacy, privacyPage);
+	router.map(routes.encore.privacyMarkdown, markdownPage);
 
 	return await router.fetch(new Request(new URL(path, "https://sergiodxa.com"), { headers }));
 }

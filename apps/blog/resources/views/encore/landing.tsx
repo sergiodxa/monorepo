@@ -89,7 +89,7 @@ export function EncoreLandingView() {
 				share={model.share}
 				title={copy.meta.title}
 				description={copy.meta.description}
-				path={routes.encore.href()}
+				path={routes.encore.landing.href()}
 				sparkles={64}
 			>
 				<EncoreLandingContent locale={model.locale} />
@@ -751,7 +751,7 @@ function Privacy(handle: Handle) {
 						<>
 							{t.privacy.description}
 							<span mix={[block(), raw({ marginBlockStart: "0.75rem" })]}>
-								<Link href={inLanguage(routes.encorePrivacy.href(), t.locale)}>
+								<Link href={inLanguage(routes.encore.privacy.href(), t.locale)}>
 									{t.privacy.policy}
 								</Link>
 							</span>
@@ -870,7 +870,10 @@ function Download(handle: Handle) {
 				actions={
 					<span mix={[vstack({ gap: 4, align: "center" })]}>
 						<AppStoreCall />
-						<Link href={inLanguage(routes.encoreSupport.index.href(), t.locale)} mix={[text("sm")]}>
+						<Link
+							href={inLanguage(routes.encore.support.index.href(), t.locale)}
+							mix={[text("sm")]}
+						>
 							{t.closing.support}
 						</Link>
 					</span>

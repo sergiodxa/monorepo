@@ -19,7 +19,7 @@ import routes from "~/routes/web";
  *
  * @returns The landing page in the reader's language.
  */
-export default createAction(routes.wakaba, (ctx) => {
+export default createAction(routes.wakaba.landing, (ctx) => {
 	let locale = resolvePageLocale(ctx.url, ctx.request.headers.get("Accept-Language"));
 	return ctx.render(
 		WakabaLandingView,

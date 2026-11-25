@@ -19,7 +19,7 @@ import routes from "~/routes/web";
  *
  * @returns The landing page in the reader's language.
  */
-export default createAction(routes.encore, (ctx) => {
+export default createAction(routes.encore.landing, (ctx) => {
 	let locale = resolveLocale(ctx.url, ctx.request.headers.get("Accept-Language"), ENCORE_LOCALES);
 	return ctx.render(
 		EncoreLandingView,

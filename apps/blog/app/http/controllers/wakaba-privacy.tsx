@@ -55,7 +55,7 @@ function markdown(status: number, body: string, locale: PageLocale = "en"): Resp
  *
  * @returns The policy page, or a `500` when its source will not parse.
  */
-export default createAction(routes.wakabaPrivacy, async (ctx) => {
+export default createAction(routes.wakaba.privacy, async (ctx) => {
 	let locale = localeOf(ctx);
 	let page = parseMarkdownPage(SOURCES[locale]);
 	if (isFailure(page)) return markdown(500, UNREADABLE);
@@ -82,7 +82,7 @@ export default createAction(routes.wakabaPrivacy, async (ctx) => {
  *
  * @returns The policy's Markdown body.
  */
-export const markdownPage = createAction(routes.wakabaPrivacyMarkdown, async (ctx) => {
+export const markdownPage = createAction(routes.wakaba.privacyMarkdown, async (ctx) => {
 	let locale = localeOf(ctx);
 	let page = parseMarkdownPage(SOURCES[locale]);
 	if (isFailure(page)) return markdown(500, UNREADABLE);

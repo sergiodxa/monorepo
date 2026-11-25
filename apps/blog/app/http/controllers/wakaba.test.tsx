@@ -23,9 +23,9 @@ import privacyPage, { markdownPage } from "./wakaba-privacy";
 /** Fetches a page through a router carrying only what the controllers need. */
 async function fetchPage(path: string, headers: Record<string, string> = {}): Promise<Response> {
 	let router = createRouter<AppContext>({ middleware: pageRenderer() });
-	router.map(routes.wakaba, landingPage);
-	router.map(routes.wakabaPrivacy, privacyPage);
-	router.map(routes.wakabaPrivacyMarkdown, markdownPage);
+	router.map(routes.wakaba.landing, landingPage);
+	router.map(routes.wakaba.privacy, privacyPage);
+	router.map(routes.wakaba.privacyMarkdown, markdownPage);
 
 	return await router.fetch(new Request(new URL(path, "https://sergiodxa.com"), { headers }));
 }

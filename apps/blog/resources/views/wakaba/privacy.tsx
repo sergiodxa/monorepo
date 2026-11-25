@@ -56,7 +56,7 @@ export function WakabaPrivacyView() {
 				bilingual
 				title={model.title}
 				description={model.description}
-				path={routes.wakabaPrivacy.href()}
+				path={routes.wakaba.privacy.href()}
 			>
 				<main
 					mix={[
@@ -112,7 +112,7 @@ export function WakabaPrivacyView() {
 							]}
 						>
 							<span mix={[fg("neutral")]}>{t.forLine}</span>
-							<Link href={inLanguage(routes.wakabaPrivacyMarkdown.href(), locale)}>
+							<Link href={inLanguage(routes.wakaba.privacyMarkdown.href(), locale)}>
 								{t.viewMarkdown}
 							</Link>
 						</p>

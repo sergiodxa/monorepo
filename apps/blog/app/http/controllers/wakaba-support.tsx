@@ -80,7 +80,7 @@ function withLanguage(locale: PageLocale = "en", init?: ResponseInit): ResponseI
  * The Wakaba support page. Public and anonymous; the app's cross-origin guard and the
  * support desk middleware run ahead of it.
  */
-export default createController(routes.wakabaSupport, {
+export default createController(routes.wakaba.support, {
 	actions: {
 		/**
 		 * Renders the form, or the confirmation when the previous request was a delivery
@@ -110,7 +110,7 @@ export default createController(routes.wakabaSupport, {
 		 */
 		action: async (ctx) => {
 			let locale = localeOf(ctx);
-			let confirmation = inLanguage(routes.wakabaSupport.index.href(), locale);
+			let confirmation = inLanguage(routes.wakaba.support.index.href(), locale);
 			let form = ctx.get(FormData);
 			let values = submittedValues(form);
 			let session = ctx.get(Session);

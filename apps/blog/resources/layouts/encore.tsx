@@ -219,11 +219,11 @@ export function EncoreHeader(handle: Handle<{ path: string }>) {
 						]}
 					>
 						<QuietLink
-							href={inLanguage(routes.encoreSupport.index.href(), copy.locale)}
+							href={inLanguage(routes.encore.support.index.href(), copy.locale)}
 							label={copy.header.support}
 						/>
 						<QuietLink
-							href={inLanguage(routes.encorePrivacy.href(), copy.locale)}
+							href={inLanguage(routes.encore.privacy.href(), copy.locale)}
 							label={copy.header.privacy}
 						/>
 						<EncoreSoundToggle label={copy.header.sound} />
@@ -244,14 +244,14 @@ function footerColumns(copy: EncoreCopy): Array<FooterColumn> {
 			title: copy.footer.columns.encore,
 			links: [
 				{
-					href: inLanguage(`${routes.encore.href()}#download`, copy.locale),
+					href: inLanguage(`${routes.encore.landing.href()}#download`, copy.locale),
 					label: copy.footer.download,
 				},
 				{
-					href: inLanguage(routes.encoreSupport.index.href(), copy.locale),
+					href: inLanguage(routes.encore.support.index.href(), copy.locale),
 					label: copy.header.support,
 				},
-				{ href: inLanguage(routes.encorePrivacy.href(), copy.locale), label: copy.header.privacy },
+				{ href: inLanguage(routes.encore.privacy.href(), copy.locale), label: copy.header.privacy },
 			],
 		},
 		{
@@ -259,7 +259,7 @@ function footerColumns(copy: EncoreCopy): Array<FooterColumn> {
 			links: [
 				{ href: routes.feed.href(), label: copy.footer.blog },
 				{ href: routes.apps.href(), label: "Apps" },
-				{ href: routes.wakaba.href(), label: "Wakaba" },
+				{ href: routes.wakaba.landing.href(), label: "Wakaba" },
 				{ href: "https://uptime.sergiodxa.com", label: "Uptime" },
 				{ href: "https://sdxc.dev", label: "sdxc.dev" },
 			],

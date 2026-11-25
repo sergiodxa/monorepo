@@ -108,8 +108,8 @@ const FOOTER_COLUMNS: Array<FooterColumn> = [
 		links: [
 			{ href: routes.feed.href(), label: "Blog" },
 			{ href: routes.apps.href(), label: "Apps" },
-			{ href: routes.wakaba.href(), label: "Wakaba" },
-			{ href: routes.encore.href(), label: "Encore" },
+			{ href: routes.wakaba.landing.href(), label: "Wakaba" },
+			{ href: routes.encore.landing.href(), label: "Encore" },
 		],
 	},
 	{

@@ -174,14 +174,14 @@ function footerColumns(copy: WakabaCopy): Array<FooterColumn> {
 			title: copy.footer.columns.wakaba,
 			links: [
 				{
-					href: `${inLanguage(routes.wakaba.href(), copy.locale)}#download`,
+					href: `${inLanguage(routes.wakaba.landing.href(), copy.locale)}#download`,
 					label: copy.footer.download,
 				},
 				{
-					href: inLanguage(routes.wakabaSupport.index.href(), copy.locale),
+					href: inLanguage(routes.wakaba.support.index.href(), copy.locale),
 					label: copy.header.support,
 				},
-				{ href: inLanguage(routes.wakabaPrivacy.href(), copy.locale), label: copy.header.privacy },
+				{ href: inLanguage(routes.wakaba.privacy.href(), copy.locale), label: copy.header.privacy },
 			],
 		},
 		{
@@ -189,7 +189,7 @@ function footerColumns(copy: WakabaCopy): Array<FooterColumn> {
 			links: [
 				{ href: routes.feed.href(), label: copy.footer.blog },
 				{ href: routes.apps.href(), label: "Apps" },
-				{ href: routes.encore.href(), label: "Encore" },
+				{ href: routes.encore.landing.href(), label: "Encore" },
 				{ href: "https://uptime.sergiodxa.com", label: "Uptime" },
 				{ href: "https://sdxc.dev", label: "sdxc.dev" },
 			],

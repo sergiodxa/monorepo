@@ -59,7 +59,7 @@ export function EncorePrivacyView() {
 				share={model.share}
 				title={model.title}
 				description={model.description}
-				path={routes.encorePrivacy.href()}
+				path={routes.encore.privacy.href()}
 			>
 				<EncorePage
 					title={model.title}
@@ -68,7 +68,7 @@ export function EncorePrivacyView() {
 					intro={
 						<p mix={[m(0), hstack({ gap: 4, align: "center" }), flexWrap("wrap"), text("sm")]}>
 							<span mix={[fg("neutral")]}>{t.forLine}</span>
-							<Link href={inLanguage(routes.encorePrivacyMarkdown.href(), locale)}>
+							<Link href={inLanguage(routes.encore.privacyMarkdown.href(), locale)}>
 								{t.viewMarkdown}
 							</Link>
 						</p>

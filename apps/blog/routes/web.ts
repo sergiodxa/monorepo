@@ -82,42 +82,43 @@ export default route({
 	apps: get("/apps"),
 	appsMarkdown: get("/apps.md"),
 
-	/**
-	 * Encore's landing, the Marketing URL of its App Store listing, drawn in the app's own
-	 * look, in English, Argentine Spanish or Japanese.
-	 */
-	encore: get("/apps/encore"),
+	/** Encore's pages, every one in the app's own look. */
+	encore: {
+		/**
+		 * Encore's landing, the Marketing URL of its App Store listing, in English, Argentine
+		 * Spanish or Japanese.
+		 */
+		landing: get("/apps/encore"),
+		/**
+		 * The support page the Encore App Store listings link to. `form()` serves the page on
+		 * `GET` and takes the support request on `POST` at the same address, so a failed
+		 * submission re-renders where the visitor already is.
+		 */
+		support: form("/apps/encore/support"),
+		/**
+		 * Encore's privacy policy, which the App Store listings and the support form link to,
+		 * plus the same policy as Markdown on its own route.
+		 */
+		privacy: get("/apps/encore/privacy"),
+		privacyMarkdown: get("/apps/encore/privacy.md"),
+	},
 
-	/**
-	 * The support page the Encore App Store listings link to. `form()` serves the page on
-	 * `GET` and takes the support request on `POST` at the same address, so a failed
-	 * submission re-renders where the visitor already is.
-	 */
-	encoreSupport: form("/apps/encore/support"),
+	/** Wakaba's pages, every one in the app's own look rather than the blog's. */
+	wakaba: {
+		/** Wakaba's landing, the Marketing URL of its App Store listing. */
+		landing: get("/apps/wakaba"),
+		/**
+		 * The Wakaba support page, its listing's Support URL: the form on `GET`, a support
+		 * request on `POST` at the same address, so a failed submission re-renders where the
+		 * visitor is.
+		 */
+		support: form("/apps/wakaba/support"),
+		/** Wakaba's privacy policy, plus the same policy as Markdown on its own route. */
+		privacy: get("/apps/wakaba/privacy"),
+		privacyMarkdown: get("/apps/wakaba/privacy.md"),
+	},
 
-	/**
-	 * Encore's privacy policy, which the App Store listings and the support form link to,
-	 * plus the same policy as Markdown on its own route.
-	 */
-	encorePrivacy: get("/apps/encore/privacy"),
-	encorePrivacyMarkdown: get("/apps/encore/privacy.md"),
-
-	/**
-	 * Wakaba's landing, the Marketing URL of its App Store listing, drawn in the app's own
-	 * look rather than the blog's.
-	 */
-	wakaba: get("/apps/wakaba"),
-
-	/**
-	 * The Wakaba support page, its listing's Support URL: the form on `GET`, a support request
-	 * on `POST` at the same address, so a failed submission re-renders where the visitor is.
-	 */
-	wakabaSupport: form("/apps/wakaba/support"),
-
-	/** Wakaba's privacy policy, plus the same policy as Markdown on its own route. */
-	wakabaPrivacy: get("/apps/wakaba/privacy"),
-	wakabaPrivacyMarkdown: get("/apps/wakaba/privacy.md"),
-
+	/** Malfoid Stickers' pages, every one in the sticker pack's own look. */
 	malfoid: {
 		/**
 		 * Malfoid Stickers' landing, the Marketing URL of its App Store listing, drawn in the

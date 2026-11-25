@@ -57,7 +57,7 @@ function markdown(status: number, body: string, locale: EncoreLocale = "en"): Re
  *
  * @returns The policy page, or a `500` when its source will not parse.
  */
-export default createAction(routes.encorePrivacy, async (ctx) => {
+export default createAction(routes.encore.privacy, async (ctx) => {
 	let locale = localeOf(ctx);
 	let page = parseMarkdownPage(SOURCES[locale]);
 	if (isFailure(page)) return markdown(500, UNREADABLE);
@@ -85,7 +85,7 @@ export default createAction(routes.encorePrivacy, async (ctx) => {
  *
  * @returns The policy's Markdown body.
  */
-export const markdownPage = createAction(routes.encorePrivacyMarkdown, async (ctx) => {
+export const markdownPage = createAction(routes.encore.privacyMarkdown, async (ctx) => {
 	let locale = localeOf(ctx);
 	let page = parseMarkdownPage(SOURCES[locale]);
 	if (isFailure(page)) return markdown(500, UNREADABLE);

@@ -69,7 +69,7 @@ export function EncoreSupportView() {
 				share={model.share}
 				title={t.title}
 				description={t.description}
-				path={routes.encoreSupport.index.href()}
+				path={routes.encore.support.index.href()}
 			>
 				<EncorePage
 					title={t.title}
@@ -92,9 +92,9 @@ export function EncoreSupportView() {
 						)}
 						limits={SUPPORT_LIMITS}
 						messageMin={SUPPORT_MESSAGE_MIN}
-						action={inLanguage(routes.encoreSupport.action.href(), locale)}
-						againHref={inLanguage(routes.encoreSupport.index.href(), locale)}
-						privacyHref={inLanguage(routes.encorePrivacy.href(), locale)}
+						action={inLanguage(routes.encore.support.action.href(), locale)}
+						againHref={inLanguage(routes.encore.support.index.href(), locale)}
+						privacyHref={inLanguage(routes.encore.privacy.href(), locale)}
 					/>
 				</EncorePage>
 			</EncoreLayout>

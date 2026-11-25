@@ -84,7 +84,7 @@ function withLanguage(locale: EncoreLocale = "en", init?: ResponseInit): Respons
  * The Encore support page. Public and anonymous; the app's cross-origin guard and the
  * support desk middleware run ahead of it.
  */
-export default createController(routes.encoreSupport, {
+export default createController(routes.encore.support, {
 	actions: {
 		/**
 		 * Renders the form, or the confirmation when the previous request was a delivery
@@ -117,7 +117,7 @@ export default createController(routes.encoreSupport, {
 			let values = submittedValues(form);
 			let session = ctx.get(Session);
 			let locale = localeOf(ctx);
-			let confirmation = inLanguage(routes.encoreSupport.index.href(), locale);
+			let confirmation = inLanguage(routes.encore.support.index.href(), locale);
 
 			let trap = ctx.honeypotOutcome;
 			if (isFailure(trap)) {

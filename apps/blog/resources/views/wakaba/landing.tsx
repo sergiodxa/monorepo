@@ -97,7 +97,7 @@ export function WakabaLandingView() {
 				bilingual
 				title={copy.meta.title}
 				description={copy.meta.description}
-				path={routes.wakaba.href()}
+				path={routes.wakaba.landing.href()}
 			>
 				<WakabaLandingContent locale={model.locale} />
 			</WakabaLayout>
@@ -994,7 +994,7 @@ function Privacy(handle: Handle) {
 							description={
 								<>
 									{t.privacy.description}{" "}
-									<Link href={inLanguage(routes.wakabaPrivacy.href(), t.locale)}>
+									<Link href={inLanguage(routes.wakaba.privacy.href(), t.locale)}>
 										{t.header.privacy}
 									</Link>
 								</>
@@ -1132,7 +1132,10 @@ function Download(handle: Handle) {
 				actions={
 					<span mix={[vstack({ gap: 4, align: "center" })]}>
 						<AppStoreCall />
-						<Link href={inLanguage(routes.wakabaSupport.index.href(), t.locale)} mix={[text("sm")]}>
+						<Link
+							href={inLanguage(routes.wakaba.support.index.href(), t.locale)}
+							mix={[text("sm")]}
+						>
 							{t.closing.support}
 						</Link>
 					</span>

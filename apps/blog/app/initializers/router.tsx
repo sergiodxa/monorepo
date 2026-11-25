@@ -362,35 +362,35 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		lazy(() => import("~/app/http/controllers/apps").then((it) => it.markdownPage)),
 	);
 	router.map(
-		routes.encore,
+		routes.encore.landing,
 		lazy(() => import("~/app/http/controllers/encore")),
 	);
 	router.map(
-		routes.encoreSupport,
+		routes.encore.support,
 		lazy(() => import("~/app/http/controllers/encore-support"), contactGuards),
 	);
 	router.map(
-		routes.encorePrivacy,
+		routes.encore.privacy,
 		lazy(() => import("~/app/http/controllers/encore-privacy")),
 	);
 	router.map(
-		routes.encorePrivacyMarkdown,
+		routes.encore.privacyMarkdown,
 		lazy(() => import("~/app/http/controllers/encore-privacy").then((it) => it.markdownPage)),
 	);
 	router.map(
-		routes.wakaba,
+		routes.wakaba.landing,
 		lazy(() => import("~/app/http/controllers/wakaba")),
 	);
 	router.map(
-		routes.wakabaSupport,
+		routes.wakaba.support,
 		lazy(() => import("~/app/http/controllers/wakaba-support"), contactGuards),
 	);
 	router.map(
-		routes.wakabaPrivacy,
+		routes.wakaba.privacy,
 		lazy(() => import("~/app/http/controllers/wakaba-privacy")),
 	);
 	router.map(
-		routes.wakabaPrivacyMarkdown,
+		routes.wakaba.privacyMarkdown,
 		lazy(() => import("~/app/http/controllers/wakaba-privacy").then((it) => it.markdownPage)),
 	);
 	router.map(

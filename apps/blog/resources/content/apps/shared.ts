@@ -10,8 +10,8 @@ import routes from "~/routes/web";
 
 /** Where each listed app opens from the showcase. */
 export const APP_LINKS = {
-	wakaba: routes.wakaba.href(),
-	encore: routes.encore.href(),
+	wakaba: routes.wakaba.landing.href(),
+	encore: routes.encore.landing.href(),
 	uptime: "https://uptime.sergiodxa.com",
 	reader: "https://reader.sergiodxa.com",
 } as const;

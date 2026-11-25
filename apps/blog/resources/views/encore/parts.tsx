@@ -118,7 +118,7 @@ export function EncoreMark(handle: Handle<{ size: number }>) {
 export function Wordmark(handle: Handle) {
 	return () => (
 		<a
-			href={inLanguage(routes.encore.href(), copyOf(handle).locale)}
+			href={inLanguage(routes.encore.landing.href(), copyOf(handle).locale)}
 			aria-label="Encore"
 			mix={[
 				hstack({ gap: 2, align: "center" }),

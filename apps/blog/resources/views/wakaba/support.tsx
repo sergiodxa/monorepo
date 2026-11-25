@@ -65,7 +65,7 @@ export function WakabaSupportView() {
 		let { state, values, issues, honeypot } = model;
 		let locale = model.locale ?? "en";
 		let t = WAKABA_PAGES_COPY[locale].support;
-		let action = inLanguage(routes.wakabaSupport.action.href(), locale);
+		let action = inLanguage(routes.wakaba.support.action.href(), locale);
 
 		return (
 			<WakabaLayout
@@ -74,7 +74,7 @@ export function WakabaSupportView() {
 				bilingual
 				title={t.title}
 				description={t.description}
-				path={routes.wakabaSupport.index.href()}
+				path={routes.wakaba.support.index.href()}
 			>
 				<main
 					mix={[
@@ -138,8 +138,8 @@ export function WakabaSupportView() {
 						limits={SUPPORT_LIMITS}
 						messageMin={SUPPORT_MESSAGE_MIN}
 						action={action}
-						againHref={inLanguage(routes.wakabaSupport.index.href(), locale)}
-						privacyHref={inLanguage(routes.wakabaPrivacy.href(), locale)}
+						againHref={inLanguage(routes.wakaba.support.index.href(), locale)}
+						privacyHref={inLanguage(routes.wakaba.privacy.href(), locale)}
 					/>
 				</main>
 			</WakabaLayout>
