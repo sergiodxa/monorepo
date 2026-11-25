@@ -200,6 +200,7 @@ describe("malfoidMeta", () => {
 			"About",
 			"https://sergiodxa.com/apps/malfoid",
 			LANDING_COPY.en,
+			"landing",
 			{ id: "6740000000" },
 		);
 
@@ -220,6 +221,9 @@ describe("GET /apps/malfoid/privacy", () => {
 		expect(html).toContain("Support requests through this website");
 		expect(html).toContain('href="/apps/malfoid/privacy.md"');
 		expect(html).toContain('href="https://sergiodxa.com/apps/malfoid/support"');
+		expect(html).toContain(
+			'property="og:image" content="https://sergiodxa.com/apps/malfoid/branding/social-card-privacy.png"',
+		);
 	});
 
 	test("answers Markdown when the request prefers it", async () => {
@@ -242,6 +246,10 @@ describe("GET /apps/malfoid/privacy in Spanish", () => {
 		expect(html).toContain("La app no recopila datos");
 		expect(html).toContain('href="/apps/malfoid/privacy.md?lang=es-AR"');
 		expect(html).toContain('href="https://sergiodxa.com/apps/malfoid/support?lang=es-AR"');
+		expect(html).toContain(
+			'property="og:image" content="https://sergiodxa.com/apps/malfoid/branding/social-card-privacy.es-AR.png"',
+		);
+		expect(html).toContain("Política de privacidad de Malfoid Stickers: la app no recopila datos.");
 	});
 
 	test("serves the Spanish Markdown at the .md route with ?lang=", async () => {

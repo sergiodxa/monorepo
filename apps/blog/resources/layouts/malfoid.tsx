@@ -53,8 +53,20 @@ export namespace MalfoidLayout {
 		 * search engines at its `?lang=`.
 		 */
 		bilingual?: boolean;
+		/** Which social card a shared link previews with. The landing's by default. */
+		card?: MalfoidCard;
 	}
 }
+
+/** The pages with a social card of their own, each drawn in every language the copy has. */
+export type MalfoidCard = "landing" | "privacy" | "support";
+
+/** Where each card's English file lives; another language inserts its tag before `.png`. */
+const CARD_FILES: Record<MalfoidCard, string> = {
+	landing: "social-card",
+	privacy: "social-card-privacy",
+	support: "social-card-support",
+};
 
 /**
  * The tags that describe a page off the site: Open Graph and Twitter with the social card of
@@ -65,6 +77,7 @@ export namespace MalfoidLayout {
  * @param description The page's description.
  * @param url The page's canonical URL.
  * @param copy The page's words, for the card's alt text and the page's locale.
+ * @param card The page whose card a shared link previews with.
  * @param listing The App Store listing the banner names, the configured one by default.
  * @returns The meta tags, in the order the document writes them.
  */
@@ -73,10 +86,16 @@ export function malfoidMeta(
 	description: string,
 	url: string,
 	copy: LandingCopy = LANDING_COPY.en,
+	card: MalfoidCard = "landing",
 	listing: AppStoreListing = APP_STORE,
 ): Array<DocumentShell.MetaTag> {
-	let card = copy.locale === "en" ? "social-card.png" : `social-card.${copy.locale}.png`;
-	let image = new URL(`${MALFOID_ASSETS}/branding/${card}`, PROFILE.canonical.origin).href;
+	let file = copy.locale === "en" ? CARD_FILES[card] : `${CARD_FILES[card]}.${copy.locale}`;
+	let image = new URL(`${MALFOID_ASSETS}/branding/${file}.png`, PROFILE.canonical.origin).href;
+	let alt = {
+		landing: copy.meta.socialCardAlt,
+		privacy: copy.meta.privacyCardAlt,
+		support: copy.meta.supportCardAlt,
+	}[card];
 	let tags: Array<DocumentShell.MetaTag> = [
 		{ property: "og:type", content: "website" },
 		{ property: "og:site_name", content: "Malfoid Stickers" },
@@ -85,7 +104,7 @@ export function malfoidMeta(
 		{ property: "og:description", content: description },
 		{ property: "og:url", content: url },
 		{ property: "og:image", content: image },
-		{ property: "og:image:alt", content: copy.meta.socialCardAlt },
+		{ property: "og:image:alt", content: alt },
 		{ property: "og:image:width", content: "1200" },
 		{ property: "og:image:height", content: "630" },
 		{ name: "twitter:card", content: "summary_large_image" },
@@ -153,7 +172,7 @@ function footerColumns(copy: LandingCopy): Array<FooterColumn> {
  */
 export function MalfoidLayout(handle: Handle<MalfoidLayout.Props>) {
 	return () => {
-		let { assets, bilingual, children, description, path, title } = handle.props;
+		let { assets, bilingual, card, children, description, path, title } = handle.props;
 		let copy = handle.props.copy ?? LANDING_COPY.en;
 		let origin = PROFILE.canonical.origin;
 		let canonical = new URL(
@@ -179,7 +198,7 @@ export function MalfoidLayout(handle: Handle<MalfoidLayout.Props>) {
 				icons={ICONS}
 				alternates={alternates}
 				themeColors={MALFOID_THEME_COLORS}
-				meta={malfoidMeta(title, description, canonical, copy)}
+				meta={malfoidMeta(title, description, canonical, copy, card)}
 				bodyMix={[
 					m(0),
 					minBs("100dvh"),

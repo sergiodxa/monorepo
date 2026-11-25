@@ -25,7 +25,14 @@ export interface MoodCopy {
 /** The landing and its shell in one language. */
 export interface LandingCopy {
 	locale: PageLocale;
-	meta: { title: string; description: string; socialCardAlt: string };
+	/** The page's title and description, and the alt text of each page's social card. */
+	meta: {
+		title: string;
+		description: string;
+		socialCardAlt: string;
+		privacyCardAlt: string;
+		supportCardAlt: string;
+	};
 	/** The shell's words: the header's links and the footer's columns. */
 	chrome: {
 		navLabel: string;
@@ -101,6 +108,10 @@ const EN: LandingCopy = {
 			"Meet Malfoid, your favorite grumpy blonde with an attitude: 60 free, textless iMessage stickers for iPhone and iPad. No ads, no subscriptions, no data collection.",
 		socialCardAlt:
 			"Malfoid Stickers, Cute & Sassy Reactions: three stickers of Malfoid smiling smugly, crying dramatically and hugging a pink heart.",
+		privacyCardAlt:
+			"Malfoid Stickers Privacy Policy: the app collects no data. Malfoid looks suspicious, covers her face and points at you.",
+		supportCardAlt:
+			"Malfoid Stickers Support, for questions, bugs and sticker ideas: Malfoid thinks it over, waves hello and gives a thumbs-up.",
 	},
 	chrome: {
 		navLabel: "Malfoid Stickers",
@@ -269,6 +280,10 @@ const ES: LandingCopy = {
 			"Conoce a Malfoid, tu rubia gruñona favorita con mucha actitud: 60 stickers gratis y sin texto para iMessage en iPhone y iPad. Sin anuncios, sin suscripciones, sin recopilar datos.",
 		socialCardAlt:
 			"Malfoid Stickers, reacciones tiernas y atrevidas: tres stickers de Malfoid sonriendo con superioridad, llorando con drama y abrazando un corazón rosa.",
+		privacyCardAlt:
+			"Política de privacidad de Malfoid Stickers: la app no recopila datos. Malfoid mira con sospecha, se tapa la cara y te señala.",
+		supportCardAlt:
+			"Soporte de Malfoid Stickers, para dudas, errores e ideas de stickers: Malfoid se queda pensando, saluda y levanta el pulgar.",
 	},
 	chrome: {
 		navLabel: "Malfoid Stickers",

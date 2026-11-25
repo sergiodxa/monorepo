@@ -56,6 +56,7 @@ export function MalfoidPrivacyView() {
 				assets={assets}
 				copy={LANDING_COPY[locale]}
 				bilingual
+				card="privacy"
 				title={model.title}
 				description={model.description}
 				path={routes.malfoid.privacy.href()}

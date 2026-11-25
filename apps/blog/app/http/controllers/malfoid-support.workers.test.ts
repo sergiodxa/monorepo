@@ -171,6 +171,9 @@ describe("GET /apps/malfoid/support", () => {
 		expect(html).toContain("This form is part of the website, not the app.");
 		expect(html).toContain("Please don’t include passwords, payment details");
 		expect(html).toContain('href="/apps/malfoid/privacy"');
+		expect(html).toContain(
+			'property="og:image" content="https://sergiodxa.com/apps/malfoid/branding/social-card-support.png"',
+		);
 	});
 
 	test("lists the quick fixes before the form and links the install steps", async () => {
@@ -223,6 +226,9 @@ describe("/apps/malfoid/support in Spanish", () => {
 		expect(html).toContain('<option value="Stickers not showing"');
 		expect(html).toContain("Los stickers no aparecen");
 		expect(html).toContain('href="/apps/malfoid/privacy?lang=es-AR"');
+		expect(html).toContain(
+			'property="og:image" content="https://sergiodxa.com/apps/malfoid/branding/social-card-support.es-AR.png"',
+		);
 	});
 
 	test("reports invalid fields in Spanish and keeps ?lang= on the confirmation", async () => {

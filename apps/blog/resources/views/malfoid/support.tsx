@@ -72,6 +72,7 @@ export function MalfoidSupportView() {
 				assets={assets}
 				copy={LANDING_COPY[locale]}
 				bilingual
+				card="support"
 				title={SUPPORT.title}
 				description={SUPPORT.description}
 				path={routes.malfoid.support.index.href()}
