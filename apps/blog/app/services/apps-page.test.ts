@@ -15,7 +15,13 @@ describe("appsFor", () => {
 	test("lists the same five apps in every language", () => {
 		for (let locale of ["en", "es-AR"] as const) {
 			let page = appsFor(locale);
-			expect(page.apps.map((app) => app.id)).toEqual(["wakaba", "encore", "malfoid", "uptime", "reader"]);
+			expect(page.apps.map((app) => app.id)).toEqual([
+				"wakaba",
+				"encore",
+				"malfoid",
+				"uptime",
+				"reader",
+			]);
 			expect(page.apps.map((app) => app.href)).toEqual([
 				APP_LINKS.wakaba,
 				APP_LINKS.encore,
