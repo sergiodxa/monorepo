@@ -86,6 +86,36 @@ describe("Sticker viewer", () => {
 	});
 });
 
+describe("Sticker preloading", () => {
+	/** How each of the first `count` slides loads its artwork. */
+	function slideLoading(host: HTMLElement, count: number) {
+		return Array.from(host.querySelectorAll("#malfoid-stickers [data-lightbox-slide]"))
+			.slice(0, count)
+			.map((slide) => slide.querySelector("img")?.loading);
+	}
+
+	test("starts loading a sticker when its tile is pointed at", () => {
+		let host = mountLanding(1024);
+		let tile = host.querySelector('[aria-label^="Open sticker: Malfoid gives a superior look"]');
+		tile?.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+
+		expect(slideLoading(host, 3)).toEqual(["lazy", "eager", "lazy"]);
+		host.remove();
+	});
+
+	test("loads the neighbours of the sticker on screen", async () => {
+		let host = mountLanding(1024);
+		let tile = host.querySelector<HTMLButtonElement>('[aria-label^="Open sticker: Malfoid rolls"]');
+		tile?.click();
+
+		await expect
+			.poll(() => slideLoading(host, 5))
+			.toEqual(["lazy", "eager", "eager", "eager", "lazy"]);
+		host.querySelector<HTMLDialogElement>("#malfoid-stickers")?.close();
+		host.remove();
+	});
+});
+
 describe("AppStoreCall", () => {
 	test("reads as a status before release and links the listing after", () => {
 		mounted = render(<AppStoreCall href={null} />);

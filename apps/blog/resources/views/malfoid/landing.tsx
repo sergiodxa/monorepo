@@ -35,6 +35,7 @@ import type { PageLocale } from "~/app/services/page-locale";
 import type { LandingCopy } from "~/resources/content/malfoid/landing";
 import type { StickerId } from "~/resources/content/malfoid/stickers";
 
+import { StickerPreload } from "~/resources/components/sticker-preload";
 import { LANDING_COPY, MOOD_COVERS } from "~/resources/content/malfoid/landing";
 import { STICKER_CATEGORIES, STICKERS } from "~/resources/content/malfoid/stickers";
 import { MalfoidLayout } from "~/resources/layouts/malfoid";
@@ -439,7 +440,8 @@ function Moods(handle: Handle<BandProps>) {
 /**
  * Every sticker in the pack, grouped by mood under a heading the mood cards link to. Each tile
  * opens the viewer at that sticker, where it answers a friend's message at full size with its
- * description beneath; swiping or the arrows step through all 60.
+ * description beneath; swiping or the arrows step through all 60. Pointing at a tile starts
+ * its sticker loading, and an open slide loads its neighbours.
  *
  * @param handle Runtime handle carrying the page's words.
  * @returns The render function producing the band.
@@ -507,6 +509,7 @@ function Gallery(handle: Handle<BandProps>) {
 						</section>
 					))}
 				</div>
+				<StickerPreload />
 				<Lightbox
 					id={VIEWER_ID}
 					label={t.gallery.viewer}
