@@ -5,7 +5,7 @@ section:
     title: Visual novels
     order: 4.7
 order: 12
-lastUpdated: 2026-11-24
+lastUpdated: 2026-11-25
 outcomes:
     - "How a title screen places the library screens, starts a chapter replay and shows the cast"
     - "How to run the dev tools beside the player in development only"
@@ -82,8 +82,10 @@ export const CAST = cast({
 });
 ```
 
-A character stays `???` on the screen until they are `known` or a scene introduces them, and
-each sprite stays locked until the stage shows the character in it once, in any playthrough.
+The screen lists each character once the reader meets them, in any playthrough: a scene
+introduces them, they speak a line, or the stage draws them. Each sprite stays locked until the
+stage shows the character in it once. `lore: { listed: false }` leaves a passer-by off the list,
+such as a prefect who speaks one line.
 
 Give a character a `bio` to let their page grow as the story reveals them, and declare places and
 terms the reader learns: [Keep an encyclopedia](/docs/visual-novels/encyclopedia) covers both.

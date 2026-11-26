@@ -5,7 +5,7 @@ section:
     title: Visual novels
     order: 4.7
 order: 1
-lastUpdated: 2026-11-24
+lastUpdated: 2026-11-25
 outcomes:
     - "How to declare a novel's scenes, cast and assets, typed from your state and messages"
     - "How to write a scene as a list of directives and map it onto its declaration"
@@ -94,11 +94,11 @@ export const SCENES = scenes({
 export const CAST = cast({
 	mika: character({
 		name: "cast.mika",
+		lore: { known: true },
 		color: "#e86a92",
-		known: true,
 		sprites: { smile: mikaSmile, laugh: mikaLaugh },
 	}),
-	you: character({ name: "cast.you", known: true }),
+	you: character({ name: "cast.you", lore: { known: true } }),
 });
 
 export const ASSETS = assets({
@@ -123,8 +123,8 @@ declare module "@sdxc/novel" {
 
 A `chapter` groups scenes for the chapter select, and a character without `sprites` (like
 `you`) speaks without standing on stage. A character shows as `???` until a scene runs
-`ctx.introduce(CAST.mika)`, and a replay names everyone met in any playthrough; `known: true`
-names one from the first line, as both are here. A `description` message key adds a paragraph
+`ctx.introduce(CAST.mika)`, and a replay names everyone met in any playthrough;
+`lore: { known: true }` names one from the first line, as both are here. A `description` message key adds a paragraph
 about the character to the Characters screen. `NovelTypes` types every scene from your state and
 catalog: `set` takes only paths the state has, and `say` asks for exactly the values a message
 declares.
@@ -276,9 +276,9 @@ export const Game = clientEntry(
 ```
 
 The player fills its parent with a letterboxed 16:9 stage built from `@sdxc/ui`, so load
-`@sdxc/ui/theme.css` in your document. The reader advances with a click, Space or Enter, and
-the keyboard, touch and gamepad controls cover auto, skip, rollback, the backlog, saves and
-settings.
+`@sdxc/ui/theme.css` in your document. The reader advances with a click, Space or Enter, a
+right click hides the interface to look at the scene, and the keyboard, touch and gamepad
+controls cover auto, skip, rollback, the backlog, saves and settings.
 
 The page renders `Game`, and `novel.links()` answers the `<link>` tags that preload the opening
 scene's pictures and sounds and prefetch the scenes one jump away. Render each `NovelLink` as a

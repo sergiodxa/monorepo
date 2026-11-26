@@ -115,8 +115,8 @@ export const novel = createNovel({
 ## Reveal an entry
 
 `ctx.learn(entry)` opens an entry at the line where the story first brings it up. The player
-shows a "New entry: Regulars" toast the first time. The entry stays open in every later play,
-replays included:
+shows a "New entry: Regulars" toast the first time, and clicking it opens the entry. The entry
+stays open in every later play, replays included:
 
 ```typescript {% title="resources/novel/scenes/counter.ts" %}
 export default createScene(SCENES.prologue.counter, (ctx) => [
@@ -131,16 +131,17 @@ An entry id is `<topic>.<entry>` (`terms.regular`), and persistent data keeps it
 
 ## Grow a character's page
 
-The encyclopedia's Characters page shows each character the reader has met, with their portrait
-and every look the stage drew them in. A `description` adds a line about them, and a `bio` adds
+The encyclopedia's Characters page shows each character the reader has met, once a scene
+introduces them, they speak or the stage draws them, with their portrait and every look the stage
+drew them in. `lore: { listed: false }` leaves out a passer-by with nothing to read about. A `description` adds a line about them, and a `bio` adds
 titled sections that open one by one:
 
 ```typescript {% title="resources/novel/declarations.ts" %}
 export const CAST = cast({
 	mika: character({
 		name: "cast.mika",
+		lore: { known: true },
 		color: "#e86a92",
-		known: true,
 		description: "about.mika",
 		bio: {
 			cafe: { title: "bio.mika.cafe", body: "bio.mika.cafeText", known: true },
@@ -171,8 +172,9 @@ a reader reads a life; the story is free to reveal them in any order.
 
 `NovelPlayer.Default` offers the Encyclopedia in its Extras menu and on the title screen, and
 a speaker's name in the textbox opens it on that character. Its pages are every learned entry,
-Characters, each topic, the Gallery and the Music room. A novel without topics has no page of
-every entry. `pages` picks and orders them, where `topics` stands for any topic not named:
+Characters, each topic, the Gallery and the Music room, the last two in the order the story
+first shows and plays them. A novel without topics has no page of every entry, and one without
+images or tracks no Gallery or Music room. `pages` picks and orders them, where `topics` stands for any topic not named:
 
 ```tsx {% title="resources/components/game.tsx" %}
 <NovelPlayer.Extras>
@@ -190,13 +192,16 @@ The book reads the same variables as the settings screen: `--novel-settings-tab-
 tabs, and `--novel-settings-panel-background`, `-panel-color` and `-divider` for the page. Three
 more style the open entry: `--novel-encyclopedia-page-padding`,
 `--novel-encyclopedia-current-background` and `--novel-encyclopedia-current-color`. Every part
-carries a data attribute for anything the variables leave out:
+carries a data attribute for anything the variables leave out. CGs and a character's looks
+share one frame, locked or not, from `--novel-library-frame`, `--novel-library-radius`,
+`--novel-library-locked-background` and `--novel-library-locked-color`:
 
 ```tsx {% title="resources/components/game.tsx" %}
 mix={css({
 	"--novel-settings-panel-background": "#f3ead6",
 	"--novel-encyclopedia-current-background": "#0f6b43",
 	"--novel-encyclopedia-current-color": "#f6e6bd",
+	"--novel-library-frame": "1px solid #c9a45a",
 	"& [data-novel-encyclopedia-article] h3": { fontFamily: "Georgia, serif" },
 })}
 ```
