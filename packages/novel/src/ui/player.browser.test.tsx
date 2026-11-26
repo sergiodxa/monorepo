@@ -879,6 +879,21 @@ describe("NovelPlayer", () => {
 		tokens.remove();
 	});
 
+	test("types the settings screen's preview line at the chosen text speed", async () => {
+		let player = mount({ settings: { textSpeed: 20 } });
+		await shows(player, "Welcome to the café.");
+		await userEvent.keyboard("{Escape}");
+		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
+		await vi.waitFor(() => expect(screen.open).toBe(true));
+		let preview = screen.querySelector("[data-novel-settings-preview]")!;
+		let line = preview.textContent!;
+		let untyped = () => preview.querySelector("span")!.textContent!.length;
+		await vi.waitFor(() => {
+			expect(untyped()).toBeGreaterThan(0);
+			expect(untyped()).toBeLessThan(line.length - 2);
+		});
+	});
+
 	test("keeps the settings screen one size on every tab, so its tabs never move", async () => {
 		let player = mount({ settings: { textSpeed: 0 } });
 		await shows(player, "Welcome to the café.");

@@ -222,13 +222,9 @@ describe("NovelPlayer.Title's full screen button", () => {
 		await vi.waitFor(() => expect(toggle.hidden).toBe(false));
 		expect(toggle.getAttribute("aria-label")).toBe("Full screen");
 		expect(toggle.getAttribute("aria-pressed")).toBe("false");
-		let entered = vi
-			.spyOn(HTMLElement.prototype, "requestFullscreen")
-			.mockImplementation(async function (this: HTMLElement) {
-				expect(this).toBe(result.$("[data-novel-title]")!.parentElement);
-			});
+		let entered = vi.spyOn(HTMLElement.prototype, "requestFullscreen").mockResolvedValue(undefined);
 		await userEvent.click(toggle);
-		expect(entered).toHaveBeenCalledTimes(1);
+		expect(entered.mock.contexts).toEqual([result.$("[data-novel-title]")!.parentElement]);
 		let left = vi.spyOn(document, "exitFullscreen").mockResolvedValue(undefined);
 		vi.spyOn(document, "fullscreenElement", "get").mockReturnValue(document.body);
 		document.dispatchEvent(new Event("fullscreenchange"));
@@ -265,14 +261,9 @@ describe("NovelPlayer.Default with a title screen", () => {
 		let container = result.$("[data-novel-title]")!.parentElement;
 		button(result, "new-game")!.click();
 		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
-		let target: Element | undefined;
-		vi.spyOn(HTMLElement.prototype, "requestFullscreen").mockImplementation(async function (
-			this: HTMLElement,
-		) {
-			target = this;
-		});
+		let entered = vi.spyOn(HTMLElement.prototype, "requestFullscreen").mockResolvedValue(undefined);
 		await userEvent.click(result.$('[data-novel-menu] [data-action="fullscreen"]')!);
-		expect(target).toBe(container);
+		expect(entered.mock.contexts).toEqual([container]);
 		expect(result.$("[data-novel-player]")!.parentElement).toBe(container);
 	});
 

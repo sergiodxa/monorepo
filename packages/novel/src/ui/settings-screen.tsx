@@ -465,7 +465,8 @@ interface TextPreviewProps {
 
 /**
  * Types `text` over and over at `speed`, pausing a second on the full line, so the reader sees
- * the speed they chose before they play.
+ * the speed they chose before they play. It starts typing once it is on the page, so a server
+ * render draws the line at rest.
  */
 function TextPreview(handle: Handle<TextPreviewProps>) {
 	let shown = 0;
@@ -493,7 +494,10 @@ function TextPreview(handle: Handle<TextPreviewProps>) {
 			speed = handle.props.speed;
 			clearTimeout(timer);
 			shown = speed <= 0 ? text.length : 0;
-			if (speed > 0) timer = setTimeout(tick, 1000 / speed);
+			let started = speed;
+			handle.queueTask(() => {
+				if (started > 0 && started === speed) timer = setTimeout(tick, 1000 / started);
+			});
 		}
 		return (
 			<p
