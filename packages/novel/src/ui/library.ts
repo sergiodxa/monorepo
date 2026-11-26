@@ -15,6 +15,7 @@ import { isFailure } from "@sdxc/result";
 import type {
 	ArcInfo,
 	AssetSource,
+	BioSection,
 	ChapterInfo,
 	CharacterDeclaration,
 	EntryDeclaration,
@@ -27,7 +28,7 @@ import type { Novel } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 
 import { INTERNALS } from "../novel.js";
-import { lookKey, recordKey } from "../persistent.js";
+import { bioKey, lookKey, recordKey } from "../persistent.js";
 
 import { resolveSource } from "./source.js";
 
@@ -106,6 +107,17 @@ export interface LibraryCharacter {
 	 * stage drew, in the order the reader saw them; none for a character with no image.
 	 */
 	looks: LibraryLook[];
+	/** Every section of the character's bio in declaration order. */
+	bio: LibraryBioSection[];
+}
+
+/** A section of a character's bio and whether the reader has learned it. */
+export interface LibraryBioSection {
+	/** The section's id in the character's `bio`. */
+	id: string;
+	section: BioSection;
+	/** True for a section declared `known`, or one a scene taught in any play. */
+	learned: boolean;
 }
 
 /** An encyclopedia entry and whether the reader can open it. */
@@ -261,6 +273,11 @@ export async function readLibrary(
 			character,
 			met: character.known || record.introduced.includes(character.id),
 			looks: looks(character, record.unlocked.sprites),
+			bio: Object.entries(character.bio ?? {}).map(([id, section]) => ({
+				id,
+				section,
+				learned: section.known === true || record.unlocked.bios.includes(bioKey(character.id, id)),
+			})),
 		})),
 		topics: [...internals.topics.values()].map((topic) => ({
 			topic,

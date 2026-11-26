@@ -32,9 +32,16 @@ export interface Persistent {
 	/**
 	 * The ids of the images shown and the music played, for a gallery and a music room, and every
 	 * look of a character the stage drew, as {@link lookKey} names it, for the characters screen,
-	 * and the id of every encyclopedia entry a scene taught.
+	 * the id of every encyclopedia entry a scene taught, and every bio section as {@link bioKey}
+	 * names it.
 	 */
-	unlocked: { images: string[]; music: string[]; sprites: string[]; entries: string[] };
+	unlocked: {
+		images: string[];
+		music: string[];
+		sprites: string[];
+		entries: string[];
+		bios: string[];
+	};
 	/** The id of every character a play introduced, so a replay names everyone the reader met. */
 	introduced: string[];
 }
@@ -51,8 +58,9 @@ const PERSISTENT_SCHEMA: Schema<unknown, Persistent> = s.object({
 			music: s.defaulted(s.array(s.string()), []),
 			sprites: s.defaulted(s.array(s.string()), []),
 			entries: s.defaulted(s.array(s.string()), []),
+			bios: s.defaulted(s.array(s.string()), []),
 		}),
-		{ images: [], music: [], sprites: [], entries: [] },
+		{ images: [], music: [], sprites: [], entries: [], bios: [] },
 	),
 	introduced: s.defaulted(s.array(s.string()), []),
 }) as Schema<unknown, Persistent>;
@@ -68,7 +76,7 @@ export function emptyPersistent(): Persistent {
 		chosen: [],
 		endings: [],
 		chapters: [],
-		unlocked: { images: [], music: [], sprites: [], entries: [] },
+		unlocked: { images: [], music: [], sprites: [], entries: [], bios: [] },
 		introduced: [],
 	};
 }
@@ -140,4 +148,13 @@ export function lookKey(
 	if (typeof look === "string") return `${character}:${look}`;
 	let parts = Object.entries(look).map(([layer, variant]) => `${layer}=${variant}`);
 	return `${character}:${parts.join(",")}`;
+}
+
+/**
+ * Names a section of a character's bio as persistent data records it, `<character>:<section>`.
+ *
+ * @example bioKey("harry", "scar"); // "harry:scar"
+ */
+export function bioKey(character: string, section: string): string {
+	return `${character}:${section}`;
 }

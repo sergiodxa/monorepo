@@ -54,7 +54,7 @@ import { referenceName } from "./declarations.js";
 import { NovelError } from "./errors.js";
 import { copyKeepingFiles } from "./files.js";
 import { REPLY } from "./frames.js";
-import { lookKey, recordKey } from "./persistent.js";
+import { bioKey, lookKey, recordKey } from "./persistent.js";
 import { getPath, setPath, validate } from "./state.js";
 
 /** The tools a callback receives, as the engine builds them over its own persistent record. */
@@ -140,6 +140,7 @@ type Effect =
 	| { type: "introduce"; id: string }
 	| { type: "look"; id: string }
 	| { type: "learn"; id: string }
+	| { type: "learnBio"; id: string }
 	| { type: "line"; line: LineEvent }
 	| { type: "notify"; notify: NotifyEvent }
 	| { type: "remember"; extension: string; value: unknown }
@@ -363,6 +364,11 @@ export class PlayEngine {
 			case "learn": {
 				let added = addOnce(persistent.unlocked.entries, effect.id);
 				if (added) this.#runtime.emit("unlock", { kind: "entry", id: effect.id });
+				return added;
+			}
+			case "learnBio": {
+				let added = addOnce(persistent.unlocked.bios, effect.id);
+				if (added) this.#runtime.emit("unlock", { kind: "bio", id: effect.id });
 				return added;
 			}
 			case "line": {
@@ -642,6 +648,20 @@ export class PlayEngine {
 				this.#declared(directive.entry);
 				this.#pending.push({ type: "learn", id: directive.entry.id });
 				return null;
+			case "learnBio": {
+				this.#declared(directive.character);
+				let subject = bioKey(directive.character.id, directive.section);
+				if (directive.character.bio?.[directive.section] === undefined) {
+					this.#problem(
+						new NovelError("missing-asset", `"cast.${subject}" is not declared by the novel.`, {
+							subject: `cast.${subject}`,
+						}),
+					);
+					return null;
+				}
+				this.#pending.push({ type: "learnBio", id: subject });
+				return null;
+			}
 			case "notify": {
 				let values =
 					typeof directive.values === "function"

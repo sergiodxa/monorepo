@@ -131,7 +131,13 @@ describe(readLibrary, () => {
 		chosen: [],
 		endings: ["endings.bad", "endings.removed"],
 		chapters: ["prologue"],
-		unlocked: { images: ["images.letter"], music: ["music.theme"], sprites: [], entries: [] },
+		unlocked: {
+			images: ["images.letter"],
+			music: ["music.theme"],
+			sprites: [],
+			entries: [],
+			bios: [],
+		},
 	};
 
 	test("groups mapped scenes by chapter with their read lines in scene order", async () => {

@@ -70,7 +70,7 @@ const STORED: Persistent = {
 	chosen: [],
 	endings: [],
 	chapters: ["prologue"],
-	unlocked: { images: [], music: [], sprites: [], entries: [] },
+	unlocked: { images: [], music: [], sprites: [], entries: [], bios: [] },
 	introduced: [],
 };
 

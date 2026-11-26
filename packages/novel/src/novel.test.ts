@@ -65,6 +65,10 @@ const EN = {
 		kai: "Kai",
 		player: "You",
 		mikaAbout: "Runs the café by the station.",
+		mikaFamily: "Family",
+		mikaFamilyBody: "Her aunt left her the café.",
+		mikaPast: "Before the café",
+		mikaPastBody: "She sailed for three years.",
 	},
 	chapters: { prologue: "Prologue" },
 	lore: {
@@ -134,6 +138,10 @@ const CAST = cast({
 		name: "cast.mika",
 		color: "#e86a92",
 		known: true,
+		bio: {
+			family: { title: "cast.mikaFamily", body: "cast.mikaFamilyBody", known: true },
+			past: { title: "cast.mikaPast", body: "cast.mikaPastBody" },
+		},
 		sprites: { smile: "/mika/smile.webp", neutral: "/mika/neutral.webp" },
 	}),
 	ren: character({
@@ -938,6 +946,7 @@ describe("sprites seen", () => {
 			music: [],
 			sprites: [],
 			entries: [],
+			bios: [],
 		});
 	});
 });
@@ -1095,7 +1104,7 @@ describe("replay", () => {
 			chosen: [],
 			endings: ["endings.bad"],
 			chapters: [],
-			unlocked: { images: [], music: [], sprites: [], entries: [] },
+			unlocked: { images: [], music: [], sprites: [], entries: [], bios: [] },
 		});
 		let names = new Set(log.map((entry) => entry.name));
 		expect(names).toEqual(new Set(["scene", "line", "persist"]));
@@ -1204,6 +1213,7 @@ describe("persistent data", () => {
 			music: ["music.chill"],
 			sprites: ["mika:smile", "ren:body=school,face=grin", "mika:neutral"],
 			entries: [],
+			bios: [],
 		});
 	});
 
@@ -1230,7 +1240,7 @@ describe("persistent data", () => {
 			chosen: [],
 			endings: [],
 			chapters: [],
-			unlocked: { images: [], music: [], sprites: [], entries: [] },
+			unlocked: { images: [], music: [], sprites: [], entries: [], bios: [] },
 			introduced: [],
 		});
 	});
@@ -1536,6 +1546,38 @@ describe("encyclopedia", () => {
 		expect(play.events.filter((event) => event.type === "unlock")).toEqual([
 			{ type: "unlock", payload: { kind: "entry", id: "places.pier" } },
 		]);
+	});
+
+	test("records a learned bio section once and announces it the first time", async () => {
+		let play = createTestPlay(
+			oneScene((ctx) => [
+				ctx.learn(CAST.mika, "past"),
+				ctx.narrate("opening.welcome"),
+				ctx.learn(CAST.mika, "past"),
+				ctx.narrate("opening.lucky"),
+			]),
+		);
+		await play.advance();
+		await play.advance();
+		expect(play.persistent.unlocked.bios).toEqual(["mika:past"]);
+		expect(play.events.filter((event) => event.type === "unlock")).toEqual([
+			{ type: "unlock", payload: { kind: "bio", id: "mika:past" } },
+		]);
+	});
+
+	test("reports a bio section the character does not declare", async () => {
+		let novel = oneScene((ctx) => [ctx.learn(CAST.ren, "past"), ctx.narrate("opening.welcome")]);
+		let report = await check(novel);
+		expect(report.problems).toContainEqual({
+			code: "missing-asset",
+			severity: "error",
+			scene: "prologue.unwritten",
+			asset: "cast.ren:past",
+		});
+		let play = createTestPlay(novel);
+		await play.advance();
+		expect(play.persistent.unlocked.bios).toEqual([]);
+		expect(play.events.some((event) => event.type === "error")).toBe(true);
 	});
 
 	test("reports an entry the novel does not declare", async () => {

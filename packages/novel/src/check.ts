@@ -164,6 +164,21 @@ function walkList(list: readonly Directive[], walk: SceneWalk, slots: Map<string
 			case "learn":
 				declared(walk, directive.entry);
 				break;
+			case "learnBio":
+				declared(walk, directive.character);
+				if (directive.character.bio?.[directive.section] === undefined) {
+					let asset = `cast.${directive.character.id}:${directive.section}`;
+					if (!walk.reported.has(asset)) {
+						walk.reported.add(asset);
+						walk.problems.push({
+							code: "missing-asset",
+							severity: "error",
+							scene: walk.scene,
+							asset,
+						});
+					}
+				}
+				break;
 			case "introduce":
 				declared(walk, directive.character);
 				if (directive.character.known) {

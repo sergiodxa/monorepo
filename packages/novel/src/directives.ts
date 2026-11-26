@@ -33,6 +33,8 @@ import type {
 	StateRecord,
 } from "./types.js";
 
+import { isEntryDeclaration } from "./declarations.js";
+
 /**
  * A callback as a directive stores it. The builders type it from the app's state; the engine
  * calls it with whatever state the play holds.
@@ -86,6 +88,13 @@ export interface IntroduceDirective {
 export interface LearnDirective {
 	type: "learn";
 	entry: EntryDeclaration;
+}
+
+/** Makes the reader learn a section of a character's bio, which the characters screen shows from then on. */
+export interface LearnBioDirective {
+	type: "learnBio";
+	character: CharacterDeclaration;
+	section: string;
 }
 
 /** Changes the sprite or layers a character shows. */
@@ -278,6 +287,7 @@ export type Directive =
 	| ClearDirective
 	| IntroduceDirective
 	| LearnDirective
+	| LearnBioDirective
 	| ExpressDirective
 	| MoveDirective
 	| SayDirective
@@ -483,6 +493,11 @@ export interface SceneDirectives<State = NovelState, Tools = PlayTools> {
 	 * announces it the first time.
 	 */
 	learn(entry: EntryDeclaration): LearnDirective;
+	/**
+	 * Opens a section of a character's bio, by its id in the character's `bio`, in this play and
+	 * every later one; the player announces it the first time.
+	 */
+	learn(character: CharacterDeclaration, section: string): LearnBioDirective;
 	/** Changes the sprite or layers a character shows. */
 	express<Character extends StagedCharacter>(
 		character: Character,
@@ -656,8 +671,11 @@ const builders: SceneDirectives = {
 	introduce(character) {
 		return { type: "introduce", character };
 	},
-	learn(entry) {
-		return { type: "learn", entry };
+	learn(declaration: EntryDeclaration | CharacterDeclaration, section?: string): never {
+		let directive: LearnDirective | LearnBioDirective = isEntryDeclaration(declaration)
+			? { type: "learn", entry: declaration }
+			: { type: "learnBio", character: declaration, section: section ?? "" };
+		return directive as never;
 	},
 	express(character, options) {
 		let picked = options as {

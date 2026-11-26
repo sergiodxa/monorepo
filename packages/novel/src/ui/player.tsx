@@ -485,11 +485,18 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		});
 	}
 
-	/** What the toast for an unlock says: "CG unlocked", or "New entry: The pier" for an entry. */
-	function unlockedText(kind: "image" | "music" | "entry", id: string): string {
+	/**
+	 * What the toast for an unlock says: "CG unlocked", "New entry: The pier" for an entry, or
+	 * "New entry: Harry" for a section of Harry's bio.
+	 */
+	function unlockedText(kind: "image" | "music" | "entry" | "bio", id: string): string {
 		if (kind === "image") return labels.imageUnlocked;
 		if (kind === "music") return labels.musicUnlocked;
-		let title = handle.props.novel[INTERNALS]().entries.get(id)?.title;
+		let internals = handle.props.novel[INTERNALS]();
+		let title =
+			kind === "entry"
+				? internals.entries.get(id)?.title
+				: internals.characters.get(id.split(":")[0] ?? "")?.name;
 		let t = intl(handle).t as (key: string) => string;
 		return title === undefined ? labels.entryUnlocked : `${labels.entryUnlocked}: ${t(title)}`;
 	}

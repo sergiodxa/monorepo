@@ -319,6 +319,8 @@ export interface CharacterLeaf<Image extends CharacterImage = CharacterImage> {
 	readonly known: boolean;
 	/** The description's message key, which the characters screen shows. */
 	readonly description?: string;
+	/** The bio's sections by id, in the order the characters screen lists them. */
+	readonly bio?: Readonly<Record<string, BioSection>>;
 	readonly image: Image;
 }
 
@@ -343,6 +345,8 @@ export interface CharacterDeclaration<
 	readonly known: boolean;
 	/** The description's message key, which the characters screen shows once the reader met them. */
 	readonly description?: string;
+	/** The bio's sections by id, each shown once a scene teaches it. */
+	readonly bio?: Readonly<Record<string, BioSection>>;
 	readonly image: Image;
 }
 
@@ -359,6 +363,24 @@ export interface CharacterOptions {
 	known?: boolean;
 	/** The description's message key, which the characters screen shows once the reader met them. */
 	description?: LineKey;
+	/**
+	 * Sections of the character's bio by id, in the order the characters screen lists them. Each
+	 * stays hidden until a scene runs `learn(character, id)`, unless it is `known`.
+	 */
+	bio?: Readonly<Record<string, BioSection>>;
+}
+
+/** A titled part of a character's bio. */
+export interface BioSection {
+	/** The heading's message key. */
+	readonly title: LineKey;
+	/** The text's message key; a blank line in the message starts a new paragraph. */
+	readonly body: LineKey;
+	/**
+	 * Shows the section as soon as the reader meets the character, with no `learn`.
+	 * @default false
+	 */
+	readonly known?: boolean;
 }
 
 /**
@@ -406,6 +428,7 @@ export function character(
 		image,
 	};
 	if (options.description !== undefined) leaf = { ...leaf, description: options.description };
+	if (options.bio !== undefined) leaf = { ...leaf, bio: options.bio };
 	return options.color === undefined ? leaf : { ...leaf, color: options.color };
 }
 

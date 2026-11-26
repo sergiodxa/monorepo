@@ -1,6 +1,6 @@
 /**
  * The characters screen: the cast in a scrolling list beside the chosen character's portrait,
- * name, description and every look the stage drew them in. A character stays unnamed until the
+ * name, description, the bio learned so far and every look the stage drew them in. A character stays unnamed until the
  * reader meets them, and a look stays locked until the stage shows it once.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -71,6 +71,7 @@ export function Characters(handle: Handle<Characters.Props>) {
 		let shown = seen.find((look) => look.key === chosenLook) ?? seen[0];
 		let character = current?.character;
 		let looks = current?.looks ?? [];
+		let learnedBio = current?.bio.filter((entry) => entry.learned) ?? [];
 		return (
 			<div
 				{...rest}
@@ -191,6 +192,17 @@ export function Characters(handle: Handle<Characters.Props>) {
 									<Message i18nKey={character.description} />
 								</p>
 							)}
+							{learnedBio.map((entry, index) => (
+								<section key={entry.id} data-novel-character-bio={entry.id}>
+									<h4 mix={css({ margin: "0.25rem 0 0.35rem", fontSize: "1.1em" })}>
+										{`${index + 1}. `}
+										<Message i18nKey={entry.section.title} />
+									</h4>
+									<p mix={css({ margin: 0, lineHeight: 1.5, whiteSpace: "pre-line" })}>
+										<Message i18nKey={entry.section.body} />
+									</p>
+								</section>
+							))}
 							{looks.length === 0 ? null : (
 								<ul
 									aria-label={labels.characterLooks}

@@ -69,6 +69,10 @@ const MESSAGES = {
 		ren: "Ren",
 		kai: "Kai",
 		mikaAbout: "Runs the café by the station.",
+		mikaFamily: "Family",
+		mikaFamilyBody: "Her aunt left her the café.",
+		mikaPast: "Before the café",
+		mikaPastBody: "She sailed for three years.",
 	},
 	chapters: { prologue: "Prologue" },
 	titles: { opening: "Opening", cafe: "The café" },
@@ -189,7 +193,13 @@ const STORED: Persistent = {
 	chosen: ["prologue.opening:cafe.leave"],
 	endings: ["endings.bad"],
 	chapters: ["prologue"],
-	unlocked: { images: ["images.letter"], music: ["music.chill"], sprites: [], entries: [] },
+	unlocked: {
+		images: ["images.letter"],
+		music: ["music.chill"],
+		sprites: [],
+		entries: [],
+		bios: [],
+	},
 	introduced: [],
 };
 
@@ -237,7 +247,7 @@ const ARC_STORED: Persistent = {
 	chosen: [],
 	endings: [],
 	chapters: ["y1.ch01"],
-	unlocked: { images: [], music: [], sprites: [], entries: [] },
+	unlocked: { images: [], music: [], sprites: [], entries: [], bios: [] },
 	introduced: [],
 };
 
@@ -380,6 +390,11 @@ describe("Characters", () => {
 		mika: character({
 			name: "cast.mika",
 			description: "cast.mikaAbout",
+			bio: {
+				family: { title: "cast.mikaFamily", body: "cast.mikaFamilyBody", known: true },
+				past: { title: "cast.mikaPast", body: "cast.mikaPastBody" },
+				sea: { title: "cast.mikaPast", body: "cast.mikaPastBody" },
+			},
 			sprites: { smile: svg("pink"), sad: svg("blue") },
 		}),
 		ren: character({
@@ -399,7 +414,7 @@ describe("Characters", () => {
 		});
 		let stored = {
 			introduced: ["mika"],
-			unlocked: { sprites: ["mika:sad", "ren:body=school,face=grin"] },
+			unlocked: { sprites: ["mika:sad", "ren:body=school,face=grin"], bios: ["mika:sea"] },
 		};
 		let result = mount(<Characters novel={novel} persistent={stored} />);
 		let screen = await loaded(result, "[data-novel-characters]");
@@ -420,6 +435,15 @@ describe("Characters", () => {
 			[...detail().querySelectorAll("[data-novel-character-portrait] img")].map((img) =>
 				img.getAttribute("src"),
 			);
+		expect(
+			[...detail().querySelectorAll("[data-novel-character-bio]")].map((section) => [
+				section.getAttribute("data-novel-character-bio"),
+				section.querySelector("h4")!.textContent,
+			]),
+		).toEqual([
+			["family", "1. Family"],
+			["sea", "2. Before the café"],
+		]);
 		expect(portrait()).toEqual([svg("blue")]);
 		let looks = [...detail().querySelectorAll("[data-look]")];
 		expect(

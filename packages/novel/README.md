@@ -252,7 +252,7 @@ The chapter a group of a scene map was declared as, with its `arc` when it has o
 
 Declares a character by its name's message key and an optional `color`, with a flat set of `sprites` (one shows at a time), `layers` drawn bottom to top (one variant each), or no image for a voice that never stands on stage.
 
-A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. Persistent data keeps everyone introduced in any play, so a scene or chapter replay names them from its first line. `known: true` names a character from the first line, as the player, their family or anyone the reader already knows. `description` is a message key the characters screen shows beside their portrait.
+A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. Persistent data keeps everyone introduced in any play, so a scene or chapter replay names them from its first line. `known: true` names a character from the first line, as the player, their family or anyone the reader already knows. `description` is a message key the characters screen shows beside their portrait. `bio` adds titled sections by id (`{ scar: { title, body, known? } }`) that the characters screen lists, numbered, below the description: each stays hidden until a scene runs `ctx.learn(character, "scar")`, unless it is `known`, so a character's page fills in as the story reveals them.
 
 ```typescript
 character({ name: "cast.you", known: true });
@@ -337,6 +337,7 @@ Builds a scene's directives once, when its module loads. The scene is plain data
 - `enter(character, { at, expression? | layers, transition? })`: puts a character in a column, showing a named sprite (the first by default) or a variant for every layer
 - `exit(character, { transition? })`: takes a character off stage
 - `learn(entry)`: opens an encyclopedia entry in this play and every later one; the player announces the first time with a "New entry" toast
+- `learn(character, section)`: opens a section of the character's `bio` the same way, recorded as `<character>:<section>` in `unlocked.bios`
 - `introduce(character)`: names a character from the next line on; earlier lines showed the `unknownName` label. The play's state keeps the characters introduced, so saves, loads, rollbacks and the backlog show each line's speakers as they were
 - `clear({ transition? })`: takes every character off stage at once, each leaving with the transition, so a chapter's last scene can hand the next one an empty stage
 - `express(character, { expression | layers, transition? })`: changes the sprite, or any of the layers

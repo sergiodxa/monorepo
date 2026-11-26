@@ -48,8 +48,11 @@ export interface ChoiceEvent {
 
 /** An image was shown or a track played for the first time in any playthrough. */
 export interface UnlockEvent {
-	kind: "image" | "music" | "entry";
-	/** The asset's id (`images.letter`), or the entry's (`places.hogsmeade`). */
+	kind: "image" | "music" | "entry" | "bio";
+	/**
+	 * The asset's id (`images.letter`), the entry's (`places.hogsmeade`), or the bio section's
+	 * (`harry:scar`).
+	 */
 	id: string;
 }
 
