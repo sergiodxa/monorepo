@@ -479,6 +479,22 @@ describe("Encyclopedia", () => {
 		await vi.waitFor(() => expect(article().querySelector("h3")!.textContent).toBe("The pier"));
 	});
 
+	test("leaves out the page of every entry for a novel without topics", async () => {
+		let novel = createNovel({
+			scenes: SCENES,
+			cast: CAST,
+			assets: ASSETS,
+			state: STATE,
+			initial: SCENES.prologue.opening,
+		});
+		let result = mount(<Encyclopedia novel={novel} persistent={STORED} />);
+		let book = await loaded(result, "[data-novel-encyclopedia]");
+		expect(
+			[...book.querySelectorAll("[data-novel-encyclopedia-page]")].map((tab) => tab.textContent),
+		).toEqual(["Characters", "Gallery", "Music room"]);
+		expect(book.querySelector("[data-novel-characters]")).not.toBeNull();
+	});
+
 	test("shows only the pages the game picks, in its order", async () => {
 		let result = mount(
 			<Encyclopedia novel={fixture()} persistent={STORED} pages={["terms", "places"]} />,
