@@ -74,6 +74,14 @@ const THUMB_HIT_INSET =
 	"min(0px, calc((100% - max(var(--ui-slider-thumb-size, 1.25rem), var(--ui-target-size, 1.5rem))) / 2))";
 
 /**
+ * How far WebKit's thumb moves down its input to sit on the rail's centre line: WebKit draws it at
+ * the start of an input that {@link THUMB_HIT_INSET} grew past the thumb, so it takes half the
+ * growth as margin. Firefox centres its thumb on its own.
+ */
+const THUMB_CENTER_OFFSET =
+	"calc((max(var(--ui-slider-thumb-size, 1.25rem), var(--ui-target-size, 1.5rem)) - var(--ui-slider-thumb-size, 1.25rem)) / 2)";
+
+/**
  * Prop types for {@link Slider} and its compound parts.
  */
 export namespace Slider {
@@ -320,6 +328,7 @@ Slider.Thumb = function SliderThumb(handle: Handle<Slider.ThumbProps>) {
 						when("&:disabled", cursor("not-allowed")),
 						outlineStyle("none"),
 						when("&::-webkit-slider-runnable-track", [appearance(), bs("100%"), bg("transparent")]),
+						when("&::-webkit-slider-thumb", raw({ marginBlockStart: THUMB_CENTER_OFFSET })),
 						when("&::-moz-range-track", [
 							appearance(),
 							bs("100%"),
