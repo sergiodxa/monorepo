@@ -407,7 +407,12 @@ export function RangeSetting(handle: Handle<SettingsScreen.RangeProps>) {
 		return (
 			<SettingRow label={label} readout={readout ?? String(value)} mix={mix}>
 				<Slider min={min} max={max} value={value} style={{ minInlineSize: 0 }}>
-					<Slider.Track>
+					<Slider.Track
+						style={{
+							"--ui-neutral-border": themeVar("--novel-settings-slider-track"),
+							"--ui-brand-bg-solid": themeVar("--novel-settings-slider-fill"),
+						}}
+					>
 						<Slider.Thumb name={name} step={step} aria-label={label} />
 					</Slider.Track>
 				</Slider>

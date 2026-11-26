@@ -116,6 +116,8 @@ export const NOVEL_THEME_VARIABLES = {
 	"--novel-settings-tab-font": "inherit",
 	"--novel-settings-tab-selected-background": "rgb(127 127 127 / 0.25)",
 	"--novel-settings-tab-selected-color": "inherit",
+	"--novel-settings-slider-track": "rgb(127 127 127 / 0.35)",
+	"--novel-settings-slider-fill": "var(--novel-accent, #f4c95d)",
 	"--novel-settings-preview-background": "var(--novel-textbox-background, rgb(10 10 20 / 0.78))",
 	"--novel-settings-preview-color": "var(--novel-textbox-color, #fff)",
 	"--novel-encyclopedia-page-padding": "1rem 1.5rem",

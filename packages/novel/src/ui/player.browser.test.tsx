@@ -795,6 +795,26 @@ describe("NovelPlayer", () => {
 		await vi.waitFor(() => expect(screen.open).toBe(false));
 	});
 
+	test("draws each slider's rail and fill in the settings colors under a theme that sets every element's tokens", async () => {
+		let player = mount({ settings: { textSpeed: 0, autoDelay: 0 } });
+		await shows(player, "Welcome to the café.");
+		await userEvent.keyboard("{Escape}");
+		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
+		await vi.waitFor(() => expect(screen.open).toBe(true));
+		let tokens = document.createElement("style");
+		tokens.textContent = ".tokens * { --ui-neutral-border: red; --ui-brand-bg-solid: red; }";
+		document.head.append(tokens);
+		screen.classList.add("tokens");
+		screen.style.setProperty("--novel-settings-slider-track", "rgb(1, 2, 3)");
+		screen.style.setProperty("--novel-settings-slider-fill", "rgb(4, 5, 6)");
+		let track = screen
+			.querySelector('input[name="autoDelay"]')!
+			.closest('[data-slot="slider"] > div')!;
+		expect(getComputedStyle(track, "::before").backgroundColor).toBe("rgb(1, 2, 3)");
+		expect(getComputedStyle(track, "::after").backgroundColor).toBe("rgb(4, 5, 6)");
+		tokens.remove();
+	});
+
 	test("dispatches typed, bubbling events an ancestor catches through on()", async () => {
 		let player = mount({ settings: { textSpeed: 0, skip: "all" } });
 		await shows(player, "Welcome to the café.");

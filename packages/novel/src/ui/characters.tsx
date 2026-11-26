@@ -208,7 +208,7 @@ export function Characters(handle: Handle<Characters.Props>) {
 									aria-label={labels.characterLooks}
 									mix={css({
 										margin: 0,
-										padding: 0,
+										padding: "4px",
 										listStyle: "none",
 										display: "flex",
 										flexWrap: "wrap",

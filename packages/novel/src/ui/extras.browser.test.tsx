@@ -453,6 +453,14 @@ describe("Characters", () => {
 			["mika:sad", true],
 		]);
 
+		let pressed = detail().querySelector<HTMLElement>("[data-look] button[aria-pressed='true']")!;
+		let list = pressed.closest("ul")!;
+		let edge = list.getBoundingClientRect();
+		let first = list.firstElementChild!.getBoundingClientRect();
+		let outline = Number.parseFloat(getComputedStyle(pressed).outlineWidth);
+		expect(first.top - outline).toBeGreaterThanOrEqual(edge.top);
+		expect(first.left - outline).toBeGreaterThanOrEqual(edge.left);
+
 		entries[1]!.click();
 		await vi.waitFor(() => expect(detail().querySelector("h3")!.textContent).toBe("Ren"));
 		expect(portrait()).toEqual([svg("gray"), svg("yellow")]);
