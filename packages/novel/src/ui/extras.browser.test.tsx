@@ -473,10 +473,10 @@ describe("Characters", () => {
 	});
 });
 
-describe("Encyclopedia", () => {
-	/** The fixture's reader, who also learned the pier. */
-	const LEARNED = { ...STORED, unlocked: { ...STORED.unlocked, entries: ["places.pier"] } };
+/** The fixture's reader, who also learned the pier. */
+const LEARNED = { ...STORED, unlocked: { ...STORED.unlocked, entries: ["places.pier"] } };
 
+describe("Encyclopedia", () => {
 	test("pages through the cast, the novel's topics, the CGs and the music", async () => {
 		let result = mount(<Encyclopedia novel={fixture()} persistent={LEARNED} />);
 		let book = await loaded(result, "[data-novel-encyclopedia]");

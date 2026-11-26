@@ -575,10 +575,10 @@ describe("NovelPlayer.Title's look", () => {
 	});
 });
 
-describe("Interface sounds", () => {
-	/** Two sounds declared by URL, so a test reads which one played. */
-	const SOUNDS = assets({ sounds: { tick: "/tick.wav", chime: "/chime.wav" } });
+/** Two sounds declared by URL, so a test reads which one played. */
+const SOUNDS = assets({ sounds: { tick: "/tick.wav", chime: "/chime.wav" } });
 
+describe("Interface sounds", () => {
 	/** Records every interface sound the title or the player plays, without playing it. */
 	function listen() {
 		return vi.spyOn(AudioMixer.prototype, "playInterface").mockImplementation(() => undefined);

@@ -1509,20 +1509,20 @@ describe("events", () => {
 /** The fishing outputs exploration tries: a poor catch and a good one. */
 const FISHING = { fishing: () => [{ caught: 1 }, { caught: 4 }] };
 
-describe("encyclopedia", () => {
-	const LORE = encyclopedia({
-		places: topic({
-			name: "lore.places",
-			entries: {
-				cafe: entry({ title: "lore.cafe", body: "lore.cafeBody", known: true }),
-				pier: entry({
-					title: "lore.pier",
-					sections: [{ title: "lore.pier", body: "lore.pierBody" }],
-				}),
-			},
-		}),
-	});
+const LORE = encyclopedia({
+	places: topic({
+		name: "lore.places",
+		entries: {
+			cafe: entry({ title: "lore.cafe", body: "lore.cafeBody", known: true }),
+			pier: entry({
+				title: "lore.pier",
+				sections: [{ title: "lore.pier", body: "lore.pierBody" }],
+			}),
+		},
+	}),
+});
 
+describe("encyclopedia", () => {
 	test("names every topic and entry by its keys", () => {
 		expect(LORE.places.id).toBe("places");
 		expect(LORE.places.entries.pier.id).toBe("places.pier");
