@@ -5,11 +5,11 @@ section:
     title: Visual novels
     order: 4.7
 order: 11
-lastUpdated: 2026-11-19
+lastUpdated: 2026-11-25
 outcomes:
     - "How to declare a Blob as an asset beside URLs"
-    - "How the player plays and draws a Blob, and what it leaves out of prefetch and offline"
-    - "When a generated asset belongs in a file instead"
+    - "How the player plays and draws a Blob, and when a generated asset belongs in a file instead"
+    - "How to give the menus hover and select sounds rendered with @sdxc/synth"
 ---
 
 A jam game has no composer, and a procedural story draws its own skies. Every asset kind takes a
@@ -94,6 +94,49 @@ Scenes use them like any other asset: `ctx.show(ASSETS.backgrounds.dusk)`,
 > A Blob is made when the declarations module runs, on the server too when it renders the page.
 > Keep generated files short, like the 45-second loop above. A long soundtrack, or one the server
 > loads on every request, belongs in files rendered once at build time and declared by URL.
+
+## Sound the interface
+
+A short note makes a good interface sound. `renderScore` plays one on an instrument, and its
+release becomes the file's tail:
+
+```typescript {% title="resources/novel/generated.ts" %}
+import { PRESETS, encodeWav, renderScore } from "@sdxc/synth";
+
+export function blip(pitch: string, length = 0.125): Blob {
+	let samples = renderScore(
+		{
+			tempo: 120,
+			tracks: [
+				{ instrument: PRESETS.pluck, notes: [{ at: 0, length, pitch }] },
+			],
+		},
+		{ sampleRate: SAMPLE_RATE },
+	);
+	return new Blob([encodeWav(samples, SAMPLE_RATE)], { type: "audio/wav" });
+}
+```
+
+Declare them as sounds, and give the player a `hover` and a `select`:
+
+```typescript {% title="resources/novel/declarations.ts" %}
+export const ASSETS = assets({
+	sounds: { hover: blip("E6", 0.0625), select: blip("A5") },
+});
+```
+
+```tsx {% title="resources/components/game.tsx" %}
+<NovelPlayer.Default
+	novel={novel}
+	titleScreen={{ heading: "The Café" }}
+	sounds={{ hover: ASSETS.sounds.hover, select: ASSETS.sounds.select }}
+/>
+```
+
+The hover sound plays as the pointer enters a button, tab or link, or keyboard and gamepad focus
+moves to one, and the select sound as the reader picks one, on the title screen and in play.
+Clicking the stage to advance stays silent. Both play on their own channel, which the settings
+screen lists as **Interface**, so a reader can turn them down without losing the story's sounds.
 
 ## Test the declarations
 

@@ -66,7 +66,8 @@ Escape, or **Settings** in the quick menu, opens the settings screen, and every 
 - **Text**: text speed (characters a second, or instantly), the auto-mode delay, what skip passes
   through (read text only, or all of it) and the text size. A sample line types at the chosen
   speed, so the reader sees it before playing.
-- **Sound**: the master volume and one per channel (music, ambience, sounds, voices).
+- **Sound**: the master volume and one per channel (music, ambience, sounds, voices and the
+  interface's own sounds).
 - **Accessibility**: a dyslexia-friendly typeface and reading every line aloud.
 
 Each row shows the setting's current value beside its control, and **Reset settings** restores
