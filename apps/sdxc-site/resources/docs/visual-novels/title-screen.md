@@ -65,6 +65,11 @@ save. A chapter or scene replay begun on the title goes back to it as
 soon as it ends. The title then reflects the play: **Continue** resumes the newest save,
 autosaves included, and the library screens show what the play unlocked.
 
+A button in the title's bottom corner enters and leaves full screen, where the browser allows
+it. It fills the screen with the box the title sits in, which the player shares, so starting a
+game or coming back to the title stays in full screen. `--novel-title-fullscreen-*` variables
+size, place and color it.
+
 ## Restyle it with variables
 
 Every color, font, size and position on the title is a `--novel-title-*` variable, and
