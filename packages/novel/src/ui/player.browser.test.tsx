@@ -28,10 +28,13 @@ import {
 	character,
 	createNovel,
 	createScene,
+	encyclopedia,
+	entry,
 	interaction,
 	interactions,
 	scene,
 	scenes,
+	topic,
 } from "../index.js";
 
 import type { AutoBehavior } from "./behaviors/auto.js";
@@ -83,7 +86,13 @@ const STATE = s.object({
 
 /** The catalog the player translates through, with markup on the first line. */
 const MESSAGES = {
-	cast: { mika: "Mika", ren: "Ren", player: "You" },
+	cast: {
+		mika: "Mika",
+		ren: "Ren",
+		player: "You",
+		mikaPast: "Before the café",
+		mikaPastBody: "Mika sailed with her father.",
+	},
 	titles: { opening: "Opening", cafe: "The café" },
 	opening: {
 		welcome: "Welcome to the {#b}café{/b}.",
@@ -91,10 +100,16 @@ const MESSAGES = {
 		both: "Together!",
 		thinking: "I should say something.",
 		ask: "Where now?",
+		lucky: "You learn something new.",
 	},
 	cafe: { impressed: "Wow, {$caught} fish!", stay: "Stay", leave: "Leave" },
 	endings: { good: "Good ending", bad: "Bad ending" },
 	unwritten: { jump: "A door creaks." },
+	lore: {
+		places: "Places",
+		pier: "The pier",
+		pierBody: "Boats tie up here at dusk.",
+	},
 };
 
 const SCENES = scenes({
@@ -104,8 +119,8 @@ const SCENES = scenes({
 const CAST = cast({
 	mika: character({
 		name: "cast.mika",
+		lore: { known: true },
 		color: "#e86a92",
-		known: true,
 		sprites: { smile: svg("pink"), neutral: svg("hotpink") },
 	}),
 	ren: character({
@@ -172,6 +187,49 @@ function fixture() {
 	});
 	novel.map(SCENES.prologue.opening, OPENING);
 	novel.map(SCENES.prologue.cafe, CAFE);
+	return novel;
+}
+
+/** An encyclopedia of one entry the lore scene teaches. */
+const LORE = encyclopedia({
+	places: topic({
+		name: "lore.places",
+		entries: { pier: entry({ title: "lore.pier", body: "lore.pierBody" }) },
+	}),
+});
+
+/** A cast whose Mika has a bio section the lore scene teaches. */
+const LORE_CAST = cast({
+	mika: character({
+		name: "cast.mika",
+		lore: { known: true },
+		bio: { past: { title: "cast.mikaPast", body: "cast.mikaPastBody" } },
+		sprites: { smile: svg("pink") },
+	}),
+});
+
+const LORE_SCENES = scenes({ lore: { pier: scene({ title: "titles.opening" }) } });
+
+/** A novel whose one scene meets Mika, then teaches the pier and a section of her bio. */
+function loreFixture() {
+	let novel = createNovel({
+		scenes: LORE_SCENES,
+		cast: LORE_CAST,
+		assets: ASSETS,
+		encyclopedia: LORE,
+		state: STATE,
+		initial: LORE_SCENES.lore.pier,
+	});
+	novel.map(
+		LORE_SCENES.lore.pier,
+		createScene(LORE_SCENES.lore.pier, (ctx) => [
+			ctx.show(ASSETS.backgrounds.cafe, { transition: "fade" }),
+			ctx.enter(LORE_CAST.mika, { at: "left", expression: "smile" }),
+			ctx.learn(LORE.places.entries.pier),
+			ctx.learn(LORE_CAST.mika, "past"),
+			ctx.narrate("opening.lucky"),
+		]),
+	);
 	return novel;
 }
 
@@ -795,7 +853,7 @@ describe("NovelPlayer", () => {
 		await vi.waitFor(() => expect(screen.open).toBe(false));
 	});
 
-	test("draws each slider's rail and fill in the settings colors under a theme that sets every element's tokens", async () => {
+	test("draws each slider's thin rail and its fill in the settings colors under a theme that sets every element's tokens", async () => {
 		let player = mount({ settings: { textSpeed: 0, autoDelay: 0 } });
 		await shows(player, "Welcome to the café.");
 		await userEvent.keyboard("{Escape}");
@@ -810,7 +868,9 @@ describe("NovelPlayer", () => {
 		let track = screen
 			.querySelector('input[name="autoDelay"]')!
 			.closest('[data-slot="slider"] > div')!;
-		expect(getComputedStyle(track, "::before").backgroundColor).toBe("rgb(1, 2, 3)");
+		expect(getComputedStyle(track, "::before").backgroundColor).toBe("rgba(0, 0, 0, 0)");
+		expect(getComputedStyle(track).backgroundImage).toContain("rgb(1, 2, 3)");
+		expect(getComputedStyle(track).backgroundSize).toBe("100% 2px");
 		expect(getComputedStyle(track, "::after").backgroundColor).toBe("rgb(4, 5, 6)");
 		tokens.remove();
 	});
@@ -929,6 +989,62 @@ describe("NovelPlayer", () => {
 		expect(player.result.$("[data-novel-menu]")).toBeNull();
 		clickStage(player);
 		await vi.waitFor(() => expect(player.line()).toBe("Welcome to the café."));
+	});
+
+	test("a right click hides the interface and a second one brings it back", async () => {
+		let player = mount();
+		await shows(player, "Welcome to the café.");
+		let rightClick = () =>
+			player
+				.surface()
+				.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+		expect(rightClick()).toBe(false);
+		await vi.waitFor(() => expect(player.root().dataset["hidden"]).toBe("true"));
+		expect(player.result.$("[data-novel-textbox]")).toBeNull();
+		expect(rightClick()).toBe(false);
+		await vi.waitFor(() => expect(player.root().dataset["hidden"]).toBe("false"));
+		expect(player.line()).toBe("Welcome to the café.");
+	});
+
+	test("opens the encyclopedia on the entry a toast reports when the reader clicks it", async () => {
+		let player = mount({ novel: loreFixture() });
+		await shows(player, "You learn something new.");
+		let toast = () =>
+			[...player.result.$$("[data-novel-notification-opens]")].find(
+				(button) => button.textContent === "New entry: The pier",
+			);
+		await vi.waitFor(() => expect(toast()).toBeDefined());
+		(toast() as HTMLButtonElement).click();
+		await vi.waitFor(() => {
+			let book = player.result.$("dialog[open] [data-novel-encyclopedia]");
+			expect(book).not.toBeNull();
+			let article = book!.querySelector("[data-novel-encyclopedia-article]");
+			expect(article?.getAttribute("data-novel-encyclopedia-article")).toBe("places.pier");
+			expect(article?.querySelector("h3")?.textContent).toBe("The pier");
+			expect(
+				book!.querySelector("[data-novel-encyclopedia-entries] [aria-current='true']")?.textContent,
+			).toContain("The pier");
+		});
+		expect(toast()).toBeUndefined();
+	});
+
+	test("opens the characters page on the character a bio toast reports when the reader clicks it", async () => {
+		let player = mount({ novel: loreFixture() });
+		await shows(player, "You learn something new.");
+		let toast = () =>
+			[...player.result.$$("[data-novel-notification-opens]")].find(
+				(button) => button.textContent === "New entry: Mika",
+			);
+		await vi.waitFor(() => expect(toast()).toBeDefined());
+		(toast() as HTMLButtonElement).click();
+		await vi.waitFor(() => {
+			let characters = player.result.$("dialog[open] [data-novel-characters]");
+			expect(characters).not.toBeNull();
+			expect(
+				characters!.querySelector("[data-character='mika'] button")?.getAttribute("aria-current"),
+			).toBe("true");
+		});
+		expect(toast()).toBeUndefined();
 	});
 
 	test("enters full screen with the player as the full-screen element", async () => {

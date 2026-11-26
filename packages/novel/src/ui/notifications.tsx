@@ -9,7 +9,9 @@
 
 import type { Handle, Props as TagProps } from "remix/component";
 
-import { css, ref } from "remix/component";
+import { css, on, ref } from "remix/component";
+
+import type { NovelNotification } from "./behaviors/notifications.js";
 
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
@@ -140,15 +142,59 @@ export function Notifications(handle: Handle<Notifications.Props>) {
 				<ol>
 					{notifications.entries.map((entry) => (
 						<li key={entry.id} data-novel-notification={entry.id} data-kind={entry.kind}>
-							{"text" in entry ? (
-								entry.text
-							) : (
-								<Message i18nKey={entry.key} values={entry.values} markup={player.markup} />
-							)}
+							<ToastBody entry={entry} />
 						</li>
 					))}
 				</ol>
 			</div>
+		);
+	};
+}
+
+/** Props of {@link ToastBody}. */
+interface ToastBodyProps {
+	entry: NovelNotification;
+}
+
+/**
+ * A toast's words; a toast that `opens` an entry or a character is a button that opens it in the
+ * encyclopedia and dismisses the toast.
+ */
+function ToastBody(handle: Handle<ToastBodyProps>) {
+	let player = handle.context.get(NovelPlayer);
+	return () => {
+		let { entry } = handle.props;
+		let words =
+			"text" in entry ? (
+				entry.text
+			) : (
+				<Message i18nKey={entry.key} values={entry.values} markup={player.markup} />
+			);
+		let target = entry.opens;
+		if (target === undefined) return <>{words}</>;
+		return (
+			<button
+				type="button"
+				data-novel-notification-opens=""
+				mix={[
+					css({
+						padding: 0,
+						border: 0,
+						background: "none",
+						color: "inherit",
+						font: "inherit",
+						textAlign: "inherit",
+						cursor: "pointer",
+					}),
+					on("click", () => {
+						player.notifications.dismiss(entry.id);
+						if ("entry" in target) player.showEntry(target.entry);
+						else player.showCharacter(target.character);
+					}),
+				]}
+			>
+				{words}
+			</button>
 		);
 	};
 }

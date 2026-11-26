@@ -321,6 +321,8 @@ export interface CharacterLeaf<Image extends CharacterImage = CharacterImage> {
 	readonly description?: string;
 	/** The bio's sections by id, in the order the characters screen lists them. */
 	readonly bio?: Readonly<Record<string, BioSection>>;
+	/** `false` for a passer-by the characters screen leaves out. */
+	readonly listed?: boolean;
 	readonly image: Image;
 }
 
@@ -347,6 +349,8 @@ export interface CharacterDeclaration<
 	readonly description?: string;
 	/** The bio's sections by id, each shown once a scene teaches it. */
 	readonly bio?: Readonly<Record<string, BioSection>>;
+	/** `false` for a passer-by the characters screen leaves out. */
+	readonly listed?: boolean;
 	readonly image: Image;
 }
 
@@ -355,12 +359,8 @@ export interface CharacterOptions {
 	/** The name's message key. */
 	name: LineKey;
 	color?: string;
-	/**
-	 * Names the character from the first line, as the player, their family or anyone the reader
-	 * already knows; any other character shows as unknown until a scene runs `introduce`.
-	 * @default false
-	 */
-	known?: boolean;
+	/** How the story and the encyclopedia treat the character before and after the reader meets them. */
+	lore?: CharacterLore;
 	/** The description's message key, which the characters screen shows once the reader met them. */
 	description?: LineKey;
 	/**
@@ -368,6 +368,22 @@ export interface CharacterOptions {
 	 * stays hidden until a scene runs `learn(character, id)`, unless it is `known`.
 	 */
 	bio?: Readonly<Record<string, BioSection>>;
+}
+
+/** A character's `lore`: whether the reader knows their name and finds them in the encyclopedia. */
+export interface CharacterLore {
+	/**
+	 * Names the character from the first line, as the player, their family or anyone the reader
+	 * already knows; any other character shows as unknown until a scene runs `introduce`.
+	 * @default false
+	 */
+	known?: boolean;
+	/**
+	 * Lists the character on the characters screen once the reader meets them. `false` leaves out
+	 * a passer-by, such as "a prefect", who speaks a line but has nothing to read about.
+	 * @default true
+	 */
+	listed?: boolean;
 }
 
 /** A titled part of a character's bio. */
@@ -424,11 +440,12 @@ export function character(
 	let leaf: CharacterLeaf = {
 		[CHARACTER]: "leaf",
 		name: options.name,
-		known: options.known === true,
+		known: options.lore?.known === true,
 		image,
 	};
 	if (options.description !== undefined) leaf = { ...leaf, description: options.description };
 	if (options.bio !== undefined) leaf = { ...leaf, bio: options.bio };
+	if (options.lore?.listed === false) leaf = { ...leaf, listed: false };
 	return options.color === undefined ? leaf : { ...leaf, color: options.color };
 }
 

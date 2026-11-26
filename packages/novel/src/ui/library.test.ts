@@ -264,6 +264,62 @@ describe(readLibrary, () => {
 		let library = await readLibrary(novel, persistent, "ja-JP");
 		expect(library.chapters[0]?.scenes[0]?.lines[1]?.voice).toBe("/voice/ja/opening.hello.ogg");
 	});
+	test("lists CGs and tracks in the order the story first shows and plays them", async () => {
+		let novel = createNovel({
+			scenes: SCENES,
+			cast: CAST,
+			assets: ASSETS,
+			state: STATE,
+			initial: SCENES.prologue.opening,
+		});
+		novel.map(
+			SCENES.prologue.opening,
+			createScene(SCENES.prologue.opening, (ctx) => [
+				ctx.play(ASSETS.music.theme),
+				ctx.show(ASSETS.images.kiss),
+				ctx.narrate("opening.welcome"),
+			]),
+		);
+		novel.map(
+			SCENES.spring.cafe,
+			createScene(SCENES.spring.cafe, (ctx) => [
+				ctx.show(ASSETS.images.letter),
+				ctx.play(ASSETS.music.chill),
+				ctx.narrate("opening.thinking"),
+			]),
+		);
+		let library = await readLibrary(novel, persistent, "en");
+		expect(library.images.map((image) => image.id)).toEqual(["images.kiss", "images.letter"]);
+		expect(library.music.map((track) => track.id)).toEqual(["music.theme", "music.chill"]);
+	});
+
+	test("meets a named character when the reader reads their line, and leaves out the unlisted", async () => {
+		let people = cast({
+			mika: character({ name: "cast.mika", lore: { known: true } }),
+			ren: character({ name: "cast.ren", lore: { known: true } }),
+			kai: character({ name: "cast.kai", lore: { listed: false } }),
+		});
+		let novel = createNovel({
+			scenes: SCENES,
+			cast: people,
+			state: STATE,
+			initial: SCENES.prologue.opening,
+		});
+		novel.map(
+			SCENES.prologue.opening,
+			createScene(SCENES.prologue.opening, (ctx) => [
+				ctx.say(people.mika, "opening.hello", { name: "Ada" }),
+				ctx.say(people.ren, "opening.lucky"),
+				ctx.say(people.kai, "opening.welcome"),
+			]),
+		);
+		let library = await readLibrary(novel, persistent, "en");
+		expect(library.characters.map((entry) => [entry.character.id, entry.met])).toEqual([
+			["mika", true],
+			["ren", false],
+		]);
+	});
+
 	test("lists the cast with who the reader met and the looks they saw", async () => {
 		let people = cast({
 			mika: character({
@@ -273,7 +329,7 @@ describe(readLibrary, () => {
 			}),
 			ren: character({
 				name: "cast.ren",
-				known: true,
+				lore: { known: true },
 				layers: {
 					body: { school: "/ren/school.webp" },
 					face: { neutral: "/ren/neutral.webp", grin: "/ren/grin.webp" },

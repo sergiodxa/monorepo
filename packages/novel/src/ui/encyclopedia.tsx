@@ -14,6 +14,8 @@ import { css, on } from "remix/component";
 
 import type { Novel } from "../novel.js";
 
+import { INTERNALS } from "../novel.js";
+
 import type { LibraryEntry, LibraryTopic } from "./library.js";
 import type { NovelLabels } from "./settings.js";
 
@@ -45,7 +47,8 @@ export namespace Encyclopedia {
 		persistent?: unknown;
 		/**
 		 * The pages down the book's edge, in order: `all` (every learned entry), `characters`,
-		 * `gallery`, `music`, a topic's id, or `topics` for every topic not named elsewhere.
+		 * `gallery`, `music`, a topic's id, or `topics` for every topic not named elsewhere. The
+		 * gallery and the music room show only when the novel declares an image or a track.
 		 *
 		 * @default ["all", "characters", "topics", "gallery", "music"]
 		 */
@@ -59,19 +62,29 @@ export namespace Encyclopedia {
 	export type BuiltInPage = (typeof BUILT_IN_PAGES)[number];
 }
 
+/**
+ * The page a player asked the book to open on: the topic of the entry `showEntry()` named, or the
+ * characters page after `showCharacter()`.
+ */
+function openingPage(player: NovelPlayer.Context | undefined): string | undefined {
+	if (player?.entry !== undefined) return player.entry.split(".")[0];
+	if (player?.character !== undefined) return "characters";
+	return undefined;
+}
+
 /** A page down the book's edge: a built-in one, or one of the novel's topics. */
 type Page = { id: Encyclopedia.BuiltInPage } | { id: string; topic: LibraryTopic };
 
 /**
- * Shows the encyclopedia. Inside a player it opens on the character `showCharacter()` asked for,
- * and otherwise on its first page.
+ * Shows the encyclopedia. Inside a player it opens on the entry `showEntry()` or the character
+ * `showCharacter()` last asked for, and otherwise on its first page.
  *
  * @example <Encyclopedia pages={["characters", "places", "terms", "gallery"]} />
  */
 export function Encyclopedia(handle: Handle<Encyclopedia.Props>) {
 	let read = libraryReader(handle);
 	let player = handle.context.get(NovelPlayer) as NovelPlayer.Context | undefined;
-	let current: string | undefined = player?.character === undefined ? undefined : "characters";
+	let current = openingPage(player);
 
 	/** Turns to `id`. */
 	function turn(id: string): void {
@@ -94,7 +107,14 @@ export function Encyclopedia(handle: Handle<Encyclopedia.Props>) {
 		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
 		let locale = intl(handle).locale;
 		let library = read(source.novel, source.persistent, locale);
-		let pages = resolvePages(wanted, library?.topics ?? []);
+		let declared = new Set(
+			[...source.novel[INTERNALS]().assets.values()].map((asset) => asset.kind),
+		);
+		let pages = resolvePages(wanted, library?.topics ?? []).filter(
+			(item) =>
+				(item.id !== "gallery" || declared.has("image")) &&
+				(item.id !== "music" || declared.has("music")),
+		);
 		let page = pages.find((item) => item.id === current) ?? pages[0];
 		let shared = { novel: source.novel, persistent: source.persistent, labels };
 		return (
@@ -172,6 +192,11 @@ export function Encyclopedia(handle: Handle<Encyclopedia.Props>) {
 				<div
 					role="tabpanel"
 					data-novel-encyclopedia-content={page?.id ?? ""}
+					style={
+						page?.id === "characters"
+							? { overflowY: "hidden", "--novel-characters-height": "100%" }
+							: undefined
+					}
 					mix={css({
 						minInlineSize: 0,
 						minBlockSize: 0,
@@ -187,6 +212,7 @@ export function Encyclopedia(handle: Handle<Encyclopedia.Props>) {
 						library={library?.topics ?? []}
 						shared={shared}
 						titles={titles}
+						entry={player?.entry}
 					/>
 				</div>
 			</div>
@@ -245,16 +271,25 @@ interface PageContentProps {
 	page: Page | undefined;
 	library: readonly LibraryTopic[];
 	shared: { novel: Novel; persistent: unknown; labels: NovelLabels };
+	/** The entry a player asked the book to open on. */
+	entry: string | undefined;
 	titles: Readonly<Record<string, string>> | undefined;
 }
 
 /** What a page shows: a built-in screen, every learned entry, or one topic's entries. */
 function PageContent(handle: Handle<PageContentProps>) {
 	return () => {
-		let { page, library, shared, titles } = handle.props;
+		let { page, library, shared, titles, entry } = handle.props;
 		if (page === undefined) return null;
 		if ("topic" in page) {
-			return <Entries key={page.id} entries={page.topic.entries} labels={shared.labels} />;
+			return (
+				<Entries
+					key={page.id}
+					entries={page.topic.entries}
+					labels={shared.labels}
+					initial={entry}
+				/>
+			);
 		}
 		if (page.id === "characters") return <Characters {...shared} />;
 		if (page.id === "gallery") return <Gallery {...shared} />;
@@ -268,7 +303,7 @@ function PageContent(handle: Handle<PageContentProps>) {
 		let all = library.flatMap((topic) =>
 			topic.entries.map((entry) => ({ ...entry, topicName: topic.topic.name })),
 		);
-		return <Entries key="all" entries={all} labels={shared.labels} />;
+		return <Entries key="all" entries={all} labels={shared.labels} initial={entry} />;
 	};
 }
 
@@ -281,6 +316,8 @@ interface ListedEntry extends LibraryEntry {
 interface EntriesProps {
 	entries: readonly ListedEntry[];
 	labels: NovelLabels;
+	/** The entry the page opens on, such as the one a toast's click asked for. */
+	initial?: string | undefined;
 }
 
 /**
@@ -289,7 +326,7 @@ interface EntriesProps {
  */
 function Entries(handle: Handle<EntriesProps>) {
 	let query = "";
-	let chosen: string | undefined;
+	let chosen: string | undefined = handle.props.initial;
 
 	return () => {
 		let { entries, labels } = handle.props;
@@ -465,7 +502,7 @@ function Article(handle: Handle<ArticleProps>) {
 				{body === undefined ? null : <Prose i18nKey={body} />}
 				{sections.map((section, index) => (
 					<section key={index} id={`${prefix}-${index}`}>
-						<h4 mix={css({ margin: "0.5rem 0", fontSize: "1.15em", textAlign: "center" })}>
+						<h4 mix={css({ margin: "0.5rem 0", fontSize: "1.15em" })}>
 							{`${index + 1}. `}
 							<Message i18nKey={section.title} />
 						</h4>

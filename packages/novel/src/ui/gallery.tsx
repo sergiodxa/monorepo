@@ -22,6 +22,7 @@ import { libraryReader, librarySource } from "./library.js";
 import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS } from "./settings.js";
 import { resolveSource } from "./source.js";
+import { themeVar } from "./theme.js";
 
 export namespace Gallery {
 	/** Props {@link Gallery} accepts. */
@@ -38,7 +39,8 @@ export namespace Gallery {
 }
 
 /**
- * Lists the novel's CGs in declaration order; the reader opens an unlocked one full size.
+ * Lists the novel's CGs in the order the story first shows them, each in the same frame, locked or
+ * not; the reader opens an unlocked one full size.
  *
  * @example <Gallery novel={novel} persistent={stored} />
  */
@@ -85,8 +87,8 @@ export function Gallery(handle: Handle<Gallery.Props>) {
 											inlineSize: "100%",
 											aspectRatio: "16 / 9",
 											padding: 0,
-											border: 0,
-											borderRadius: "0.4rem",
+											border: themeVar("--novel-library-frame"),
+											borderRadius: themeVar("--novel-library-radius"),
 											overflow: "hidden",
 											background: "#000",
 											cursor: "zoom-in",
@@ -116,9 +118,10 @@ export function Gallery(handle: Handle<Gallery.Props>) {
 										display: "grid",
 										placeItems: "center",
 										aspectRatio: "16 / 9",
-										borderRadius: "0.4rem",
-										border: "1px dashed var(--ui-border, rgb(127 127 127 / 0.5))",
-										opacity: 0.6,
+										borderRadius: themeVar("--novel-library-radius"),
+										border: themeVar("--novel-library-frame"),
+										background: themeVar("--novel-library-locked-background"),
+										color: themeVar("--novel-library-locked-color"),
 									})}
 								>
 									{labels.locked}

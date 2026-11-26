@@ -68,6 +68,8 @@ const MESSAGES = {
 		mika: "Mika",
 		ren: "Ren",
 		kai: "Kai",
+		sora: "Sora",
+		prefect: "A prefect",
 		mikaAbout: "Runs the café by the station.",
 		mikaFamily: "Family",
 		mikaFamilyBody: "Her aunt left her the café.",
@@ -399,13 +401,19 @@ describe("Characters", () => {
 		}),
 		ren: character({
 			name: "cast.ren",
-			known: true,
+			lore: { known: true },
 			layers: { body: { school: svg("gray") }, face: { grin: svg("yellow") } },
 		}),
 		kai: character({ name: "cast.kai", sprites: { neutral: svg("black") } }),
+		sora: character({ name: "cast.sora", lore: { known: true }, sprites: { neutral: svg("red") } }),
+		prefect: character({
+			name: "cast.prefect",
+			lore: { listed: false },
+			sprites: { neutral: svg("red") },
+		}),
 	});
 
-	test("hides who the reader has not met and every look the stage never drew", async () => {
+	test("lists only who the reader met, leaving out passers-by, and locks every look the stage never drew", async () => {
 		let novel = createNovel({
 			scenes: SCENES,
 			cast: people,
@@ -413,7 +421,7 @@ describe("Characters", () => {
 			initial: SCENES.prologue.opening,
 		});
 		let stored = {
-			introduced: ["mika"],
+			introduced: ["mika", "prefect"],
 			unlocked: { sprites: ["mika:sad", "ren:body=school,face=grin"], bios: ["mika:sea"] },
 		};
 		let result = mount(<Characters novel={novel} persistent={stored} />);
@@ -422,9 +430,7 @@ describe("Characters", () => {
 		expect(entries.map((entry) => [entry.textContent, entry.disabled])).toEqual([
 			["Mika", false],
 			["Ren", false],
-			["???", true],
 		]);
-		expect(entries[2]!.closest("[data-character]")!.getAttribute("data-character")).toBe("");
 
 		let detail = () => screen.querySelector("[data-novel-character-detail]")!;
 		expect(detail().querySelector("h3")!.textContent).toBe("Mika");
@@ -509,6 +515,20 @@ describe("Encyclopedia", () => {
 		await vi.waitFor(() => expect(listed()).toEqual(["PlacesThe pier"]));
 		book.querySelector<HTMLButtonElement>('[data-entry="places.pier"]')!.click();
 		await vi.waitFor(() => expect(article().querySelector("h3")!.textContent).toBe("The pier"));
+	});
+
+	test("leaves out the gallery and the music room for a novel without images or tracks", async () => {
+		let novel = createNovel({
+			scenes: SCENES,
+			cast: CAST,
+			state: STATE,
+			initial: SCENES.prologue.opening,
+		});
+		let result = mount(<Encyclopedia novel={novel} persistent={STORED} />);
+		let book = await loaded(result, "[data-novel-encyclopedia]");
+		expect(
+			[...book.querySelectorAll("[data-novel-encyclopedia-page]")].map((tab) => tab.textContent),
+		).toEqual(["Characters"]);
 	});
 
 	test("leaves out the page of every entry for a novel without topics", async () => {

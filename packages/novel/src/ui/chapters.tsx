@@ -25,6 +25,7 @@ import { libraryReader, librarySource } from "./library.js";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS } from "./settings.js";
+import { themeVar } from "./theme.js";
 
 export namespace ChapterSelect {
 	/** Props {@link ChapterSelect} and {@link SceneReplay} accept. */
@@ -83,7 +84,7 @@ function Entry(handle: Handle<EntryProps>) {
 						css({
 							inlineSize: "100%",
 							padding: "0.6rem 0.8rem",
-							border: "1px solid var(--ui-border, rgb(127 127 127 / 0.4))",
+							border: themeVar("--novel-library-frame"),
 							borderRadius: "0.5rem",
 							background: "transparent",
 							color: "inherit",

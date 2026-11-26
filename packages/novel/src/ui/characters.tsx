@@ -1,7 +1,7 @@
 /**
- * The characters screen: the cast in a scrolling list beside the chosen character's portrait,
- * name, description, the bio learned so far and every look the stage drew them in. A character stays unnamed until the
- * reader meets them, and a look stays locked until the stage shows it once.
+ * The characters screen: the characters the reader has met, in a scrolling list beside the chosen
+ * one's portrait, name, description, the bio learned so far and every look the stage drew them in.
+ * A look stays locked until the stage shows it once.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,6 +22,7 @@ import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS } from "./settings.js";
 import { resolveSource } from "./source.js";
+import { themeVar } from "./theme.js";
 
 export namespace Characters {
 	/** Props {@link Characters} accepts. */
@@ -33,7 +34,7 @@ export namespace Characters {
 		 * while the screen shows, since a new value reads the library again.
 		 */
 		persistent?: unknown;
-		labels?: Partial<Pick<NovelLabels, "loading" | "locked" | "unknownName" | "characterLooks">>;
+		labels?: Partial<Pick<NovelLabels, "loading" | "locked" | "characterLooks">>;
 	}
 }
 
@@ -63,10 +64,8 @@ export function Characters(handle: Handle<Characters.Props>) {
 		let labels = { ...DEFAULT_LABELS, ...player?.labels, ...overrides };
 		let locale = intl(handle).locale;
 		let library = read(source.novel, source.persistent, locale);
-		let cast = library?.characters ?? [];
-		let current =
-			cast.find((entry) => entry.met && entry.character.id === selected) ??
-			cast.find((entry) => entry.met);
+		let cast = library?.characters.filter((entry) => entry.met) ?? [];
+		let current = cast.find((entry) => entry.character.id === selected) ?? cast[0];
 		let seen = current?.looks.filter((look) => look.seen) ?? [];
 		let shown = seen.find((look) => look.key === chosenLook) ?? seen[0];
 		let character = current?.character;
@@ -83,7 +82,7 @@ export function Characters(handle: Handle<Characters.Props>) {
 						display: "grid",
 						gridTemplateColumns: "minmax(9rem, 14rem) minmax(0, 1fr)",
 						gap: "1rem",
-						blockSize: "min(60vh, 36rem)",
+						blockSize: "var(--novel-characters-height, min(60vh, 36rem))",
 						"@container (max-width: 34rem)": {
 							gridTemplateColumns: "minmax(0, 1fr)",
 							gridTemplateRows: "auto minmax(0, 1fr)",
@@ -106,12 +105,11 @@ export function Characters(handle: Handle<Characters.Props>) {
 					})}
 				>
 					{cast.map((entry) => (
-						<li key={entry.character.id} data-character={entry.met ? entry.character.id : ""}>
+						<li key={entry.character.id} data-character={entry.character.id}>
 							<button
 								type="button"
-								disabled={!entry.met}
 								aria-current={entry === current ? "true" : undefined}
-								style={entry.met ? { color: entry.character.color } : undefined}
+								style={{ color: entry.character.color }}
 								mix={[
 									css({
 										display: "block",
@@ -124,15 +122,14 @@ export function Characters(handle: Handle<Characters.Props>) {
 										font: "inherit",
 										textAlign: "start",
 										cursor: "pointer",
-										"&:hover:not(:disabled), &[aria-current='true']": {
+										"&:hover, &[aria-current='true']": {
 											background: "rgb(127 127 127 / 0.2)",
 										},
-										"&:disabled": { cursor: "default", opacity: 0.5 },
 									}),
 									on("click", () => select(entry.character.id)),
 								]}
 							>
-								{entry.met ? <Message i18nKey={entry.character.name} /> : labels.unknownName}
+								<Message i18nKey={entry.character.name} />
 							</button>
 						</li>
 					))}
@@ -163,9 +160,10 @@ export function Characters(handle: Handle<Characters.Props>) {
 											inset: 0,
 											display: "grid",
 											placeItems: "center",
-											borderRadius: "0.4rem",
-											border: "1px dashed var(--ui-border, rgb(127 127 127 / 0.5))",
-											opacity: 0.6,
+											borderRadius: themeVar("--novel-library-radius"),
+											border: themeVar("--novel-library-frame"),
+											background: themeVar("--novel-library-locked-background"),
+											color: themeVar("--novel-library-locked-color"),
 										})}
 									>
 										{labels.locked}
@@ -182,6 +180,7 @@ export function Characters(handle: Handle<Characters.Props>) {
 								gap: "0.75rem",
 								minBlockSize: 0,
 								overflowY: "auto",
+								paddingBlockEnd: "1rem",
 							})}
 						>
 							<h3 style={{ color: character.color }} mix={css({ margin: 0, fontSize: "1.5em" })}>
@@ -228,8 +227,8 @@ export function Characters(handle: Handle<Characters.Props>) {
 															inlineSize: "3.5rem",
 															blockSize: "4.5rem",
 															overflow: "hidden",
-															borderRadius: "0.4rem",
-															border: "1px solid var(--ui-border, rgb(127 127 127 / 0.5))",
+															borderRadius: themeVar("--novel-library-radius"),
+															border: themeVar("--novel-library-frame"),
 														}),
 														css({
 															padding: 0,
@@ -256,10 +255,10 @@ export function Characters(handle: Handle<Characters.Props>) {
 															inlineSize: "3.5rem",
 															blockSize: "4.5rem",
 															overflow: "hidden",
-															borderRadius: "0.4rem",
-															border: "1px solid var(--ui-border, rgb(127 127 127 / 0.5))",
+															borderRadius: themeVar("--novel-library-radius"),
+															border: themeVar("--novel-library-frame"),
+															background: themeVar("--novel-library-locked-background"),
 														}),
-														css({ borderStyle: "dashed", opacity: 0.5 }),
 													]}
 												/>
 											)}

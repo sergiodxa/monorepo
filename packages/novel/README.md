@@ -31,7 +31,11 @@ import {
 
 let SCENES = scenes({ opening: scene(), cafe: scene({ title: "scenes.cafe" }) });
 let CAST = cast({
-	mika: character({ name: "cast.mika", known: true, sprites: { smile: "/mika/smile.webp" } }),
+	mika: character({
+		name: "cast.mika",
+		lore: { known: true },
+		sprites: { smile: "/mika/smile.webp" },
+	}),
 });
 let ASSETS = assets({ backgrounds: { street: "/bg/street.webp" } });
 
@@ -252,10 +256,10 @@ The chapter a group of a scene map was declared as, with its `arc` when it has o
 
 Declares a character by its name's message key and an optional `color`, with a flat set of `sprites` (one shows at a time), `layers` drawn bottom to top (one variant each), or no image for a voice that never stands on stage.
 
-A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. Persistent data keeps everyone introduced in any play, so a scene or chapter replay names them from its first line. `known: true` names a character from the first line, as the player, their family or anyone the reader already knows. `description` is a message key the characters screen shows beside their portrait. `bio` adds titled sections by id (`{ scar: { title, body, known? } }`) that the characters screen lists, numbered, below the description: each stays hidden until a scene runs `ctx.learn(character, "scar")`, unless it is `known`, so a character's page fills in as the story reveals them.
+A character is unnamed until the story introduces them: the textbox and the backlog show the `unknownName` label (`"???"`) in place of their name until a scene runs `ctx.introduce(character)`. Persistent data keeps everyone introduced in any play, so a scene or chapter replay names them from its first line. `lore: { known: true }` names a character from the first line, as the player, their family or anyone the reader already knows, and `lore: { listed: false }` leaves a passer-by such as "a prefect" off the characters screen. `description` is a message key the characters screen shows beside their portrait. `bio` adds titled sections by id (`{ scar: { title, body, known? } }`) that the characters screen lists, numbered, below the description: each stays hidden until a scene runs `ctx.learn(character, "scar")`, unless it is `known`, so a character's page fills in as the story reveals them.
 
 ```typescript
-character({ name: "cast.you", known: true });
+character({ name: "cast.you", lore: { known: true } });
 character({
 	name: "cast.ren",
 	layers: { body: { school: "/ren/body.webp" }, face: { grin: "/ren/grin.webp" } },
@@ -536,7 +540,7 @@ What `handle.context.get(NovelPlayer)` answers inside a player: one stable objec
 
 - State: `novel`, `element` (the root), `dialog` (the open dialog, or `null`), `frame`, `phase`, `ending`, `stage` (what the stage draws: the frame's, then the stage the story finished on), `state` (the story state at the current stop, extension slices included, one value per stop), `error`, `stalled`, `instant` (true while skipping or under reduced motion), `hidden`, `replaying`, `returnsToTitle`, `persistent`, `labels`, `locale`, `markup`, `ids` (each screen's dialog id) and `anchor` (the CSS anchor name on the root)
 - Behaviors, typed by their interfaces: `reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`, plus `mixer` (`AudioMixer`) and `prefetcher` (`Prefetcher`)
-- Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument), `toggleFullscreen()`, `replay(scene, scope)`, `endReplay()`, `toTitle()` (dispatches `novel:title` with the play's persistent data), `open(screen)`, `retry()` and `restart()` (a new play from the first scene, keeping persistent data)
+- Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument; a right click on the stage does the same), `toggleFullscreen()`, `replay(scene, scope)`, `endReplay()`, `toTitle()` (dispatches `novel:title` with the play's persistent data), `open(screen)`, `showEntry(id)` (opens the encyclopedia on the entry `<topic>.<entry>`, read back as `entry`), `retry()` and `restart()` (a new play from the first scene, keeping persistent data)
 
 ```tsx
 import type { Handle } from "remix/component";
@@ -622,9 +626,9 @@ Each part is a member of `NovelPlayer` and is also exported under its own name. 
 - `NovelPlayer.QuickMenu` (`QuickMenu`): The buttons over the stage (auto, skip, backlog, save, load, quick save and load, settings, hide, full screen, End replay during a replay, and Title when the player has a title screen), then its children
 - `NovelPlayer.Backlog` (`Backlog`): A modal dialog of the lines read, oldest first, each with a button that replays its voice; an entry read before it showed carries `data-novel-read`
 - `NovelPlayer.Saves` (`SaveScreen`): The save and load dialogs, with the autosave slot first (load-only), then the quick one and `slots` numbered slots (default `6`); a replay offers no saving
-- `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting, in Text, Sound and Accessibility tabs (`data-novel-settings-tab`), each row showing the setting's current value beside its control, with a line typed at the chosen text speed, Reset settings and Back; its sliders draw their rail in `--novel-settings-slider-track` and the filled part in `--novel-settings-slider-fill`
+- `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting, in Text, Sound and Accessibility tabs (`data-novel-settings-tab`), each row showing the setting's current value beside its control, with a line typed at the chosen text speed, Reset settings and Back; its sliders draw a thin rail line in `--novel-settings-slider-track` (`--novel-settings-slider-track-thickness` thick) and the filled part in `--novel-settings-slider-fill`
 - `NovelPlayer.Extras` (`Extras`): An Extras menu offering the library screens given as its children, each in its own modal dialog
-- `NovelPlayer.Notifications` (`Notifications`): The `notifications` queue as toasts in a `popover="manual"` element, so they sit in the top layer over dialogs and full screen, anchored to the player so `--novel-notification-inset` measures from its edges; a polite live region whose toasts each leave after `duration` milliseconds (default `4000`) and carry `data-kind`. Reduced motion drops their entrance
+- `NovelPlayer.Notifications` (`Notifications`): The `notifications` queue as toasts in a `popover="manual"` element, so they sit in the top layer over dialogs and full screen, anchored to the player so `--novel-notification-inset` measures from its edges; a polite live region whose toasts each leave after `duration` milliseconds (default `4000`) and carry `data-kind`. A toast that `opens` an entry or a character, as the player's "New entry" toasts do, is a button (`data-novel-notification-opens`) that opens it in the encyclopedia. Reduced motion drops their entrance
 
 #### Theme: `NOVEL_THEME_VARIABLES`
 
@@ -659,7 +663,7 @@ How the reader experiences the play, kept in the browser and never in the game s
 - `SettingsModel`: The reader's settings: `value`, `set(next)`, `update(patch)`, `setVolume(channel, value)`, completed with `DEFAULT_SETTINGS`
 - `CountdownModel`: A timed menu's clock: `start(frame)`, `cancel()`, `endsAt`, and an `expire` event (`CountdownExpireEvent`) with the option `timeoutOption(frame)` picks, its `default` or else its first available option
 - `AutosaveModel`: Asks the player to save, through a `save` event, when a chapter starts (a new play's first one included) and every `every` lines (default `20`), and when the reader leaves the tab with lines shown since the last save, into `slot` (default `AUTO_SLOT`, `"auto"`); the player saves through its own save path, so the save reaches `novel:save` and the save screens, and never during a replay
-- `NotificationsModel`: The toasts queue: `push({ text } | { key, values? })` with an optional `kind` (default `"custom"`), `dismiss(id)` and `entries`, holding at most `limit` toasts (default `5`). The player pushes `image` and `music` unlocks, an `ending` with how many of all endings are reached, and each `notify` outside replays
+- `NotificationsModel`: The toasts queue: `push({ text } | { key, values? })` with an optional `kind` (default `"custom"`) and `opens` (`{ entry }` or `{ character }`), `dismiss(id)` and `entries`, holding at most `limit` toasts (default `5`). The player pushes `image` and `music` unlocks, an `ending` with how many of all endings are reached, and each `notify` outside replays
 - `ReadModel`: Whether the current line (`current`) and each backlog entry (`isRead(id)`) had been read before it showed, from the line frame's `seen`, which skip's read-only mode follows too
 - `Prefetcher`: Warms the files of the scenes ahead as the play enters a scene, four at a time
 
@@ -673,15 +677,15 @@ How the reader experiences the play, kept in the browser and never in the game s
 
 #### `Memories`, `Gallery`, `MusicRoom` and `EndingsList`
 
-The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, opening its scrolling box at the newest one, and replays a voiced line's voice through the player's mixer, or outside one a mixer it makes for itself (a `novel:replay-voice` listener may prevent that and play it another way); `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens. When the story has arcs, `Memories` heads each arc's chapters with its title in a `section` carrying `data-arc`.
+The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, opening its scrolling box at the newest one, and replays a voiced line's voice through the player's mixer, or outside one a mixer it makes for itself (a `novel:replay-voice` listener may prevent that and play it another way); `Gallery` lists the CGs in the order the story first shows them, opening an unlocked one full size; `MusicRoom` plays unlocked tracks, in the order the story first plays them, through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens. CGs and looks share one frame, locked or not, drawn from `--novel-library-frame`, `--novel-library-radius`, `--novel-library-locked-background` and `--novel-library-locked-color`. When the story has arcs, `Memories` heads each arc's chapters with its title in a `section` carrying `data-arc`.
 
 #### `Encyclopedia`
 
-One book for everything the reader has learned. Pages down its edge open every learned entry (with its topic beside it), the cast as `Characters` shows it, each topic, the CGs and the music; `pages` picks and orders them (`all`, `characters`, a topic id, `topics` for the remaining topics, `gallery`, `music`), and a novel without topics has no `all` page, and `titles` names the music room's tracks. A topic lists its learned entries with a search field beside the open article: its topic, title, summary, a Contents disclosure of its sections, the text, then each numbered section. It is the default library screen of `NovelPlayer.Default` and the title screen, opens on the character `showCharacter()` asked for, and a speaker's name in the textbox opens it. Its parts carry `data-novel-encyclopedia`, `-page`, `-content`, `-search`, `-article`, `-topic`, `-summary` and `-contents`, and it reads the settings screen's tab and panel variables plus `--novel-encyclopedia-page-padding` and `-current-background`/`-current-color` for the open entry.
+One book for everything the reader has learned. Pages down its edge open every learned entry (with its topic beside it), the cast as `Characters` shows it, each topic, the CGs and the music; `pages` picks and orders them (`all`, `characters`, a topic id, `topics` for the remaining topics, `gallery`, `music`), a novel without topics has no `all` page, one without images or tracks no `gallery` or `music` page, and `titles` names the music room's tracks. A topic lists its learned entries with a search field beside the open article: its topic, title, summary, a Contents disclosure of its sections, the text, then each numbered section. It is the default library screen of `NovelPlayer.Default` and the title screen, opens on the entry `showEntry()` or the character `showCharacter()` last asked for, and a speaker's name in the textbox and a "New entry" toast open it. Its parts carry `data-novel-encyclopedia`, `-page`, `-content`, `-search`, `-article`, `-topic`, `-summary` and `-contents`, and it reads the settings screen's tab and panel variables plus `--novel-encyclopedia-page-padding` and `-current-background`/`-current-color` for the open entry.
 
 #### `Characters`
 
-The cast in declaration order, as a scrolling list beside the chosen character's portrait, name, `description` and looks. A character shows as the `unknownName` label, and cannot be picked, until they are `known` or a play introduces them; a sprite stays a locked placeholder until the stage draws the character in it once, and a layered character lists each combination of variants the stage drew. Inside a player it opens on the character `showCharacter()` asked for, and its dialog is wider than the other screens'. It takes the same `novel`, `persistent` and `labels` props as the screens above; `characterLooks` names the strip of looks.
+The characters the reader has met in any play (introduced, heard speaking or drawn on stage), in declaration order, as a scrolling list beside the chosen character's portrait, name, `description`, learned bio and looks; a character declared `lore: { listed: false }` is never listed; a sprite stays a locked placeholder until the stage draws the character in it once, and a layered character lists each combination of variants the stage drew. Inside a player it opens on the character `showCharacter()` asked for, and its dialog is wider than the other screens'. It takes the same `novel`, `persistent` and `labels` props as the screens above; `characterLooks` names the strip of looks.
 
 #### `ChapterSelect` and `SceneReplay`
 
@@ -738,7 +742,7 @@ The scenery transitions the player draws itself as View Transitions (any other n
 - `NovelPlayer.Props`, `NovelPlayer.DefaultProps`, `NovelPlayer.Context`, `NovelPlayer.Screen`, `NovelPlayer.Markup`: The provider's props, `Default`'s, the context its parts read, the screens `open()` takes and the markup map.
 - `NovelPlayer.Behaviors`, `NovelPlayer.EventMap`: The `behaviors` prop and the context's events.
 - `RevealBehavior`, `AutoBehavior`, `SkipBehavior`, `BacklogBehavior`, `SavesBehavior`, `SettingsBehavior`, `CountdownBehavior`, `AutosaveBehavior`, `NotificationsBehavior`, `ReadBehavior`: What the player relies on from each behavior.
-- `NotificationInput`, `NotificationText`, `NotificationMessage`, `NovelNotification`: A toast as `push()` takes it, as plain text or a message to translate, and as the queue holds it.
+- `NotificationInput`, `NotificationText`, `NotificationMessage`, `NovelNotification`, `NotificationTarget`: A toast as `push()` takes it, as plain text or a message to translate, as the queue holds it, and what clicking it opens.
 - `Interaction.Props<Map>`, `Interaction.Map`, `Interaction.Frame<Map>`, `Interaction.Rendered`: An interaction part's props, the map it takes, the custom frame of each interaction in it, and what the children function returns.
 - `Stage.Props`, `Stage.SceneryProps`, `Stage.CharacterProps`, `Textbox.Props`, `Textbox.PartProps`, `Textbox.CaptionsProps`, `Message.Props`, `ChoiceMenu.Props`, `Backlog.Props`, `SaveScreen.Props`, `SaveScreen.ThumbnailProps`, `SettingsScreen.Props`, `SettingsScreen.RangeProps`, `SettingsScreen.RowProps`, `SettingsScreen.Tab`, `QuickMenu.Props`, `Extras.Props`, `Title.Props`, `Title.Options`, `SaveScreen.SummaryProps`, `Notifications.Props`, `Memories.Props`, `Gallery.Props`, `MusicRoom.Props`, `EndingsList.Props`, `ChapterSelect.Props`, `SceneReplay.Props`: Each component's props.
 - `keyboardControls.Options`: The keymap the keyboard mixin takes.
@@ -770,7 +774,7 @@ Starts a play a test drives by naming each reply, from the initial scene or from
 
 #### `check(novel: Novel): Promise<CheckReport>`
 
-Reads every mapped scene without playing a line. Errors break a play or a save: a key used twice in a scene, a jump to a scene with no module, an undeclared asset or character, a module that fails to load. Warnings may be intended: two characters in one column, a menu whose every option is conditional, an `introduce` of a character declared `known` (`known-introduced`), a scene the initial one never reaches. Every `oneOf` candidate counts as reachable and is checked for a module, and a `notify` key a catalog lacks is a `missing-message` error scoped to its scene and locale. `ok` is true when no problem is an error.
+Reads every mapped scene without playing a line. Errors break a play or a save: a key used twice in a scene, a jump to a scene with no module, an undeclared asset or character, a module that fails to load. Warnings may be intended: two characters in one column, a menu whose every option is conditional, an `introduce` of a character declared `lore: { known: true }` (`known-introduced`), a scene the initial one never reaches. Every `oneOf` candidate counts as reachable and is checked for a module, and a `notify` key a catalog lacks is a `missing-message` error scoped to its scene and locale. `ok` is true when no problem is an error.
 
 #### `explore(novel: Novel, options?: ExploreOptions): Promise<ExploreReport>`
 

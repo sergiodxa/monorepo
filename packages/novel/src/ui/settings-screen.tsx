@@ -410,9 +410,15 @@ export function RangeSetting(handle: Handle<SettingsScreen.RangeProps>) {
 				<Slider min={min} max={max} value={value} style={{ minInlineSize: 0 }}>
 					<Slider.Track
 						style={{
-							"--ui-neutral-border": themeVar("--novel-settings-slider-track"),
+							"--ui-neutral-border": "transparent",
 							"--ui-brand-bg-solid": themeVar("--novel-settings-slider-fill"),
 						}}
+						mix={css({
+							backgroundImage: `linear-gradient(${themeVar("--novel-settings-slider-track")}, ${themeVar("--novel-settings-slider-track")})`,
+							backgroundSize: `100% ${themeVar("--novel-settings-slider-track-thickness")}`,
+							backgroundPosition: "center",
+							backgroundRepeat: "no-repeat",
+						})}
 					>
 						<Slider.Thumb name={name} step={step} aria-label={label} />
 					</Slider.Track>

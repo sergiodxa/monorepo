@@ -16,6 +16,7 @@ export type {
 	NotificationInput,
 	NotificationMessage,
 	NotificationsBehavior,
+	NotificationTarget,
 	NotificationText,
 	NovelNotification,
 } from "./ui/behaviors/notifications.js";

@@ -100,7 +100,10 @@ export interface LibraryLook {
 /** A declared character, whether the reader met them, and the looks the stage drew them in. */
 export interface LibraryCharacter {
 	character: CharacterDeclaration;
-	/** True for a character declared `known`, or one a play introduced. */
+	/**
+	 * True once the reader met the character in any play: a scene introduced them, they spoke a
+	 * line the reader read, or the stage drew them.
+	 */
 	met: boolean;
 	/**
 	 * Every declared sprite in declaration order, or for a layered character every combination the
@@ -263,22 +266,39 @@ export async function readLibrary(
 		group.reached ||= entry.reached || (chapter !== null && record.chapters.includes(chapter.name));
 	}
 	for (let key of record.endings) endings.add(key);
+	let heard = new Set(
+		chapters.flatMap((chapter) =>
+			chapter.scenes.flatMap((scene) =>
+				scene.lines.flatMap((line) => line.speakers.map((speaker) => speaker.id)),
+			),
+		),
+	);
+	let shown = appearanceOrder(loaded);
 	return {
 		persistent: record,
 		chapters,
 		arcs: groupArcs(chapters),
-		images: unlocks(internals.assets.values(), "image", record.unlocked.images),
-		music: unlocks(internals.assets.values(), "music", record.unlocked.music),
-		characters: [...internals.characters.values()].map((character) => ({
-			character,
-			met: character.known || record.introduced.includes(character.id),
-			looks: looks(character, record.unlocked.sprites),
-			bio: Object.entries(character.bio ?? {}).map(([id, section]) => ({
-				id,
-				section,
-				learned: section.known === true || record.unlocked.bios.includes(bioKey(character.id, id)),
-			})),
-		})),
+		images: inOrder(unlocks(internals.assets.values(), "image", record.unlocked.images), shown),
+		music: inOrder(unlocks(internals.assets.values(), "music", record.unlocked.music), shown),
+		characters: [...internals.characters.values()]
+			.filter((character) => character.listed !== false)
+			.map((character) => {
+				let drawn = looks(character, record.unlocked.sprites);
+				return {
+					character,
+					met:
+						record.introduced.includes(character.id) ||
+						heard.has(character.id) ||
+						drawn.some((look) => look.seen),
+					looks: drawn,
+					bio: Object.entries(character.bio ?? {}).map(([id, section]) => ({
+						id,
+						section,
+						learned:
+							section.known === true || record.unlocked.bios.includes(bioKey(character.id, id)),
+					})),
+				};
+			}),
 		topics: [...internals.topics.values()].map((topic) => ({
 			topic,
 			entries: [...internals.entries.values()]
@@ -290,6 +310,27 @@ export async function readLibrary(
 		})),
 		endings: [...endings].map((key) => ({ key, reached: record.endings.includes(key) })),
 	};
+}
+
+/**
+ * Each asset id in the order the story first shows or plays it, reading the scenes in declaration
+ * order, so the gallery and the music room follow the story rather than the asset map.
+ */
+function appearanceOrder(scenes: ReadonlyArray<readonly Directive[] | null>): Map<string, number> {
+	let order = new Map<string, number>();
+	for (let directives of scenes) {
+		for (let directive of walk(directives ?? [])) {
+			if (directive.type !== "show" && directive.type !== "play") continue;
+			if (!order.has(directive.asset.id)) order.set(directive.asset.id, order.size);
+		}
+	}
+	return order;
+}
+
+/** Sorts assets by where the story first uses them; ones no scene uses keep their order at the end. */
+function inOrder(assets: LibraryAsset[], order: ReadonlyMap<string, number>): LibraryAsset[] {
+	let position = (asset: LibraryAsset) => order.get(asset.id) ?? Number.POSITIVE_INFINITY;
+	return [...assets].sort((a, b) => position(a) - position(b));
 }
 
 /** Groups consecutive chapters that share an arc, each group reached when one of its chapters is. */

@@ -63,6 +63,8 @@ const EN = {
 		mika: "Mika",
 		ren: "Ren",
 		kai: "Kai",
+		sora: "Sora",
+		prefect: "A prefect",
 		player: "You",
 		mikaAbout: "Runs the café by the station.",
 		mikaFamily: "Family",
@@ -136,8 +138,8 @@ const SCENES = scenes({
 const CAST = cast({
 	mika: character({
 		name: "cast.mika",
+		lore: { known: true },
 		color: "#e86a92",
-		known: true,
 		bio: {
 			family: { title: "cast.mikaFamily", body: "cast.mikaFamilyBody", known: true },
 			past: { title: "cast.mikaPast", body: "cast.mikaPastBody" },
@@ -151,7 +153,7 @@ const CAST = cast({
 			face: { neutral: "/ren/face-neutral.webp", grin: "/ren/face-grin.webp" },
 		},
 	}),
-	player: character({ name: "cast.player", known: true }),
+	player: character({ name: "cast.player", lore: { known: true } }),
 });
 
 const ASSETS = assets({

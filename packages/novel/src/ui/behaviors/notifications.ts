@@ -13,9 +13,14 @@ import { TypedEventTarget } from "remix/component";
 /** Toasts the queue holds by default; the oldest leaves first. */
 const NOTIFICATIONS_LIMIT = 5;
 
+/** What clicking a toast opens: an encyclopedia entry by `<topic>.<entry>`, or a character's page. */
+export type NotificationTarget = { entry: string } | { character: string };
+
 /** A toast's words already in the reader's language, such as a label. */
 export interface NotificationText {
 	text: string;
+	/** Makes the toast a button that opens this entry or character in the encyclopedia. */
+	opens?: NotificationTarget;
 	/**
 	 * What it reports, set as `data-kind` on the toast for a theme to style: `"image"`, `"music"`,
 	 * `"entry"`, `"ending"` and `"notify"` from the player, anything a game pushes.
@@ -31,6 +36,8 @@ export interface NotificationMessage {
 	key: string;
 	/** The values the message is formatted with. */
 	values?: Record<string, unknown> | undefined;
+	/** Makes the toast a button that opens this entry or character in the encyclopedia. */
+	opens?: NotificationTarget;
 	/** @default "custom" */
 	kind?: string;
 }

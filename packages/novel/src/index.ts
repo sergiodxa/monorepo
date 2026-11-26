@@ -26,6 +26,7 @@ export type {
 	CharacterDeclaration,
 	CharacterImage,
 	CharacterLeaf,
+	CharacterLore,
 	CharacterOptions,
 	EncyclopediaMap,
 	EntryDeclaration,

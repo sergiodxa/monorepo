@@ -289,7 +289,8 @@ export function Stage(handle: Handle<Stage.Props>) {
 
 /**
  * What the stage adds while it draws a play: a click or tap advances, or brings a hidden
- * interface back, except on the interface's own controls.
+ * interface back, except on the interface's own controls, and a right click hides the interface
+ * to show the scene alone, or brings it back.
  */
 function playerStage(player: NovelPlayer.Context) {
 	return [
@@ -298,6 +299,11 @@ function playerStage(player: NovelPlayer.Context) {
 			if ((event.target as Element).closest(INTERACTIVE) !== null) return;
 			if (player.hidden) player.hide(false);
 			else player.advance();
+		}),
+		on<HTMLElement, "contextmenu">("contextmenu", (event) => {
+			if (player.dialog !== null) return;
+			event.preventDefault();
+			player.hide();
 		}),
 	];
 }

@@ -28,7 +28,7 @@ import type { AutoBehavior } from "./behaviors/auto.js";
 import type { AutosaveBehavior } from "./behaviors/autosave.js";
 import type { BacklogBehavior } from "./behaviors/backlog.js";
 import type { CountdownBehavior } from "./behaviors/countdown.js";
-import type { NotificationsBehavior } from "./behaviors/notifications.js";
+import type { NotificationsBehavior, NotificationText } from "./behaviors/notifications.js";
 import type { ReadBehavior } from "./behaviors/read.js";
 import type { RevealBehavior } from "./behaviors/reveal.js";
 import type { SavesBehavior } from "./behaviors/save-slots.js";
@@ -244,6 +244,10 @@ export namespace NovelPlayer {
 		open(screen: Screen): void;
 		/** The character the characters screen opens on, as `showCharacter()` last asked. */
 		readonly character: string | undefined;
+		/** The entry the encyclopedia opens on, as `showEntry()` last asked, as `<topic>.<entry>`. */
+		readonly entry: string | undefined;
+		/** Opens the encyclopedia on the entry `id` (`<topic>.<entry>`), when the player offers it. */
+		showEntry(id: string): void;
 		/**
 		 * Opens the encyclopedia's characters page on `id`, or else the characters screen, when the
 		 * player offers either.
@@ -375,6 +379,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 	) as Record<NovelPlayer.Screen, string>;
 	let anchor = `--novel-${handle.id.replace(/[^\w-]/g, "-")}`;
 	let shownCharacter: string | undefined;
+	let shownEntry: string | undefined;
 
 	/** Opens one of the player's dialogs, when it is rendered. */
 	function open(screen: NovelPlayer.Screen): void {
@@ -479,7 +484,11 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			}),
 			novel.on("unlock", (event, play) => {
 				if (!ours(play)) return;
-				notifications.push({ text: unlockedText(event.kind, event.id), kind: event.kind });
+				notifications.push({
+					text: unlockedText(event.kind, event.id),
+					kind: event.kind,
+					...unlockTarget(event.kind, event.id),
+				});
 			}),
 			novel.on("notify", (event, play) => {
 				if (ours(play))
@@ -508,6 +517,16 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 				: internals.characters.get(id.split(":")[0] ?? "")?.name;
 		let t = intl(handle).t as (key: string) => string;
 		return title === undefined ? labels.entryUnlocked : `${labels.entryUnlocked}: ${t(title)}`;
+	}
+
+	/** What clicking an unlock's toast opens: the entry, or the character whose bio grew. */
+	function unlockTarget(
+		kind: "image" | "music" | "entry" | "bio",
+		id: string,
+	): Pick<NotificationText, "opens"> {
+		if (kind === "entry") return { opens: { entry: id } };
+		if (kind === "bio") return { opens: { character: id.split(":")[0] ?? id } };
+		return {};
 	}
 
 	/** Pushes "Ending 3/5": the endings reached in any playthrough out of every ending the scenes hold. */
@@ -667,8 +686,17 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		get character() {
 			return shownCharacter;
 		},
+		get entry() {
+			return shownEntry;
+		},
+		showEntry: (id) => {
+			shownEntry = id;
+			shownCharacter = undefined;
+			open("encyclopedia");
+		},
 		showCharacter: (id) => {
 			shownCharacter = id;
+			shownEntry = undefined;
 			let book = root?.querySelector(`#${ids.encyclopedia}`);
 			open(book instanceof HTMLDialogElement ? "encyclopedia" : "characters");
 		},
