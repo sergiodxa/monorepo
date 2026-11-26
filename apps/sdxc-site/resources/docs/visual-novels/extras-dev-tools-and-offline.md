@@ -1,13 +1,13 @@
 ---
 title: Extras, dev tools and offline
-description: Put chapter select and the gallery on a title screen, show the cast, edit scenes with hot reload in the dev tools, and let readers keep playing without a connection.
+description: Put chapter select and the encyclopedia on a title screen, show the cast, edit scenes with hot reload in the dev tools, and let readers keep playing without a connection.
 section:
     title: Visual novels
     order: 4.7
 order: 12
 lastUpdated: 2026-11-24
 outcomes:
-    - "How a title screen places the library screens, starts a chapter replay and shows the cast"
+    - "How a title screen places the library screens, starts a chapter replay and keeps an encyclopedia"
     - "How to run the dev tools beside the player in development only"
     - "What the offline worker caches, and how a page registers it"
 ---
@@ -84,7 +84,36 @@ export const CAST = cast({
 
 A character stays `???` on the screen until they are `known` or a scene introduces them, and
 each sprite stays locked until the stage shows the character in it once, in any playthrough.
-In the player, a named speaker's name on the textbox opens the screen on them.
+
+## Keep an encyclopedia
+
+The Encyclopedia gathers what the reader has learned in one book: the cast, the gallery, the
+music, and topics you declare, such as places or terms. Declare the entries and pass them to
+`createNovel`:
+
+```typescript {% title="resources/novel/declarations.ts" %}
+export const LORE = encyclopedia({
+	places: topic({
+		name: "lore.places",
+		entries: {
+			pier: entry({
+				title: "lore.pier.title",
+				summary: "lore.pier.summary",
+				body: "lore.pier.body",
+				sections: [
+					{ title: "lore.pier.historyTitle", body: "lore.pier.history" },
+				],
+			}),
+		},
+	}),
+});
+```
+
+An entry stays hidden until a scene teaches it with `ctx.learn(LORE.places.entries.pier)`, which
+also shows a "New entry" toast. `known: true` opens it from the first play. The player offers
+the Encyclopedia in its extras menu and on the title screen, and a named speaker's name on the
+textbox opens it on them. `<Encyclopedia pages={["characters", "places", "gallery"]} />` picks
+the pages and their order.
 
 ## Edit scenes with the dev tools
 
