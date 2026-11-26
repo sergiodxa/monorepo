@@ -399,9 +399,103 @@ export function Title(handle: Handle<Title.Props>) {
 					);
 				})}
 				<SettingsScreen id={settingsId} settings={settings} labels={labels} />
+				<FullscreenButton label={labels.fullscreen} />
 			</div>
 		);
 	};
+}
+
+/** Props of {@link FullscreenButton}. */
+interface FullscreenButtonProps {
+	label: string;
+}
+
+/**
+ * Enters or leaves full screen from the title's bottom corner. It fills the screen with the box
+ * the title sits in, which the play started from it shares, so starting a game stays in full
+ * screen; it shows only where the browser allows full screen.
+ */
+function FullscreenButton(handle: Handle<FullscreenButtonProps>) {
+	let button: HTMLButtonElement | undefined;
+	let supported = false;
+	let active = false;
+
+	handle.queueTask(() => {
+		supported = document.fullscreenEnabled;
+		active = document.fullscreenElement !== null;
+		document.addEventListener(
+			"fullscreenchange",
+			() => {
+				active = document.fullscreenElement !== null;
+				void handle.update();
+			},
+			{ signal: handle.signal },
+		);
+		void handle.update();
+	});
+
+	/** Leaves full screen, or fills the screen with the box the title sits in. */
+	function toggle(): void {
+		if (document.fullscreenElement !== null) {
+			void document.exitFullscreen().catch(() => undefined);
+			return;
+		}
+		let title = button?.closest("[data-novel-title]");
+		let target = title?.parentElement ?? title;
+		void target?.requestFullscreen().catch(() => undefined);
+	}
+
+	return () => (
+		<button
+			type="button"
+			data-novel-title-fullscreen=""
+			aria-label={handle.props.label}
+			aria-pressed={active ? "true" : "false"}
+			hidden={!supported}
+			mix={[
+				ref((node) => {
+					button = node;
+				}),
+				css({
+					position: "absolute",
+					insetBlockEnd: themeVar("--novel-title-fullscreen-inset"),
+					insetInlineEnd: themeVar("--novel-title-fullscreen-inset"),
+					display: "grid",
+					placeItems: "center",
+					inlineSize: themeVar("--novel-title-fullscreen-size"),
+					blockSize: themeVar("--novel-title-fullscreen-size"),
+					padding: 0,
+					border: themeVar("--novel-title-fullscreen-border"),
+					borderRadius: themeVar("--novel-title-fullscreen-radius"),
+					background: themeVar("--novel-title-fullscreen-background"),
+					color: themeVar("--novel-title-fullscreen-color"),
+					cursor: "pointer",
+					"&[hidden]": { display: "none" },
+					"&:hover, &:focus-visible": { color: themeVar("--novel-title-heading-color") },
+					"& svg": { inlineSize: "55%", blockSize: "55%" },
+				}),
+				on("click", toggle),
+			]}
+		>
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
+				<path
+					d={
+						active
+							? "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"
+							: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
+					}
+				/>
+			</svg>
+		</button>
+	);
 }
 
 /** Props of one title menu entry: a play it starts on click, or the dialog it opens. */

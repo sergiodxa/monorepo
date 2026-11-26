@@ -215,6 +215,29 @@ describe("NovelPlayer.Title", () => {
 	});
 });
 
+describe("NovelPlayer.Title's full screen button", () => {
+	test("fills the screen with the box the title sits in, and leaves full screen once in it", async () => {
+		let { result } = mount(<Title novel={fixture()} heading="The Café" />);
+		let toggle = result.$("[data-novel-title-fullscreen]") as HTMLButtonElement;
+		await vi.waitFor(() => expect(toggle.hidden).toBe(false));
+		expect(toggle.getAttribute("aria-label")).toBe("Full screen");
+		expect(toggle.getAttribute("aria-pressed")).toBe("false");
+		let entered = vi
+			.spyOn(HTMLElement.prototype, "requestFullscreen")
+			.mockImplementation(async function (this: HTMLElement) {
+				expect(this).toBe(result.$("[data-novel-title]")!.parentElement);
+			});
+		await userEvent.click(toggle);
+		expect(entered).toHaveBeenCalledTimes(1);
+		let left = vi.spyOn(document, "exitFullscreen").mockResolvedValue(undefined);
+		vi.spyOn(document, "fullscreenElement", "get").mockReturnValue(document.body);
+		document.dispatchEvent(new Event("fullscreenchange"));
+		await vi.waitFor(() => expect(toggle.getAttribute("aria-pressed")).toBe("true"));
+		await userEvent.click(toggle);
+		expect(left).toHaveBeenCalledTimes(1);
+	});
+});
+
 describe("NovelPlayer.Default with a title screen", () => {
 	test("opens on the title and plays once the reader starts a new game", async () => {
 		let { result } = mount(
@@ -229,6 +252,28 @@ describe("NovelPlayer.Default with a title screen", () => {
 		button(result, "new-game")!.click();
 		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
 		expect(result.$("[data-novel-title]")).toBeNull();
+	});
+
+	test("fills the screen with the box it shares with the title, so leaving the play stays in full screen", async () => {
+		let { result } = mount(
+			<NovelPlayer.Default
+				novel={fixture()}
+				settings={{ textSpeed: 0 }}
+				titleScreen={{ heading: "The Café" }}
+			/>,
+		);
+		let container = result.$("[data-novel-title]")!.parentElement;
+		button(result, "new-game")!.click();
+		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
+		let target: Element | undefined;
+		vi.spyOn(HTMLElement.prototype, "requestFullscreen").mockImplementation(async function (
+			this: HTMLElement,
+		) {
+			target = this;
+		});
+		await userEvent.click(result.$('[data-novel-menu] [data-action="fullscreen"]')!);
+		expect(target).toBe(container);
+		expect(result.$("[data-novel-player]")!.parentElement).toBe(container);
 	});
 
 	test("leaves a play for the title from the quick menu", async () => {

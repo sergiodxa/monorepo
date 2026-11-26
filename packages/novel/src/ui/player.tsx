@@ -579,13 +579,17 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		void handle.update();
 	}
 
-	/** Enters or leaves full screen with the player as the full-screen element. */
+	/**
+	 * Enters or leaves full screen. A player that returns to a title screen fills the screen with
+	 * the box it shares with the title, so going back to the title stays in full screen.
+	 */
 	function toggleFullscreen(): void {
 		if (document.fullscreenElement !== null) {
 			void document.exitFullscreen().catch(() => undefined);
 			return;
 		}
-		void root?.requestFullscreen().catch(() => undefined);
+		let target = handle.props.returnsToTitle === true ? root?.parentElement : root;
+		void target?.requestFullscreen().catch(() => undefined);
 	}
 
 	let members: Omit<NovelPlayer.Context, keyof EventTarget> = {
