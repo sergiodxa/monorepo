@@ -7,7 +7,7 @@ section:
 order: 12
 lastUpdated: 2026-11-24
 outcomes:
-    - "How a title screen places the library screens, starts a chapter replay and keeps an encyclopedia"
+    - "How a title screen places the library screens, starts a chapter replay and shows the cast"
     - "How to run the dev tools beside the player in development only"
     - "What the offline worker caches, and how a page registers it"
 ---
@@ -22,8 +22,8 @@ npm add @sdxc/novel remix
 
 ## Show the extras on a title screen
 
-The player's Extras menu holds Memories, the gallery, the characters screen, the music room, the
-endings list, chapter select and scene replay, all read from persistent data. Each is also a component a title screen
+The player's Extras menu holds Memories, the encyclopedia (with the cast, the gallery and the
+music room), the endings list, chapter select and scene replay, all read from persistent data. Each is also a component a title screen
 places itself, given the novel and the stored `persistent` value. Picking a chapter dispatches a
 bubbling `novel:replay` event with the `scene` to start and its `scope`:
 
@@ -85,50 +85,8 @@ export const CAST = cast({
 A character stays `???` on the screen until they are `known` or a scene introduces them, and
 each sprite stays locked until the stage shows the character in it once, in any playthrough.
 
-A `bio` lets a character's page grow as the story reveals them. Declare its sections by id, and
-teach each one where the story reveals it with `ctx.learn(CAST.mika, "past")`:
-
-```typescript {% title="resources/novel/declarations.ts" %}
-mika: character({
-	name: "cast.mika",
-	description: "cast.mikaAbout",
-	bio: {
-		family: { title: "bio.mika.family", body: "bio.mika.familyText", known: true },
-		past: { title: "bio.mika.past", body: "bio.mika.pastText" },
-	},
-	sprites: { smile: mikaSmile },
-}),
-```
-
-## Keep an encyclopedia
-
-The Encyclopedia gathers what the reader has learned in one book: the cast, the gallery, the
-music, and topics you declare, such as places or terms. Declare the entries and pass them to
-`createNovel`:
-
-```typescript {% title="resources/novel/declarations.ts" %}
-export const LORE = encyclopedia({
-	places: topic({
-		name: "lore.places",
-		entries: {
-			pier: entry({
-				title: "lore.pier.title",
-				summary: "lore.pier.summary",
-				body: "lore.pier.body",
-				sections: [
-					{ title: "lore.pier.historyTitle", body: "lore.pier.history" },
-				],
-			}),
-		},
-	}),
-});
-```
-
-An entry stays hidden until a scene teaches it with `ctx.learn(LORE.places.entries.pier)`, which
-also shows a "New entry" toast. `known: true` opens it from the first play. The player offers
-the Encyclopedia in its extras menu and on the title screen, and a named speaker's name on the
-textbox opens it on them. `<Encyclopedia pages={["characters", "places", "gallery"]} />` picks
-the pages and their order.
+Give a character a `bio` to let their page grow as the story reveals them, and declare places and
+terms the reader learns: [Keep an encyclopedia](/docs/visual-novels/encyclopedia) covers both.
 
 ## Edit scenes with the dev tools
 
@@ -244,6 +202,8 @@ test("the offline cache covers the café", () => {
 
 - [`@sdxc/novel`](/api/novel) — the dev tools' API, the offline worker's options and every
   library screen.
+- [Keep an encyclopedia](/docs/visual-novels/encyclopedia) — entries and character bios the
+  reader fills in as they play.
 - [Make your first novel](/docs/visual-novels/first-novel) — back to the start of the section.
 - [Generated audio and images](/docs/visual-novels/generated-audio-and-images) — the previous
   guide.
