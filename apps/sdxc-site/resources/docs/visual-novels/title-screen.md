@@ -5,7 +5,7 @@ section:
     title: Visual novels
     order: 4.7
 order: 2.5
-lastUpdated: 2026-11-24
+lastUpdated: 2026-11-25
 outcomes:
     - "How to open the novel on a title screen, play what the reader starts and return after it ends"
     - "Where the logo, the background, the portrait and the footer go"
@@ -56,10 +56,12 @@ unlocked, and a setting changed on the title carries into the play:
 The buttons read the player's `labels`, so `newGame`, `continue` and `titleMenu` translate with
 the rest of the interface.
 
-## Come back after an ending
+## Come back to the title
 
 When the reader reaches an ending, the ending screen shows its name with a **Back to title**
-button (`labels.backToTitle`). A chapter or scene replay begun on the title goes back to it as
+button (`labels.backToTitle`). During a play, the quick menu's **Title** button
+(`labels.toTitle`) leaves for the title at any time, and **Continue** resumes from the newest
+save. A chapter or scene replay begun on the title goes back to it as
 soon as it ends. The title then reflects the play: **Continue** resumes the newest save,
 autosaves included, and the library screens show what the play unlocked.
 

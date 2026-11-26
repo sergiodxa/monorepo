@@ -5,9 +5,9 @@ section:
     title: Visual novels
     order: 4.7
 order: 2
-lastUpdated: 2026-11-24
+lastUpdated: 2026-11-25
 outcomes:
-    - "How to keep saves, settings and persistent data in the browser, and open on a title screen"
+    - "How to keep saves, settings and persistent data in the browser, and what the settings screen offers"
     - "How to lock a menu option until an earlier playthrough reached an ending"
     - "When to raise the novel's version so older saves upgrade"
 ---
@@ -57,6 +57,38 @@ Render `StoredGame` inside the `IntlProvider` of the `Game` entry from
 the browser, since the server has none. A private window or a full quota reads as nothing stored
 and the play goes on unsaved. The player reads `start` once, so mount a new player, with a new
 `key`, to start another play.
+
+## Let the reader change the settings
+
+Escape, or **Settings** in the quick menu, opens the settings screen, and every change reaches
+`sync()` as one `novel:settings` event. It sorts the settings into tabs:
+
+- **Text**: text speed (characters a second, or instantly), the auto-mode delay, what skip passes
+  through (read text only, or all of it) and the text size. A sample line types at the chosen
+  speed, so the reader sees it before playing.
+- **Sound**: the master volume and one per channel (music, ambience, sounds, voices).
+- **Accessibility**: a dyslexia-friendly typeface and reading every line aloud.
+
+Each row shows the setting's current value beside its control, and **Reset settings** restores
+`DEFAULT_SETTINGS`. Every word on the screen is a label (`settingsText`, `textPreview`,
+`resetSettings`, `back` and the rest), so it translates through the player's `labels`, and it
+reads the `--novel-settings-*` variables for its tabs, page, dividers and preview:
+
+```tsx {% title="resources/components/game.tsx" %}
+<NovelPlayer.Default
+	novel={novel}
+	{...stored}
+	labels={{ settingsSound: "Audio", textPreview: "The bell over the door rings." }}
+	mix={[
+		STORAGE.sync(),
+		css({
+			"--novel-settings-panel-background": "#fbf4e8",
+			"--novel-settings-tab-selected-background": "#e86a92",
+			"--novel-settings-tab-selected-color": "#fff",
+		}),
+	]}
+/>
+```
 
 ## Open on a title screen
 
