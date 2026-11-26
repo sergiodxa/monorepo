@@ -12,6 +12,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type {
 	AssetDeclaration,
 	CharacterDeclaration,
+	EntryDeclaration,
 	InteractionDeclaration,
 	LayerImage,
 	SceneDeclaration,
@@ -79,6 +80,12 @@ export interface ClearDirective {
 export interface IntroduceDirective {
 	type: "introduce";
 	character: CharacterDeclaration;
+}
+
+/** Makes the reader learn an encyclopedia entry, which opens in the encyclopedia from then on. */
+export interface LearnDirective {
+	type: "learn";
+	entry: EntryDeclaration;
 }
 
 /** Changes the sprite or layers a character shows. */
@@ -270,6 +277,7 @@ export type Directive =
 	| ExitDirective
 	| ClearDirective
 	| IntroduceDirective
+	| LearnDirective
 	| ExpressDirective
 	| MoveDirective
 	| SayDirective
@@ -470,6 +478,11 @@ export interface SceneDirectives<State = NovelState, Tools = PlayTools> {
 	 * the unknown-name label. The play's state keeps it, so saves, loads and rollbacks agree.
 	 */
 	introduce(character: CharacterDeclaration): IntroduceDirective;
+	/**
+	 * Opens an encyclopedia entry for the reader, in this play and every later one; the player
+	 * announces it the first time.
+	 */
+	learn(entry: EntryDeclaration): LearnDirective;
 	/** Changes the sprite or layers a character shows. */
 	express<Character extends StagedCharacter>(
 		character: Character,
@@ -642,6 +655,9 @@ const builders: SceneDirectives = {
 	},
 	introduce(character) {
 		return { type: "introduce", character };
+	},
+	learn(entry) {
+		return { type: "learn", entry };
 	},
 	express(character, options) {
 		let picked = options as {

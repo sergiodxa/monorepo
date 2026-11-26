@@ -266,6 +266,19 @@ character({
 
 Names every character by its key, which the stage and saves refer to it by.
 
+#### `encyclopedia(tree: Record<string, TopicLeaf>): EncyclopediaMap`, `topic(options): TopicLeaf` and `entry(options: EntryOptions): EntryLeaf`
+
+Declares the encyclopedia: topics such as places or magic, each with entries the reader learns as the story goes. An entry has a `title`, an optional `summary` line, an opening `body`, titled `sections`, an `image`, and `known: true` for common knowledge open from the first play. Every text is a message key, and a blank line in a message starts a new paragraph. An entry's id is `<topic>.<entry>`, and it stays hidden until a scene runs `ctx.learn(entry)`:
+
+```ts
+export const LORE = encyclopedia({
+	places: topic({
+		name: "lore.places",
+		entries: { pier: entry({ title: "lore.pier.title", body: "lore.pier.body" }) },
+	}),
+});
+```
+
 #### `assets(tree: AssetTree): AssetMap`
 
 Names every file by its group and key (`backgrounds.cafe`). Groups are `backgrounds`, `images` (full-screen CGs), `music`, `ambience` and `sounds`; a file is a URL, a `Blob`, or a map of locale to either, and a sound may be `{ src, caption }`. A string is loaded from its URL; a `Blob` is a file the page already holds, such as audio rendered in the browser, and plays or draws without a fetch. Saves keep the id, so a save loaded after a rebuild draws the file's current declaration.
@@ -323,6 +336,7 @@ Builds a scene's directives once, when its module loads. The scene is plain data
 - `hide(asset, { transition? })`: removes the full-screen image
 - `enter(character, { at, expression? | layers, transition? })`: puts a character in a column, showing a named sprite (the first by default) or a variant for every layer
 - `exit(character, { transition? })`: takes a character off stage
+- `learn(entry)`: opens an encyclopedia entry in this play and every later one; the player announces the first time with a "New entry" toast
 - `introduce(character)`: names a character from the next line on; earlier lines showed the `unknownName` label. The play's state keeps the characters introduced, so saves, loads, rollbacks and the backlog show each line's speakers as they were
 - `clear({ transition? })`: takes every character off stage at once, each leaving with the transition, so a chapter's last scene can hand the next one an empty stage
 - `express(character, { expression | layers, transition? })`: changes the sprite, or any of the layers
@@ -358,6 +372,7 @@ Creates a novel from its declarations and story options; presentation settings b
 - `options.cast`: The `cast()` map, which a loaded save redraws characters from
 - `options.assets`: The `assets()` map, which a loaded save re-reads file URLs from
 - `options.interactions`: The `interactions()` map
+- `options.encyclopedia`: The `encyclopedia()` map, whose entries scenes `learn`
 - `options.state`: The state schema; it gives a new play its defaults and validates every loaded save
 - `options.extensions`: Story extensions, each with a unique name that holds no dot and matches no built-in directive, `notify` included (`createNovel` throws otherwise)
 - `options.initial`: The scene a new play starts in
@@ -493,7 +508,7 @@ Given `titleScreen={{ heading, background?, art?, footer?, screens? }}` it opens
 
 #### `NovelPlayer.Title`
 
-The title screen, filling its box: `heading` (text, or a logo `<img>`/`<svg>` scaled to `--novel-title-logo-*`), a full-bleed `background` (or the `--novel-title-background` variable), a foreground `art` anchored at `--novel-title-art-inset`, New game, Continue from the newest of `saves` with that save's scene and date (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Gallery`, `Characters`, `Memories`), the settings screen, and a `footer` under the menu. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable, and every part carries a `data-novel-title-*` attribute (`heading`, `menu`, `button` with `data-action`, `label`, `detail`, `footer`, `background`, `art`) that the title's own `mix` can decorate:
+The title screen, filling its box: `heading` (text, or a logo `<img>`/`<svg>` scaled to `--novel-title-logo-*`), a full-bleed `background` (or the `--novel-title-background` variable), a foreground `art` anchored at `--novel-title-art-inset`, New game, Continue from the newest of `saves` with that save's scene and date (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Encyclopedia`, `Memories`), the settings screen, and a `footer` under the menu. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable, and every part carries a `data-novel-title-*` attribute (`heading`, `menu`, `button` with `data-action`, `label`, `detail`, `footer`, `background`, `art`) that the title's own `mix` can decorate:
 
 ```tsx
 <NovelPlayer.Title
@@ -657,6 +672,10 @@ How the reader experiences the play, kept in the browser and never in the game s
 #### `Memories`, `Gallery`, `MusicRoom` and `EndingsList`
 
 The library screens. Inside a player they read `novel` and the persistent data from its context; on a title screen, pass `novel` and the stored `persistent` value (keep one value while the screen shows), with optional `labels`. `Memories` lists the lines read, scene by scene, opening its scrolling box at the newest one, and replays a voiced line's voice through the player's mixer, or outside one a mixer it makes for itself (a `novel:replay-voice` listener may prevent that and play it another way); `Gallery` lists the CGs, opening an unlocked one full size; `MusicRoom` plays unlocked tracks through an optional `mixer`, with `titles` as message keys by asset id; `EndingsList` counts the endings reached. Lazily mapped scenes load as a screen opens. When the story has arcs, `Memories` heads each arc's chapters with its title in a `section` carrying `data-arc`.
+
+#### `Encyclopedia`
+
+One book for everything the reader has learned. Pages down its edge open every learned entry (with its topic beside it), the cast as `Characters` shows it, each topic, the CGs and the music; `pages` picks and orders them (`all`, `characters`, a topic id, `topics` for the remaining topics, `gallery`, `music`), and `titles` names the music room's tracks. A topic lists its learned entries with a search field beside the open article: its topic, title, summary, a Contents disclosure of its sections, the text, then each numbered section. It is the default library screen of `NovelPlayer.Default` and the title screen, opens on the character `showCharacter()` asked for, and a speaker's name in the textbox opens it. Its parts carry `data-novel-encyclopedia`, `-page`, `-content`, `-search`, `-article`, `-topic`, `-summary` and `-contents`, and it reads the settings screen's tab and panel variables plus `--novel-encyclopedia-page-padding` and `-current-background`/`-current-color` for the open entry.
 
 #### `Characters`
 

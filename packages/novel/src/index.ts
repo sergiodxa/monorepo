@@ -27,6 +27,11 @@ export type {
 	CharacterImage,
 	CharacterLeaf,
 	CharacterOptions,
+	EncyclopediaMap,
+	EntryDeclaration,
+	EntryLeaf,
+	EntryOptions,
+	EntrySection,
 	InteractionDeclaration,
 	InteractionLeaf,
 	InteractionMap,
@@ -37,6 +42,8 @@ export type {
 	SceneMap,
 	SceneTree,
 	SpriteImage,
+	TopicDeclaration,
+	TopicLeaf,
 } from "./declarations.js";
 export type {
 	BackDirective,
@@ -182,10 +189,13 @@ export {
 	chapter,
 	chapterOf,
 	character,
+	encyclopedia,
+	entry,
 	interaction,
 	interactions,
 	scene,
 	scenes,
+	topic,
 } from "./declarations.js";
 export { createScene } from "./directives.js";
 export { NovelError } from "./errors.js";

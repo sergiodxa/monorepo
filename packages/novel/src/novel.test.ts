@@ -39,11 +39,14 @@ import {
 	character,
 	createNovel,
 	createScene,
+	encyclopedia,
+	entry,
 	interaction,
 	interactions,
 	lazy,
 	scene,
 	scenes,
+	topic,
 } from "./index.js";
 
 /** The fixture's story state; every field has a default, so a new play starts from `{}`. */
@@ -64,6 +67,20 @@ const EN = {
 		mikaAbout: "Runs the café by the station.",
 	},
 	chapters: { prologue: "Prologue" },
+	lore: {
+		places: "Places",
+		terms: "Terms",
+		cafe: "The café",
+		cafeBody: "Open from dawn.",
+		pier: "The pier",
+		pierBody: "Where the ferry lands.",
+		lost: "Lost",
+		cafeMotto: "Coffee by the station.",
+		history: "History",
+		historyBody: "Built a century ago.",
+		secret: "The secret",
+		tab: "A tab",
+	},
 	titles: { opening: "Opening", cafe: "The café" },
 	opening: {
 		welcome: "Welcome to the café.",
@@ -920,6 +937,7 @@ describe("sprites seen", () => {
 			images: ["images.letter"],
 			music: [],
 			sprites: [],
+			entries: [],
 		});
 	});
 });
@@ -1077,7 +1095,7 @@ describe("replay", () => {
 			chosen: [],
 			endings: ["endings.bad"],
 			chapters: [],
-			unlocked: { images: [], music: [], sprites: [] },
+			unlocked: { images: [], music: [], sprites: [], entries: [] },
 		});
 		let names = new Set(log.map((entry) => entry.name));
 		expect(names).toEqual(new Set(["scene", "line", "persist"]));
@@ -1185,6 +1203,7 @@ describe("persistent data", () => {
 			images: ["images.letter"],
 			music: ["music.chill"],
 			sprites: ["mika:smile", "ren:body=school,face=grin", "mika:neutral"],
+			entries: [],
 		});
 	});
 
@@ -1211,7 +1230,7 @@ describe("persistent data", () => {
 			chosen: [],
 			endings: [],
 			chapters: [],
-			unlocked: { images: [], music: [], sprites: [] },
+			unlocked: { images: [], music: [], sprites: [], entries: [] },
 			introduced: [],
 		});
 	});
@@ -1477,6 +1496,67 @@ describe("events", () => {
 
 /** The fishing outputs exploration tries: a poor catch and a good one. */
 const FISHING = { fishing: () => [{ caught: 1 }, { caught: 4 }] };
+
+describe("encyclopedia", () => {
+	const LORE = encyclopedia({
+		places: topic({
+			name: "lore.places",
+			entries: {
+				cafe: entry({ title: "lore.cafe", body: "lore.cafeBody", known: true }),
+				pier: entry({
+					title: "lore.pier",
+					sections: [{ title: "lore.pier", body: "lore.pierBody" }],
+				}),
+			},
+		}),
+	});
+
+	test("names every topic and entry by its keys", () => {
+		expect(LORE.places.id).toBe("places");
+		expect(LORE.places.entries.pier.id).toBe("places.pier");
+		expect(LORE.places.entries.pier.topic).toBe("places");
+		expect(LORE.places.entries.cafe.known).toBe(true);
+		expectTypeOf(LORE.places.entries.pier.id).toEqualTypeOf<"places.pier">();
+	});
+
+	test("records a learned entry once across plays and announces it the first time", async () => {
+		let novel = oneScene(
+			(ctx) => [
+				ctx.learn(LORE.places.entries.pier),
+				ctx.narrate("opening.welcome"),
+				ctx.learn(LORE.places.entries.pier),
+				ctx.narrate("opening.lucky"),
+			],
+			{ encyclopedia: LORE },
+		);
+		let play = createTestPlay(novel);
+		await play.advance();
+		await play.advance();
+		expect(play.persistent.unlocked.entries).toEqual(["places.pier"]);
+		expect(play.events.filter((event) => event.type === "unlock")).toEqual([
+			{ type: "unlock", payload: { kind: "entry", id: "places.pier" } },
+		]);
+	});
+
+	test("reports an entry the novel does not declare", async () => {
+		let other = encyclopedia({
+			terms: topic({ name: "lore.terms", entries: { lost: entry({ title: "lore.lost" }) } }),
+		});
+		let novel = oneScene(
+			(ctx) => [ctx.learn(other.terms.entries.lost), ctx.narrate("opening.welcome")],
+			{
+				encyclopedia: LORE,
+			},
+		);
+		let report = await check(novel);
+		expect(report.problems).toContainEqual({
+			code: "missing-asset",
+			severity: "error",
+			scene: "prologue.unwritten",
+			asset: "encyclopedia.terms.lost",
+		});
+	});
+});
 
 describe("check", () => {
 	test("reports the fixture's unmapped jump and the scenes nothing reaches", async () => {

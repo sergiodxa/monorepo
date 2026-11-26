@@ -17,7 +17,9 @@ import type {
 	AssetSource,
 	ChapterInfo,
 	CharacterDeclaration,
+	EntryDeclaration,
 	SceneDeclaration,
+	TopicDeclaration,
 } from "../declarations.js";
 import type { Directive } from "../directives.js";
 import type { Speaker } from "../frames.js";
@@ -106,6 +108,19 @@ export interface LibraryCharacter {
 	looks: LibraryLook[];
 }
 
+/** An encyclopedia entry and whether the reader can open it. */
+export interface LibraryEntry {
+	entry: EntryDeclaration;
+	/** True for an entry declared `known`, or one a scene taught in any play. */
+	learned: boolean;
+}
+
+/** An encyclopedia topic with its entries in declaration order. */
+export interface LibraryTopic {
+	topic: TopicDeclaration;
+	entries: LibraryEntry[];
+}
+
 /** An ending known from the scenes, or reached in an earlier playthrough. */
 export interface LibraryEnding {
 	/** The ending's message key. */
@@ -123,6 +138,8 @@ export interface NovelLibrary {
 	music: LibraryAsset[];
 	/** The cast in declaration order. */
 	characters: LibraryCharacter[];
+	/** The encyclopedia's topics in declaration order. */
+	topics: LibraryTopic[];
 	/** Every ending key the mapped scenes hold, then any reached one they no longer hold. */
 	endings: LibraryEnding[];
 }
@@ -244,6 +261,15 @@ export async function readLibrary(
 			character,
 			met: character.known || record.introduced.includes(character.id),
 			looks: looks(character, record.unlocked.sprites),
+		})),
+		topics: [...internals.topics.values()].map((topic) => ({
+			topic,
+			entries: [...internals.entries.values()]
+				.filter((entry) => entry.topic === topic.id)
+				.map((entry) => ({
+					entry,
+					learned: entry.known || record.unlocked.entries.includes(entry.id),
+				})),
 		})),
 		endings: [...endings].map((key) => ({ key, reached: record.endings.includes(key) })),
 	};

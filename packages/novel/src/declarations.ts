@@ -1,7 +1,7 @@
 /**
  * The novel's declarations: `scenes` with their chapters, the `cast`, the `assets` scenes draw
- * on, and the app-rendered `interactions`. They hold data and types alone, so a page, a test or
- * a check imports them without loading a single scene module.
+ * on, the app-rendered `interactions` and the `encyclopedia`. They hold data and types alone, so
+ * a page, a test or a check imports them without loading a single scene module.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,6 +34,9 @@ const ASSET = Symbol.for("@sdxc/novel.asset");
 
 /** Brands a named interaction. */
 const INTERACTION = Symbol.for("@sdxc/novel.interaction");
+
+/** Brands an encyclopedia entry and its topic. */
+const ENTRY = Symbol.for("@sdxc/novel.entry");
 
 /**
  * One media file, or a map of locale to file for media with text in it. A string is a URL to
@@ -630,6 +633,205 @@ export function interactions<const Tree extends Readonly<Record<string, Interact
 		map[name] = { [INTERACTION]: "declaration", name, input: leaf.input, output: leaf.output };
 	}
 	return map as InteractionMap<Tree>;
+}
+
+/** A titled part of an encyclopedia entry. */
+export interface EntrySection {
+	/** The heading's message key. */
+	readonly title: LineKey;
+	/** The text's message key; a blank line in the message starts a new paragraph. */
+	readonly body: LineKey;
+}
+
+/** The options `entry()` takes. */
+export interface EntryOptions {
+	/** The title's message key, which the list and the article show. */
+	title: LineKey;
+	/** A line under the title, such as a motto or a one-sentence summary. */
+	summary?: LineKey;
+	/** The article's opening text; a blank line in the message starts a new paragraph. */
+	body?: LineKey;
+	/** Titled parts after the opening text, listed as the article's contents. */
+	sections?: readonly EntrySection[];
+	/** A picture shown beside the article. */
+	image?: AssetSource;
+	/**
+	 * Opens the entry from the first play, for common knowledge; any other entry stays hidden
+	 * until a scene runs `learn` for it.
+	 * @default false
+	 */
+	known?: boolean;
+}
+
+/** An entry as `entry()` declares it, before `encyclopedia()` names it. */
+export interface EntryLeaf {
+	readonly [ENTRY]: "entry-leaf";
+	readonly title: string;
+	readonly summary?: string;
+	readonly body?: string;
+	readonly sections: readonly EntrySection[];
+	readonly image?: AssetSource;
+	readonly known: boolean;
+}
+
+/**
+ * A named encyclopedia entry; `id` is `<topic>.<entry>`, which persistent data records once the
+ * reader learns it.
+ *
+ * @template Id - Its topic and key.
+ */
+export interface EntryDeclaration<Id extends string = string> extends Omit<
+	EntryLeaf,
+	typeof ENTRY
+> {
+	readonly [ENTRY]: "entry";
+	readonly id: Id;
+	/** The id of the topic it belongs to. */
+	readonly topic: string;
+}
+
+/** A topic as `topic()` declares it, before `encyclopedia()` names it. */
+export interface TopicLeaf<
+	Entries extends Readonly<Record<string, EntryLeaf>> = Readonly<Record<string, EntryLeaf>>,
+> {
+	readonly [ENTRY]: "topic-leaf";
+	/** The topic's name's message key, which the encyclopedia's tabs show. */
+	readonly name: string;
+	/** An icon drawn on the topic's tab. */
+	readonly icon?: AssetSource;
+	readonly entries: Entries;
+}
+
+/**
+ * A named topic, holding its entries in declaration order.
+ *
+ * @template Entries - Its entries, each named.
+ * @template Id - Its key in the encyclopedia.
+ */
+export interface TopicDeclaration<
+	Entries = Readonly<Record<string, EntryDeclaration>>,
+	Id extends string = string,
+> {
+	readonly [ENTRY]: "topic";
+	readonly id: Id;
+	readonly name: string;
+	readonly icon?: AssetSource;
+	readonly entries: Entries;
+}
+
+/**
+ * Declares an encyclopedia entry.
+ *
+ * @param options - Its title, text, picture and whether the reader knows it from the start.
+ * @returns A leaf for {@link topic} to hold.
+ * @example entry({ title: "lore.hogsmeade.title", body: "lore.hogsmeade.body" })
+ */
+export function entry(options: EntryOptions): EntryLeaf {
+	let leaf: EntryLeaf = {
+		[ENTRY]: "entry-leaf",
+		title: options.title,
+		sections: options.sections ?? [],
+		known: options.known === true,
+	};
+	if (options.summary !== undefined) leaf = { ...leaf, summary: options.summary };
+	if (options.body !== undefined) leaf = { ...leaf, body: options.body };
+	return options.image === undefined ? leaf : { ...leaf, image: options.image };
+}
+
+/**
+ * Declares a topic of the encyclopedia, such as places or magic, with its entries.
+ *
+ * @param options - Its name, an icon, and its entries by key.
+ * @returns A leaf for {@link encyclopedia} to name.
+ * @example topic({ name: "lore.places", entries: { hogsmeade: entry({ title: "lore.hogsmeade.title" }) } })
+ */
+export function topic<const Entries extends Readonly<Record<string, EntryLeaf>>>(options: {
+	name: LineKey;
+	icon?: AssetSource;
+	entries: Entries;
+}): TopicLeaf<Entries> {
+	let leaf: TopicLeaf<Entries> = {
+		[ENTRY]: "topic-leaf",
+		name: options.name,
+		entries: options.entries,
+	};
+	return options.icon === undefined ? leaf : { ...leaf, icon: options.icon };
+}
+
+/**
+ * The map `encyclopedia()` returns, every topic and entry carrying its id.
+ *
+ * @template Tree - The topics it was built from.
+ */
+export type EncyclopediaMap<Tree> = {
+	readonly [Topic in keyof Tree & string]: Tree[Topic] extends TopicLeaf<infer Entries>
+		? TopicDeclaration<
+				{ readonly [Key in keyof Entries & string]: EntryDeclaration<`${Topic}.${Key}`> },
+				Topic
+			>
+		: never;
+};
+
+/**
+ * Names every topic and entry of the encyclopedia by its keys, so a scene can `learn` an entry
+ * and persistent data records it as `<topic>.<entry>`.
+ *
+ * @param tree - The topics, in the order the encyclopedia lists them.
+ * @returns The same map with every topic and entry named.
+ * @example export default encyclopedia({ places: topic({ name: "lore.places", entries: { … } }) });
+ */
+export function encyclopedia<const Tree extends Readonly<Record<string, TopicLeaf>>>(
+	tree: Tree,
+): EncyclopediaMap<Tree> {
+	let map: Record<string, TopicDeclaration> = {};
+	for (let [id, leaf] of Object.entries(tree)) {
+		let entries: Record<string, EntryDeclaration> = {};
+		for (let [key, item] of Object.entries(leaf.entries)) {
+			entries[key] = { ...item, [ENTRY]: "entry", id: `${id}.${key}`, topic: id };
+		}
+		map[id] = { ...leaf, [ENTRY]: "topic", id, entries };
+	}
+	return map as EncyclopediaMap<Tree>;
+}
+
+/**
+ * Reports whether a value is a named encyclopedia entry.
+ *
+ * @param value - Anything found in an encyclopedia.
+ * @returns `true` for an entry `encyclopedia()` named.
+ */
+export function isEntryDeclaration(value: unknown): value is EntryDeclaration {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		(value as Record<symbol, unknown>)[ENTRY] === "entry"
+	);
+}
+
+/**
+ * Reports whether a value is a named encyclopedia topic.
+ *
+ * @param value - Anything found in an encyclopedia.
+ * @returns `true` for a topic `encyclopedia()` named.
+ */
+export function isTopicDeclaration(value: unknown): value is TopicDeclaration {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		(value as Record<symbol, unknown>)[ENTRY] === "topic"
+	);
+}
+
+/** A declaration a scene can name and the novel may lack. */
+export type SceneReference = AssetDeclaration | CharacterDeclaration | EntryDeclaration;
+
+/**
+ * Names a declaration as problems report it: an asset by its id, a character as `cast.<id>` and
+ * an entry as `encyclopedia.<topic>.<entry>`.
+ */
+export function referenceName(declaration: SceneReference): string {
+	if (isEntryDeclaration(declaration)) return `encyclopedia.${declaration.id}`;
+	return "kind" in declaration ? declaration.id : `cast.${declaration.id}`;
 }
 
 /**

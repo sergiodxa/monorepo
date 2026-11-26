@@ -261,7 +261,7 @@ export class DevTools {
 		if (all || options.seen === true) persistent.seen = {};
 		if (all || options.chosen === true) persistent.chosen = [];
 		if (all || options.unlocked === true)
-			persistent.unlocked = { images: [], music: [], sprites: [] };
+			persistent.unlocked = { images: [], music: [], sprites: [], entries: [] };
 		if (all || options.endings === true) persistent.endings = [];
 		if (all || options.chapters === true) persistent.chapters = [];
 		if (all || options.introduced === true) persistent.introduced = [];

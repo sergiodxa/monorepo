@@ -274,7 +274,7 @@ describe("reset()", () => {
 			chosen: [],
 			endings: [],
 			chapters: [],
-			unlocked: { images: [], music: [], sprites: [] },
+			unlocked: { images: [], music: [], sprites: [], entries: [] },
 			introduced: [],
 		});
 	});

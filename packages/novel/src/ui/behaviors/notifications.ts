@@ -18,7 +18,7 @@ export interface NotificationText {
 	text: string;
 	/**
 	 * What it reports, set as `data-kind` on the toast for a theme to style: `"image"`, `"music"`,
-	 * `"ending"` and `"notify"` from the player, anything a game pushes.
+	 * `"entry"`, `"ending"` and `"notify"` from the player, anything a game pushes.
 	 *
 	 * @default "custom"
 	 */

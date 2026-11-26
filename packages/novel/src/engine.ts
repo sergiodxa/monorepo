@@ -22,6 +22,7 @@ import type {
 	CharacterDeclaration,
 	InteractionDeclaration,
 	SceneDeclaration,
+	SceneReference,
 } from "./declarations.js";
 import type { ChooseDirective, Directive, PickDirective, StoredCallback } from "./directives.js";
 import type { ChoiceEvent, Emit, LineEvent, NotifyEvent } from "./events.js";
@@ -49,6 +50,7 @@ import type {
 import type { NovelPersistent, NovelState, PlayTools, StateRecord } from "./types.js";
 
 import { directiveAt, enterOption, menuAnchor, nextPath, optionOf } from "./anchors.js";
+import { referenceName } from "./declarations.js";
 import { NovelError } from "./errors.js";
 import { copyKeepingFiles } from "./files.js";
 import { REPLY } from "./frames.js";
@@ -76,8 +78,8 @@ export interface NovelRuntime {
 	scene(name: string): SceneDeclaration | undefined;
 	position(position: Position): Fraction;
 	voice(speaker: string, key: string): AssetSource | null;
-	/** Reports whether the novel lacks an asset or a character a scene uses. */
-	missing(declaration: AssetDeclaration | CharacterDeclaration): boolean;
+	/** Reports whether the novel lacks an asset, a character or an entry a scene uses. */
+	missing(declaration: SceneReference): boolean;
 	/** The schema of an extension's lasting slice, or `undefined` when it keeps none. */
 	lasting(extension: string): StandardSchemaV1 | undefined;
 	/** The locales whose catalog lacks a message key. */
@@ -137,6 +139,7 @@ type Effect =
 	| { type: "unlock"; kind: "image" | "music"; id: string }
 	| { type: "introduce"; id: string }
 	| { type: "look"; id: string }
+	| { type: "learn"; id: string }
 	| { type: "line"; line: LineEvent }
 	| { type: "notify"; notify: NotifyEvent }
 	| { type: "remember"; extension: string; value: unknown }
@@ -357,6 +360,11 @@ export class PlayEngine {
 				return addOnce(persistent.introduced, effect.id);
 			case "look":
 				return addOnce(persistent.unlocked.sprites, effect.id);
+			case "learn": {
+				let added = addOnce(persistent.unlocked.entries, effect.id);
+				if (added) this.#runtime.emit("unlock", { kind: "entry", id: effect.id });
+				return added;
+			}
 			case "line": {
 				let id = recordKey(effect.line.scene, effect.line.key);
 				let values = structuredClone(effect.line.values ?? {}) as Persistent["seen"][string];
@@ -404,9 +412,9 @@ export class PlayEngine {
 	}
 
 	/** Queues a `missing-asset` problem when the novel does not declare what a directive uses. */
-	#declared(declaration: AssetDeclaration | CharacterDeclaration): void {
+	#declared(declaration: SceneReference): void {
 		if (!this.#runtime.missing(declaration)) return;
-		let subject = "kind" in declaration ? declaration.id : `cast.${declaration.id}`;
+		let subject = referenceName(declaration);
 		this.#problem(
 			new NovelError("missing-asset", `"${subject}" is not declared by the novel.`, { subject }),
 		);
@@ -629,6 +637,10 @@ export class PlayEngine {
 					work.introduced = [...work.introduced, directive.character.id];
 				}
 				this.#pending.push({ type: "introduce", id: directive.character.id });
+				return null;
+			case "learn":
+				this.#declared(directive.entry);
+				this.#pending.push({ type: "learn", id: directive.entry.id });
 				return null;
 			case "notify": {
 				let values =

@@ -29,14 +29,18 @@ import {
 	character,
 	createNovel,
 	createScene,
+	encyclopedia,
+	entry,
 	lazy,
 	scene,
 	scenes,
+	topic,
 } from "../index.js";
 
 import { AudioMixer } from "./audio.js";
 import { ChapterSelect, SceneReplay } from "./chapters.js";
 import { Characters } from "./characters.js";
+import { Encyclopedia } from "./encyclopedia.js";
 import { EndingsList } from "./endings.js";
 import { Gallery } from "./gallery.js";
 import { Memories } from "./memories.js";
@@ -77,7 +81,38 @@ const MESSAGES = {
 	},
 	cafe: { stay: "Stay", leave: "Leave" },
 	endings: { good: "Good ending", bad: "Bad ending" },
+	lore: {
+		places: "Places",
+		terms: "Terms",
+		cafe: "The café",
+		cafeMotto: "Coffee by the station.",
+		cafeBody: "Opens at dawn.",
+		pier: "The pier",
+		pierBody: "Where the ferry lands.",
+		history: "History",
+		historyBody: "Built a century ago.",
+		secret: "The secret",
+		tab: "A tab",
+	},
 };
+
+const LORE = encyclopedia({
+	places: topic({
+		name: "lore.places",
+		entries: {
+			cafe: entry({
+				title: "lore.cafe",
+				summary: "lore.cafeMotto",
+				body: "lore.cafeBody",
+				sections: [{ title: "lore.history", body: "lore.historyBody" }],
+				known: true,
+			}),
+			pier: entry({ title: "lore.pier", body: "lore.pierBody" }),
+			secret: entry({ title: "lore.secret" }),
+		},
+	}),
+	terms: topic({ name: "lore.terms", entries: { tab: entry({ title: "lore.tab" }) } }),
+});
 
 const SCENES = scenes({
 	prologue: chapter({
@@ -132,6 +167,7 @@ function fixture() {
 		scenes: SCENES,
 		cast: CAST,
 		assets: ASSETS,
+		encyclopedia: LORE,
 		state: STATE,
 		initial: SCENES.prologue.opening,
 		voice: ({ speaker, key }) => (speaker === "mika" ? `/voice/${key}.ogg` : undefined),
@@ -153,7 +189,7 @@ const STORED: Persistent = {
 	chosen: ["prologue.opening:cafe.leave"],
 	endings: ["endings.bad"],
 	chapters: ["prologue"],
-	unlocked: { images: ["images.letter"], music: ["music.chill"], sprites: [] },
+	unlocked: { images: ["images.letter"], music: ["music.chill"], sprites: [], entries: [] },
 	introduced: [],
 };
 
@@ -201,7 +237,7 @@ const ARC_STORED: Persistent = {
 	chosen: [],
 	endings: [],
 	chapters: ["y1.ch01"],
-	unlocked: { images: [], music: [], sprites: [] },
+	unlocked: { images: [], music: [], sprites: [], entries: [] },
 	introduced: [],
 };
 
@@ -399,6 +435,63 @@ describe("Characters", () => {
 	});
 });
 
+describe("Encyclopedia", () => {
+	/** The fixture's reader, who also learned the pier. */
+	const LEARNED = { ...STORED, unlocked: { ...STORED.unlocked, entries: ["places.pier"] } };
+
+	test("pages through the cast, the novel's topics, the CGs and the music", async () => {
+		let result = mount(<Encyclopedia novel={fixture()} persistent={LEARNED} />);
+		let book = await loaded(result, "[data-novel-encyclopedia]");
+		let tabs = [...book.querySelectorAll<HTMLButtonElement>("[data-novel-encyclopedia-page]")];
+		expect(tabs.map((tab) => tab.textContent)).toEqual([
+			"All entries",
+			"Characters",
+			"Places",
+			"Terms",
+			"Gallery",
+			"Music room",
+		]);
+		tabs[4]!.click();
+		await vi.waitFor(() => expect(book.querySelector("[data-novel-gallery]")).not.toBeNull());
+		tabs[1]!.click();
+		await vi.waitFor(() => expect(book.querySelector("[data-novel-characters]")).not.toBeNull());
+	});
+
+	test("lists only learned entries, with their topic on the page of every entry", async () => {
+		let result = mount(<Encyclopedia novel={fixture()} persistent={LEARNED} />);
+		let book = await loaded(result, "[data-novel-encyclopedia]");
+		let listed = () => [...book.querySelectorAll("[data-entry]")].map((item) => item.textContent);
+		expect(listed()).toEqual(["PlacesThe café", "PlacesThe pier"]);
+		let article = () => book.querySelector("[data-novel-encyclopedia-article]")!;
+		expect(article().querySelector("[data-novel-encyclopedia-topic]")!.textContent).toBe("Places");
+		expect(article().querySelector("h3")!.textContent).toBe("The café");
+		expect(article().querySelector("[data-novel-encyclopedia-summary]")!.textContent).toBe(
+			"Coffee by the station.",
+		);
+		expect(article().querySelector("[data-novel-encyclopedia-contents] li")!.textContent).toBe(
+			"History",
+		);
+		expect(article().querySelector("section h4")!.textContent).toBe("1. History");
+
+		await userEvent.fill(book.querySelector("[data-novel-encyclopedia-search]")!, "pier");
+		await vi.waitFor(() => expect(listed()).toEqual(["PlacesThe pier"]));
+		book.querySelector<HTMLButtonElement>('[data-entry="places.pier"]')!.click();
+		await vi.waitFor(() => expect(article().querySelector("h3")!.textContent).toBe("The pier"));
+	});
+
+	test("shows only the pages the game picks, in its order", async () => {
+		let result = mount(
+			<Encyclopedia novel={fixture()} persistent={STORED} pages={["terms", "places"]} />,
+		);
+		let book = await loaded(result, "[data-novel-encyclopedia]");
+		expect(
+			[...book.querySelectorAll("[data-novel-encyclopedia-page]")].map((tab) => tab.textContent),
+		).toEqual(["Terms", "Places"]);
+		expect(book.querySelector("[data-entry]")).toBeNull();
+		expect(book.textContent).toContain("Nothing learned yet.");
+	});
+});
+
 describe("MusicRoom", () => {
 	test("plays an unlocked track on the mixer's music channel and stops it", async () => {
 		let mixer = new AudioMixer(DEFAULT_SETTINGS.volume);
@@ -563,7 +656,7 @@ describe("NovelPlayer extras", () => {
 		expect(getComputedStyle(mika).translate).not.toBe("none");
 	});
 
-	test("opens the characters screen on a speaker from their name, once the story names them", async () => {
+	test("opens the encyclopedia on a speaker from their name, once the story names them", async () => {
 		let view = player();
 		await shows(view, "Welcome.");
 		view.next();
@@ -578,6 +671,9 @@ describe("NovelPlayer extras", () => {
 			).toBe("Mika"),
 		);
 		expect(view.result.$("[data-novel-characters]")!.closest("dialog")!.open).toBe(true);
+		expect(
+			view.result.$('[data-novel-encyclopedia-page="characters"]')!.getAttribute("aria-selected"),
+		).toBe("true");
 		expect(view.line()).toBe("Hello, Ada!");
 	});
 

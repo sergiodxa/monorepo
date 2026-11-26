@@ -16,6 +16,7 @@ import type { NovelLabels } from "./settings.js";
 
 import { ChapterSelect, SceneReplay } from "./chapters.js";
 import { Characters } from "./characters.js";
+import { Encyclopedia } from "./encyclopedia.js";
 import { EndingsList } from "./endings.js";
 import { Gallery } from "./gallery.js";
 import { Memories } from "./memories.js";
@@ -27,16 +28,23 @@ import { dialogSurface } from "./theme.js";
 /** A library screen the extras menu offers. */
 export type LibraryScreen = Extract<
 	NovelPlayer.Screen,
-	"memories" | "gallery" | "characters" | "music" | "endings" | "chapters" | "scenes"
+	| "memories"
+	| "gallery"
+	| "characters"
+	| "encyclopedia"
+	| "music"
+	| "endings"
+	| "chapters"
+	| "scenes"
 >;
 
 export namespace Extras {
 	/** Props {@link Extras} accepts. */
 	export interface Props extends Omit<TagProps<"span">, "children"> {
 		/**
-		 * The screens to offer, in menu order: `Memories`, `Gallery`, `Characters`, `MusicRoom`, `EndingsList`,
-		 * `ChapterSelect` and `SceneReplay`, each with the props it needs, such as a music room's
-		 * `titles`. Other children are left out.
+		 * The screens to offer, in menu order: `Memories`, `Encyclopedia`, `Gallery`, `Characters`,
+		 * `MusicRoom`, `EndingsList`, `ChapterSelect` and `SceneReplay`, each with the props it needs,
+		 * such as a music room's `titles`. Other children are left out.
 		 */
 		children?: RemixNode;
 	}
@@ -49,7 +57,7 @@ export interface ScreenDialogProps extends Pick<Dialog.Props, "mix"> {
 	closeLabel: string;
 	/** True while the dialog is open, which is when its content renders and loads. */
 	open: boolean;
-	/** Widens the dialog to fit a screen that shows art beside a list, as the characters screen does. */
+	/** Widens the dialog to fit a screen that shows art beside a list, as the encyclopedia does. */
 	wide?: boolean;
 	children?: RemixNode;
 }
@@ -66,6 +74,7 @@ function screenOf(type: unknown): Pick<OfferedScreen, "screen" | "label"> | unde
 	if (type === Memories) return { screen: "memories", label: "memories" };
 	if (type === Gallery) return { screen: "gallery", label: "gallery" };
 	if (type === Characters) return { screen: "characters", label: "characters" };
+	if (type === Encyclopedia) return { screen: "encyclopedia", label: "encyclopedia" };
 	if (type === MusicRoom) return { screen: "music", label: "musicRoom" };
 	if (type === EndingsList) return { screen: "endings", label: "endings" };
 	if (type === ChapterSelect) return { screen: "chapters", label: "chapterSelect" };
@@ -94,13 +103,13 @@ export function Extras(handle: Handle<Extras.Props>) {
 	let menuId = `${handle.id}-extras`.replace(/[^\w-]/g, "-");
 	let open: LibraryScreen | undefined;
 
-	/** Tracks which screen is open; closing the music room restores the frame's music. */
+	/** Tracks which screen is open; closing a screen that plays music restores the frame's. */
 	function toggle(screen: LibraryScreen, shown: boolean): void {
 		if (shown) open = screen;
 		else if (open === screen) {
 			open = undefined;
 			let frame = player.frame;
-			if (screen === "music" && frame !== undefined) {
+			if ((screen === "music" || screen === "encyclopedia") && frame !== undefined) {
 				player.mixer.reconcile(frame.audio, player.locale, true);
 			}
 		}
@@ -142,7 +151,7 @@ export function Extras(handle: Handle<Extras.Props>) {
 						title={labels[label]}
 						closeLabel={labels.close}
 						open={open === screen}
-						wide={screen === "characters"}
+						wide={screen === "characters" || screen === "encyclopedia"}
 						mix={on("toggle", (event) =>
 							toggle(screen, (event as ToggleEvent).newState === "open"),
 						)}

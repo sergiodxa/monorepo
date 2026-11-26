@@ -140,6 +140,18 @@ export interface NovelLabels {
 	imageUnlocked: string;
 	/** The toast shown when a track plays for the first time in any playthrough. */
 	musicUnlocked: string;
+	/** The toast shown when a scene teaches an encyclopedia entry, followed by its title. */
+	entryUnlocked: string;
+	/** The encyclopedia screen's name. */
+	encyclopedia: string;
+	/** The encyclopedia's page listing every entry of every topic. */
+	encyclopediaAll: string;
+	/** The encyclopedia's search field's placeholder and accessible name. */
+	search: string;
+	/** The disclosure listing an entry's sections. */
+	contents: string;
+	/** What a topic says before the reader has learned any of its entries. */
+	noEntries: string;
 	/** The toast shown on reaching an ending, followed by how many of all endings were reached. */
 	endingReached: string;
 	/** The title screen's button that starts a play from the beginning. */
@@ -213,6 +225,12 @@ export const DEFAULT_LABELS: NovelLabels = {
 	notifications: "Notifications",
 	imageUnlocked: "CG unlocked",
 	musicUnlocked: "Track unlocked",
+	entryUnlocked: "New entry",
+	encyclopedia: "Encyclopedia",
+	encyclopediaAll: "All entries",
+	search: "Search…",
+	contents: "Contents",
+	noEntries: "Nothing learned yet.",
 	endingReached: "Ending",
 	newGame: "New game",
 	continue: "Continue",

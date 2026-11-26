@@ -50,18 +50,16 @@ import { SaveSlots } from "./behaviors/save-slots.js";
 import { SettingsModel } from "./behaviors/settings.js";
 import { SkipModel } from "./behaviors/skip.js";
 import { ChapterSelect, SceneReplay } from "./chapters.js";
-import { Characters } from "./characters.js";
 import { ChoiceMenu } from "./choice-menu.js";
 import { gamepadControls, keyboardControls, touchControls } from "./controls.js";
 import { Director } from "./director.js";
+import { Encyclopedia } from "./encyclopedia.js";
 import { EndingsList } from "./endings.js";
 import { NovelEndingEvent, NovelSaveEvent, NovelSettingsEvent, NovelTitleEvent } from "./events.js";
 import { Extras } from "./extras.js";
-import { Gallery } from "./gallery.js";
 import { Interaction } from "./interaction.js";
 import { readLibrary } from "./library.js";
 import { Memories } from "./memories.js";
-import { MusicRoom } from "./music-room.js";
 import { Notifications } from "./notifications.js";
 import { QuickMenu } from "./quick-menu.js";
 import { SaveScreen } from "./saves.js";
@@ -86,6 +84,7 @@ export namespace NovelPlayer {
 		| "memories"
 		| "gallery"
 		| "characters"
+		| "encyclopedia"
 		| "music"
 		| "endings"
 		| "chapters"
@@ -243,7 +242,10 @@ export namespace NovelPlayer {
 		open(screen: Screen): void;
 		/** The character the characters screen opens on, as `showCharacter()` last asked. */
 		readonly character: string | undefined;
-		/** Opens the characters screen on `id`, when the player offers one. */
+		/**
+		 * Opens the encyclopedia's characters page on `id`, or else the characters screen, when the
+		 * player offers either.
+		 */
 		showCharacter(id: string): void;
 		/** Asks for the first stop again after an error stopped the play before it. */
 		retry(): void;
@@ -354,6 +356,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 				"memories",
 				"gallery",
 				"characters",
+				"encyclopedia",
 				"music",
 				"endings",
 				"chapters",
@@ -467,8 +470,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			}),
 			novel.on("unlock", (event, play) => {
 				if (!ours(play)) return;
-				let text = event.kind === "image" ? labels.imageUnlocked : labels.musicUnlocked;
-				notifications.push({ text, kind: event.kind });
+				notifications.push({ text: unlockedText(event.kind, event.id), kind: event.kind });
 			}),
 			novel.on("notify", (event, play) => {
 				if (ours(play))
@@ -481,6 +483,15 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		handle.signal.addEventListener("abort", () => {
 			for (let stop of stops) stop();
 		});
+	}
+
+	/** What the toast for an unlock says: "CG unlocked", or "New entry: The pier" for an entry. */
+	function unlockedText(kind: "image" | "music" | "entry", id: string): string {
+		if (kind === "image") return labels.imageUnlocked;
+		if (kind === "music") return labels.musicUnlocked;
+		let title = handle.props.novel[INTERNALS]().entries.get(id)?.title;
+		let t = intl(handle).t as (key: string) => string;
+		return title === undefined ? labels.entryUnlocked : `${labels.entryUnlocked}: ${t(title)}`;
 	}
 
 	/** Pushes "Ending 3/5": the endings reached in any playthrough out of every ending the scenes hold. */
@@ -642,7 +653,8 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		},
 		showCharacter: (id) => {
 			shownCharacter = id;
-			open("characters");
+			let book = root?.querySelector(`#${ids.encyclopedia}`);
+			open(book instanceof HTMLDialogElement ? "encyclopedia" : "characters");
 		},
 		retry: () => director.retry(),
 		restart: async () => {
@@ -849,9 +861,7 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 					<QuickMenu>
 						<Extras>
 							<Memories />
-							<Gallery />
-							<Characters />
-							<MusicRoom />
+							<Encyclopedia />
 							<EndingsList />
 							<ChapterSelect />
 							<SceneReplay />

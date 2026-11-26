@@ -110,8 +110,9 @@ export function NamePlate(handle: Handle<Textbox.PartProps>) {
 		let { mix, ...rest } = handle.props;
 		let frame = player.frame;
 		if (frame?.type !== "line" || frame.speakers.length === 0) return null;
-		let offersCharacters =
-			player.element?.querySelector(`#${player.ids.characters}`) instanceof HTMLDialogElement;
+		let offersCharacters = [player.ids.encyclopedia, player.ids.characters].some(
+			(id) => player.element?.querySelector(`#${id}`) instanceof HTMLDialogElement,
+		);
 		return (
 			<p
 				{...rest}

@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AssetDeclaration, CharacterDeclaration } from "./declarations.js";
+import type { SceneReference } from "./declarations.js";
 import type { ChooseDirective, Directive } from "./directives.js";
 import type { MessageCatalog, Novel, NovelInternals } from "./novel.js";
 import type { Fraction } from "./stage.js";
 
 import { menuAnchor } from "./anchors.js";
+import { referenceName } from "./declarations.js";
 import { jumpOf } from "./directives.js";
 import { hasMessage, INTERNALS } from "./novel.js";
 
@@ -160,6 +161,9 @@ function walkList(list: readonly Directive[], walk: SceneWalk, slots: Map<string
 			case "clear":
 				slots.clear();
 				break;
+			case "learn":
+				declared(walk, directive.entry);
+				break;
 			case "introduce":
 				declared(walk, directive.character);
 				if (directive.character.known) {
@@ -229,10 +233,10 @@ function translated(walk: SceneWalk, key: string): void {
 	}
 }
 
-/** Reports an asset or a character the novel does not declare, once per scene. */
-function declared(walk: SceneWalk, declaration: AssetDeclaration | CharacterDeclaration): void {
+/** Reports an asset, a character or an entry the novel does not declare, once per scene. */
+function declared(walk: SceneWalk, declaration: SceneReference): void {
 	if (!walk.internals.missing(declaration)) return;
-	let asset = "kind" in declaration ? declaration.id : `cast.${declaration.id}`;
+	let asset = referenceName(declaration);
 	if (walk.reported.has(asset)) return;
 	walk.reported.add(asset);
 	walk.problems.push({ code: "missing-asset", severity: "error", scene: walk.scene, asset });

@@ -31,9 +31,10 @@ export interface Persistent {
 	chapters: string[];
 	/**
 	 * The ids of the images shown and the music played, for a gallery and a music room, and every
-	 * look of a character the stage drew, as {@link lookKey} names it, for the characters screen.
+	 * look of a character the stage drew, as {@link lookKey} names it, for the characters screen,
+	 * and the id of every encyclopedia entry a scene taught.
 	 */
-	unlocked: { images: string[]; music: string[]; sprites: string[] };
+	unlocked: { images: string[]; music: string[]; sprites: string[]; entries: string[] };
 	/** The id of every character a play introduced, so a replay names everyone the reader met. */
 	introduced: string[];
 }
@@ -49,8 +50,9 @@ const PERSISTENT_SCHEMA: Schema<unknown, Persistent> = s.object({
 			images: s.defaulted(s.array(s.string()), []),
 			music: s.defaulted(s.array(s.string()), []),
 			sprites: s.defaulted(s.array(s.string()), []),
+			entries: s.defaulted(s.array(s.string()), []),
 		}),
-		{ images: [], music: [], sprites: [] },
+		{ images: [], music: [], sprites: [], entries: [] },
 	),
 	introduced: s.defaulted(s.array(s.string()), []),
 }) as Schema<unknown, Persistent>;
@@ -66,7 +68,7 @@ export function emptyPersistent(): Persistent {
 		chosen: [],
 		endings: [],
 		chapters: [],
-		unlocked: { images: [], music: [], sprites: [] },
+		unlocked: { images: [], music: [], sprites: [], entries: [] },
 		introduced: [],
 	};
 }

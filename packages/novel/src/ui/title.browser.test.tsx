@@ -70,7 +70,7 @@ const STORED: Persistent = {
 	chosen: [],
 	endings: [],
 	chapters: ["prologue"],
-	unlocked: { images: [], music: [], sprites: [] },
+	unlocked: { images: [], music: [], sprites: [], entries: [] },
 	introduced: [],
 };
 
@@ -127,7 +127,7 @@ describe("NovelPlayer.Title", () => {
 		expect(button(result, "continue")).toBeNull();
 		expect(
 			[...result.$$("[data-novel-title] nav button")].map((entry) => entry.textContent),
-		).toEqual(["New game", "Chapters", "Gallery", "Characters", "Memories", "Settings"]);
+		).toEqual(["New game", "Chapters", "Encyclopedia", "Memories", "Settings"]);
 	});
 
 	test("starts a new game with the start it was given, leaving any save out", () => {

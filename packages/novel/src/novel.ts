@@ -19,7 +19,10 @@ import type {
 	AssetDeclaration,
 	AssetSource,
 	CharacterDeclaration,
+	EntryDeclaration,
 	SceneDeclaration,
+	SceneReference,
+	TopicDeclaration,
 } from "./declarations.js";
 import type { SceneModule } from "./directives.js";
 import type { Cursor, Live, NovelRuntime } from "./engine.js";
@@ -44,7 +47,9 @@ import {
 	collect,
 	isAssetDeclaration,
 	isCharacterDeclaration,
+	isEntryDeclaration,
 	isSceneDeclaration,
+	isTopicDeclaration,
 } from "./declarations.js";
 import { extensionContext, isBuiltinDirective } from "./directives.js";
 import { drawCharacter, PlayEngine } from "./engine.js";
@@ -107,6 +112,8 @@ export interface NovelOptions {
 	assets?: object;
 	/** The `interactions()` map. */
 	interactions?: object;
+	/** The `encyclopedia()` map, whose entries scenes `learn`. */
+	encyclopedia?: object;
 	/** The schema of the story state; it types every callback and validates loaded saves. */
 	state: StandardSchemaV1<unknown, DeclaredState>;
 	/**
@@ -188,12 +195,16 @@ export interface NovelInternals {
 	readonly scenes: ReadonlyMap<string, SceneDeclaration>;
 	readonly assets: ReadonlyMap<string, AssetDeclaration>;
 	readonly characters: ReadonlyMap<string, CharacterDeclaration>;
+	/** The encyclopedia's topics, in declaration order. */
+	readonly topics: ReadonlyMap<string, TopicDeclaration>;
+	/** Every encyclopedia entry by its `<topic>.<entry>` id. */
+	readonly entries: ReadonlyMap<string, EntryDeclaration>;
 	/** The names of the mapped scenes. */
 	readonly mapped: readonly string[];
 	load(scene: string): Promise<Result<SceneIndex, NovelError>>;
 	position(position: Position): Fraction;
 	/** Reports whether the novel lacks an asset or a character a scene uses. */
-	missing(declaration: AssetDeclaration | CharacterDeclaration): boolean;
+	missing(declaration: SceneReference): boolean;
 	/** The voice file of a spoken line, from the novel's `voice` option. */
 	voice(speaker: string, key: string): AssetSource | null;
 	/**
@@ -251,6 +262,8 @@ export class Novel {
 	#scenes: Map<string, SceneDeclaration>;
 	#characters: Map<string, CharacterDeclaration>;
 	#assets: Map<string, AssetDeclaration>;
+	#topics: Map<string, TopicDeclaration>;
+	#entries: Map<string, EntryDeclaration>;
 	#listeners = new Listeners();
 	#extensions: readonly AnyExtension[];
 	#methods = new Map<string, ExtensionMethods>();
@@ -288,6 +301,14 @@ export class Novel {
 			(entry) => entry.id,
 		);
 		this.#assets = byKey(collect(options.assets ?? {}, isAssetDeclaration), (asset) => asset.id);
+		this.#topics = byKey(
+			collect(options.encyclopedia ?? {}, isTopicDeclaration),
+			(item) => item.id,
+		);
+		this.#entries = byKey(
+			collect(options.encyclopedia ?? {}, isEntryDeclaration),
+			(item) => item.id,
+		);
 	}
 
 	/** Every mapped scene, in the order it was mapped. */
@@ -400,6 +421,8 @@ export class Novel {
 			scenes: this.#scenes,
 			assets: this.#assets,
 			characters: this.#characters,
+			topics: this.#topics,
+			entries: this.#entries,
 			mapped: [...this.#modules.keys()],
 			load: (scene) => this.#load(scene),
 			position: (position) => this.#position(position),
@@ -579,7 +602,10 @@ export class Novel {
 	}
 
 	/** Reports whether the novel lacks a declaration a scene uses, when it declares that kind. */
-	#missing(declaration: AssetDeclaration | CharacterDeclaration): boolean {
+	#missing(declaration: SceneReference): boolean {
+		if (isEntryDeclaration(declaration)) {
+			return this.#options.encyclopedia !== undefined && !this.#entries.has(declaration.id);
+		}
 		if ("kind" in declaration) {
 			if (this.#options.assets === undefined) return false;
 			let declared = this.#assets.get(declaration.id);
