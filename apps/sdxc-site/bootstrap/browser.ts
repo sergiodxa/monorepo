@@ -11,6 +11,8 @@ import type { RunInit } from "remix/component";
 
 import { run } from "remix/component";
 
+import { leaveFilesToTheBrowser } from "~/resources/components/file-navigation";
+
 /**
  * Keeps a reader on the page when they press a link or submit a form inside a live example:
  * those name `/examples/` addresses, and the navigation is cancelled before the runtime
@@ -24,6 +26,7 @@ function stayOnExampleNavigation(event: NavigateEvent) {
 }
 
 globalThis.navigation?.addEventListener("navigate", stayOnExampleNavigation);
+globalThis.navigation?.addEventListener("navigate", leaveFilesToTheBrowser);
 
 /**
  * Islands shipped by packages, keyed by the bare specifier their client entry names. The
