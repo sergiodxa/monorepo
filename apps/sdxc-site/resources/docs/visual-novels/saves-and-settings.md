@@ -72,7 +72,7 @@ Escape, or **Settings** in the quick menu, opens the settings screen, and every 
 Each row shows the setting's current value beside its control, and **Reset settings** restores
 `DEFAULT_SETTINGS`. Every word on the screen is a label (`settingsText`, `textPreview`,
 `resetSettings`, `back` and the rest), so it translates through the player's `labels`, and it
-reads the `--novel-settings-*` variables for its tabs, page, dividers and preview:
+reads the `--novel-settings-*` variables for its tabs, page, dividers, sliders and preview:
 
 ```tsx {% title="resources/components/game.tsx" %}
 <NovelPlayer.Default
@@ -85,6 +85,8 @@ reads the `--novel-settings-*` variables for its tabs, page, dividers and previe
 			"--novel-settings-panel-background": "#fbf4e8",
 			"--novel-settings-tab-selected-background": "#e86a92",
 			"--novel-settings-tab-selected-color": "#fff",
+			"--novel-settings-slider-track": "#e8d9c4",
+			"--novel-settings-slider-fill": "#e86a92",
 		}),
 	]}
 />
