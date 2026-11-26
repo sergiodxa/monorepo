@@ -292,7 +292,7 @@ describe("ScreenDialog", () => {
 				<ScreenDialog id="screen" title="Screen" closeLabel="Close" open={false} />
 			</div>,
 		);
-		result.$<HTMLDialogElement>("#screen")!.showModal();
+		document.querySelector<HTMLDialogElement>("#screen")!.showModal();
 		let close = result.$('[data-slot="close"]')!;
 		expect(getComputedStyle(close).color).toBe("rgb(243, 231, 204)");
 		expect(getComputedStyle(close.querySelector("svg")!).color).toBe("rgb(243, 231, 204)");
