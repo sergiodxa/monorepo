@@ -8,7 +8,7 @@
  */
 
 /** A channel of the mixer, each with its own volume. */
-export type AudioChannel = "music" | "ambience" | "sound" | "voice";
+export type AudioChannel = "music" | "ambience" | "sound" | "voice" | "interface";
 
 /** Which lines skip passes through: only those already read, or every line. */
 export type SkipMode = "read" | "all";
@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS: NovelSettings = {
 	textSpeed: 40,
 	autoDelay: 1000,
 	skip: "read",
-	volume: { master: 1, music: 0.8, ambience: 0.8, sound: 1, voice: 1 },
+	volume: { master: 1, music: 0.8, ambience: 0.8, sound: 1, voice: 1, interface: 0.6 },
 	fontSize: 1,
 	dyslexiaFont: false,
 	selfVoicing: false,
@@ -87,6 +87,7 @@ export interface NovelLabels {
 	volumeAmbience: string;
 	volumeSound: string;
 	volumeVoice: string;
+	volumeInterface: string;
 	fontSize: string;
 	dyslexiaFont: string;
 	selfVoicing: string;
@@ -189,6 +190,7 @@ export const DEFAULT_LABELS: NovelLabels = {
 	volumeAmbience: "Ambience",
 	volumeSound: "Sounds",
 	volumeVoice: "Voices",
+	volumeInterface: "Interface",
 	fontSize: "Text size",
 	dyslexiaFont: "Dyslexia-friendly font",
 	selfVoicing: "Read text aloud",

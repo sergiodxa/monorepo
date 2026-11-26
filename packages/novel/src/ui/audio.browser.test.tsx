@@ -178,13 +178,14 @@ describe(AudioMixer, () => {
 
 	test("applies master and channel volumes", async () => {
 		let mix = await running();
-		mix.setVolume({ master: 0.5, music: 0.25, ambience: 1, sound: 0, voice: 0.75 });
+		mix.setVolume({ master: 0.5, music: 0.25, ambience: 1, sound: 0, voice: 0.75, interface: 0.5 });
 		expect(mix.snapshot.volume).toEqual({
 			master: 0.5,
 			music: 0.25,
 			ambience: 1,
 			sound: 0,
 			voice: 0.75,
+			interface: 0.5,
 		});
 	});
 });

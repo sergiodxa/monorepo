@@ -16,13 +16,16 @@ import type { GameState } from "../frames.js";
 import type { Novel, StartOptions } from "../novel.js";
 
 import type { LibraryScreen } from "./extras.js";
+import type { InterfaceSounds } from "./interface-sounds.js";
 import type { NovelLabels, StoredSettings } from "./settings.js";
 
+import { AudioMixer } from "./audio.js";
 import { SettingsModel } from "./behaviors/settings.js";
 import { ChapterSelect } from "./chapters.js";
 import { Encyclopedia } from "./encyclopedia.js";
 import { NovelSettingsEvent, NovelStartEvent } from "./events.js";
 import { offeredScreens, ScreenDialog } from "./extras.js";
+import { interfaceSounds } from "./interface-sounds.js";
 import { Memories } from "./memories.js";
 import { SaveSummary } from "./saves.js";
 import { SettingsScreen } from "./settings-screen.js";
@@ -73,6 +76,8 @@ export namespace Title {
 		/** The settings the app stored, which the settings screen shows and changes. */
 		settings?: StoredSettings;
 		labels?: Partial<NovelLabels>;
+		/** Sounds the menu plays as the reader reaches and picks an option. */
+		sounds?: InterfaceSounds;
 		/**
 		 * The library screens the menu offers, in order, like `NovelPlayer.Extras`' children.
 		 *
@@ -125,6 +130,16 @@ export function Title(handle: Handle<Title.Props>) {
 	let settings = new SettingsModel(seenSettings);
 	let open: string | undefined;
 	let prefix = handle.id.replace(/[^\w-]/g, "-");
+	/** The title's own mixer, made once a sound plays, so a silent title opens no audio context. */
+	let mixer: AudioMixer | undefined;
+	handle.signal.addEventListener("abort", () => mixer?.dispose());
+
+	/** The mixer at the reader's current volumes. */
+	function soundMixer(): AudioMixer {
+		mixer ??= new AudioMixer(settings.value.volume);
+		mixer.setVolume(settings.value.volume);
+		return mixer;
+	}
 
 	settings.addEventListener(
 		"change",
@@ -165,6 +180,7 @@ export function Title(handle: Handle<Title.Props>) {
 			start,
 			settings: stored,
 			labels: overrides,
+			sounds: _sounds,
 			children,
 			mix,
 			...rest
@@ -211,6 +227,17 @@ export function Title(handle: Handle<Title.Props>) {
 						event.stopPropagation();
 						begin(event.currentTarget, { ...fresh(), scene: event.scene, replay: event.scope });
 					}),
+					on("pointerdown", () => {
+						if (handle.props.sounds !== undefined) void soundMixer().resume();
+					}),
+					on("keydown", () => {
+						if (handle.props.sounds !== undefined) void soundMixer().resume();
+					}),
+					interfaceSounds(() => ({
+						mixer: soundMixer,
+						sounds: handle.props.sounds,
+						locale: intl(handle).locale,
+					})),
 					mix,
 				]}
 			>

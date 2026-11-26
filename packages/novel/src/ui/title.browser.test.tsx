@@ -23,9 +23,10 @@ import type { GameState } from "../frames.js";
 import type { StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 
-import { chapter, createNovel, createScene, scene, scenes } from "../index.js";
+import { assets, chapter, createNovel, createScene, scene, scenes } from "../index.js";
 import { LocalStorageStore } from "../storage/local-storage.js";
 
+import { AudioMixer } from "./audio.js";
 import { ChapterSelect } from "./chapters.js";
 import { NovelPlayer } from "./player.js";
 import { Title } from "./title.js";
@@ -526,5 +527,80 @@ describe("NovelPlayer.Title's look", () => {
 		expect(result.$("[data-novel-title-background] [data-backdrop]")).not.toBeNull();
 		expect(result.$("[data-novel-title-art] [data-portrait]")).not.toBeNull();
 		expect(result.$("[data-novel-title-footer]")!.textContent).toBe("Credits");
+	});
+});
+
+describe("Interface sounds", () => {
+	/** Two sounds declared by URL, so a test reads which one played. */
+	const SOUNDS = assets({ sounds: { tick: "/tick.wav", chime: "/chime.wav" } });
+
+	/** Records every interface sound the title or the player plays, without playing it. */
+	function listen() {
+		return vi.spyOn(AudioMixer.prototype, "playInterface").mockImplementation(() => undefined);
+	}
+
+	test("ticks as the pointer reaches each title option and chimes as the reader picks one", async () => {
+		let played = listen();
+		let { result } = mount(
+			<Title
+				novel={fixture()}
+				heading="The Café"
+				sounds={{ hover: SOUNDS.sounds.tick, select: SOUNDS.sounds.chime }}
+			/>,
+		);
+		await userEvent.hover(button(result, "new-game")!);
+		await userEvent.hover(button(result, "new-game")!);
+		await userEvent.hover(button(result, "settings")!);
+		expect(played.mock.calls).toEqual([["/tick.wav"], ["/tick.wav"]]);
+		await userEvent.click(button(result, "settings")!);
+		expect(played.mock.calls).toEqual([["/tick.wav"], ["/tick.wav"], ["/chime.wav"]]);
+	});
+
+	test("ticks as keyboard focus moves between options", async () => {
+		let played = listen();
+		let { result } = mount(
+			<Title novel={fixture()} heading="The Café" sounds={{ hover: SOUNDS.sounds.tick }} />,
+		);
+		button(result, "new-game")!.focus();
+		await userEvent.keyboard("{Tab}");
+		expect(played).toHaveBeenCalledWith("/tick.wav");
+	});
+
+	test("ticks and chimes for the quick menu, Title included, and stays quiet as a click advances the line", async () => {
+		let played = listen();
+		let { result } = mount(
+			<NovelPlayer.Default
+				novel={fixture()}
+				settings={{ textSpeed: 0 }}
+				titleScreen={{ heading: "The Café" }}
+				sounds={{ hover: SOUNDS.sounds.tick, select: SOUNDS.sounds.chime }}
+			/>,
+		);
+		await userEvent.click(button(result, "new-game")!);
+		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
+		expect(played).toHaveBeenLastCalledWith("/chime.wav");
+		played.mockClear();
+		(result.$("[data-novel-surface]") as HTMLElement).click();
+		await vi.waitFor(() =>
+			expect(result.$("[data-novel-line]")?.textContent).toBe("I should say something."),
+		);
+		expect(played).not.toHaveBeenCalledWith("/chime.wav");
+		await userEvent.hover(result.$('[data-novel-menu] [data-action="auto"]')!);
+		expect(played).toHaveBeenLastCalledWith("/tick.wav");
+		await userEvent.click(result.$('[data-novel-menu] [data-action="auto"]')!);
+		expect(played).toHaveBeenLastCalledWith("/chime.wav");
+		await userEvent.click(result.$('[data-novel-menu] [data-action="toTitle"]')!);
+		await vi.waitFor(() => expect(result.$("[data-novel-title]")).not.toBeNull());
+		expect(played).toHaveBeenLastCalledWith("/chime.wav");
+		expect(played.mock.calls.filter(([file]) => file === "/chime.wav")).toHaveLength(2);
+	});
+
+	test("lets the reader turn the interface sounds down on their own", async () => {
+		let { result } = mount(<Title novel={fixture()} heading="The Café" />);
+		await userEvent.click(button(result, "settings")!);
+		await userEvent.click(result.$('[data-novel-settings-tab="sound"]')!);
+		let slider = result.$('input[name="volume.interface"]') as HTMLInputElement;
+		expect(slider.value).toBe("60");
+		expect(slider.getAttribute("aria-label")).toBe("Interface");
 	});
 });

@@ -110,6 +110,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 			["ambience", labels.volumeAmbience],
 			["sound", labels.volumeSound],
 			["voice", labels.volumeVoice],
+			["interface", labels.volumeInterface],
 		] as const;
 		let percent = new Intl.NumberFormat(undefined, { style: "percent" });
 		let seconds = new Intl.NumberFormat(undefined, {

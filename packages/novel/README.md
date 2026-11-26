@@ -459,6 +459,7 @@ Owns a play and publishes it to the parts inside it; it draws nothing but its ch
 - `behaviors`: Replaces any of the reader's behaviors (`reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`) with your own implementation of its interface; read once, at mount
 - `prefetch`: How many jumps ahead to prefetch modules, images, sounds, voices and music as the play enters a scene, or `false` (default `1`)
 - `returnsToTitle`: Hands the reader back to a title screen: the ending's button reads **Back to title** in place of Play again, and it, or a replay with no play to resume ending, dispatches `novel:title`
+- `sounds`: `InterfaceSounds`, a `hover` sound played as the pointer enters an option or keyboard and gamepad focus moves to one, and a `select` sound played as the reader picks one, each a declared sound asset on the mixer's `interface` channel. Advancing a line stays silent, and so does the interface for a moment after a pick, so opening a dialog sounds once. `NovelPlayer.Default` passes it to its title screen, and `NovelPlayer.Title` takes it too
 - `children`: The parts
 
 ```tsx
@@ -688,7 +689,7 @@ The cast in declaration order, as a scrolling list beside the chosen character's
 
 #### `AudioMixer`
 
-Mixes the music, ambience, sound and voice channels through one `AudioContext`, created on first use. `new AudioMixer(volume)`; `resume()` from a user interaction, since browsers keep the context suspended until one; `reconcile(audio, locale, silent?)` brings it in line with a frame (crossfading music, layering ambience, playing each sound once); `playVoice(source)` lowers the music while a voice speaks; `preload(source)` (each takes a URL or a Blob, which decodes from its bytes), `stopVoice()`, `setVolume(volume)`, `snapshot` and `dispose()`.
+Mixes the music, ambience, sound, voice and interface channels through one `AudioContext`, created on first use. `new AudioMixer(volume)`; `resume()` from a user interaction, since browsers keep the context suspended until one; `reconcile(audio, locale, silent?)` brings it in line with a frame (crossfading music, layering ambience, playing each sound once); `playVoice(source)` lowers the music while a voice speaks; `playInterface(source)` plays an interface sound once the context runs, and only decodes it before then; `preload(source)` (each takes a URL or a Blob, which decodes from its bytes), `stopVoice()`, `setVolume(volume)`, `snapshot` and `dispose()`.
 
 #### `readLibrary(novel: Novel, persistent: unknown, locale: string): Promise<NovelLibrary>`
 
@@ -714,7 +715,7 @@ interface NovelSettings {
 }
 ```
 
-`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`), the title screen (`newGame`, `continue`, `titleMenu`, `backToTitle`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`, `unknownName`).
+`NovelLabels` covers the quick menu (`menu`, `auto`, `skip`, `backlog`, `save`, `load`, `quickSave`, `quickLoad`, `settings`, `hide`, `fullscreen`, `close`, `endReplay`), the slots (`slot`, `emptySlot`), the settings (`textSpeed`, `autoDelay`, `skipMode`, `skipRead`, `skipAll`, `volumeMaster`, `volumeMusic`, `volumeAmbience`, `volumeSound`, `volumeVoice`, `volumeInterface`, `fontSize`, `dyslexiaFont`, `selfVoicing`), the extras (`extras`, `memories`, `gallery`, `musicRoom`, `endings`, `chapterSelect`, `sceneReplay`, `unknownEnding`, `noMemories`, `play`, `stop`, `locked`, `loading`) the notifications (`notifications`, `imageUnlocked`, `musicUnlocked`, `endingReached`), the title screen (`newGame`, `continue`, `titleMenu`, `backToTitle`) and the rest (`autosave`, `replayVoice`, `retry`, `timeLeft`, `unknownName`).
 
 #### `KEYMAP` and `gamepadActions(previous: readonly boolean[], current: readonly boolean[]): GamepadAction[]`
 
@@ -747,6 +748,7 @@ The scenery transitions the player draws itself as View Transitions (any other n
 - `NovelLibrary`, `LibraryArc`, `LibraryChapter`, `LibraryScene`, `LibraryAsset`, `LibraryEnding`, `SceneLine`, `MemoryLine`: What `readLibrary` and `sceneLines` answer.
 - `BacklogEntry`: A line as the backlog keeps it, with its values, speakers and voice for the reader's locale.
 - `MixerSnapshot`: What the mixer plays now, for a test or a panel.
+- `InterfaceSounds`: The `hover` and `select` sounds the player and the title screen play.
 - `Phase`: Where the player is in a frame (`idle`, `staging`, `typing`, `waiting`, `replying`), as `data-phase` shows it.
 - `RunningTransition`: A stage transition with its `finished` promise and a `finish()` that ends it early.
 - `Column`: A column's `left`, `width` and whether it sits left of center.

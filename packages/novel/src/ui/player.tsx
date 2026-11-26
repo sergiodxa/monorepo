@@ -35,6 +35,7 @@ import type { SavesBehavior } from "./behaviors/save-slots.js";
 import type { SettingsBehavior } from "./behaviors/settings.js";
 import type { SkipBehavior } from "./behaviors/skip.js";
 import type { Phase } from "./director.js";
+import type { InterfaceSounds } from "./interface-sounds.js";
 import type { Prefetcher } from "./prefetch.js";
 import type { NovelLabels, NovelSettings, StoredSettings } from "./settings.js";
 
@@ -58,6 +59,7 @@ import { EndingsList } from "./endings.js";
 import { NovelEndingEvent, NovelSaveEvent, NovelSettingsEvent, NovelTitleEvent } from "./events.js";
 import { Extras } from "./extras.js";
 import { Interaction } from "./interaction.js";
+import { interfaceSounds } from "./interface-sounds.js";
 import { readLibrary } from "./library.js";
 import { Memories } from "./memories.js";
 import { Notifications } from "./notifications.js";
@@ -297,6 +299,13 @@ export namespace NovelPlayer {
 		 * `novel:title`.
 		 */
 		returnsToTitle?: boolean;
+		/**
+		 * Sounds the interface plays as the reader reaches and picks an option, on the mixer's
+		 * interface channel.
+		 *
+		 * @example sounds={{ hover: ASSETS.sounds.tick, select: ASSETS.sounds.chime }}
+		 */
+		sounds?: InterfaceSounds;
 		/** The parts the player is composed of; `NovelPlayer.Default` holds every one. */
 		children?: RemixNode;
 	}
@@ -695,6 +704,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			prefetch: _prefetch,
 			behaviors: _behaviors,
 			returnsToTitle: _returnsToTitle,
+			sounds: _sounds,
 			children,
 			mix,
 			...rest
@@ -742,6 +752,12 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 						},
 					}),
 					on("pointerdown", () => void director.mixer.resume()),
+					on("keydown", () => void director.mixer.resume()),
+					interfaceSounds(() => ({
+						mixer: () => director.mixer,
+						sounds: handle.props.sounds,
+						locale: intl(handle).locale,
+					})),
 					mix,
 				]}
 			>
@@ -821,6 +837,7 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 					start={start}
 					settings={changed ?? rest.settings}
 					labels={rest.labels}
+					sounds={rest.sounds}
 					mix={[
 						on("novel:settings", (event) => {
 							changed = event.settings;

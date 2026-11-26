@@ -45,7 +45,7 @@ export interface MixerSnapshot {
 }
 
 /**
- * Mixes a play's four channels. It creates its context on first use, which browsers keep
+ * Mixes a play's five channels. It creates its context on first use, which browsers keep
  * suspended until the reader interacts; call {@link AudioMixer.resume} from that interaction.
  */
 export class AudioMixer {
@@ -82,6 +82,7 @@ export class AudioMixer {
 				ambience: this.#channels.get("ambience")?.gain.value ?? this.#volume.ambience,
 				sound: this.#channels.get("sound")?.gain.value ?? this.#volume.sound,
 				voice: this.#channels.get("voice")?.gain.value ?? this.#volume.voice,
+				interface: this.#channels.get("interface")?.gain.value ?? this.#volume.interface,
 			},
 			duck: this.#duck?.gain.value ?? 1,
 		};
@@ -95,7 +96,7 @@ export class AudioMixer {
 		master.connect(context.destination);
 		let duck = context.createGain();
 		duck.connect(master);
-		for (let channel of ["music", "ambience", "sound", "voice"] as const) {
+		for (let channel of ["music", "ambience", "sound", "voice", "interface"] as const) {
 			let gain = context.createGain();
 			gain.connect(channel === "music" ? duck : master);
 			this.#channels.set(channel, gain);
@@ -193,6 +194,20 @@ export class AudioMixer {
 	 */
 	async preload(file: string | Blob): Promise<void> {
 		await this.#buffer(file);
+	}
+
+	/**
+	 * Plays an interface sound once the context runs. Before the reader's first interaction it
+	 * only decodes the file, so sounds never queue up and burst out when the context starts.
+	 *
+	 * @param file - The sound's URL, or the file itself.
+	 */
+	playInterface(file: string | Blob): void {
+		if (this.context.state !== "running") {
+			void this.#buffer(file);
+			return;
+		}
+		void this.#playBuffer(file, "interface", 1);
 	}
 
 	/** Stops the voice, which advancing past its line does. */
