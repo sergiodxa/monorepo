@@ -85,6 +85,21 @@ export const CAST = cast({
 A character stays `???` on the screen until they are `known` or a scene introduces them, and
 each sprite stays locked until the stage shows the character in it once, in any playthrough.
 
+A `bio` lets a character's page grow as the story reveals them. Declare its sections by id, and
+teach each one where the story reveals it with `ctx.learn(CAST.mika, "past")`:
+
+```typescript {% title="resources/novel/declarations.ts" %}
+mika: character({
+	name: "cast.mika",
+	description: "cast.mikaAbout",
+	bio: {
+		family: { title: "bio.mika.family", body: "bio.mika.familyText", known: true },
+		past: { title: "bio.mika.past", body: "bio.mika.pastText" },
+	},
+	sprites: { smile: mikaSmile },
+}),
+```
+
 ## Keep an encyclopedia
 
 The Encyclopedia gathers what the reader has learned in one book: the cast, the gallery, the
