@@ -17,7 +17,7 @@ import type { NovelLabels, NovelSettings, SkipMode } from "./settings.js";
 
 import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS, DEFAULT_SETTINGS } from "./settings.js";
-import { dialogSurface, themeVar } from "./theme.js";
+import { dialogCloseColors, dialogSurface, themeVar } from "./theme.js";
 
 /** The settings screen's tabs, in the order they are listed. */
 const SETTINGS_TABS = ["text", "sound", "accessibility"] as const;
@@ -308,7 +308,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 						{labels.back}
 					</button>
 				</div>
-				<Dialog.Close commandfor={id} aria-label={labels.close} />
+				<Dialog.Close commandfor={id} aria-label={labels.close} style={dialogCloseColors()} />
 			</Dialog>
 		);
 	};

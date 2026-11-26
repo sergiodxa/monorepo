@@ -23,7 +23,7 @@ import { Memories } from "./memories.js";
 import { MusicRoom } from "./music-room.js";
 import { NovelPlayer } from "./player.js";
 import { quickMenuButton } from "./quick-menu.js";
-import { dialogSurface } from "./theme.js";
+import { dialogCloseColors, dialogSurface } from "./theme.js";
 
 /** A library screen the extras menu offers. */
 export type LibraryScreen = Extract<
@@ -196,7 +196,7 @@ export function ScreenDialog(handle: Handle<ScreenDialogProps>) {
 					<Dialog.Title id={`${id}-title`}>{title}</Dialog.Title>
 				</Dialog.Header>
 				<div mix={css({ maxBlockSize: "65vh", overflowY: "auto" })}>{open ? children : null}</div>
-				<Dialog.Close commandfor={id} aria-label={closeLabel} />
+				<Dialog.Close commandfor={id} aria-label={closeLabel} style={dialogCloseColors()} />
 			</Dialog>
 		);
 	};

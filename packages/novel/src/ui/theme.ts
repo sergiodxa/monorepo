@@ -234,3 +234,15 @@ export function dialogSurface(): Record<string, string> {
 		borderImageWidth: themeVar("--novel-dialog-border-image-width"),
 	};
 }
+
+/**
+ * The inline colors of a player dialog's close button: its glyph takes the dialog's text color and
+ * its hover and press tints are mixed from it, so the button reads on a light or a dark surface.
+ */
+export function dialogCloseColors(): Record<string, string> {
+	return {
+		"--ui-neutral-fg-emphasis": "currentColor",
+		"--ui-neutral-bg-tint-hover": "color-mix(in oklab, currentColor 14%, transparent)",
+		"--ui-neutral-bg-tint-pressed": "color-mix(in oklab, currentColor 22%, transparent)",
+	};
+}

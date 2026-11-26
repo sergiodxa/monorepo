@@ -22,7 +22,7 @@ import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 import { listenerSignal } from "./signal.js";
 import { Stage } from "./stage.js";
-import { dialogSurface } from "./theme.js";
+import { dialogCloseColors, dialogSurface } from "./theme.js";
 
 export namespace SaveScreen {
 	/** Props {@link SaveScreen} accepts. */
@@ -167,7 +167,7 @@ function SlotDialog(handle: Handle<SlotDialogProps>) {
 						);
 					})}
 				</ul>
-				<Dialog.Close commandfor={id} aria-label={labels.close} />
+				<Dialog.Close commandfor={id} aria-label={labels.close} style={dialogCloseColors()} />
 			</Dialog>
 		);
 	};

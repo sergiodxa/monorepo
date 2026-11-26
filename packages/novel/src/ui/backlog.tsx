@@ -17,7 +17,7 @@ import { css, on, ref } from "remix/component";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 import { listenerSignal } from "./signal.js";
-import { dialogSurface, themeVar } from "./theme.js";
+import { dialogCloseColors, dialogSurface, themeVar } from "./theme.js";
 
 export namespace Backlog {
 	/** Props {@link Backlog} accepts. */
@@ -126,7 +126,7 @@ export function Backlog(handle: Handle<Backlog.Props>) {
 						</li>
 					))}
 				</ol>
-				<Dialog.Close commandfor={id} aria-label={labels.close} />
+				<Dialog.Close commandfor={id} aria-label={labels.close} style={dialogCloseColors()} />
 			</Dialog>
 		);
 	};

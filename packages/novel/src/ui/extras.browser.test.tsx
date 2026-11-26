@@ -42,6 +42,7 @@ import { ChapterSelect, SceneReplay } from "./chapters.js";
 import { Characters } from "./characters.js";
 import { Encyclopedia } from "./encyclopedia.js";
 import { EndingsList } from "./endings.js";
+import { ScreenDialog } from "./extras.js";
 import { Gallery } from "./gallery.js";
 import { Memories } from "./memories.js";
 import { MusicRoom } from "./music-room.js";
@@ -277,6 +278,26 @@ async function loaded(result: RenderResult, selector: string): Promise<HTMLEleme
 	await vi.waitFor(() => expect(result.$(selector)!.getAttribute("aria-busy")).toBeNull());
 	return result.$(selector)!;
 }
+
+describe("ScreenDialog", () => {
+	test("draws its close button in the dialog's own text color on a dark surface", async () => {
+		let result = mount(
+			<div
+				style={{
+					"--novel-dialog-background": "rgb(10 30 20)",
+					"--novel-dialog-color": "rgb(243 231 204)",
+					"--ui-neutral-fg-emphasis": "rgb(30 30 30)",
+				}}
+			>
+				<ScreenDialog id="screen" title="Screen" closeLabel="Close" open={false} />
+			</div>,
+		);
+		result.$<HTMLDialogElement>("#screen")!.showModal();
+		let close = result.$('[data-slot="close"]')!;
+		expect(getComputedStyle(close).color).toBe("rgb(243, 231, 204)");
+		expect(getComputedStyle(close.querySelector("svg")!).color).toBe("rgb(243, 231, 204)");
+	});
+});
 
 describe("Memories", () => {
 	test("lists the read lines of reached scenes with their values, speakers and voices", async () => {
