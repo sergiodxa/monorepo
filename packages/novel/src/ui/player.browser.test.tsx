@@ -842,8 +842,12 @@ describe("NovelPlayer", () => {
 		expect(readout.textContent).toBe("Instant");
 		await userEvent.click(screen.querySelector('[data-novel-settings-tab="sound"]')!);
 		let music = screen.querySelector<HTMLInputElement>('input[name="volume.music"]')!;
-		expect(music.checkVisibility()).toBe(true);
-		expect(screen.querySelector('input[name="textSpeed"]')!.checkVisibility()).toBe(false);
+		expect(music.checkVisibility({ visibilityProperty: true })).toBe(true);
+		expect(
+			screen
+				.querySelector('input[name="textSpeed"]')!
+				.checkVisibility({ visibilityProperty: true }),
+		).toBe(false);
 		await userEvent.click(screen.querySelector("[data-novel-settings-reset]")!);
 		expect(changed).toHaveBeenLastCalledWith(
 			expect.objectContaining({ textSpeed: 40, volume: expect.objectContaining({ music: 0.8 }) }),
@@ -872,6 +876,43 @@ describe("NovelPlayer", () => {
 		expect(getComputedStyle(track).backgroundImage).toContain("rgb(1, 2, 3)");
 		expect(getComputedStyle(track).backgroundSize).toBe("100% 2px");
 		expect(getComputedStyle(track, "::after").backgroundColor).toBe("rgb(4, 5, 6)");
+		tokens.remove();
+	});
+
+	test("keeps the settings screen one size on every tab, so its tabs never move", async () => {
+		let player = mount({ settings: { textSpeed: 0 } });
+		await shows(player, "Welcome to the café.");
+		await userEvent.keyboard("{Escape}");
+		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
+		await vi.waitFor(() => expect(screen.open).toBe(true));
+		let measure = () => {
+			let tab = screen.querySelector('[data-novel-settings-tab="accessibility"]')!;
+			return [screen.getBoundingClientRect().height, tab.getBoundingClientRect().top];
+		};
+		let sizes = [measure()];
+		for (let name of ["sound", "accessibility", "text"]) {
+			await userEvent.click(screen.querySelector(`[data-novel-settings-tab="${name}"]`)!);
+			sizes.push(measure());
+		}
+		expect(new Set(sizes.map((size) => size.join(","))).size).toBe(1);
+	});
+
+	test("draws the switches in the settings colors under a theme that sets every element's tokens", async () => {
+		let player = mount({ settings: { textSpeed: 0 } });
+		await shows(player, "Welcome to the café.");
+		await userEvent.keyboard("{Escape}");
+		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
+		await vi.waitFor(() => expect(screen.open).toBe(true));
+		let tokens = document.createElement("style");
+		tokens.textContent = ".tokens * { --ui-neutral-border: red; --ui-brand-bg-solid: red; }";
+		document.head.appendChild(tokens);
+		screen.classList.add("tokens");
+		screen.style.setProperty("--novel-settings-switch-off", "rgb(1, 2, 3)");
+		screen.style.setProperty("--novel-settings-switch-on", "rgb(4, 5, 6)");
+		let toggle = screen.querySelector<HTMLInputElement>('input[name="dyslexiaFont"]')!;
+		await vi.waitFor(() => expect(getComputedStyle(toggle).backgroundColor).toBe("rgb(1, 2, 3)"));
+		toggle.checked = true;
+		await vi.waitFor(() => expect(getComputedStyle(toggle).backgroundColor).toBe("rgb(4, 5, 6)"));
 		tokens.remove();
 	});
 

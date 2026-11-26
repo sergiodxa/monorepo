@@ -162,8 +162,8 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 					<div
 						data-novel-settings-panel=""
 						mix={css({
-							display: "flex",
-							flexDirection: "column",
+							display: "grid",
+							alignItems: "start",
 							minInlineSize: 0,
 							maxBlockSize: "min(60vh, 32rem)",
 							overflowY: "auto",
@@ -176,7 +176,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 							role="tabpanel"
 							id={`${id}-panel-text`}
 							aria-labelledby={`${id}-tab-text`}
-							hidden={tab !== "text"}
+							{...tabPanelState(tab === "text")}
 						>
 							<RangeSetting
 								label={labels.textSpeed}
@@ -230,7 +230,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 							role="tabpanel"
 							id={`${id}-panel-sound`}
 							aria-labelledby={`${id}-tab-sound`}
-							hidden={tab !== "sound"}
+							{...tabPanelState(tab === "sound")}
 						>
 							{volumes.map(([channel, label]) => (
 								<RangeSetting
@@ -250,12 +250,13 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 							role="tabpanel"
 							id={`${id}-panel-accessibility`}
 							aria-labelledby={`${id}-tab-accessibility`}
-							hidden={tab !== "accessibility"}
+							{...tabPanelState(tab === "accessibility")}
 						>
 							<SettingRow label={labels.dyslexiaFont}>
 								<Switch
 									name="dyslexiaFont"
 									aria-label={labels.dyslexiaFont}
+									style={SWITCH_COLORS}
 									checked={settings.dyslexiaFont}
 									mix={on("change", (event) =>
 										change({ dyslexiaFont: event.currentTarget.checked }),
@@ -266,6 +267,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 								<Switch
 									name="selfVoicing"
 									aria-label={labels.selfVoicing}
+									style={SWITCH_COLORS}
 									checked={settings.selfVoicing}
 									mix={on("change", (event) =>
 										change({ selfVoicing: event.currentTarget.checked }),
@@ -395,6 +397,32 @@ export function SettingRow(handle: Handle<SettingsScreen.RowProps>) {
 		);
 	};
 }
+
+/**
+ * Every tab's panel shares one grid cell, so the screen keeps the tallest tab's height and the tabs
+ * beside it never move; the panels not shown stay laid out but invisible and inert.
+ */
+function tabPanelState(shown: boolean) {
+	return shown
+		? { style: { gridArea: "1 / 1" } }
+		: {
+				inert: true,
+				"aria-hidden": "true" as const,
+				style: { gridArea: "1 / 1", visibility: "hidden" as const },
+			};
+}
+
+/**
+ * The switches' colors on the input itself, where they win over a theme that sets the UI tokens on
+ * every element: the track off and on, and the thumb.
+ */
+const SWITCH_COLORS = {
+	"--ui-neutral-border": themeVar("--novel-settings-switch-off"),
+	"--ui-neutral-border-strong": themeVar("--novel-settings-switch-off"),
+	"--ui-brand-bg-solid": themeVar("--novel-settings-switch-on"),
+	"--ui-brand-bg-solid-hover": themeVar("--novel-settings-switch-on"),
+	"--ui-brand-fg-on-solid": themeVar("--novel-settings-switch-thumb"),
+};
 
 /**
  * One slider row; its `<input>` fires a native `input` event on every value as the reader

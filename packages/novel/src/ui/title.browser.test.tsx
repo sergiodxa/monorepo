@@ -548,6 +548,8 @@ describe("Interface sounds", () => {
 				sounds={{ hover: SOUNDS.sounds.tick, select: SOUNDS.sounds.chime }}
 			/>,
 		);
+		await userEvent.hover(result.$("[data-novel-title] h1")!);
+		played.mockClear();
 		await userEvent.hover(button(result, "new-game")!);
 		await userEvent.hover(button(result, "new-game")!);
 		await userEvent.hover(button(result, "settings")!);
