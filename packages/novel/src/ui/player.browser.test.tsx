@@ -45,6 +45,23 @@ import { InteractionCompleteEvent, NovelSaveEvent } from "./events.js";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 
+/**
+ * Sets `@sdxc/ui`-style tokens on every element, as its theme does under a dark color scheme,
+ * in colors no themed control may show; `remove()` the returned sheet when done.
+ */
+function everyElementTokens(): HTMLStyleElement {
+	let sheet = document.createElement("style");
+	sheet.textContent = `* {
+		--ui-neutral-fg-emphasis: rgb(255, 0, 0);
+		--ui-neutral-border: rgb(255, 0, 0);
+		--ui-brand-bg-solid: rgb(255, 0, 0);
+		--ui-brand-fg-on-solid: rgb(255, 0, 0);
+		--ui-neutral-bg-tint: rgb(255, 0, 0);
+	}`;
+	document.head.append(sheet);
+	return sheet;
+}
+
 /** An SVG image as a data URL, so images decode without a server. */
 function svg(color: string, width = 320, height = 640): string {
 	return `data:image/svg+xml,${encodeURIComponent(
@@ -863,16 +880,13 @@ describe("NovelPlayer", () => {
 		await userEvent.keyboard("{Escape}");
 		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
 		await vi.waitFor(() => expect(screen.open).toBe(true));
-		let tokens = document.createElement("style");
-		tokens.textContent = ".tokens * { --ui-neutral-border: red; --ui-brand-bg-solid: red; }";
-		document.head.append(tokens);
-		screen.classList.add("tokens");
+		let tokens = everyElementTokens();
 		screen.style.setProperty("--novel-settings-slider-track", "rgb(1, 2, 3)");
-		screen.style.setProperty("--novel-settings-slider-fill", "rgb(4, 5, 6)");
+		screen.style.setProperty("--novel-settings-panel-accent", "rgb(4, 5, 6)");
 		let track = screen
 			.querySelector('input[name="autoDelay"]')!
 			.closest('[data-slot="slider"] > div')!;
-		expect(getComputedStyle(track, "::before").backgroundColor).toBe("rgba(0, 0, 0, 0)");
+		expect(getComputedStyle(track, "::before").visibility).toBe("hidden");
 		expect(getComputedStyle(track).backgroundImage).toContain("rgb(1, 2, 3)");
 		expect(getComputedStyle(track).backgroundSize).toBe("100% 2px");
 		expect(getComputedStyle(track, "::after").backgroundColor).toBe("rgb(4, 5, 6)");
@@ -918,17 +932,68 @@ describe("NovelPlayer", () => {
 		await userEvent.keyboard("{Escape}");
 		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
 		await vi.waitFor(() => expect(screen.open).toBe(true));
-		let tokens = document.createElement("style");
-		tokens.textContent = ".tokens * { --ui-neutral-border: red; --ui-brand-bg-solid: red; }";
-		document.head.appendChild(tokens);
-		screen.classList.add("tokens");
-		screen.style.setProperty("--novel-settings-switch-off", "rgb(1, 2, 3)");
-		screen.style.setProperty("--novel-settings-switch-on", "rgb(4, 5, 6)");
+		let tokens = everyElementTokens();
 		let toggle = screen.querySelector<HTMLInputElement>('input[name="dyslexiaFont"]')!;
+		expect(getComputedStyle(toggle).backgroundColor).toBe("rgba(127, 127, 127, 0.45)");
+		expect(getComputedStyle(toggle, "::before").backgroundColor).toBe("rgb(255, 255, 255)");
+		screen.style.setProperty("--novel-settings-panel-line", "rgb(1, 2, 3)");
+		screen.style.setProperty("--novel-settings-panel-accent", "rgb(4, 5, 6)");
+		screen.style.setProperty("--novel-settings-panel-on-accent", "rgb(7, 8, 9)");
 		await vi.waitFor(() => expect(getComputedStyle(toggle).backgroundColor).toBe("rgb(1, 2, 3)"));
 		toggle.checked = true;
 		await vi.waitFor(() => expect(getComputedStyle(toggle).backgroundColor).toBe("rgb(4, 5, 6)"));
+		expect(getComputedStyle(toggle, "::before").backgroundColor).toBe("rgb(7, 8, 9)");
 		tokens.remove();
+	});
+
+	test("draws the settings panel's controls in its own ink, apart from the dialog's", async () => {
+		let player = mount({ settings: { textSpeed: 0 } });
+		await shows(player, "Welcome to the café.");
+		await userEvent.keyboard("{Escape}");
+		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
+		await vi.waitFor(() => expect(screen.open).toBe(true));
+		let tokens = everyElementTokens();
+		screen.style.setProperty("--novel-dialog-color", "rgb(243, 231, 204)");
+		screen.style.setProperty("--novel-settings-panel-color", "rgb(43, 33, 20)");
+		let close = screen.querySelector('[data-slot="close"]')!;
+		let select = screen.querySelector("select")!;
+		await vi.waitFor(() => expect(getComputedStyle(close).color).toBe("rgb(243, 231, 204)"));
+		await vi.waitFor(() => expect(getComputedStyle(select).color).toBe("rgb(43, 33, 20)"));
+		tokens.remove();
+	});
+
+	test("leaves the @sdxc/ui tokens outside its dialogs to the app's theme", async () => {
+		let player = mount({ settings: { textSpeed: 0 } });
+		await shows(player, "Welcome to the café.");
+		let tokens = everyElementTokens();
+		let inside = player.surface().querySelector("*")!;
+		expect(getComputedStyle(inside).getPropertyValue("--ui-neutral-border").trim()).toBe(
+			"rgb(255, 0, 0)",
+		);
+		tokens.remove();
+	});
+
+	test("frames the settings panel, its tabs and its preview through variables", async () => {
+		let player = mount({ settings: { textSpeed: 0 } });
+		await shows(player, "Welcome to the café.");
+		await userEvent.keyboard("{Escape}");
+		let screen = (player.result.$("[data-novel-settings]") as HTMLDialogElement)!;
+		await vi.waitFor(() => expect(screen.open).toBe(true));
+		screen.style.setProperty("--novel-settings-panel-border", "3px solid rgb(1, 2, 3)");
+		screen.style.setProperty("--novel-settings-panel-shadow", "rgb(1, 2, 3) 0px 0px 0px 2px inset");
+		screen.style.setProperty("--novel-settings-tab-tracking", "2px");
+		screen.style.setProperty("--novel-settings-tab-shadow", "rgb(4, 5, 6) 0px 0px 0px 1px inset");
+		screen.style.setProperty("--novel-settings-preview-border", "4px solid rgb(7, 8, 9)");
+		screen.style.setProperty("--novel-settings-preview-font-style", "italic");
+		let panel = getComputedStyle(screen.querySelector("[data-novel-settings-panel]")!);
+		expect(panel.borderTopWidth).toBe("3px");
+		expect(panel.boxShadow).toBe("rgb(1, 2, 3) 0px 0px 0px 2px inset");
+		let reset = getComputedStyle(screen.querySelector("[data-novel-settings-reset]")!);
+		expect(reset.letterSpacing).toBe("2px");
+		expect(reset.boxShadow).toBe("rgb(4, 5, 6) 0px 0px 0px 1px inset");
+		let preview = getComputedStyle(screen.querySelector("[data-novel-settings-preview]")!);
+		expect(preview.borderTopWidth).toBe("4px");
+		expect(preview.fontStyle).toBe("italic");
 	});
 
 	test("dispatches typed, bubbling events an ancestor catches through on()", async () => {

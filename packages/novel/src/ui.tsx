@@ -47,7 +47,7 @@ export type {
 	SkipMode,
 	StoredSettings,
 } from "./ui/settings.js";
-export type { NovelThemeVariable } from "./ui/theme.js";
+export type { NovelTheme, NovelThemeVariable } from "./ui/theme.js";
 export type { RunningTransition } from "./ui/transitions.js";
 
 export { AudioMixer } from "./ui/audio.js";
@@ -97,6 +97,6 @@ export { RangeSetting, SettingRow, SettingsScreen } from "./ui/settings-screen.j
 export { resolveSource } from "./ui/source.js";
 export { CharacterSprite, Scenery, Stage } from "./ui/stage.js";
 export { Captions, Line, NamePlate, NextIndicator, Textbox } from "./ui/textbox.js";
-export { NOVEL_THEME_VARIABLES } from "./ui/theme.js";
+export { NOVEL_THEME_VARIABLES, theme } from "./ui/theme.js";
 export { Title } from "./ui/title.js";
 export { BUILT_IN_TRANSITIONS, prefersReducedMotion } from "./ui/transitions.js";

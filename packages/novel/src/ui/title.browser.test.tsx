@@ -548,6 +548,35 @@ describe("NovelPlayer.Title's look", () => {
 		expect(named.result.$("[data-novel-title-art]")!.hasAttribute("aria-hidden")).toBe(false);
 	});
 
+	test("animates the art, lifts a pointed button and sets the footer's leading through variables", async () => {
+		let { result } = mount(
+			<div
+				style={{
+					display: "contents",
+					"--novel-title-art-animation": "novel-title-rise 1s ease both",
+					"--novel-title-button-hover-translate": "0px -4px",
+					"--novel-title-footer-leading": "2",
+				}}
+			>
+				<Title
+					novel={fixture()}
+					heading="The Café"
+					art={<img src={svg(320, 640)} alt="" />}
+					footer="A fan work."
+				/>
+			</div>,
+		);
+		expect(getComputedStyle(result.$("[data-novel-title-art]")!).animationName).toBe(
+			"novel-title-rise",
+		);
+		let footer = getComputedStyle(result.$("[data-novel-title-footer]")!);
+		expect(parseFloat(footer.lineHeight) / parseFloat(footer.fontSize)).toBeCloseTo(2);
+		let newGame = button(result, "new-game")!;
+		expect(getComputedStyle(newGame).translate).toBe("none");
+		await userEvent.hover(newGame);
+		await vi.waitFor(() => expect(getComputedStyle(newGame).translate).toBe("0px -4px"));
+	});
+
 	test("passes the background, art and footer through NovelPlayer.Default", () => {
 		let { result } = mount(
 			<NovelPlayer.Default

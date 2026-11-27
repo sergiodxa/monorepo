@@ -109,7 +109,7 @@ export function Characters(handle: Handle<Characters.Props>) {
 							<button
 								type="button"
 								aria-current={entry === current ? "true" : undefined}
-								style={{ color: entry.character.color }}
+								style={{ "--novel-character-color": entry.character.color }}
 								mix={[
 									css({
 										display: "block",
@@ -118,7 +118,7 @@ export function Characters(handle: Handle<Characters.Props>) {
 										border: 0,
 										borderRadius: "0.4rem",
 										background: "transparent",
-										color: "inherit",
+										color: themeVar("--novel-character-name-color"),
 										font: "inherit",
 										textAlign: "start",
 										cursor: "pointer",
@@ -183,7 +183,14 @@ export function Characters(handle: Handle<Characters.Props>) {
 								paddingBlockEnd: "1rem",
 							})}
 						>
-							<h3 style={{ color: character.color }} mix={css({ margin: 0, fontSize: "1.5em" })}>
+							<h3
+								style={{ "--novel-character-color": character.color }}
+								mix={css({
+									margin: 0,
+									fontSize: "1.5em",
+									color: themeVar("--novel-character-name-color"),
+								})}
+							>
 								<Message i18nKey={character.name} />
 							</h3>
 							{character.description === undefined ? null : (

@@ -23,7 +23,8 @@ import { Memories } from "./memories.js";
 import { MusicRoom } from "./music-room.js";
 import { NovelPlayer } from "./player.js";
 import { quickMenuButton } from "./quick-menu.js";
-import { dialogCloseColors, dialogSurface } from "./theme.js";
+import { ThemeBridge } from "./theme-bridge.js";
+import { dialogSurface, dialogTitle } from "./theme.js";
 
 /** A library screen the extras menu offers. */
 export type LibraryScreen = Extract<
@@ -176,6 +177,7 @@ export function ScreenDialog(handle: Handle<ScreenDialogProps>) {
 				id={id}
 				aria-labelledby={`${id}-title`}
 				data-novel-screen=""
+				data-novel-theme-surface="dialog"
 				style={
 					wide === true
 						? { ...dialogSurface(), maxInlineSize: "none", inlineSize: "min(64rem, 96vw)" }
@@ -184,7 +186,6 @@ export function ScreenDialog(handle: Handle<ScreenDialogProps>) {
 				mix={[
 					css({
 						inlineSize: "min(48rem, 94vw)",
-						fontSize: "1rem",
 						cursor: "auto",
 						userSelect: "text",
 						textAlign: "start",
@@ -192,11 +193,14 @@ export function ScreenDialog(handle: Handle<ScreenDialogProps>) {
 					mix,
 				]}
 			>
+				<ThemeBridge />
 				<Dialog.Header>
-					<Dialog.Title id={`${id}-title`}>{title}</Dialog.Title>
+					<Dialog.Title id={`${id}-title`} style={dialogTitle()}>
+						{title}
+					</Dialog.Title>
 				</Dialog.Header>
 				<div mix={css({ maxBlockSize: "65vh", overflowY: "auto" })}>{open ? children : null}</div>
-				<Dialog.Close commandfor={id} aria-label={closeLabel} style={dialogCloseColors()} />
+				<Dialog.Close commandfor={id} aria-label={closeLabel} />
 			</Dialog>
 		);
 	};

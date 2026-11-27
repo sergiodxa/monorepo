@@ -13,6 +13,7 @@ import type { RenderResult } from "remix/component/test";
 
 import { createI18n } from "@sdxc/i18n";
 import { IntlProvider } from "@sdxc/i18n/ui";
+import { Button, Select } from "@sdxc/ui";
 import { on } from "remix/component";
 import { render } from "remix/component/test";
 import * as s from "remix/data-schema";
@@ -279,23 +280,117 @@ async function loaded(result: RenderResult, selector: string): Promise<HTMLEleme
 	return result.$(selector)!;
 }
 
+/**
+ * Sets `@sdxc/ui`-style tokens on every element under `.system`, as its theme does under a dark
+ * color scheme: a dark ink and bright fills that no themed control may show. Returns its remover.
+ */
+function uiTheme(): () => void {
+	let sheet = document.createElement("style");
+	sheet.textContent = `:is(.system, .system *) {
+		--ui-neutral-fg-emphasis: rgb(30, 30, 30);
+		--ui-neutral-border: rgb(255, 0, 0);
+		--ui-neutral-bg-tint: rgb(0, 255, 0);
+		--ui-neutral-ring: rgb(255, 0, 255);
+		--ui-brand-ring: rgb(255, 0, 255);
+	}`;
+	document.head.append(sheet);
+	return () => sheet.remove();
+}
+
 describe("ScreenDialog", () => {
-	test("draws its close button in the dialog's own text color on a dark surface", async () => {
+	test("draws its close button and every @sdxc/ui button in the dialog's theme under a theme that sets every element's tokens", async () => {
+		let removeTheme = uiTheme();
 		let result = mount(
 			<div
+				class="system"
 				style={{
 					"--novel-dialog-background": "rgb(10 30 20)",
 					"--novel-dialog-color": "rgb(243 231 204)",
-					"--ui-neutral-fg-emphasis": "rgb(30 30 30)",
+					"--novel-dialog-line": "rgb(1 2 3)",
+					"--novel-dialog-field": "rgb(4 5 6)",
+					"--novel-dialog-accent": "rgb(7 8 9)",
 				}}
 			>
-				<ScreenDialog id="screen" title="Screen" closeLabel="Close" open={false} />
+				<ScreenDialog id="screen" title="Screen" closeLabel="Close" open>
+					<Button variant="ghost" data-ghost="">
+						Ghost
+					</Button>
+					<Button variant="outline" data-outline="">
+						Outline
+					</Button>
+					<Select aria-label="Pick">
+						<Select.Option value="a">A</Select.Option>
+					</Select>
+				</ScreenDialog>
 			</div>,
 		);
 		document.querySelector<HTMLDialogElement>("#screen")!.showModal();
 		let close = result.$('[data-slot="close"]')!;
 		expect(getComputedStyle(close).color).toBe("rgb(243, 231, 204)");
 		expect(getComputedStyle(close.querySelector("svg")!).color).toBe("rgb(243, 231, 204)");
+		let ghost = result.$("[data-ghost]")!;
+		expect(getComputedStyle(ghost).color).toBe("rgb(243, 231, 204)");
+		let outline = result.$("[data-outline]")!;
+		expect(getComputedStyle(outline).color).toBe("rgb(243, 231, 204)");
+		expect(getComputedStyle(outline).borderTopColor).toBe("rgb(1, 2, 3)");
+		let select = result.$("select")!;
+		expect(getComputedStyle(select).color).toBe("rgb(243, 231, 204)");
+		expect(getComputedStyle(select).backgroundColor).toBe("rgb(4, 5, 6)");
+		expect(getComputedStyle(result.$('[data-slot="title"]')!).color).toBe("rgb(243, 231, 204)");
+		ghost.focus();
+		await userEvent.keyboard("{Tab}");
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		await vi.waitFor(() => expect(getComputedStyle(ghost).outlineColor).toBe("rgb(7, 8, 9)"));
+		removeTheme();
+	});
+
+	test("keeps the theme's own tokens where the game sets no dialog color", async () => {
+		let removeTheme = uiTheme();
+		let result = mount(
+			<div class="system">
+				<ScreenDialog id="screen" title="Screen" closeLabel="Close" open>
+					<Button variant="outline" data-outline="">
+						Outline
+					</Button>
+				</ScreenDialog>
+			</div>,
+		);
+		document.querySelector<HTMLDialogElement>("#screen")!.showModal();
+		let outline = result.$("[data-outline]")!;
+		expect(getComputedStyle(result.$('[data-slot="close"]')!).color).toBe("rgb(30, 30, 30)");
+		expect(getComputedStyle(outline).color).toBe("rgb(30, 30, 30)");
+		expect(getComputedStyle(outline).borderTopColor).toBe("rgb(255, 0, 0)");
+		removeTheme();
+	});
+
+	test("frames the dialog and sets its type and its title from the theme", async () => {
+		let result = mount(
+			<div
+				style={{
+					"--novel-dialog-border": "3px solid rgb(1, 2, 3)",
+					"--novel-dialog-shadow": "rgb(4, 5, 6) 0px 0px 0px 4px inset",
+					"--novel-dialog-font": "monospace",
+					"--novel-dialog-font-size": "20px",
+					"--novel-dialog-title-font": "serif",
+					"--novel-dialog-title-tracking": "4px",
+					"--novel-dialog-title-color": "rgb(7, 8, 9)",
+				}}
+			>
+				<ScreenDialog id="screen" title="Screen" closeLabel="Close" open={false} />
+			</div>,
+		);
+		let dialog = document.querySelector<HTMLDialogElement>("#screen")!;
+		dialog.showModal();
+		let style = getComputedStyle(dialog);
+		expect(style.borderTopWidth).toBe("3px");
+		expect(style.borderTopColor).toBe("rgb(1, 2, 3)");
+		expect(style.boxShadow).toBe("rgb(4, 5, 6) 0px 0px 0px 4px inset");
+		expect(style.fontFamily).toBe("monospace");
+		expect(style.fontSize).toBe("20px");
+		let title = getComputedStyle(result.$('[data-slot="title"]')!);
+		expect(title.fontFamily).toBe("serif");
+		expect(title.letterSpacing).toBe("4px");
+		expect(title.color).toBe("rgb(7, 8, 9)");
 	});
 });
 
@@ -514,6 +609,77 @@ describe("Encyclopedia", () => {
 		await vi.waitFor(() => expect(book.querySelector("[data-novel-gallery]")).not.toBeNull());
 		tabs[1]!.click();
 		await vi.waitFor(() => expect(book.querySelector("[data-novel-characters]")).not.toBeNull());
+	});
+
+	test("sets its page, its entries' spread and its article's type from the theme", async () => {
+		let result = mount(
+			<div
+				style={{
+					"--novel-encyclopedia-columns": "100px 200px",
+					"--novel-encyclopedia-column-gap": "30px",
+					"--novel-encyclopedia-page-border": "3px solid rgb(1, 2, 3)",
+					"--novel-encyclopedia-page-radius": "5px",
+					"--novel-encyclopedia-page-shadow": "rgb(1, 2, 3) 0px 0px 0px 2px inset",
+					"--novel-encyclopedia-page-color": "rgb(4, 5, 6)",
+					"--novel-encyclopedia-title-weight": "500",
+					"--novel-encyclopedia-topic-color": "rgb(7, 8, 9)",
+					"--novel-encyclopedia-topic-font": "serif",
+					"--novel-encyclopedia-contents-color": "rgb(10, 11, 12)",
+					"--novel-encyclopedia-search-font-style": "italic",
+					"--novel-encyclopedia-tab-tracking": "3px",
+					"--novel-settings-tab-shadow": "rgb(1, 2, 3) 0px 0px 0px 1px inset",
+				}}
+			>
+				<Encyclopedia novel={fixture()} persistent={LEARNED} />
+			</div>,
+		);
+		let book = await loaded(result, "[data-novel-encyclopedia]");
+		let page = getComputedStyle(book.querySelector("[data-novel-encyclopedia-content]")!);
+		expect(page.borderTopWidth).toBe("3px");
+		expect(page.borderTopLeftRadius).toBe("5px");
+		expect(page.boxShadow).toBe("rgb(1, 2, 3) 0px 0px 0px 2px inset");
+		expect(page.color).toBe("rgb(4, 5, 6)");
+		let tab = getComputedStyle(book.querySelector("[data-novel-encyclopedia-page]")!);
+		expect(tab.letterSpacing).toBe("3px");
+		expect(tab.boxShadow).toBe("rgb(1, 2, 3) 0px 0px 0px 1px inset");
+		let entries = getComputedStyle(book.querySelector("[data-novel-encyclopedia-entries]")!);
+		expect(entries.gridTemplateColumns).toBe("100px 200px");
+		expect(entries.columnGap).toBe("30px");
+		let article = book.querySelector("[data-novel-encyclopedia-article]")!;
+		expect(getComputedStyle(article.querySelector("h3")!).fontWeight).toBe("500");
+		let topicLabel = getComputedStyle(article.querySelector("[data-novel-encyclopedia-topic]")!);
+		expect(topicLabel.color).toBe("rgb(7, 8, 9)");
+		expect(topicLabel.fontFamily).toBe("serif");
+		expect(getComputedStyle(article.querySelector("summary")!).color).toBe("rgb(10, 11, 12)");
+		expect(
+			getComputedStyle(book.querySelector("[data-novel-encyclopedia-search]")!).fontStyle,
+		).toBe("italic");
+	});
+
+	test("keeps the article title's weight from the page's own styles unless the theme sets one", async () => {
+		let result = mount(<Encyclopedia novel={fixture()} persistent={LEARNED} />);
+		let book = await loaded(result, "[data-novel-encyclopedia]");
+		let title = book.querySelector("[data-novel-encyclopedia-article] h3")!;
+		expect(getComputedStyle(title).fontWeight).toBe("700");
+	});
+
+	test("draws the cast's names in their own colors unless the theme sets one", async () => {
+		let result = mount(
+			<div>
+				<Encyclopedia novel={fixture()} persistent={LEARNED} pages={["characters"]} />
+			</div>,
+		);
+		let book = await loaded(result, "[data-novel-encyclopedia]");
+		let name = () => book.querySelector<HTMLElement>('[data-character="mika"] button')!;
+		await vi.waitFor(() => expect(getComputedStyle(name()).color).toBe("rgb(232, 106, 146)"));
+		expect(getComputedStyle(book.querySelector("[data-novel-character-detail] h3")!).color).toBe(
+			"rgb(232, 106, 146)",
+		);
+		book.parentElement!.style.setProperty("--novel-character-name-color", "rgb(43, 33, 20)");
+		await vi.waitFor(() => expect(getComputedStyle(name()).color).toBe("rgb(43, 33, 20)"));
+		expect(getComputedStyle(book.querySelector("[data-novel-character-detail] h3")!).color).toBe(
+			"rgb(43, 33, 20)",
+		);
 	});
 
 	test("lists only learned entries, with their topic on the page of every entry", async () => {

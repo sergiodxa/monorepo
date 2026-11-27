@@ -278,6 +278,13 @@ export function Title(handle: Handle<Title.Props>) {
 							blockSize: themeVar("--novel-title-art-block-size"),
 							display: "flex",
 							filter: themeVar("--novel-title-art-filter"),
+							"@media (prefers-reduced-motion: no-preference)": {
+								animation: themeVar("--novel-title-art-animation"),
+							},
+							"@keyframes novel-title-rise": {
+								from: { opacity: 0, translate: "0 3cqh" },
+								to: { opacity: 1, translate: "0 0" },
+							},
 							"& > img, & > svg, & > picture, & > picture > img": {
 								display: "block",
 								blockSize: "100%",
@@ -367,7 +374,7 @@ export function Title(handle: Handle<Title.Props>) {
 								fontSize: themeVar("--novel-title-footer-font-size"),
 								color: themeVar("--novel-title-footer-color"),
 								textAlign: themeVar("--novel-title-footer-align") as "start",
-								lineHeight: 1.45,
+								lineHeight: themeVar("--novel-title-footer-leading"),
 							})}
 						>
 							{footer}
@@ -545,6 +552,7 @@ function TitleButton(handle: Handle<TitleButtonProps>) {
 							background: themeVar("--novel-title-button-hover"),
 							borderColor: themeVar("--novel-title-button-hover-border-color"),
 							boxShadow: themeVar("--novel-title-button-hover-shadow"),
+							translate: themeVar("--novel-title-button-hover-translate"),
 						},
 						"@media (prefers-reduced-motion: reduce)": { transition: "none" },
 					}),

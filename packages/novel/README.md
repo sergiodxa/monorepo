@@ -626,30 +626,32 @@ Each part is a member of `NovelPlayer` and is also exported under its own name. 
 - `NovelPlayer.QuickMenu` (`QuickMenu`): The buttons over the stage (auto, skip, backlog, save, load, quick save and load, settings, hide, full screen, End replay during a replay, and Title when the player has a title screen), then its children
 - `NovelPlayer.Backlog` (`Backlog`): A modal dialog of the lines read, oldest first, each with a button that replays its voice; an entry read before it showed carries `data-novel-read`
 - `NovelPlayer.Saves` (`SaveScreen`): The save and load dialogs, with the autosave slot first (load-only), then the quick one and `slots` numbered slots (default `6`); a replay offers no saving
-- `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting, in Text, Sound and Accessibility tabs (`data-novel-settings-tab`), each row showing the setting's current value beside its control, with a line typed at the chosen text speed, Reset settings and Back; its sliders draw a thin rail line in `--novel-settings-slider-track` (`--novel-settings-slider-track-thickness` thick) and the filled part in `--novel-settings-slider-fill`; its switches read `--novel-settings-switch-off`, `-on` and `-thumb`, and every tab shares one size, the tallest tab's, so the tabs beside them never move
+- `NovelPlayer.Settings` (`SettingsScreen`): A modal dialog for every presentation setting, in Text, Sound and Accessibility tabs (`data-novel-settings-tab`), each row showing the setting's current value beside its control, with a line typed at the chosen text speed, Reset settings and Back; its sliders draw a thin rail line in `--novel-settings-slider-track` (`--novel-settings-slider-track-thickness` thick), and its sliders, switches and select take the settings page's colors (`--novel-settings-panel-color`, `-panel-accent`, `-panel-on-accent`, `-panel-line`, `-panel-field`); every tab shares one size, the tallest tab's, so the tabs beside them never move
 - `NovelPlayer.Extras` (`Extras`): An Extras menu offering the library screens given as its children, each in its own modal dialog
 - `NovelPlayer.Notifications` (`Notifications`): The `notifications` queue as toasts in a `popover="manual"` element, so they sit in the top layer over dialogs and full screen, anchored to the player so `--novel-notification-inset` measures from its edges; a polite live region whose toasts each leave after `duration` milliseconds (default `4000`) and carry `data-kind`. A toast that `opens` an entry or a character, as the player's "New entry" toasts do, is a button (`data-novel-notification-opens`) that opens it in the encyclopedia. Reduced motion drops their entrance
 
 #### Theme: `NOVEL_THEME_VARIABLES`
 
-Every color, image, size and timing the parts draw is a `--novel-*` custom property, and `NOVEL_THEME_VARIABLES` maps each name to its default. Set them with `css()` on the player or any ancestor; image frames work through the `border-image` variables:
+Every color, image, size and timing the parts draw is a `--novel-*` custom property, and `NOVEL_THEME_VARIABLES` maps each name to its default. Set them on the player or any ancestor through `theme()`, whose keys are the variables' names, so a typo is a type error; image frames work through the `border-image` variables:
 
 ```tsx
 <NovelPlayer.Default
 	novel={novel}
-	mix={css({
-		"--novel-textbox-background": "rgb(30 20 10 / 0.85)",
-		"--novel-textbox-border-image-source": "url(/ui/frame.png)",
-		"--novel-textbox-border-image-slice": "24",
-		"--novel-textbox-border-image-width": "24px",
-		"--novel-nameplate-font-family": "Caveat, cursive",
-		"--novel-next-content": '"❤"',
-		"--novel-accent": "#e8a55c",
-	})}
+	mix={css(
+		theme({
+			"--novel-textbox-background": "rgb(30 20 10 / 0.85)",
+			"--novel-textbox-border-image-source": "url(/ui/frame.png)",
+			"--novel-textbox-border-image-slice": "24",
+			"--novel-textbox-border-image-width": "24px",
+			"--novel-nameplate-font-family": "Caveat, cursive",
+			"--novel-next-content": '"❤"',
+			"--novel-accent": "#e8a55c",
+		}),
+	)}
 />
 ```
 
-The variables cover the player and stage (`letterbox`, `color`, `accent`, `stage-background`, transitions, character height), speaker focus (`focus-scale`, `focus-lift`, `focus-filter`, `dim-brightness`, `dim-filter`), the text (font, size, leading, tracking, color, shadow), the textbox (background, border, `border-image-*`, padding, radius, shadow, backdrop filter, position, inset, sizes), the name plate (background, `border-image-*`, font, color, offset), the next-line indicator (`next-content`, `next-image`, size, `next-inset`, color, animation), the choices (gap, prompt, option background, border, `border-image-*`, hover, focus and disabled states, the countdown bar), the quick menu, the dialogs (background, color, `border-image-*`), the settings screen (`settings-panel-*`, `-divider`, `-readout-color`, `-tab-*` for its tabs and buttons, `-preview-*`), captions, the ending overlay, errors, read lines (`read-color`, `inherit` by default) and the notifications (`notification-inset`, `-gap`, `-background`, `-color`, `-border`, `-radius`, `-padding`, `-font`, `-font-size`, `-shadow`, `-animation`).
+The variables cover the player and stage (`letterbox`, `color`, `accent`, `stage-background`, transitions, character height), speaker focus (`focus-scale`, `focus-lift`, `focus-filter`, `dim-brightness`, `dim-filter`), the text (font, size, leading, tracking, color, shadow), the textbox (background, border, `border-image-*`, padding, radius, shadow, backdrop filter, position, inset, sizes), the name plate (background, `border-image-*`, font, color, offset), the next-line indicator (`next-content`, `next-image`, size, `next-inset`, color, animation), the choices (gap, prompt, option background, border, `border-image-*`, hover, focus and disabled states, the countdown bar), the quick menu, the dialogs (background, color, `border-image-*`, border, shadow, font, `title-*`, and `accent`, `on-accent`, `line`, `field`, which every `@sdxc/ui` control inside a dialog takes), the settings screen (`settings-panel-*` including its own control colors, `-divider`, `-readout-color`, `-tab-*` for its tabs and buttons, `-slider-track*`, `-preview-*`), the encyclopedia (`encyclopedia-page-*`, `-columns`, `-tab-*`, `-title-weight`, `-topic-*`, `-contents-color`, `-search-font-style`), `character-name-color`, captions, the ending overlay, errors, read lines (`read-color`, `inherit` by default) and the notifications (`notification-inset`, `-gap`, `-background`, `-color`, `-border`, `-radius`, `-padding`, `-font`, `-font-size`, `-shadow`, `-animation`).
 
 #### Behaviors
 
@@ -774,7 +776,7 @@ Starts a play a test drives by naming each reply, from the initial scene or from
 
 #### `check(novel: Novel): Promise<CheckReport>`
 
-Reads every mapped scene without playing a line. Errors break a play or a save: a key used twice in a scene, a jump to a scene with no module, an undeclared asset or character, a module that fails to load. Warnings may be intended: two characters in one column, a menu whose every option is conditional, an `introduce` of a character declared `lore: { known: true }` (`known-introduced`), a scene the initial one never reaches. Every `oneOf` candidate counts as reachable and is checked for a module, and a `notify` key a catalog lacks is a `missing-message` error scoped to its scene and locale. `ok` is true when no problem is an error.
+Reads every mapped scene without playing a line. Errors break a play or a save: a key used twice in a scene, a jump to a scene with no module, an undeclared asset or character, a module that fails to load. Warnings may be intended: two characters in one column, a menu whose every option is conditional, an `introduce` of a character declared `lore: { known: true }` (`known-introduced`), a scene the initial one never reaches, and an extra no scene unlocks (`unshown-sprite`, `unshown-image`, `unplayed-music`, `unlearned-entry`, `unmet-character`). Every `oneOf` candidate counts as reachable and is checked for a module, and a `notify` key a catalog lacks is a `missing-message` error scoped to its scene and locale. `ok` is true when no problem is an error.
 
 #### `explore(novel: Novel, options?: ExploreOptions): Promise<ExploreReport>`
 
@@ -826,6 +828,10 @@ The scene graph as a [Mermaid](https://mermaid.js.org) flowchart (a box per scen
 - `DevToolsOptions`, `DevEvent`, `ReloadResult`, `ResetOptions`, `DevProblems`: The options and answers above; a logged event carries an `id` counting up and `at`, its `Date.now()`.
 - `SceneGraph`, `GraphScene`, `GraphEdge`, `MissingMessage`: Every declared scene (with `mapped` and its endings), every `goto` and `call` between them, and a key one locale's catalog lacks.
 - `NovelDevTools.Props`: The panel's props.
+
+### `@sdxc/novel/sounds`
+
+`renderInterfaceSounds(preset?: "soft" | "tick" | "chime" | InterfaceSoundPreset)` synthesizes hover and select sounds for the player's `sounds` prop in the browser, with no audio files to ship; `INTERFACE_SOUND_PRESETS` holds the presets to tweak.
 
 ### `@sdxc/novel/offline`
 

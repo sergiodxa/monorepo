@@ -22,7 +22,7 @@ import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 import { listenerSignal } from "./signal.js";
 import { Stage } from "./stage.js";
-import { dialogCloseColors, dialogSurface } from "./theme.js";
+import { dialogSurface, dialogTitle } from "./theme.js";
 
 export namespace SaveScreen {
 	/** Props {@link SaveScreen} accepts. */
@@ -95,11 +95,12 @@ function SlotDialog(handle: Handle<SlotDialogProps>) {
 				id={id}
 				aria-labelledby={`${id}-title`}
 				data-novel-saves={mode}
+				data-novel-theme-surface="dialog"
 				style={dialogSurface()}
-				mix={css({ inlineSize: "min(56rem, 94vw)", fontSize: "1rem", cursor: "auto" })}
+				mix={css({ inlineSize: "min(56rem, 94vw)", cursor: "auto" })}
 			>
 				<Dialog.Header>
-					<Dialog.Title id={`${id}-title`}>
+					<Dialog.Title id={`${id}-title`} style={dialogTitle()}>
 						{mode === "save" ? labels.save : labels.load}
 					</Dialog.Title>
 				</Dialog.Header>
@@ -167,7 +168,7 @@ function SlotDialog(handle: Handle<SlotDialogProps>) {
 						);
 					})}
 				</ul>
-				<Dialog.Close commandfor={id} aria-label={labels.close} style={dialogCloseColors()} />
+				<Dialog.Close commandfor={id} aria-label={labels.close} />
 			</Dialog>
 		);
 	};

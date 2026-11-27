@@ -70,6 +70,7 @@ import { DEFAULT_LABELS } from "./settings.js";
 import { listenerSignal } from "./signal.js";
 import { Stage } from "./stage.js";
 import { Captions, Line, NamePlate, NextIndicator, Textbox } from "./textbox.js";
+import { ThemeBridge } from "./theme-bridge.js";
 import { themeVar } from "./theme.js";
 import { Title } from "./title.js";
 
@@ -331,7 +332,8 @@ export namespace NovelPlayer {
 
 /**
  * Plays a novel and provides {@link NovelPlayer.Context} to the parts and mixins inside it; it
- * renders nothing of its own but a root element. It reads its translator from `IntlProvider`,
+ * renders nothing of its own but a root element holding the stylesheet that carries the theme
+ * into `@sdxc/ui` controls. It reads its translator from `IntlProvider`,
  * renders inside the app's own client entry since a novel holds functions, and reads `start`
  * and `behaviors` once, at mount. Saves (autosaves included), settings and endings leave as
  * `novel:save`, `novel:settings` and `novel:ending`. Every visual decision of the parts is a
@@ -794,6 +796,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 				]}
 			>
 				{children}
+				<ThemeBridge root />
 			</div>
 		);
 	};

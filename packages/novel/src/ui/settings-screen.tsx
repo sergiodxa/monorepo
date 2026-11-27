@@ -17,7 +17,8 @@ import type { NovelLabels, NovelSettings, SkipMode } from "./settings.js";
 
 import { NovelPlayer } from "./player.js";
 import { DEFAULT_LABELS, DEFAULT_SETTINGS } from "./settings.js";
-import { dialogCloseColors, dialogSurface, themeVar } from "./theme.js";
+import { ThemeBridge } from "./theme-bridge.js";
+import { dialogSurface, dialogTitle, themeVar } from "./theme.js";
 
 /** The settings screen's tabs, in the order they are listed. */
 const SETTINGS_TABS = ["text", "sound", "accessibility"] as const;
@@ -124,11 +125,15 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 				id={id}
 				aria-labelledby={`${id}-title`}
 				data-novel-settings=""
+				data-novel-theme-surface="dialog"
 				style={{ ...dialogSurface(), maxInlineSize: "none", inlineSize: "min(60rem, 96vw)" }}
-				mix={[css({ fontSize: "1rem", cursor: "auto" }), mix]}
+				mix={[css({ cursor: "auto" }), mix]}
 			>
+				<ThemeBridge />
 				<Dialog.Header>
-					<Dialog.Title id={`${id}-title`}>{labels.settings}</Dialog.Title>
+					<Dialog.Title id={`${id}-title`} style={dialogTitle()}>
+						{labels.settings}
+					</Dialog.Title>
 				</Dialog.Header>
 				<div
 					mix={css({
@@ -161,6 +166,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 					</div>
 					<div
 						data-novel-settings-panel=""
+						data-novel-theme-surface="settings"
 						mix={css({
 							display: "grid",
 							alignItems: "start",
@@ -170,6 +176,8 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 							padding: themeVar("--novel-settings-panel-padding"),
 							background: themeVar("--novel-settings-panel-background"),
 							color: themeVar("--novel-settings-panel-color"),
+							border: themeVar("--novel-settings-panel-border"),
+							boxShadow: themeVar("--novel-settings-panel-shadow"),
 						})}
 					>
 						<div
@@ -256,7 +264,6 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 								<Switch
 									name="dyslexiaFont"
 									aria-label={labels.dyslexiaFont}
-									style={SWITCH_COLORS}
 									checked={settings.dyslexiaFont}
 									mix={on("change", (event) =>
 										change({ dyslexiaFont: event.currentTarget.checked }),
@@ -267,7 +274,6 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 								<Switch
 									name="selfVoicing"
 									aria-label={labels.selfVoicing}
-									style={SWITCH_COLORS}
 									checked={settings.selfVoicing}
 									mix={on("change", (event) =>
 										change({ selfVoicing: event.currentTarget.checked }),
@@ -308,7 +314,7 @@ export function SettingsScreen(handle: Handle<SettingsScreen.Props>) {
 						{labels.back}
 					</button>
 				</div>
-				<Dialog.Close commandfor={id} aria-label={labels.close} style={dialogCloseColors()} />
+				<Dialog.Close commandfor={id} aria-label={labels.close} />
 			</Dialog>
 		);
 	};
@@ -324,6 +330,8 @@ function settingsButton() {
 		background: themeVar("--novel-settings-tab-background"),
 		color: themeVar("--novel-settings-tab-color"),
 		font: themeVar("--novel-settings-tab-font"),
+		letterSpacing: themeVar("--novel-settings-tab-tracking"),
+		boxShadow: themeVar("--novel-settings-tab-shadow"),
 		textAlign: "center",
 		cursor: "pointer",
 		"&:hover, &:focus-visible, &[aria-selected='true']": {
@@ -413,18 +421,6 @@ function tabPanelState(shown: boolean) {
 }
 
 /**
- * The switches' colors on the input itself, where they win over a theme that sets the UI tokens on
- * every element: the track off and on, and the thumb.
- */
-const SWITCH_COLORS = {
-	"--ui-neutral-border": themeVar("--novel-settings-switch-off"),
-	"--ui-neutral-border-strong": themeVar("--novel-settings-switch-off"),
-	"--ui-brand-bg-solid": themeVar("--novel-settings-switch-on"),
-	"--ui-brand-bg-solid-hover": themeVar("--novel-settings-switch-on"),
-	"--ui-brand-fg-on-solid": themeVar("--novel-settings-switch-thumb"),
-};
-
-/**
  * One slider row; its `<input>` fires a native `input` event on every value as the reader
  * drags, which bubbles to the row where `mix` lands.
  *
@@ -437,15 +433,12 @@ export function RangeSetting(handle: Handle<SettingsScreen.RangeProps>) {
 			<SettingRow label={label} readout={readout ?? String(value)} mix={mix}>
 				<Slider min={min} max={max} value={value} style={{ minInlineSize: 0 }}>
 					<Slider.Track
-						style={{
-							"--ui-neutral-border": "transparent",
-							"--ui-brand-bg-solid": themeVar("--novel-settings-slider-fill"),
-						}}
 						mix={css({
 							backgroundImage: `linear-gradient(${themeVar("--novel-settings-slider-track")}, ${themeVar("--novel-settings-slider-track")})`,
 							backgroundSize: `100% ${themeVar("--novel-settings-slider-track-thickness")}`,
 							backgroundPosition: "center",
 							backgroundRepeat: "no-repeat",
+							"&::before": { visibility: "hidden" },
 						})}
 					>
 						<Slider.Thumb name={name} step={step} aria-label={label} />
@@ -508,8 +501,10 @@ function TextPreview(handle: Handle<TextPreviewProps>) {
 					padding: "0.75rem 1rem",
 					minBlockSize: "1.5em",
 					borderRadius: "0.4rem",
+					border: themeVar("--novel-settings-preview-border"),
 					background: themeVar("--novel-settings-preview-background"),
 					color: themeVar("--novel-settings-preview-color"),
+					fontStyle: themeVar("--novel-settings-preview-font-style"),
 				})}
 			>
 				{text.slice(0, shown)}

@@ -17,7 +17,7 @@ import { css, on, ref } from "remix/component";
 import { Message } from "./message.js";
 import { NovelPlayer } from "./player.js";
 import { listenerSignal } from "./signal.js";
-import { dialogCloseColors, dialogSurface, themeVar } from "./theme.js";
+import { dialogSurface, dialogTitle, themeVar } from "./theme.js";
 
 export namespace Backlog {
 	/** Props {@link Backlog} accepts. */
@@ -47,11 +47,11 @@ export function Backlog(handle: Handle<Backlog.Props>) {
 				id={id}
 				aria-labelledby={`${id}-title`}
 				data-novel-backlog=""
+				data-novel-theme-surface="dialog"
 				style={dialogSurface()}
 				mix={[
 					css({
 						inlineSize: "min(48rem, 92vw)",
-						fontSize: "1rem",
 						cursor: "auto",
 						userSelect: "text",
 					}),
@@ -62,7 +62,9 @@ export function Backlog(handle: Handle<Backlog.Props>) {
 				]}
 			>
 				<Dialog.Header>
-					<Dialog.Title id={`${id}-title`}>{labels.backlog}</Dialog.Title>
+					<Dialog.Title id={`${id}-title`} style={dialogTitle()}>
+						{labels.backlog}
+					</Dialog.Title>
 				</Dialog.Header>
 				<ol
 					mix={[
@@ -126,7 +128,7 @@ export function Backlog(handle: Handle<Backlog.Props>) {
 						</li>
 					))}
 				</ol>
-				<Dialog.Close commandfor={id} aria-label={labels.close} style={dialogCloseColors()} />
+				<Dialog.Close commandfor={id} aria-label={labels.close} />
 			</Dialog>
 		);
 	};

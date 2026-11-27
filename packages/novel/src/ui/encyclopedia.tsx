@@ -168,7 +168,9 @@ export function Encyclopedia(handle: Handle<Encyclopedia.Props>) {
 									borderRadius: themeVar("--novel-settings-tab-radius"),
 									background: themeVar("--novel-settings-tab-background"),
 									color: themeVar("--novel-settings-tab-color"),
-									font: themeVar("--novel-settings-tab-font"),
+									font: themeVar("--novel-encyclopedia-tab-font"),
+									letterSpacing: themeVar("--novel-encyclopedia-tab-tracking"),
+									boxShadow: themeVar("--novel-settings-tab-shadow"),
 									cursor: "pointer",
 									"&:hover, &:focus-visible, &[aria-selected='true']": {
 										background: themeVar("--novel-settings-tab-selected-background"),
@@ -192,6 +194,7 @@ export function Encyclopedia(handle: Handle<Encyclopedia.Props>) {
 				<div
 					role="tabpanel"
 					data-novel-encyclopedia-content={page?.id ?? ""}
+					data-novel-theme-surface="encyclopedia"
 					style={
 						page?.id === "characters"
 							? { overflowY: "hidden", "--novel-characters-height": "100%" }
@@ -202,8 +205,11 @@ export function Encyclopedia(handle: Handle<Encyclopedia.Props>) {
 						minBlockSize: 0,
 						overflowY: "auto",
 						padding: themeVar("--novel-encyclopedia-page-padding"),
-						background: themeVar("--novel-settings-panel-background"),
-						color: themeVar("--novel-settings-panel-color"),
+						border: themeVar("--novel-encyclopedia-page-border"),
+						borderRadius: themeVar("--novel-encyclopedia-page-radius"),
+						background: themeVar("--novel-encyclopedia-page-background"),
+						boxShadow: themeVar("--novel-encyclopedia-page-shadow"),
+						color: themeVar("--novel-encyclopedia-page-color"),
 					})}
 				>
 					{library === undefined ? <p>{labels.loading}</p> : null}
@@ -343,8 +349,9 @@ function Entries(handle: Handle<EntriesProps>) {
 				data-novel-encyclopedia-entries=""
 				mix={css({
 					display: "grid",
-					gridTemplateColumns: "minmax(10rem, 2fr) minmax(0, 3fr)",
-					gap: "1.5rem",
+					gridTemplateColumns: themeVar("--novel-encyclopedia-columns"),
+					rowGap: "1.5rem",
+					columnGap: themeVar("--novel-encyclopedia-column-gap"),
 					blockSize: "100%",
 					"@container (max-width: 44rem)": { gridTemplateColumns: "minmax(0, 1fr)" },
 				})}
@@ -366,6 +373,7 @@ function Entries(handle: Handle<EntriesProps>) {
 								background: "transparent",
 								color: "inherit",
 								font: "inherit",
+								fontStyle: themeVar("--novel-encyclopedia-search-font-style"),
 							}),
 							on("input", (event) => {
 								query = event.currentTarget.value;
@@ -464,12 +472,26 @@ function Article(handle: Handle<ArticleProps>) {
 					{entry.topicName === undefined ? null : (
 						<p
 							data-novel-encyclopedia-topic=""
-							mix={css({ margin: 0, fontSize: "0.85em", letterSpacing: "0.1em", opacity: 0.7 })}
+							mix={css({
+								margin: 0,
+								fontFamily: themeVar("--novel-encyclopedia-topic-font"),
+								fontSize: "0.85em",
+								letterSpacing: "0.1em",
+								color: themeVar("--novel-encyclopedia-topic-color"),
+								opacity: 0.7,
+							})}
 						>
 							<Message i18nKey={entry.topicName} />
 						</p>
 					)}
-					<h3 mix={css({ margin: 0, fontSize: "1.6em", lineHeight: 1.2 })}>
+					<h3
+						mix={css({
+							margin: 0,
+							fontSize: "1.6em",
+							fontWeight: themeVar("--novel-encyclopedia-title-weight"),
+							lineHeight: 1.2,
+						})}
+					>
 						<Message i18nKey={title} />
 					</h3>
 					{summary === undefined ? null : (
@@ -487,7 +509,14 @@ function Article(handle: Handle<ArticleProps>) {
 				)}
 				{sections.length === 0 ? null : (
 					<details data-novel-encyclopedia-contents="">
-						<summary mix={css({ cursor: "pointer" })}>{labels.contents}</summary>
+						<summary
+							mix={css({
+								cursor: "pointer",
+								color: themeVar("--novel-encyclopedia-contents-color"),
+							})}
+						>
+							{labels.contents}
+						</summary>
 						<ol mix={css({ margin: "0.5rem 0 0", paddingInlineStart: "1.5rem" })}>
 							{sections.map((section, index) => (
 								<li key={index}>

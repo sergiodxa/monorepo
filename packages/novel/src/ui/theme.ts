@@ -8,9 +8,9 @@
  */
 
 /**
- * Every theme variable and its default. A default may read another variable or an `@sdxc/ui`
- * theme token, so setting `--novel-accent` recolors every accent at once. Background variables
- * take any `<image>` or gradient, and `*-border-image-*` ones frame a part with an image.
+ * Every theme variable and its default. A default may read another variable, an `@sdxc/ui` token,
+ * or `--novel-character-color`, the color a character declares; backgrounds take any `<image>`,
+ * and `*-border-image-*` frame a part with an image. `@sdxc/ui` controls in dialogs follow them.
  *
  * @example css({ "--novel-textbox-border-image-source": "url(/frame.png)", "--novel-textbox-border-image-width": "24px" })
  */
@@ -101,12 +101,31 @@ export const NOVEL_THEME_VARIABLES = {
 	"--novel-menu-active-color": "var(--novel-accent, #f4c95d)",
 	"--novel-dialog-background": "var(--ui-neutral-bg-tint)",
 	"--novel-dialog-color": "var(--ui-neutral-fg-emphasis)",
+	"--novel-dialog-accent": "var(--novel-accent, #f4c95d)",
+	"--novel-dialog-on-accent": "#fff",
+	"--novel-dialog-line": "var(--ui-neutral-border)",
+	"--novel-dialog-field": "var(--ui-neutral-bg-tint)",
+	"--novel-dialog-border": "1px solid transparent",
+	"--novel-dialog-shadow":
+		"var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000)",
+	"--novel-dialog-font": "inherit",
+	"--novel-dialog-font-size": "1rem",
+	"--novel-dialog-title-font": "inherit",
+	"--novel-dialog-title-weight": "600",
+	"--novel-dialog-title-tracking": "var(--ui-tracking-tight, -0.025em)",
+	"--novel-dialog-title-color": "var(--novel-dialog-color, var(--ui-neutral-fg-emphasis))",
 	"--novel-dialog-border-image-source": "none",
 	"--novel-dialog-border-image-slice": "100%",
 	"--novel-dialog-border-image-width": "1",
 	"--novel-settings-panel-background": "transparent",
 	"--novel-settings-panel-color": "inherit",
 	"--novel-settings-panel-padding": "0.25rem 1rem",
+	"--novel-settings-panel-border": "none",
+	"--novel-settings-panel-shadow": "none",
+	"--novel-settings-panel-accent": "var(--novel-dialog-accent, var(--novel-accent, #f4c95d))",
+	"--novel-settings-panel-on-accent": "var(--novel-dialog-on-accent, #fff)",
+	"--novel-settings-panel-line": "rgb(127 127 127 / 0.45)",
+	"--novel-settings-panel-field": "var(--novel-dialog-field, var(--ui-neutral-bg-tint))",
 	"--novel-settings-divider": "rgb(127 127 127 / 0.25)",
 	"--novel-settings-readout-color": "inherit",
 	"--novel-settings-tab-background": "transparent",
@@ -114,21 +133,36 @@ export const NOVEL_THEME_VARIABLES = {
 	"--novel-settings-tab-border": "1px solid rgb(127 127 127 / 0.3)",
 	"--novel-settings-tab-radius": "0.4rem",
 	"--novel-settings-tab-font": "inherit",
+	"--novel-settings-tab-tracking": "normal",
+	"--novel-settings-tab-shadow": "none",
 	"--novel-settings-tab-selected-background": "rgb(127 127 127 / 0.25)",
 	"--novel-settings-tab-selected-color": "inherit",
 	"--novel-settings-slider-track": "rgb(127 127 127 / 0.55)",
-	"--novel-settings-slider-fill": "var(--novel-accent, #f4c95d)",
 	"--novel-settings-slider-track-thickness": "2px",
-	"--novel-settings-switch-off": "rgb(127 127 127 / 0.45)",
-	"--novel-settings-switch-on": "var(--novel-accent, #f4c95d)",
-	"--novel-settings-switch-thumb": "#fff",
 	"--novel-settings-preview-background": "var(--novel-textbox-background, rgb(10 10 20 / 0.78))",
 	"--novel-settings-preview-color": "var(--novel-textbox-color, #fff)",
+	"--novel-settings-preview-border": "none",
+	"--novel-settings-preview-font-style": "normal",
 	"--novel-library-frame": "1px solid rgb(127 127 127 / 0.45)",
 	"--novel-library-radius": "0.4rem",
 	"--novel-library-locked-background": "rgb(127 127 127 / 0.12)",
 	"--novel-library-locked-color": "rgb(127 127 127)",
+	"--novel-character-name-color": "var(--novel-character-color, currentColor)",
+	"--novel-encyclopedia-tab-font": "var(--novel-settings-tab-font, inherit)",
+	"--novel-encyclopedia-tab-tracking": "var(--novel-settings-tab-tracking, normal)",
 	"--novel-encyclopedia-page-padding": "1rem 1.5rem",
+	"--novel-encyclopedia-page-background": "var(--novel-settings-panel-background, transparent)",
+	"--novel-encyclopedia-page-color": "var(--novel-settings-panel-color, inherit)",
+	"--novel-encyclopedia-page-border": "var(--novel-settings-panel-border, none)",
+	"--novel-encyclopedia-page-radius": "0",
+	"--novel-encyclopedia-page-shadow": "var(--novel-settings-panel-shadow, none)",
+	"--novel-encyclopedia-columns": "minmax(10rem, 2fr) minmax(0, 3fr)",
+	"--novel-encyclopedia-column-gap": "1.5rem",
+	"--novel-encyclopedia-title-weight": "revert-layer",
+	"--novel-encyclopedia-topic-font": "var(--novel-dialog-title-font, inherit)",
+	"--novel-encyclopedia-topic-color": "inherit",
+	"--novel-encyclopedia-contents-color": "inherit",
+	"--novel-encyclopedia-search-font-style": "normal",
 	"--novel-encyclopedia-current-background": "rgb(127 127 127 / 0.2)",
 	"--novel-encyclopedia-current-color": "inherit",
 	"--novel-caption-background": "rgb(0 0 0 / 0.65)",
@@ -158,6 +192,7 @@ export const NOVEL_THEME_VARIABLES = {
 	"--novel-title-art-inset": "auto 4cqw 0 auto",
 	"--novel-title-art-block-size": "95cqh",
 	"--novel-title-art-filter": "none",
+	"--novel-title-art-animation": "none",
 	"--novel-title-color": "#fff",
 	"--novel-title-font": "var(--ui-font-sans, inherit)",
 	"--novel-title-overlay": "linear-gradient(90deg, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0) 60%)",
@@ -196,6 +231,7 @@ export const NOVEL_THEME_VARIABLES = {
 	"--novel-title-button-font-variant": "normal",
 	"--novel-title-button-shadow": "none",
 	"--novel-title-button-hover-shadow": "var(--novel-title-button-shadow, none)",
+	"--novel-title-button-hover-translate": "none",
 	"--novel-title-detail-font-family": "inherit",
 	"--novel-title-detail-font-size": "0.7em",
 	"--novel-title-detail-color": "rgb(255 255 255 / 0.75)",
@@ -203,6 +239,7 @@ export const NOVEL_THEME_VARIABLES = {
 	"--novel-title-detail-text-transform": "none",
 	"--novel-title-detail-time-color": "inherit",
 	"--novel-title-footer-font-size": "1.5cqh",
+	"--novel-title-footer-leading": "1.45",
 	"--novel-title-footer-color": "rgb(255 255 255 / 0.6)",
 	"--novel-title-footer-gap": "2cqh",
 	"--novel-title-footer-max-inline-size": "36cqw",
@@ -211,6 +248,24 @@ export const NOVEL_THEME_VARIABLES = {
 
 /** The name of one of the player's theme variables. */
 export type NovelThemeVariable = keyof typeof NOVEL_THEME_VARIABLES;
+
+/** Theme variables a game sets, by their full custom property names. */
+export interface NovelTheme extends Partial<Record<NovelThemeVariable, string | number>> {}
+
+/**
+ * Collects theme variables into a style object for `css()` or `style`. Keys are the variables'
+ * own names, so a misspelled or removed variable is a type error instead of a silent no-op.
+ *
+ * @example <NovelPlayer mix={css(theme({ "--novel-accent": "#9c7630", "--novel-dialog-color": "#f3e7cc" }))} />
+ * @example <NovelPlayer style={theme({ "--novel-text-size": "4cqh" })} />
+ */
+export function theme(values: NovelTheme): NovelTheme {
+	let styles: NovelTheme = {};
+	for (let [name, value] of Object.entries(values) as [NovelThemeVariable, string | number][]) {
+		if (value !== undefined) styles[name] = value;
+	}
+	return styles;
+}
 
 /**
  * Reads a theme variable with its default, for a part's styles.
@@ -222,27 +277,118 @@ export function themeVar(name: NovelThemeVariable): string {
 }
 
 /**
- * The inline surface of a player dialog: its background, color and image frame, read from the
- * theme so a game restyles every screen at once.
+ * The inline surface of a player dialog: its background, color, frame, shadow and type, read
+ * from the theme so a game restyles every screen at once. `border` comes before the image frame,
+ * since the shorthand resets it.
  */
 export function dialogSurface(): Record<string, string> {
 	return {
 		background: themeVar("--novel-dialog-background"),
 		color: themeVar("--novel-dialog-color"),
+		border: themeVar("--novel-dialog-border"),
 		borderImageSource: themeVar("--novel-dialog-border-image-source"),
 		borderImageSlice: themeVar("--novel-dialog-border-image-slice"),
 		borderImageWidth: themeVar("--novel-dialog-border-image-width"),
+		boxShadow: themeVar("--novel-dialog-shadow"),
+		fontFamily: themeVar("--novel-dialog-font"),
+		fontSize: themeVar("--novel-dialog-font-size"),
+	};
+}
+
+/** The inline type of a player dialog's title, which every screen shares. */
+export function dialogTitle(): Record<string, string> {
+	return {
+		fontFamily: themeVar("--novel-dialog-title-font"),
+		fontWeight: themeVar("--novel-dialog-title-weight"),
+		letterSpacing: themeVar("--novel-dialog-title-tracking"),
+		color: themeVar("--novel-dialog-title-color"),
 	};
 }
 
 /**
- * The inline colors of a player dialog's close button: its glyph takes the dialog's text color and
- * its hover and press tints are mixed from it, so the button reads on a light or a dark surface.
+ * The player's surfaces, by their `data-novel-theme-surface` value: a dialog, and the settings and
+ * encyclopedia pages set inside one. Each names the ink, accent, text on the accent, line and
+ * field color its controls take; an unset page color follows the dialog's.
  */
-export function dialogCloseColors(): Record<string, string> {
-	return {
-		"--ui-neutral-fg-emphasis": "currentColor",
-		"--ui-neutral-bg-tint-hover": "color-mix(in oklab, currentColor 14%, transparent)",
-		"--ui-neutral-bg-tint-pressed": "color-mix(in oklab, currentColor 22%, transparent)",
-	};
+const SURFACES = {
+	dialog: {
+		ink: themeVar("--novel-dialog-color"),
+		accent: themeVar("--novel-dialog-accent"),
+		"on-accent": themeVar("--novel-dialog-on-accent"),
+		line: themeVar("--novel-dialog-line"),
+		field: themeVar("--novel-dialog-field"),
+	},
+	settings: {
+		ink: `var(--novel-settings-panel-color, ${themeVar("--novel-dialog-color")})`,
+		accent: themeVar("--novel-settings-panel-accent"),
+		"on-accent": themeVar("--novel-settings-panel-on-accent"),
+		line: themeVar("--novel-settings-panel-line"),
+		field: themeVar("--novel-settings-panel-field"),
+	},
+	encyclopedia: {
+		ink: `var(--novel-encyclopedia-page-color, var(--novel-settings-panel-color, ${themeVar("--novel-dialog-color")}))`,
+		accent: themeVar("--novel-settings-panel-accent"),
+		"on-accent": themeVar("--novel-settings-panel-on-accent"),
+		line: themeVar("--novel-settings-panel-line"),
+		field: themeVar("--novel-settings-panel-field"),
+	},
+} as const;
+
+/**
+ * The `@sdxc/ui` tokens every element inside a surface takes, mixed from that surface's colors:
+ * neutral text, fields, lines and their hover tints from the ink, line and field, and the brand
+ * fill, its text and every focus ring from the accent.
+ */
+const BRIDGED_TOKENS = {
+	"--ui-fg": "var(--novel-ui-ink)",
+	"--ui-border": "var(--novel-ui-line)",
+	"--ui-ring": "var(--novel-ui-accent)",
+	"--ui-neutral-fg-emphasis": "var(--novel-ui-ink)",
+	"--ui-neutral-fg": "color-mix(in oklab, var(--novel-ui-ink) 80%, transparent)",
+	"--ui-neutral-fg-muted": "color-mix(in oklab, var(--novel-ui-ink) 65%, transparent)",
+	"--ui-neutral-bg-tint": "var(--novel-ui-field)",
+	"--ui-neutral-bg-tint-hover": "color-mix(in oklab, var(--novel-ui-ink) 14%, transparent)",
+	"--ui-neutral-bg-tint-pressed": "color-mix(in oklab, var(--novel-ui-ink) 22%, transparent)",
+	"--ui-neutral-border": "var(--novel-ui-line)",
+	"--ui-neutral-border-hover": "color-mix(in oklab, var(--novel-ui-line), var(--novel-ui-ink) 30%)",
+	"--ui-neutral-border-strong": "color-mix(in oklab, var(--novel-ui-ink) 60%, transparent)",
+	"--ui-neutral-ring": "var(--novel-ui-accent)",
+	"--ui-brand-fg": "var(--novel-ui-accent)",
+	"--ui-brand-fg-on-solid": "var(--novel-ui-on-accent)",
+	"--ui-brand-bg-solid": "var(--novel-ui-accent)",
+	"--ui-brand-bg-solid-hover":
+		"color-mix(in oklab, var(--novel-ui-accent) 85%, var(--novel-ui-ink))",
+	"--ui-brand-bg-solid-pressed":
+		"color-mix(in oklab, var(--novel-ui-accent) 75%, var(--novel-ui-ink))",
+	"--ui-brand-bg-tint": "color-mix(in oklab, var(--novel-ui-accent) 16%, transparent)",
+	"--ui-brand-bg-tint-hover": "color-mix(in oklab, var(--novel-ui-accent) 24%, transparent)",
+	"--ui-brand-bg-tint-pressed": "color-mix(in oklab, var(--novel-ui-accent) 32%, transparent)",
+	"--ui-brand-border": "color-mix(in oklab, var(--novel-ui-accent) 50%, transparent)",
+	"--ui-brand-border-hover": "var(--novel-ui-accent)",
+	"--ui-brand-border-strong": "var(--novel-ui-accent)",
+	"--ui-brand-ring": "var(--novel-ui-accent)",
+} as const;
+
+/** Writes `declarations` as the body of one CSS rule. */
+function declarationBlock(declarations: Record<string, string>): string {
+	return Object.entries(declarations)
+		.map(([name, value]) => `${name}: ${value};`)
+		.join(" ");
 }
+
+/**
+ * The stylesheet bridging the theme into `@sdxc/ui`: each surface resolves its colors into
+ * `--novel-ui-*` once, and every element inside maps the UI tokens onto them, unlayered and with
+ * two attribute selectors, so it outranks a theme that sets the tokens on every element.
+ */
+export const THEME_BRIDGE_STYLESHEET = [
+	...Object.entries(SURFACES).map(
+		([surface, colors]) =>
+			`[data-novel-theme-surface="${surface}"] { ${declarationBlock(
+				Object.fromEntries(
+					Object.entries(colors).map(([name, value]) => [`--novel-ui-${name}`, value]),
+				),
+			)} }`,
+	),
+	`[data-novel-theme-surface] *:not([data-novel-theme-surface]) { ${declarationBlock(BRIDGED_TOKENS)} }`,
+].join("\n");
