@@ -119,6 +119,83 @@ Operations do not gamut-map, so a result may leave sRGB; call `toGamut()` when i
 - `ColorParseError`: `input` holds the rejected text
 - `ContrastUnreachableError`: `target`, the best `ratio` reached and the `best` color
 
+## Pattern: Theming A Page From A Chosen Color
+
+A Worker serves a stylesheet built from the accent a visitor picked. An unreadable value falls back to a default, links are darkened until they pass AA on white, and text on the accent is whichever of black or white reads better.
+
+```typescript
+import { Color } from "@sdxc/color";
+import { unwrap } from "@sdxc/result";
+
+function themeStylesheet(accentText: string | null): string {
+	let accent = unwrap(Color.parse(accentText ?? ""), () => Color.oklch(0.55, 0.15, 260)).toGamut();
+	let page = Color.rgb(1, 1, 1);
+	let link = accent.ensureContrast(page, 4.5);
+
+	return `:root {
+	--accent: ${accent.toString()};
+	--accent-hover: ${accent.darken(0.1).toGamut().toString()};
+	--on-accent: ${accent.contrastingText().toString()};
+	--link: ${(link.status === "success" ? link.data : link.error.best).toString()};
+}`;
+}
+
+export default {
+	async fetch(request: Request): Promise<Response> {
+		let accent = new URL(request.url).searchParams.get("accent");
+		return new Response(themeStylesheet(accent), { headers: { "Content-Type": "text/css" } });
+	},
+};
+```
+
+## Pattern: Validating A Submitted Color
+
+A settings form accepts any CSS color, rejects text that is not one, requires the color to stand out on white as a UI part (WCAG 1.4.11), and stores it as hex.
+
+```typescript
+import { Color } from "@sdxc/color";
+import { isFailure } from "@sdxc/result";
+
+async function saveBrandColor(request: Request): Promise<Response> {
+	let form = await request.formData();
+	let parsed = Color.parse(String(form.get("color") ?? ""));
+	if (isFailure(parsed)) return Response.json({ error: parsed.error.message }, { status: 422 });
+
+	let color = parsed.data.toGamut();
+	if (!color.contrast(Color.rgb(1, 1, 1)).aa.nonText) {
+		return Response.json({ error: "Pick a color that stands out on white" }, { status: 422 });
+	}
+	return Response.json({ color: color.toString("hex") });
+}
+```
+
+## Pattern: Finding Low-Contrast Text On A Rendered Page
+
+In the browser, `getComputedStyle` answers every color in a syntax `Color.parse` reads, `color-mix()` results included. A transparent background shows its ancestors through, so the backdrop is every translucent layer up to the first opaque one, painted over the white canvas.
+
+```typescript
+import { Color } from "@sdxc/color";
+import { isSuccess } from "@sdxc/result";
+
+function backdropOf(element: Element): Color {
+	let layers: Color[] = [];
+	for (let node: Element | null = element; node !== null; node = node.parentElement) {
+		let parsed = Color.parse(getComputedStyle(node).backgroundColor);
+		if (!isSuccess(parsed) || parsed.data.alpha === 0) continue;
+		layers.push(parsed.data);
+		if (parsed.data.alpha === 1) break;
+	}
+	return layers.reduceRight((below, layer) => layer.over(below), Color.rgb(1, 1, 1));
+}
+
+function lowContrastText(root: ParentNode): Element[] {
+	return [...root.querySelectorAll("p, a, li, label, button")].filter((element) => {
+		let text = Color.parse(getComputedStyle(element).color);
+		return isSuccess(text) && !text.data.contrast(backdropOf(element)).aa.text;
+	});
+}
+```
+
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
