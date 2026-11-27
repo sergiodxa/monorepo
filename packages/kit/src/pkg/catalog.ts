@@ -71,6 +71,7 @@ export const PACKAGES_WITHOUT_COMMAND_LINES: readonly string[] = [
 	"cloudflare-mocks",
 	"cloudflare-pricing",
 	"codemod",
+	"color",
 	"csv",
 	"data-model",
 	"data-table-d1",
