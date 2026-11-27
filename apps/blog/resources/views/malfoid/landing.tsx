@@ -1,7 +1,7 @@
 /**
  * Malfoid Stickers' landing at `/apps/malfoid`, in English or Spanish: the pack shown rather
  * than described, led by its real artwork: a hero of five stickers, a conversation she answers
- * without a word, the six moods, every sticker in a viewer, privacy, installation and questions.
+ * without a word, its seventeen sets, every sticker in a viewer, privacy, installation and questions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,11 +33,11 @@ import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { PageLocale } from "~/app/services/page-locale";
 import type { LandingCopy } from "~/resources/content/malfoid/landing";
-import type { StickerId } from "~/resources/content/malfoid/stickers";
+import type { StickerGroup, StickerId } from "~/resources/content/malfoid/stickers";
 
 import { StickerPreload } from "~/resources/components/sticker-preload";
 import { LANDING_COPY, MOOD_COVERS } from "~/resources/content/malfoid/landing";
-import { STICKER_CATEGORIES, STICKERS } from "~/resources/content/malfoid/stickers";
+import { STICKER_GROUPS, STICKERS } from "~/resources/content/malfoid/stickers";
 import { MalfoidLayout } from "~/resources/layouts/malfoid";
 import { AppStoreCall, inLocale, StickerImage } from "~/resources/views/malfoid/parts";
 import routes from "~/routes/web";
@@ -377,8 +377,9 @@ function Reply(handle: Handle<Reply.Props>) {
 }
 
 /**
- * The six moods as a table of contents: each card names a mood, says what it's for, shows the
- * sticker that stands for it and jumps to its ten stickers in the gallery.
+ * The sets as a table of contents: a card for each everyday set naming it, saying what it's
+ * for and showing the sticker that stands for it, then a compact row of the occasions, each
+ * jumping to its ten stickers in the gallery.
  *
  * @param handle Runtime handle carrying the page's words.
  * @returns The render function producing the band.
@@ -387,7 +388,7 @@ function Moods(handle: Handle<BandProps>) {
 	return () => {
 		let { t } = handle.props;
 		return (
-			<LandingSection id="moods" tone="tinted" inset mix={[nearView(900)]}>
+			<LandingSection id="moods" tone="tinted" inset mix={[nearView(1200)]}>
 				<LandingHeader eyebrow={t.moods.eyebrow} description={t.moods.description}>
 					{t.moods.title}
 				</LandingHeader>
@@ -399,10 +400,10 @@ function Moods(handle: Handle<BandProps>) {
 						p(0),
 						raw({ listStyle: "none" }),
 						at("md", gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") })),
-						at("xl", gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") })),
+						at("xl", gridTemplate({ columns: repeat(4, "minmax(0, 1fr)") })),
 					]}
 				>
-					{STICKER_CATEGORIES.map((category) => (
+					{STICKER_GROUPS.everyday.map((category) => (
 						<li
 							key={category}
 							mix={[
@@ -415,9 +416,19 @@ function Moods(handle: Handle<BandProps>) {
 									alignItems: "center",
 									backgroundColor: "var(--app-card)",
 								}),
+								at(
+									"xl",
+									raw({
+										gridTemplateColumns: "minmax(0, 1fr)",
+										alignItems: "start",
+										alignContent: "start",
+									}),
+								),
 							]}
 						>
-							<StickerImage id={MOOD_COVERS[category]} sizes="88px" decorative />
+							<div mix={[is(22)]}>
+								<StickerImage id={MOOD_COVERS[category]} sizes="88px" decorative />
+							</div>
 							<div mix={[vstack({ gap: 1.5, align: "start" })]}>
 								<Heading mix={[m(0), font("display"), text("xl"), weight("semibold")]}>
 									{t.moodNames[category].name}
@@ -432,16 +443,64 @@ function Moods(handle: Handle<BandProps>) {
 						</li>
 					))}
 				</ul>
+				<div mix={[vstack({ gap: 4, align: "stretch" }), pbs(6)]}>
+					<Heading mix={[m(0), font("display"), text("2xl"), weight("semibold")]}>
+						{t.moods.occasions}
+					</Heading>
+					<ul
+						mix={[
+							grid(),
+							gap(3),
+							m(0),
+							p(0),
+							raw({ listStyle: "none" }),
+							gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") }),
+							at("lg", gridTemplate({ columns: repeat(9, "minmax(0, 1fr)") })),
+						]}
+					>
+						{STICKER_GROUPS.occasions.map((category) => (
+							<li key={category}>
+								<a
+									href={`#${category}`}
+									title={t.moodNames[category].body}
+									mix={[
+										vstack({ gap: 2, align: "center" }),
+										is("full"),
+										p(3),
+										rounded("xl"),
+										text("sm"),
+										leading("snug"),
+										weight("medium"),
+										fg("neutral.emphasis"),
+										raw({
+											blockSize: "100%",
+											justifyContent: "start",
+											textAlign: "center",
+											textDecoration: "none",
+											backgroundColor: "var(--app-card)",
+										}),
+										motionSafe(raw({ transition: "transform 160ms ease" })),
+										hover(raw({ transform: "rotate(-2deg) scale(1.03)" })),
+									]}
+								>
+									<span mix={[is(16), raw({ display: "block" })]}>
+										<StickerImage id={MOOD_COVERS[category]} sizes="64px" decorative />
+									</span>
+									{t.moodNames[category].name}
+								</a>
+							</li>
+						))}
+					</ul>
+				</div>
 			</LandingSection>
 		);
 	};
 }
 
 /**
- * Every sticker in the pack, grouped by mood under a heading the mood cards link to. Each tile
- * opens the viewer at that sticker, where it answers a friend's message at full size with its
- * description beneath; swiping or the arrows step through all 60. Pointing at a tile starts
- * its sticker loading, and an open slide loads its neighbours.
+ * Every sticker in the pack, set by set under the headings the table of contents links to.
+ * Each tile opens the viewer at that sticker, answering a friend's message at full size; the
+ * arrows step through all 170 in the gallery's order, and the art loads ahead of the reader.
  *
  * @param handle Runtime handle carrying the page's words.
  * @returns The render function producing the band.
@@ -451,61 +510,77 @@ function Gallery(handle: Handle<BandProps>) {
 		let { t } = handle.props;
 		let locale = t.locale;
 		return (
-			<LandingSection id="stickers" mix={[nearView(2600)]}>
+			<LandingSection id="stickers" mix={[nearView(6000)]}>
 				<LandingHeader eyebrow={t.gallery.eyebrow} description={t.gallery.description}>
 					{t.gallery.title}
 				</LandingHeader>
-				<div mix={[vstack({ gap: 10, align: "stretch" })]}>
-					{STICKER_CATEGORIES.map((category) => (
-						<section key={category} id={category} aria-labelledby={`${category}-title`}>
+				<div mix={[vstack({ gap: 14, align: "stretch" })]}>
+					{(Object.keys(STICKER_GROUPS) as StickerGroup[]).map((group) => (
+						<section
+							key={group}
+							aria-labelledby={`${group}-title`}
+							mix={[vstack({ gap: 10, align: "stretch" })]}
+						>
 							<Heading
-								id={`${category}-title`}
-								mix={[m(0), font("display"), text("2xl"), weight("semibold")]}
+								id={`${group}-title`}
+								mix={[m(0), font("display"), text("3xl"), weight("semibold")]}
 							>
-								{t.moodNames[category].name}
+								{t.gallery.groups[group]}
 							</Heading>
-							<ul
-								mix={[
-									grid(),
-									gap(2),
-									m(0),
-									p(0),
-									pbs(4),
-									at("sm", gap(3)),
-									raw({
-										listStyle: "none",
-										gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-										"@media (min-width: 64rem)": {
-											gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
-										},
-									}),
-								]}
-							>
-								{STICKERS.filter((entry) => entry.category === category).map((entry) => (
-									<li key={entry.id}>
-										<Lightbox.Trigger
-											lightbox={VIEWER_ID}
-											index={STICKERS.indexOf(entry)}
-											aria-label={t.gallery.open(entry.alt[locale])}
+							<HeadingScope>
+								{STICKER_GROUPS[group].map((category) => (
+									<section key={category} id={category} aria-labelledby={`${category}-title`}>
+										<Heading
+											id={`${category}-title`}
+											mix={[m(0), font("display"), text("xl"), weight("semibold"), fg("neutral")]}
+										>
+											{t.moodNames[category].name}
+										</Heading>
+										<ul
 											mix={[
-												is("full"),
-												p(1),
-												at("md", p(2)),
-												rounded("lg"),
-												raw({ backgroundColor: "var(--malfoid-tile)" }),
-												motionSafe(raw({ transition: "transform 160ms ease" })),
-												hover(raw({ transform: "rotate(-3deg) scale(1.04)" })),
+												grid(),
+												gap(2),
+												m(0),
+												p(0),
+												pbs(4),
+												at("sm", gap(3)),
+												raw({
+													listStyle: "none",
+													gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+													"@media (min-width: 64rem)": {
+														gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
+													},
+												}),
 											]}
 										>
-											<StickerImage
-												id={entry.id}
-												decorative
-												sizes="(min-width: 64rem) 112px, 20vw"
-											/>
-										</Lightbox.Trigger>
-									</li>
+											{STICKERS.filter((entry) => entry.category === category).map((entry) => (
+												<li key={entry.id}>
+													<Lightbox.Trigger
+														lightbox={VIEWER_ID}
+														index={STICKERS.indexOf(entry)}
+														aria-label={t.gallery.open(entry.alt[locale])}
+														mix={[
+															is("full"),
+															p(1),
+															at("md", p(2)),
+															rounded("lg"),
+															raw({ backgroundColor: "var(--malfoid-tile)" }),
+															motionSafe(raw({ transition: "transform 160ms ease" })),
+															hover(raw({ transform: "rotate(-3deg) scale(1.04)" })),
+														]}
+													>
+														<StickerImage
+															id={entry.id}
+															decorative
+															sizes="(min-width: 64rem) 112px, 20vw"
+														/>
+													</Lightbox.Trigger>
+												</li>
+											))}
+										</ul>
+									</section>
 								))}
-							</ul>
+							</HeadingScope>
 						</section>
 					))}
 				</div>

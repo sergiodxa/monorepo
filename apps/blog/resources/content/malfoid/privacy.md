@@ -3,7 +3,7 @@ title: Malfoid Stickers Privacy Policy
 description: "Malfoid Stickers collects no data. How the sticker pack works on iPhone and iPad, and what happens when you contact support through this website."
 ---
 
-Last updated: November 24, 2026
+Last updated: November 26, 2026
 
 Malfoid Stickers is developed by Sergio Daniel Xalambri (“I,” “me,” or “my”). This policy explains how information is handled when you use the Malfoid Stickers iMessage sticker pack on iPhone and iPad, and, separately, when you contact Malfoid Stickers support through this website.
 
@@ -17,7 +17,7 @@ The app includes no advertising, advertising identifiers, analytics, tracking, c
 
 Malfoid Stickers is a sticker pack inside Messages. It does not access your conversations, contacts, photos, camera, microphone or location, and it does not ask for permission to use any of them.
 
-All 60 stickers are bundled with the app and load from your device, so the pack makes no network requests to show them.
+All 170 stickers are bundled with the app and load from your device, so the pack makes no network requests to show them.
 
 ## Messages and Apple
 

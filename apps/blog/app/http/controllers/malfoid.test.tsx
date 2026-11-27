@@ -79,10 +79,10 @@ describe("GET /apps/malfoid", () => {
 		expect(html).not.toContain('name="apple-itunes-app"');
 	});
 
-	test("opens every one of the 60 stickers in the viewer, named by its alt text", async () => {
+	test("opens every one of the 170 stickers in the viewer, named by its alt text", async () => {
 		let html = await (await fetchPage("/apps/malfoid")).text();
 
-		expect(STICKERS).toHaveLength(60);
+		expect(STICKERS).toHaveLength(170);
 		for (let sticker of STICKERS) {
 			expect(html).toContain(`srcset="/apps/malfoid/stickers/${sticker.id}-240.webp 240w`);
 			expect(html).toContain(
@@ -98,7 +98,7 @@ describe("GET /apps/malfoid", () => {
 		expect(html).toMatch(/src="\/apps\/malfoid\/stickers\/tantrum-480\.webp"[^>]*loading="lazy"/);
 	});
 
-	test("introduces the six moods, privacy, installation and the questions", async () => {
+	test("introduces every set, privacy, installation and the questions", async () => {
 		let html = await (await fetchPage("/apps/malfoid")).text();
 
 		for (let mood of [
@@ -108,11 +108,18 @@ describe("GET /apps/malfoid", () => {
 			"Happiness &amp; affection",
 			"Sadness &amp; exhaustion",
 			"Everyday reactions",
+			"Friendship",
+			"Memes",
+			"Lunar New Year",
+			"Mother’s &amp; Father’s Day",
+			"Earth Day",
 		]) {
 			expect(html).toContain(mood);
 		}
 		expect(html).toContain('id="install"');
 		expect(html).toContain('id="faq"');
+		expect(html).toContain('href="#halloween"');
+		expect(html).toContain('id="halloween"');
 		expect(html).toContain(
 			"Completely free. No ads. No subscriptions. No data collection. Just Malfoid.",
 		);
@@ -139,7 +146,7 @@ describe("the sticker viewer", () => {
 		expect(html).toContain(
 			"A friend writes “Should I text my ex?” and the reply is a sticker: Malfoid gives a dramatic thumbs-down.",
 		);
-		expect(html).toContain("1 / 60");
+		expect(html).toContain("1 / 170");
 	});
 
 	test("gives every sticker a message in both languages", () => {
@@ -257,7 +264,7 @@ describe("GET /apps/malfoid/privacy in Spanish", () => {
 		let body = await response.text();
 
 		expect(response.headers.get("content-language")).toBe("es-AR");
-		expect(body).toContain("Última actualización: 24 de noviembre de 2026");
+		expect(body).toContain("Última actualización: 26 de noviembre de 2026");
 		expect(body).toContain("## A qué puede acceder la app");
 		expect(body).not.toContain("title: Política de privacidad");
 	});
@@ -270,7 +277,7 @@ describe("GET /apps/malfoid/privacy.md", () => {
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toContain("text/markdown");
-		expect(body).toContain("Last updated: November 24, 2026");
+		expect(body).toContain("Last updated: November 26, 2026");
 		expect(body).toContain("does not access your conversations, contacts, photos");
 		expect(body).not.toContain("title: Malfoid Stickers Privacy Policy");
 	});

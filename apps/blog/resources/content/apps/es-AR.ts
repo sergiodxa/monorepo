@@ -64,9 +64,9 @@ const ES_AR: AppsPage = {
 			href: APP_LINKS.malfoid,
 			platform: "App Store · Muy pronto",
 			blurb:
-				"Reacciones tiernas y atrevidas para iMessage en iPhone y iPad: 60 stickers sin texto de Malfoid, orgullosa, sarcástica y secretamente cariñosa. Gratis, sin anuncios y sin recopilar datos.",
+				"Reacciones tiernas y atrevidas para iMessage en iPhone y iPad: 170 stickers sin texto de Malfoid, orgullosa, sarcástica y secretamente cariñosa. Gratis, sin anuncios y sin recopilar datos.",
 			highlights: [
-				"60 stickers en seis estados de ánimo",
+				"170 stickers para cada estado de ánimo y cada fecha",
 				"Sin texto, así que funcionan en cualquier idioma",
 				"Sin anuncios, rastreo ni recopilación de datos",
 			],

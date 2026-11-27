@@ -54,7 +54,7 @@ describe("MalfoidLandingContent", () => {
 		host.remove();
 	});
 
-	test("lays every mood's ten stickers out in full rows", () => {
+	test("lays every set's ten stickers out in full rows", () => {
 		let host = mountLanding(1024);
 
 		for (let category of STICKER_CATEGORIES) {
@@ -82,6 +82,19 @@ describe("Sticker viewer", () => {
 		expect(viewer?.open).toBe(true);
 		expect(viewer?.textContent).toContain("Brb, just one more episode.");
 		viewer?.close();
+		host.remove();
+	});
+
+	test("opens an occasion's sticker at its own slide, after every everyday set", () => {
+		let host = mountLanding(1024);
+		let index = Number(
+			host.querySelector<HTMLElement>("#christmas li [data-lightbox-index]")?.dataset.lightboxIndex,
+		);
+		let slides = host.querySelectorAll("#malfoid-stickers [data-lightbox-slide]");
+
+		expect(slides).toHaveLength(170);
+		expect(index).toBe(90);
+		expect(slides[index]?.textContent).toContain("You didn't have to get me anything!");
 		host.remove();
 	});
 });

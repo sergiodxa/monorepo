@@ -8,7 +8,11 @@
  */
 
 import type { PageLocale } from "~/app/services/page-locale";
-import type { StickerCategory, StickerId } from "~/resources/content/malfoid/stickers";
+import type {
+	StickerCategory,
+	StickerGroup,
+	StickerId,
+} from "~/resources/content/malfoid/stickers";
 
 /** A title and the sentence under it. */
 export interface CopyItem {
@@ -16,7 +20,7 @@ export interface CopyItem {
 	body: string;
 }
 
-/** A mood's name and its one-line introduction. */
+/** A set's name and its one-line introduction. */
 export interface MoodCopy {
 	name: string;
 	body: string;
@@ -62,7 +66,14 @@ export interface LandingCopy {
 		conversation: [string, string];
 		caption: string;
 	};
-	moods: { eyebrow: string; title: string; description: string; seeAll: string };
+	moods: {
+		eyebrow: string;
+		title: string;
+		description: string;
+		seeAll: string;
+		/** The heading over the occasion sets, below the everyday ones. */
+		occasions: string;
+	};
 	moodNames: Record<StickerCategory, MoodCopy>;
 	gallery: {
 		eyebrow: string;
@@ -72,6 +83,8 @@ export interface LandingCopy {
 		viewer: string;
 		/** A tile's label, naming what opens. */
 		open: (alt: string) => string;
+		/** The heading of each group of sets in the gallery. */
+		groups: Record<StickerGroup, string>;
 		/** A slide's description for a reader who cannot see the conversation. */
 		reply: (prompt: string, alt: string) => string;
 		labels: { close: string; previous: string; next: string };
@@ -89,7 +102,7 @@ export interface LandingCopy {
 	closing: { title: string; description: string; support: string };
 }
 
-/** The sticker that stands for each mood on its card. */
+/** The sticker that stands for each set on its card. */
 export const MOOD_COVERS: Record<StickerCategory, StickerId> = {
 	"pride-and-sarcasm": "superior-look",
 	"anger-and-frustration": "angry-pout",
@@ -97,6 +110,17 @@ export const MOOD_COVERS: Record<StickerCategory, StickerId> = {
 	"happiness-and-affection": "sparkling-eyes",
 	"sadness-and-exhaustion": "dramatic-crying",
 	"everyday-reactions": "eating-popcorn",
+	friendship: "friendship-pinky-promise",
+	memes: "memes-this-is-fine",
+	thanksgiving: "thanksgiving-pumpkin-pie",
+	christmas: "christmas-hot-cocoa",
+	"valentines-day": "valentines-day-offering-chocolates",
+	"new-year": "new-year-confetti-explosion",
+	halloween: "halloween-vampire-cape",
+	"lunar-new-year": "lunar-new-year-lantern",
+	easter: "easter-reluctant-bunny-ears",
+	"parents-day": "parents-day-wonky-cake",
+	"earth-day": "earth-day-globe-hug",
 };
 
 /** The landing in English. */
@@ -105,7 +129,7 @@ const EN: LandingCopy = {
 	meta: {
 		title: "Malfoid Stickers: Cute & Sassy Reactions for iMessage",
 		description:
-			"Meet Malfoid, your favorite grumpy blonde with an attitude: 60 free, textless iMessage stickers for iPhone and iPad. No ads, no subscriptions, no data collection.",
+			"Meet Malfoid, your favorite grumpy blonde with an attitude: 170 free, textless iMessage stickers for iPhone and iPad. No ads, no subscriptions, no data collection.",
 		socialCardAlt:
 			"Malfoid Stickers, Cute & Sassy Reactions: three stickers of Malfoid smiling smugly, crying dramatically and hugging a pink heart.",
 		privacyCardAlt:
@@ -131,8 +155,8 @@ const EN: LandingCopy = {
 		title: "A little cute. A little dramatic. A lot of attitude.",
 		shortTitle: "Cute. Dramatic. All attitude.",
 		description:
-			"Meet Malfoid, your favorite grumpy blonde with an attitude. Express yourself with 60 adorable, sarcastic, dramatic, and unapologetically sassy stickers.",
-		seeAll: "See all 60",
+			"Meet Malfoid, your favorite grumpy blonde with an attitude. Express yourself with 170 adorable, sarcastic, dramatic, and unapologetically sassy stickers.",
+		seeAll: "See all 170",
 	},
 	meet: {
 		eyebrow: "Meet Malfoid",
@@ -145,10 +169,12 @@ const EN: LandingCopy = {
 		caption: "An example conversation. Every reply is a Malfoid sticker.",
 	},
 	moods: {
-		eyebrow: "Six moods, ten stickers each",
+		eyebrow: "Seventeen sets, ten stickers each",
 		title: "For every mood—even the ones you’re pretending not to have.",
-		description: "Pride, rage, embarrassment, joy, despair and the everyday in between.",
+		description:
+			"Pride, rage, embarrassment, joy, despair and the everyday in between, plus a set for every holiday on the calendar.",
 		seeAll: "See all 10",
+		occasions: "And for every occasion",
 	},
 	moodNames: {
 		"pride-and-sarcasm": {
@@ -175,14 +201,41 @@ const EN: LandingCopy = {
 			name: "Everyday reactions",
 			body: "Hello, goodbye, hmm, popcorn, tea. The small replies that keep a conversation going.",
 		},
+		friendship: {
+			name: "Friendship",
+			body: "Half a snack, a shared umbrella, a pinky promise. Loyal, if you ask nicely.",
+		},
+		memes: {
+			name: "Memes",
+			body: "Everything is fine, the brain is buffering, and the table is getting flipped.",
+		},
+		thanksgiving: { name: "Thanksgiving", body: "Turkey, pie and a well-earned nap." },
+		christmas: { name: "Christmas", body: "Presents, cocoa and lights that refuse to untangle." },
+		"valentines-day": {
+			name: "Valentine’s Day",
+			body: "Roses behind her back and chocolates she’s guarding.",
+		},
+		"new-year": { name: "New Year", body: "Confetti, a midnight wish and asleep by 11:58." },
+		halloween: { name: "Halloween", body: "Capes, candy and one very crooked pumpkin." },
+		"lunar-new-year": {
+			name: "Lunar New Year",
+			body: "Red envelopes, lanterns and dumplings to share.",
+		},
+		easter: { name: "Easter", body: "Painted eggs and bunny ears, worn under protest." },
+		"parents-day": {
+			name: "Mother’s & Father’s Day",
+			body: "Handmade cards, wonky cakes and slightly burnt toast.",
+		},
+		"earth-day": { name: "Earth Day", body: "Saplings, bikes and a globe that needs a hug." },
 	},
 	gallery: {
 		eyebrow: "The whole pack",
 		title: "Every last one of her",
 		description:
-			"All 60 stickers, exactly as they appear in Messages. Tap one to see it up close, answering a friend.",
+			"All 170 stickers, exactly as they appear in Messages. Tap one to see it up close, answering a friend.",
 		viewer: "Malfoid stickers",
 		open: (alt) => `Open sticker: ${alt}`,
+		groups: { everyday: "Every day", occasions: "Occasions" },
 		reply: (prompt, alt) => `A friend writes “${prompt}” and the reply is a sticker: ${alt}`,
 		labels: { close: "Close", previous: "Previous sticker", next: "Next sticker" },
 	},
@@ -210,7 +263,7 @@ const EN: LandingCopy = {
 			"No account, no sign-in, nothing to set up.",
 			"No analytics, no tracking and no data collection.",
 			"No access to your conversations, contacts, photos, camera, microphone or location.",
-			"All 60 stickers are bundled in the app and load offline.",
+			"All 170 stickers are bundled in the app and load offline.",
 		],
 	},
 	install: {
@@ -277,7 +330,7 @@ const ES: LandingCopy = {
 	meta: {
 		title: "Malfoid Stickers: reacciones tiernas y atrevidas para iMessage",
 		description:
-			"Conoce a Malfoid, tu rubia gruñona favorita con mucha actitud: 60 stickers gratis y sin texto para iMessage en iPhone y iPad. Sin anuncios, sin suscripciones, sin recopilar datos.",
+			"Conoce a Malfoid, tu rubia gruñona favorita con mucha actitud: 170 stickers gratis y sin texto para iMessage en iPhone y iPad. Sin anuncios, sin suscripciones, sin recopilar datos.",
 		socialCardAlt:
 			"Malfoid Stickers, reacciones tiernas y atrevidas: tres stickers de Malfoid sonriendo con superioridad, llorando con drama y abrazando un corazón rosa.",
 		privacyCardAlt:
@@ -305,8 +358,8 @@ const ES: LandingCopy = {
 		title: "Un poco tierna. Un poco dramática. Mucha actitud.",
 		shortTitle: "Tierna. Dramática. Con actitud.",
 		description:
-			"Conoce a Malfoid, tu rubia gruñona favorita con mucha actitud. Exprésate con 60 stickers adorables, sarcásticos, dramáticos y descaradamente atrevidos.",
-		seeAll: "Ver los 60",
+			"Conoce a Malfoid, tu rubia gruñona favorita con mucha actitud. Exprésate con 170 stickers adorables, sarcásticos, dramáticos y descaradamente atrevidos.",
+		seeAll: "Ver los 170",
 	},
 	meet: {
 		eyebrow: "Conoce a Malfoid",
@@ -319,10 +372,12 @@ const ES: LandingCopy = {
 		caption: "Una conversación de ejemplo. Cada respuesta es un sticker de Malfoid.",
 	},
 	moods: {
-		eyebrow: "Seis estados de ánimo, diez stickers cada uno",
+		eyebrow: "Diecisiete sets, diez stickers cada uno",
 		title: "Para cada estado de ánimo, incluso los que finges no tener.",
-		description: "Orgullo, furia, vergüenza, alegría, desánimo y todo lo cotidiano entre medio.",
+		description:
+			"Orgullo, furia, vergüenza, alegría, desánimo y todo lo cotidiano entre medio, más un set para cada fecha especial del año.",
 		seeAll: "Ver los 10",
+		occasions: "Y para cada ocasión",
 	},
 	moodNames: {
 		"pride-and-sarcasm": {
@@ -349,14 +404,53 @@ const ES: LandingCopy = {
 			name: "Reacciones cotidianas",
 			body: "Hola, chau, mmm, palomitas, té. Las pequeñas respuestas que mantienen viva una conversación.",
 		},
+		friendship: {
+			name: "Amistad",
+			body: "Media galleta, un paraguas compartido, una promesa de meñique. Leal, si se lo pides bien.",
+		},
+		memes: {
+			name: "Memes",
+			body: "Todo está bien, el cerebro está cargando y la mesa va a volar.",
+		},
+		thanksgiving: { name: "Acción de Gracias", body: "Pavo, pastel y una siesta bien merecida." },
+		christmas: {
+			name: "Navidad",
+			body: "Regalos, chocolate caliente y luces que no se desenredan.",
+		},
+		"valentines-day": {
+			name: "San Valentín",
+			body: "Rosas escondidas y chocolates que defiende con su vida.",
+		},
+		"new-year": {
+			name: "Año Nuevo",
+			body: "Confeti, un deseo a medianoche y dormida a las 23:58.",
+		},
+		halloween: { name: "Halloween", body: "Capas, dulces y una calabaza muy torcida." },
+		"lunar-new-year": {
+			name: "Año Nuevo Lunar",
+			body: "Sobres rojos, faroles y dumplings para compartir.",
+		},
+		easter: {
+			name: "Pascua",
+			body: "Huevos pintados y orejas de conejo, puestas a regañadientes.",
+		},
+		"parents-day": {
+			name: "Día de la Madre y del Padre",
+			body: "Tarjetas hechas a mano, tortas torcidas y tostadas un poco quemadas.",
+		},
+		"earth-day": {
+			name: "Día de la Tierra",
+			body: "Arbolitos, bicicletas y un planeta que necesita un abrazo.",
+		},
 	},
 	gallery: {
 		eyebrow: "El pack completo",
 		title: "Todas y cada una de ella",
 		description:
-			"Los 60 stickers, tal como aparecen en Mensajes. Toca uno para verlo de cerca, respondiéndole a alguien.",
+			"Los 170 stickers, tal como aparecen en Mensajes. Toca uno para verlo de cerca, respondiéndole a alguien.",
 		viewer: "Stickers de Malfoid",
 		open: (alt) => `Abrir sticker: ${alt}`,
+		groups: { everyday: "Para todos los días", occasions: "Ocasiones" },
 		reply: (prompt, alt) => `Alguien escribe «${prompt}» y la respuesta es un sticker: ${alt}`,
 		labels: { close: "Cerrar", previous: "Sticker anterior", next: "Sticker siguiente" },
 	},
@@ -384,7 +478,7 @@ const ES: LandingCopy = {
 			"Sin cuenta, sin inicio de sesión, nada que configurar.",
 			"Sin analíticas, sin rastreo y sin recopilar datos.",
 			"Sin acceso a tus conversaciones, contactos, fotos, cámara, micrófono ni ubicación.",
-			"Los 60 stickers vienen incluidos en la app y cargan sin conexión.",
+			"Los 170 stickers vienen incluidos en la app y cargan sin conexión.",
 		],
 	},
 	install: {
