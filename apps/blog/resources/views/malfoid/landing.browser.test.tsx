@@ -12,7 +12,7 @@ import type { RenderResult } from "remix/component/test";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { STICKER_CATEGORIES } from "~/resources/content/malfoid/stickers";
+import { STICKER_CATEGORIES, STICKER_GROUPS } from "~/resources/content/malfoid/stickers";
 import { MalfoidLandingContent } from "~/resources/views/malfoid/landing";
 import { AppStoreCall } from "~/resources/views/malfoid/parts";
 
@@ -68,6 +68,22 @@ describe("MalfoidLandingContent", () => {
 			expect(tiles).toHaveLength(10);
 			expect(new Set(rows.values()).size).toBe(1);
 		}
+		host.remove();
+	});
+});
+
+describe("Occasions row", () => {
+	test("draws every occasion tile at the height of the tallest, two-line names included", () => {
+		let host = mountLanding(1440);
+		let tiles = STICKER_GROUPS.occasions.map((category) =>
+			host.querySelector(`#moods li > a[href="#${category}"]`),
+		);
+		let heights = new Set(
+			tiles.map((tile) => Math.round(tile?.getBoundingClientRect().height ?? 0)),
+		);
+
+		expect(tiles).not.toContain(null);
+		expect(heights.size).toBe(1);
 		host.remove();
 	});
 });

@@ -459,7 +459,7 @@ function Moods(handle: Handle<BandProps>) {
 						]}
 					>
 						{STICKER_GROUPS.occasions.map((category) => (
-							<li key={category}>
+							<li key={category} mix={[grid()]}>
 								<a
 									href={`#${category}`}
 									title={t.moodNames[category].body}
@@ -473,7 +473,6 @@ function Moods(handle: Handle<BandProps>) {
 										weight("medium"),
 										fg("neutral.emphasis"),
 										raw({
-											blockSize: "100%",
 											justifyContent: "start",
 											textAlign: "center",
 											textDecoration: "none",
