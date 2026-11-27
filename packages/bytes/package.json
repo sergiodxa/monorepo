@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/bytes",
+	"version": "0.0.1",
+	"description": "Typed byte size strings like \"10 MB\" or \"10 MiB\" converted to bytes",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}

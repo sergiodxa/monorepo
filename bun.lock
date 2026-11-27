@@ -829,6 +829,13 @@
         "remix": "3.2.0",
       },
     },
+    "packages/bytes": {
+      "name": "@sdxc/bytes",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/cache": {
       "name": "@sdxc/cache",
       "version": "0.0.1",
@@ -3465,6 +3472,8 @@
     "@sdxc/blueprint": ["@sdxc/blueprint@workspace:packages/blueprint"],
 
     "@sdxc/bracket-params": ["@sdxc/bracket-params@workspace:packages/bracket-params"],
+
+    "@sdxc/bytes": ["@sdxc/bytes@workspace:packages/bytes"],
 
     "@sdxc/cache": ["@sdxc/cache@workspace:packages/cache"],
 
