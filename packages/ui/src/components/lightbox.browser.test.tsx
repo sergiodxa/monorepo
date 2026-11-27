@@ -1,7 +1,8 @@
 /**
  * Opens `Lightbox` in a real browser: a trigger opens it as a true modal at the photo it
  * names, arrow keys step through the photos and the announced counter follows, the step
- * links address each neighbour by id, the close button dismisses it, and nothing overflows.
+ * links address each neighbour by id, the close button dismisses it, nothing overflows, and
+ * a phone keeps the counter on its own line.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -143,6 +144,17 @@ describe("Lightbox", () => {
 			let rect = control.getBoundingClientRect();
 			expect(rect.width).toBe(44);
 			expect(rect.height).toBe(44);
+		}
+	});
+
+	test("keeps the counter on its own line on a phone, whatever the caption's length", async () => {
+		await page.viewport(390, 640);
+		let { dialog, triggers } = await mount();
+		triggers[0]!.click();
+		for (let slide of dialog.querySelectorAll("[data-slot=lightbox-slide]")) {
+			let counter = slide.querySelector("[data-slot=lightbox-counter]")!.getBoundingClientRect();
+			let caption = slide.querySelector("[data-slot=lightbox-caption]")?.getBoundingClientRect();
+			if (caption) expect(caption.top).toBeGreaterThanOrEqual(counter.bottom);
 		}
 	});
 });

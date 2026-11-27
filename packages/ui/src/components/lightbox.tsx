@@ -251,8 +251,8 @@ interface LightboxSlideProps {
 
 /**
  * One photo filling the track: the picture contained in the space above its counter and
- * caption, with a link to each neighbour that addresses it by id, so the track scrolls there
- * with or without script. The first photo has no previous link and the last no next.
+ * caption, with a link to each neighbour that addresses it by id. On a narrow viewer the
+ * counter keeps its own line, so the photo's space stays the same from slide to slide.
  *
  * @param handle Runtime handle carrying the slide's photo and position.
  * @returns The render function producing the slide's markup.
@@ -323,16 +323,26 @@ function LightboxSlide(handle: Handle<LightboxSlideProps>) {
 					mix={[
 						raw({
 							display: "flex",
-							gap: "0.75rem",
-							alignItems: "baseline",
-							justifyContent: "center",
-							flexWrap: "wrap",
+							flexDirection: "column",
+							gap: "0.25rem",
+							alignItems: "center",
 							paddingInline: "1rem",
 							fontSize: "0.875rem",
 							lineHeight: 1.4,
 							textAlign: "center",
 							color: "rgb(255 255 255 / 0.86)",
 						}),
+						at(
+							GUTTER_WIDTH,
+							CONTAINER_NAME,
+							raw({
+								flexDirection: "row",
+								flexWrap: "wrap",
+								gap: "0.75rem",
+								alignItems: "baseline",
+								justifyContent: "center",
+							}),
+						),
 					]}
 				>
 					<span
