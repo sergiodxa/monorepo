@@ -1,7 +1,7 @@
 ---
 title: Malfoid Stickers
 headline: Selling an iMessage sticker pack by letting every sticker answer a message
-summary: The landing, support desk and privacy policy for Malfoid Stickers, a free pack of 60 iMessage stickers, server-rendered in English and Spanish from the @sdxc/ui landing kit.
+summary: The landing, support desk and privacy policy for Malfoid Stickers, a free pack of 170 iMessage stickers, server-rendered in English and Spanish from the @sdxc/ui landing kit.
 tagline: An iMessage sticker pack's landing
 cover: hero
 shots:
@@ -15,7 +15,11 @@ shots:
   - id: moods
     page: "https://sergiodxa.com/apps/malfoid"
     highlight: "#moods ul"
-    alt: Six cards for the pack's moods, each with the sticker that stands for it, what the mood is for and a link to its ten stickers.
+    alt: Eight cards for the pack's everyday sets, each with the sticker that stands for it, what the set is for and a link to its ten stickers.
+  - id: occasions
+    page: "https://sergiodxa.com/apps/malfoid"
+    highlight: "#moods div:has(> ul > li > a[href='#thanksgiving'])"
+    alt: A row of nine tiles for the holiday sets, from Thanksgiving to Earth Day, each with a sticker dressed for the day.
   - id: viewer
     page: "https://sergiodxa.com/apps/malfoid"
     click: "#stickers [data-lightbox-index='59']"
@@ -35,9 +39,9 @@ shots:
     alt: The landing in Spanish on a phone, the short headline "Tierna. Dramática. Con actitud." above three stickers on the cream stage.
 ---
 
-Malfoid Stickers is a free pack of 60 iMessage stickers for iPhone and iPad, and [sergiodxa.com/apps/malfoid](https://sergiodxa.com/apps/malfoid) is the page its App Store listing names as its Marketing URL. Beside it sit the listing's Support URL, a contact form at `/apps/malfoid/support`, and its privacy policy at `/apps/malfoid/privacy`. The blog's Worker serves all three on the blog's domain, in the pack's own palette of emerald, ivory, platinum cream and blush on a silver-mint ground, with a header and footer of their own.
+Malfoid Stickers is a free pack of 170 iMessage stickers for iPhone and iPad, and [sergiodxa.com/apps/malfoid](https://sergiodxa.com/apps/malfoid) is the page its App Store listing names as its Marketing URL. Beside it sit the listing's Support URL, a contact form at `/apps/malfoid/support`, and its privacy policy at `/apps/malfoid/privacy`. The blog's Worker serves all three on the blog's domain, in the pack's own palette of emerald, ivory, platinum cream and blush on a silver-mint ground, with a header and footer of their own.
 
-A sticker pack has no screens to show and no features to list: the product is the artwork, and what it does is answer a message. So the page leads with the art and shows it doing that job. Malfoid answers a friend in the second band, the six moods work as a table of contents, and every one of the 60 stickers opens in a viewer where it replies to a message of its own. Nothing on the page is a description standing in for a sticker. The bands come from the `@sdxc/ui` landing kit, and every word is rendered on the server in English or Spanish.
+A sticker pack has no screens to show and no features to list: the product is the artwork, and what it does is answer a message. So the page leads with the art and shows it doing that job. Malfoid answers a friend in the second band, its seventeen sets work as a table of contents, and every one of the 170 stickers opens in a viewer where it replies to a message of its own. Nothing on the page is a description standing in for a sticker. The bands come from the `@sdxc/ui` landing kit, and every word is rendered on the server in English or Spanish.
 
 ## The brief
 
@@ -55,13 +59,15 @@ The second band introduces Malfoid in two sentences beside a conversation: a fri
 
 ![A conversation answered with stickers](/showcase/malfoid/meet.webp "Two messages from a friend, each answered with a sticker instead of words.")
 
-The moods band is a table of contents: six cards, one per mood, each with the sticker that stands for it, a line about when to reach for it, and a link to its ten stickers further down.
+The next band is a table of contents for the pack's seventeen sets of ten. The eight everyday sets, six moods plus friendship and memes, each get a card with the sticker that stands for it, a line about when to reach for it, and a link to its stickers further down. The nine occasions, Thanksgiving to Earth Day, follow as a compact row of tiles, each with a sticker dressed for the day; a name that runs to two lines stretches the whole row, so the tiles stay one height.
 
-![The six moods](/showcase/malfoid/moods.webp "Each mood card shows its sticker and jumps to its ten stickers in the gallery.")
+![The everyday sets](/showcase/malfoid/moods.webp "Each everyday set gets a card with its sticker and a jump to its ten stickers in the gallery.")
+
+![The occasions](/showcase/malfoid/occasions.webp "The holiday sets sit in one row of tiles below them.")
 
 ## Sixty stickers, each answering a message
 
-The gallery lists all 60 stickers under their moods in rows of ten, five on a narrow screen, so every row is full. Each tile is a [Lightbox](/api/ui/lightbox) trigger, a plain button with `command="show-modal"` that opens a native `<dialog>` at that sticker. A slide shows a message a friend might send, "Should I text my ex?" or "Tomorrow is Monday again.", and the sticker answering it at full size, with its description beneath. The arrows, a swipe or the keyboard step through all 60. Every message is written in both languages, and the slide's accessible name reads the exchange as a sentence.
+The gallery lists all 170 stickers set by set, under two headings, every day and occasions, in rows of ten, five on a narrow screen, so every row is full. Each tile is a [Lightbox](/api/ui/lightbox) trigger, a plain button with `command="show-modal"` that opens a native `<dialog>` at that sticker. A slide shows a message a friend might send, "Should I text my ex?" or "Tomorrow is Monday again.", and the sticker answering it at full size, with its description beneath. The arrows, a swipe or the keyboard step through all 170 in the gallery's order, and on a phone the counter keeps its own line above the description, so the sticker never jumps between slides. Every message is written in both languages, and the slide's accessible name reads the exchange as a sentence.
 
 ![The sticker viewer](/showcase/malfoid/viewer.webp "Each sticker opens answering a message of its own, with its description as the caption.")
 
