@@ -35,8 +35,8 @@ export type {
 	LibraryScene,
 	MemoryLine,
 	NovelLibrary,
-	SceneLine,
 } from "./ui/library.js";
+export type { SceneLine } from "./unlocks.js";
 export type { Phase } from "./ui/director.js";
 export type { InterfaceSounds } from "./ui/interface-sounds.js";
 export type {
@@ -83,7 +83,8 @@ export { Gallery } from "./ui/gallery.js";
 export { gamepadActions } from "./ui/input.js";
 export { Interaction } from "./ui/interaction.js";
 export { columnOf, stillStage } from "./ui/layout.js";
-export { endingKeys, readLibrary, sceneLines } from "./ui/library.js";
+export { readLibrary } from "./ui/library.js";
+export { endingKeys, sceneLines } from "./unlocks.js";
 export { Memories } from "./ui/memories.js";
 export { lineMarkup, Message } from "./ui/message.js";
 export { MusicRoom } from "./ui/music-room.js";

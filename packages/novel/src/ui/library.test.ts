@@ -22,8 +22,9 @@ import {
 	scene,
 	scenes,
 } from "../index.js";
+import { endingKeys, sceneLines } from "../unlocks.js";
 
-import { endingKeys, readLibrary, sceneLines } from "./library.js";
+import { readLibrary } from "./library.js";
 
 const STATE = s.object({
 	gold: s.defaulted(s.number(), 10),

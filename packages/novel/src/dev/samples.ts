@@ -11,7 +11,7 @@ import type { NovelInternals } from "../novel.js";
 import type { NotificationInput } from "../ui/behaviors/notifications.js";
 import type { NovelLabels } from "../ui/settings.js";
 
-import { eachDirective } from "./graph.js";
+import { eachDirective } from "../unlocks.js";
 
 /** A kind of toast the player pushes by itself, which {@link sampleNotification} imitates. */
 export type SampleKind = "image" | "music" | "entry" | "bio" | "ending" | "notify";

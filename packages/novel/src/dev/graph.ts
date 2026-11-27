@@ -8,11 +8,11 @@
  */
 
 import type { ChapterInfo } from "../declarations.js";
-import type { Directive } from "../directives.js";
 import type { NovelInternals } from "../novel.js";
 
 import { jumpOf } from "../directives.js";
 import { hasMessage } from "../novel.js";
+import { eachDirective } from "../unlocks.js";
 
 /** A scene in the graph. */
 export interface GraphScene {
@@ -187,21 +187,4 @@ export async function missingMessages(internals: NovelInternals): Promise<Missin
 	for (let declaration of internals.characters.values()) report(declaration.name);
 	for (let declaration of internals.assets.values()) report(declaration.caption);
 	return missing;
-}
-
-/** Calls `visit` on every directive of a list and of every branch nested in it, in document order. */
-export function eachDirective(
-	list: readonly Directive[],
-	visit: (directive: Directive) => void,
-): void {
-	for (let directive of list) {
-		visit(directive);
-		if (directive.type === "when") {
-			eachDirective(directive.do, visit);
-			eachDirective(directive.otherwise, visit);
-		}
-		if (directive.type === "choose") {
-			for (let option of directive.options) eachDirective(option.do, visit);
-		}
-	}
 }

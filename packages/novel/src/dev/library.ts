@@ -13,7 +13,7 @@ import type { Persistent } from "../persistent.js";
 import type { NovelLibrary } from "../ui/library.js";
 
 import { bioKey, emptyPersistent, lookKey, recordKey } from "../persistent.js";
-import { endingKeys, sceneLines } from "../ui/library.js";
+import { endingKeys, isListed, isMet, sceneLines } from "../unlocks.js";
 
 /** The looks a layered character contributes at most, so a wide wardrobe stays a short list. */
 const LAYERED_LOOK_LIMIT = 64;
@@ -224,8 +224,8 @@ export function castReport(internals: NovelInternals, library: NovelLibrary): Ca
 		return {
 			id: character.id,
 			name: character.name,
-			listed: character.listed !== false,
-			met: introduced || lines.length > 0 || looks.length > 0,
+			listed: isListed(character),
+			met: isMet({ introduced, spoke: lines.length > 0, drawn: looks.length > 0 }),
 			introduced,
 			lines,
 			looks,

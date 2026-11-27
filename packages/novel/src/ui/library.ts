@@ -1,7 +1,7 @@
 /**
- * What a novel's extras screens read: the lines and endings a scene holds, found statically in
- * its directive array, and the whole library (reached scenes with their read lines, CGs, tracks,
- * endings and chapters) built from the declarations and the stored `Persistent` value.
+ * What a novel's extras screens read: the whole library (reached scenes with their read lines,
+ * CGs, tracks, the cast, endings and chapters) built from the declarations, the lines and endings
+ * each scene holds, and the stored `Persistent` value.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,24 +23,15 @@ import type {
 	TopicDeclaration,
 } from "../declarations.js";
 import type { Directive } from "../directives.js";
-import type { Speaker } from "../frames.js";
 import type { Novel } from "../novel.js";
 import type { Persistent } from "../persistent.js";
+import type { SceneLine } from "../unlocks.js";
 
 import { INTERNALS } from "../novel.js";
 import { bioKey, lookKey, recordKey } from "../persistent.js";
+import { eachDirective, endingKeys, isListed, isMet, sceneLines } from "../unlocks.js";
 
 import { resolveSource } from "./source.js";
-
-/** A line as a scene's array declares it: its key and who says it, before anyone reads it. */
-export interface SceneLine {
-	key: string;
-	/**
-	 * The characters saying it, none for narration; each one named, since the library lists lines
-	 * the reader has already read.
-	 */
-	speakers: Speaker[];
-}
 
 /** A line the reader has read, as Memories lists it. */
 export interface MemoryLine extends SceneLine {
@@ -160,64 +151,6 @@ export interface NovelLibrary {
 }
 
 /**
- * Every line a scene declares, in document order, including those inside conditions and menu
- * options; a key repeated in the scene is listed once, where it first appears.
- *
- * @param directives - The scene module's directives.
- * @returns The lines with their speakers.
- * @example sceneLines(module.directives).map((line) => line.key); // ["opening.welcome", "opening.hello"]
- */
-export function sceneLines(directives: readonly Directive[]): SceneLine[] {
-	let lines = new Map<string, SceneLine>();
-	for (let directive of walk(directives)) {
-		if (directive.type === "narrate" && !lines.has(directive.key)) {
-			lines.set(directive.key, { key: directive.key, speakers: [] });
-		}
-		if (directive.type === "say" && !lines.has(directive.key)) {
-			let speakers = directive.speakers.map((speaker) =>
-				speaker.color === undefined
-					? { id: speaker.id, name: speaker.name, introduced: true }
-					: { id: speaker.id, name: speaker.name, color: speaker.color, introduced: true },
-			);
-			lines.set(directive.key, { key: directive.key, speakers });
-		}
-	}
-	return [...lines.values()];
-}
-
-/**
- * Every ending key a scene can reach, in document order and each once.
- *
- * @param directives - The scene module's directives.
- * @returns The `ending` directives' keys.
- * @example endingKeys(module.directives); // ["endings.good", "endings.bad"]
- */
-export function endingKeys(directives: readonly Directive[]): string[] {
-	let keys = new Set<string>();
-	for (let directive of walk(directives)) {
-		if (directive.type === "ending") keys.add(directive.key);
-	}
-	return [...keys];
-}
-
-/**
- * Yields every directive of a list and of each list nested in it, in document order.
- *
- * @yields Each directive, a branch's directives right after the directive that holds them.
- */
-function* walk(list: readonly Directive[]): Generator<Directive> {
-	for (let directive of list) {
-		yield directive;
-		if (directive.type === "when") {
-			yield* walk(directive.do);
-			yield* walk(directive.otherwise);
-		} else if (directive.type === "choose") {
-			for (let option of directive.options) yield* walk(option.do);
-		}
-	}
-}
-
-/**
  * Builds the library for one reader. Every mapped scene's module is loaded, lazily mapped ones
  * included, so the endings list knows every ending; a module that fails to load is listed with
  * `loaded: false` and no lines rather than failing the whole library.
@@ -280,25 +213,24 @@ export async function readLibrary(
 		arcs: groupArcs(chapters),
 		images: inOrder(unlocks(internals.assets.values(), "image", record.unlocked.images), shown),
 		music: inOrder(unlocks(internals.assets.values(), "music", record.unlocked.music), shown),
-		characters: [...internals.characters.values()]
-			.filter((character) => character.listed !== false)
-			.map((character) => {
-				let drawn = looks(character, record.unlocked.sprites);
-				return {
-					character,
-					met:
-						record.introduced.includes(character.id) ||
-						heard.has(character.id) ||
-						drawn.some((look) => look.seen),
-					looks: drawn,
-					bio: Object.entries(character.bio ?? {}).map(([id, section]) => ({
-						id,
-						section,
-						learned:
-							section.known === true || record.unlocked.bios.includes(bioKey(character.id, id)),
-					})),
-				};
-			}),
+		characters: [...internals.characters.values()].filter(isListed).map((character) => {
+			let drawn = looks(character, record.unlocked.sprites);
+			return {
+				character,
+				met: isMet({
+					introduced: record.introduced.includes(character.id),
+					spoke: heard.has(character.id),
+					drawn: drawn.some((look) => look.seen),
+				}),
+				looks: drawn,
+				bio: Object.entries(character.bio ?? {}).map(([id, section]) => ({
+					id,
+					section,
+					learned:
+						section.known === true || record.unlocked.bios.includes(bioKey(character.id, id)),
+				})),
+			};
+		}),
 		topics: [...internals.topics.values()].map((topic) => ({
 			topic,
 			entries: [...internals.entries.values()]
@@ -319,10 +251,10 @@ export async function readLibrary(
 function appearanceOrder(scenes: ReadonlyArray<readonly Directive[] | null>): Map<string, number> {
 	let order = new Map<string, number>();
 	for (let directives of scenes) {
-		for (let directive of walk(directives ?? [])) {
-			if (directive.type !== "show" && directive.type !== "play") continue;
+		eachDirective(directives ?? [], (directive) => {
+			if (directive.type !== "show" && directive.type !== "play") return;
 			if (!order.has(directive.asset.id)) order.set(directive.asset.id, order.size);
-		}
+		});
 	}
 	return order;
 }

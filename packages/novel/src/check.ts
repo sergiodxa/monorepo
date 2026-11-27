@@ -18,6 +18,7 @@ import { jumpOf } from "./directives.js";
 import { drawCharacter } from "./engine.js";
 import { hasMessage, INTERNALS } from "./novel.js";
 import { lookKey } from "./persistent.js";
+import { isListed, isMet, walkBranches } from "./unlocks.js";
 
 /**
  * One finding. `error`s break a play or a save; `warning`s may be intended. The `un*` warnings
@@ -79,8 +80,12 @@ interface SceneWalk {
  * scene, so something one branch shows counts the way a play down that branch records it.
  */
 interface Unlocks {
-	/** Characters introduced, speaking a line, or drawn on stage. */
-	met: Set<string>;
+	/** Characters a scene introduces. */
+	introduced: Set<string>;
+	/** Characters speaking a line. */
+	spoke: Set<string>;
+	/** Characters the stage draws in any look. */
+	drawn: Set<string>;
 	/** Sprites drawn, as `lookKey` names them. */
 	sprites: Set<string>;
 	/** Image (CG) and music asset ids shown or played. */
@@ -104,7 +109,9 @@ export async function check(novel: Novel): Promise<CheckReport> {
 	let edges = new Map<string, Set<string>>();
 	let catalogs = Object.entries(internals.options.messages ?? {});
 	let unlocks: Unlocks = {
-		met: new Set(),
+		introduced: new Set(),
+		spoke: new Set(),
+		drawn: new Set(),
 		sprites: new Set(),
 		assets: new Set(),
 		entries: new Set(),
@@ -132,7 +139,12 @@ export async function check(novel: Novel): Promise<CheckReport> {
 			catalogs,
 			unlocks,
 		};
-		walkList(index.data.module.directives, walk, new Map());
+		walkBranches(
+			index.data.module.directives,
+			new Map<string, Fraction>(),
+			(directive, slots) => visit(directive, walk, slots),
+			(slots) => new Map(slots),
+		);
 		for (let [key, count] of walk.keys) {
 			if (count > 1) problems.push({ code: "duplicate-key", severity: "error", scene, key });
 		}
@@ -148,117 +160,111 @@ export async function check(novel: Novel): Promise<CheckReport> {
 }
 
 /**
- * Walks one list of directives in document order. `slots` maps each character on stage to its
- * column; a branch walks a copy, and the list after it continues from the stage before it.
+ * Checks one directive. `slots` maps each character on stage to its column for the list the
+ * directive sits in; each branch starts from a copy, so a branch's moves never leak past it.
  */
-function walkList(list: readonly Directive[], walk: SceneWalk, slots: Map<string, Fraction>): void {
-	for (let directive of list) {
-		switch (directive.type) {
-			case "say":
-				count(walk, directive.key);
-				for (let speaker of directive.speakers) {
-					declared(walk, speaker);
-					walk.unlocks.met.add(speaker.id);
-				}
-				break;
-			case "narrate":
-				count(walk, directive.key);
-				break;
-			case "notify":
-				translated(walk, directive.key);
-				break;
-			case "choose":
-				menu(directive, walk, slots);
-				break;
-			case "when":
-				walkList(directive.do, walk, new Map(slots));
-				walkList(directive.otherwise, walk, new Map(slots));
-				break;
-			case "goto":
-			case "call":
-			case "pick":
-				for (let target of jumpOf(directive)?.scenes ?? []) jump(walk, target.name);
-				break;
-			case "show":
-			case "play":
-				declared(walk, directive.asset);
-				walk.unlocks.assets.add(directive.asset.id);
-				break;
-			case "hide":
-				declared(walk, directive.asset);
-				break;
-			case "stop":
-				if (directive.asset !== undefined) declared(walk, directive.asset);
-				break;
-			case "enter": {
-				declared(walk, directive.character);
-				let at = walk.internals.position(directive.at);
-				place(walk, slots, directive.character.id, at);
-				let standing: StageCharacter = { id: directive.character.id, at, images: [] };
-				if (directive.expression !== undefined) standing.expression = directive.expression;
-				if (directive.layers !== undefined) standing.layers = directive.layers;
-				drawn(walk, directive.character, standing);
-				break;
+function visit(directive: Directive, walk: SceneWalk, slots: Map<string, Fraction>): void {
+	switch (directive.type) {
+		case "say":
+			count(walk, directive.key);
+			for (let speaker of directive.speakers) {
+				declared(walk, speaker);
+				walk.unlocks.spoke.add(speaker.id);
 			}
-			case "move":
-				declared(walk, directive.character);
-				place(walk, slots, directive.character.id, walk.internals.position(directive.at));
-				break;
-			case "exit":
-				declared(walk, directive.character);
-				slots.delete(directive.character.id);
-				break;
-			case "clear":
-				slots.clear();
-				break;
-			case "learn":
-				declared(walk, directive.entry);
-				walk.unlocks.entries.add(directive.entry.id);
-				break;
-			case "learnBio":
-				declared(walk, directive.character);
-				if (directive.character.bio?.[directive.section] === undefined) {
-					let asset = `cast.${directive.character.id}:${directive.section}`;
-					if (!walk.reported.has(asset)) {
-						walk.reported.add(asset);
-						walk.problems.push({
-							code: "missing-asset",
-							severity: "error",
-							scene: walk.scene,
-							asset,
-						});
-					}
-				}
-				break;
-			case "introduce":
-				declared(walk, directive.character);
-				walk.unlocks.met.add(directive.character.id);
-				if (directive.character.known) {
+			break;
+		case "narrate":
+			count(walk, directive.key);
+			break;
+		case "notify":
+			translated(walk, directive.key);
+			break;
+		case "choose":
+			menu(directive, walk);
+			break;
+		case "goto":
+		case "call":
+		case "pick":
+			for (let target of jumpOf(directive)?.scenes ?? []) jump(walk, target.name);
+			break;
+		case "show":
+		case "play":
+			declared(walk, directive.asset);
+			walk.unlocks.assets.add(directive.asset.id);
+			break;
+		case "hide":
+			declared(walk, directive.asset);
+			break;
+		case "stop":
+			if (directive.asset !== undefined) declared(walk, directive.asset);
+			break;
+		case "enter": {
+			declared(walk, directive.character);
+			let at = walk.internals.position(directive.at);
+			place(walk, slots, directive.character.id, at);
+			let standing: StageCharacter = { id: directive.character.id, at, images: [] };
+			if (directive.expression !== undefined) standing.expression = directive.expression;
+			if (directive.layers !== undefined) standing.layers = directive.layers;
+			drawn(walk, directive.character, standing);
+			break;
+		}
+		case "move":
+			declared(walk, directive.character);
+			place(walk, slots, directive.character.id, walk.internals.position(directive.at));
+			break;
+		case "exit":
+			declared(walk, directive.character);
+			slots.delete(directive.character.id);
+			break;
+		case "clear":
+			slots.clear();
+			break;
+		case "learn":
+			declared(walk, directive.entry);
+			walk.unlocks.entries.add(directive.entry.id);
+			break;
+		case "learnBio":
+			declared(walk, directive.character);
+			if (directive.character.bio?.[directive.section] === undefined) {
+				let asset = `cast.${directive.character.id}:${directive.section}`;
+				if (!walk.reported.has(asset)) {
+					walk.reported.add(asset);
 					walk.problems.push({
-						code: "known-introduced",
-						severity: "warning",
+						code: "missing-asset",
+						severity: "error",
 						scene: walk.scene,
-						character: directive.character.id,
+						asset,
 					});
 				}
-				break;
-			case "express":
-				declared(walk, directive.character);
-				if (directive.expression !== undefined) {
-					let at = slots.get(directive.character.id) ?? "1/2";
-					let standing: StageCharacter = { id: directive.character.id, at, images: [] };
-					standing.expression = directive.expression;
-					drawn(walk, directive.character, standing);
-				}
-				break;
-			default:
-				break;
-		}
+			}
+			break;
+		case "introduce":
+			declared(walk, directive.character);
+			walk.unlocks.introduced.add(directive.character.id);
+			if (directive.character.known) {
+				walk.problems.push({
+					code: "known-introduced",
+					severity: "warning",
+					scene: walk.scene,
+					character: directive.character.id,
+				});
+			}
+			break;
+		case "express":
+			declared(walk, directive.character);
+			if (directive.expression !== undefined) {
+				let at = slots.get(directive.character.id) ?? "1/2";
+				let standing: StageCharacter = { id: directive.character.id, at, images: [] };
+				standing.expression = directive.expression;
+				drawn(walk, directive.character, standing);
+			}
+			break;
+		default:
+			break;
 	}
 }
 
-/** Counts a menu's anchor, flags a menu that may offer nothing, and walks every option. */
-function menu(directive: ChooseDirective, walk: SceneWalk, slots: Map<string, Fraction>): void {
+/** Counts a menu's anchor and flags a menu that may offer nothing; the walk visits its options. */
+function menu(directive: ChooseDirective, walk: SceneWalk): void {
 	let anchor = menuAnchor(directive);
 	if (anchor !== undefined) count(walk, anchor);
 	if (directive.options.every((option) => option.when !== undefined)) {
@@ -269,7 +275,6 @@ function menu(directive: ChooseDirective, walk: SceneWalk, slots: Map<string, Fr
 			menu: anchor ?? "",
 		});
 	}
-	for (let option of directive.options) walkList(option.do, walk, new Map(slots));
 }
 
 /** Counts one anchored key. */
@@ -355,7 +360,7 @@ function reachable(initial: string, edges: ReadonlyMap<string, ReadonlySet<strin
 function drawn(walk: SceneWalk, character: CharacterDeclaration, standing: StageCharacter): void {
 	let drawing = drawCharacter(character, standing);
 	if (drawing.images.length === 0) return;
-	walk.unlocks.met.add(character.id);
+	walk.unlocks.drawn.add(character.id);
 	if (character.image.kind === "sprites" && drawing.expression !== undefined) {
 		walk.unlocks.sprites.add(lookKey(character.id, drawing.expression));
 	}
@@ -369,8 +374,13 @@ function drawn(walk: SceneWalk, character: CharacterDeclaration, standing: Stage
 function locked(internals: NovelInternals, unlocks: Unlocks): CheckProblem[] {
 	let problems: CheckProblem[] = [];
 	for (let character of internals.characters.values()) {
-		if (character.listed === false) continue;
-		if (!character.known && !unlocks.met.has(character.id)) {
+		if (!isListed(character)) continue;
+		let met = isMet({
+			introduced: unlocks.introduced.has(character.id),
+			spoke: unlocks.spoke.has(character.id),
+			drawn: unlocks.drawn.has(character.id),
+		});
+		if (!character.known && !met) {
 			problems.push({ code: "unmet-character", severity: "warning", character: character.id });
 		}
 		if (character.image.kind !== "sprites") continue;
