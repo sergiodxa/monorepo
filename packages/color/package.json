@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/color",
+	"version": "0.0.1",
+	"description": "Immutable CSS colors: parse every CSS color syntax, convert through OKLCH, gamut-map, mix, build scales and measure WCAG contrast",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}

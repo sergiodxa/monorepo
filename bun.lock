@@ -943,6 +943,13 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/color": {
+      "name": "@sdxc/color",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/cron": {
       "name": "@sdxc/cron",
       "version": "0.0.1",
@@ -3493,6 +3500,8 @@
     "@sdxc/cloudflare-pricing": ["@sdxc/cloudflare-pricing@workspace:packages/cloudflare-pricing"],
 
     "@sdxc/codemod": ["@sdxc/codemod@workspace:packages/codemod"],
+
+    "@sdxc/color": ["@sdxc/color@workspace:packages/color"],
 
     "@sdxc/cron": ["@sdxc/cron@workspace:packages/cron"],
 
