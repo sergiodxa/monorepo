@@ -132,9 +132,9 @@ describe("NovelDevTools", () => {
 		await playLines(unwrap(panel.novel.start()), 2);
 		await panel.open("Persistent");
 		await vi.waitFor(() =>
-			expect(panel.result.$("[aria-label='Persistent data']")?.textContent).toContain(
-				"opening:opening.welcome",
-			),
+			expect(
+				(panel.result.$("[aria-label='Persistent data']") as HTMLTextAreaElement).value,
+			).toContain("opening:opening.welcome"),
 		);
 		await userEvent.click(panel.button("Reset seen lines"));
 		expect(panel.starts).toHaveLength(1);

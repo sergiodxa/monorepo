@@ -1,7 +1,7 @@
 /**
- * `NovelDevTools`: the developer tools panel. Each tool is a native disclosure over a
- * `DevTools` connection: the play's position and state, a jump with edited state, persistent
- * data and its reset, the scene graph as a flowchart, the event log, and the static problems.
+ * `NovelDevTools`: the developer tools panel. Each tool is a native disclosure over a `DevTools`
+ * connection: the play and a jump with edited state, screen previews, persistent data and its
+ * unlocks, the cast, the player's toasts and sounds, the flowchart, the event log and problems.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,37 +13,48 @@ import { Diagram } from "@sdxc/diagram/ui";
 import { Button, Disclosure, Select, TextArea } from "@sdxc/ui";
 import { css, on } from "remix/component";
 
-import type { DevEvent, DevProblems, DevTools } from "./devtools.js";
+import type { CheckProblem } from "../check.js";
 
+import type { DevEvent, DevProblems, DevTools } from "./devtools.js";
+import type { SectionProps } from "./tools.js";
+
+import { DevToolsConnect } from "./connect.js";
 import { toMermaid } from "./graph.js";
+import { CastSection, PlayerSection, ScreensSection, UnlocksSection } from "./tools.js";
 
 export namespace NovelDevTools {
 	/** Props {@link NovelDevTools} accepts. */
 	export interface Props extends Omit<TagProps<"aside">, "children"> {
 		devtools: DevTools;
+		/**
+		 * Draws the panel as a popover over the page's edge, opened by a fixed "Dev tools" button
+		 * in the corner, so the app places it anywhere without making room for it.
+		 *
+		 * @default false
+		 */
+		floating?: boolean;
 	}
-}
-
-/** Props every tool section receives. */
-interface SectionProps {
-	devtools: DevTools;
 }
 
 /**
  * The panel. It renders again on every event the connection logs, so the state and the log
- * follow the play as it runs; the flowchart and the problems load on request, since reading
- * them imports every lazy scene.
+ * follow the play as it runs; the flowchart, the unlock lists, the cast and the problems load on
+ * request, since reading them imports every lazy scene. The tools that drive the player need
+ * `NovelDevTools.Connect` among its parts.
  *
- * @example <NovelDevTools devtools={devtools} />
+ * @example <NovelDevTools devtools={devtools} floating />
  */
 export function NovelDevTools(handle: Handle<NovelDevTools.Props>) {
 	let unsubscribe = handle.props.devtools.subscribe(() => void handle.update());
 	handle.signal.addEventListener("abort", unsubscribe);
+	let id = `${handle.id}-devtools`.replace(/[^\w-]/g, "-");
 	return () => {
-		let { devtools, mix, ...rest } = handle.props;
-		return (
+		let { devtools, floating, mix, ...rest } = handle.props;
+		let panel = (
 			<aside
 				aria-label="Novel developer tools"
+				id={floating === true ? id : undefined}
+				popover={floating === true ? "manual" : undefined}
 				{...rest}
 				mix={[
 					css({
@@ -61,20 +72,60 @@ export function NovelDevTools(handle: Handle<NovelDevTools.Props>) {
 							whiteSpace: "pre-wrap",
 							overflowWrap: "anywhere",
 						},
+						"&[popover]": {
+							position: "fixed",
+							inset: "0 0 0 auto",
+							margin: 0,
+							inlineSize: "min(26rem, 100vw)",
+							blockSize: "100dvh",
+							overflow: "auto",
+							border: "none",
+							borderInlineStart: "1px solid color-mix(in srgb, CanvasText 20%, transparent)",
+							background: "Canvas",
+							color: "CanvasText",
+						},
+						"&[popover]:not(:popover-open)": { display: "none" },
 					}),
 					...(mix === undefined ? [] : [mix].flat()),
 				]}
 			>
 				<PlaySection devtools={devtools} />
 				<JumpSection devtools={devtools} />
+				<ScreensSection devtools={devtools} />
 				<PersistentSection devtools={devtools} />
+				<UnlocksSection devtools={devtools} />
+				<CastSection devtools={devtools} />
+				<PlayerSection devtools={devtools} />
 				<FlowchartSection devtools={devtools} />
 				<EventsSection devtools={devtools} />
 				<ProblemsSection devtools={devtools} />
 			</aside>
 		);
+		if (floating !== true) return panel;
+		return (
+			<>
+				<Button
+					type="button"
+					size="sm"
+					commandfor={id}
+					command="toggle-popover"
+					data-novel-devtools-toggle=""
+					mix={css({
+						position: "fixed",
+						insetBlockEnd: "12px",
+						insetInlineEnd: "12px",
+						zIndex: 2147483647,
+					})}
+				>
+					Dev tools
+				</Button>
+				{panel}
+			</>
+		);
 	};
 }
+
+NovelDevTools.Connect = DevToolsConnect;
 
 /** Where the followed play stands and its story state. */
 function PlaySection(handle: Handle<SectionProps>) {
@@ -178,11 +229,18 @@ function JumpSection(handle: Handle<SectionProps>) {
 	};
 }
 
-/** Persistent data, with buttons that clear seen lines and unlocks. */
+/**
+ * Persistent data as JSON the reader edits, with buttons that clear seen lines and unlocks. Like
+ * the jump editor, it holds the reader's edit until it applies, and shows the play's record
+ * before and after.
+ */
 function PersistentSection(handle: Handle<SectionProps>) {
+	let draft: string | undefined;
+	let error: string | undefined;
 	return () => {
 		let { devtools } = handle.props;
 		let persistent = devtools.persistent;
+		let text = draft ?? JSON.stringify(persistent ?? {}, null, 2);
 		return (
 			<Disclosure>
 				<Disclosure.Trigger>Persistent</Disclosure.Trigger>
@@ -190,9 +248,46 @@ function PersistentSection(handle: Handle<SectionProps>) {
 					{persistent === undefined ? (
 						<p>Waiting for the play to reach a line.</p>
 					) : (
-						<div mix={css({ display: "grid", gap: "8px" })}>
-							<pre aria-label="Persistent data">{JSON.stringify(persistent, null, 2)}</pre>
+						<form
+							mix={[
+								css({ display: "grid", gap: "8px" }),
+								on("submit", (event) => {
+									event.preventDefault();
+									let record: unknown;
+									try {
+										record = JSON.parse(fieldOf(new FormData(event.currentTarget), "persistent"));
+									} catch (caught) {
+										error = `The data is not JSON: ${caught instanceof Error ? caught.message : String(caught)}`;
+										void handle.update();
+										return;
+									}
+									let edited = devtools.edit(record);
+									error = edited.status === "failure" ? edited.error.message : undefined;
+									if (edited.status === "success") draft = undefined;
+									void handle.update();
+								}),
+							]}
+						>
+							<TextArea
+								name="persistent"
+								aria-label="Persistent data"
+								rows={10}
+								spellcheck={false}
+								value={text}
+								aria-invalid={error === undefined ? undefined : "true"}
+								mix={[
+									css({ fontFamily: "ui-monospace, monospace", fontSize: "12px" }),
+									on("input", (event) => {
+										draft = event.currentTarget.value;
+										void handle.update();
+									}),
+								]}
+							/>
+							{error === undefined ? null : <p role="alert">{error}</p>}
 							<div mix={css({ display: "flex", flexWrap: "wrap", gap: "4px" })}>
+								<Button type="submit" size="sm">
+									Apply and restart
+								</Button>
 								<Button
 									type="button"
 									size="sm"
@@ -219,7 +314,7 @@ function PersistentSection(handle: Handle<SectionProps>) {
 									Reset everything
 								</Button>
 							</div>
-						</div>
+						</form>
 					)}
 				</Disclosure.Panel>
 			</Disclosure>
@@ -325,12 +420,7 @@ function ProblemsSection(handle: Handle<SectionProps>) {
 								<li>No problems found.</li>
 							) : null}
 							{problems.check.problems.map((problem) => (
-								<li data-severity={problem.severity}>
-									{problem.severity} {problem.code} in {problem.scene}
-									{"asset" in problem ? `: ${problem.asset}` : ""}
-									{"target" in problem ? `: ${problem.target}` : ""}
-									{"key" in problem ? `: ${problem.key}` : ""}
-								</li>
+								<li data-severity={problem.severity}>{describeProblem(problem)}</li>
 							))}
 							{problems.messages.map((message) => (
 								<li data-severity="error">
@@ -356,6 +446,22 @@ function ProblemsSection(handle: Handle<SectionProps>) {
 function fieldOf(data: FormData, name: string): string {
 	let value = data.get(name);
 	return typeof value === "string" ? value : "";
+}
+
+/**
+ * One line naming a problem, where it is and what it is about.
+ *
+ * @param problem - A problem `check()` found.
+ * @returns Such as `error missing-asset in opening: images.letter` or `warning unshown-sprite: mika:smile`.
+ */
+export function describeProblem(problem: CheckProblem): string {
+	let where = "scene" in problem ? ` in ${problem.scene}` : "";
+	let fields = problem as Partial<Record<string, unknown>>;
+	let subject = ["asset", "target", "key", "menu", "character", "sprite", "entry"]
+		.map((field) => fields[field])
+		.filter((value): value is string => typeof value === "string");
+	let about = subject.length === 0 ? "" : `: ${subject.join(":")}`;
+	return `${problem.severity} ${problem.code}${where}${about}`;
 }
 
 /**

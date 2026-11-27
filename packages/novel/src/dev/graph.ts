@@ -190,7 +190,10 @@ export async function missingMessages(internals: NovelInternals): Promise<Missin
 }
 
 /** Calls `visit` on every directive of a list and of every branch nested in it, in document order. */
-function eachDirective(list: readonly Directive[], visit: (directive: Directive) => void): void {
+export function eachDirective(
+	list: readonly Directive[],
+	visit: (directive: Directive) => void,
+): void {
 	for (let directive of list) {
 		visit(directive);
 		if (directive.type === "when") {

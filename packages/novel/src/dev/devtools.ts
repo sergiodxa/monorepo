@@ -1,8 +1,8 @@
 /**
  * `createDevTools()`: the developer tools' connection to a novel. It follows the play through the
- * novel's events, keeps an event log, and starts edited plays (a jump with edited state, a scene
- * reloaded by hot module replacement, persistent data reset) through a callback the app's player
- * answers, so the tools need nothing from the player beyond its `start` options.
+ * novel's events, starts edited plays (a jump, a hot reload, edited persistent data) through the
+ * app's `restart`, and drives a player that `NovelDevTools.Connect` links: screen previews over
+ * any library, sample toasts, sounds, full screen and the title screen.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,15 +19,30 @@ import type { GameState } from "../frames.js";
 import type { Novel, NovelInternals, Play, StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 import type { DeepPartial, NovelState } from "../types.js";
+import type { NovelNotification } from "../ui/behaviors/notifications.js";
+import type { LibraryScreen } from "../ui/extras.js";
+import type { NovelPlayer } from "../ui/player.js";
 
 import { check } from "../check.js";
 import { isSceneDeclaration } from "../declarations.js";
 import { NovelError } from "../errors.js";
 import { INTERNALS } from "../novel.js";
+import { readLibrary } from "../ui/library.js";
+import { pickSource } from "../ui/source.js";
 
 import type { MissingMessage, SceneGraph } from "./graph.js";
+import type { CastReport, LibraryPreset, UnlockCatalog } from "./library.js";
+import type { SampleKind, SampleSource } from "./samples.js";
 
 import { missingMessages, readGraph } from "./graph.js";
+import {
+	castReport,
+	lockedPersistent,
+	persistentProblem,
+	readCatalog,
+	unlockedPersistent,
+} from "./library.js";
+import { sampleNotification } from "./samples.js";
 
 /** Every event the tools log, in the order the novel declares them. */
 const EVENT_NAMES: readonly NovelEventName[] = [
@@ -95,6 +110,22 @@ export interface ResetOptions {
 	introduced?: boolean;
 }
 
+/** A player `NovelDevTools.Connect` linked: its context, and its translator for sample toasts. */
+export interface DevPlayer extends Pick<SampleSource, "t"> {
+	context: NovelPlayer.Context;
+}
+
+/** A player screen that reads the play itself rather than a library. */
+export type PlayerScreen = Extract<NovelPlayer.Screen, "settings" | "save" | "load" | "backlog">;
+
+/** A library screen previewed over a chosen library, which `NovelDevTools.Connect` draws. */
+export interface DevPreview {
+	screen: LibraryScreen;
+	preset: LibraryPreset;
+	/** The record the screen reads; one value per preview, since screens compare it by identity. */
+	persistent: Persistent;
+}
+
 /** Every problem the tools find without playing: `check()`'s report and missing messages. */
 export interface DevProblems {
 	check: CheckReport;
@@ -116,6 +147,8 @@ export class DevTools {
 	#count = 0;
 	#subscribers = new Set<() => void>();
 	#unsubscribe: (() => void)[];
+	#player: DevPlayer | undefined;
+	#preview: DevPreview | undefined;
 
 	/**
 	 * Connects to a novel; {@link createDevTools} is the usual way to call it.
@@ -142,9 +175,26 @@ export class DevTools {
 		return this.#play?.state;
 	}
 
-	/** The followed play's persistent data. */
+	/** The followed play's persistent data, or else the linked player's stored record. */
 	get persistent(): Persistent | undefined {
-		return this.#play?.persistent;
+		return this.#play?.persistent ?? this.#player?.context.persistent;
+	}
+
+	/** The player `NovelDevTools.Connect` linked, or `undefined` while none is on the page. */
+	get player(): NovelPlayer.Context | undefined {
+		return this.#player?.context;
+	}
+
+	/** The library screen being previewed, until {@link DevTools.closePreview}. */
+	get preview(): DevPreview | undefined {
+		return this.#preview;
+	}
+
+	/** The ids of the declared sounds, which {@link DevTools.playSound} plays. */
+	get sounds(): string[] {
+		return [...this.#internals.assets.values()]
+			.filter((asset) => asset.kind === "sound")
+			.map((asset) => asset.id);
 	}
 
 	/** The logged events, oldest first. */
@@ -166,6 +216,22 @@ export class DevTools {
 	attach(play: Play): void {
 		this.#play = play;
 		this.#notify();
+	}
+
+	/**
+	 * Links the player the tools drive; `NovelDevTools.Connect` calls it from inside the player.
+	 *
+	 * @param player - The player's context and translator.
+	 * @returns A function that unlinks it, unless another player linked since.
+	 */
+	connect(player: DevPlayer): () => void {
+		this.#player = player;
+		this.#notify();
+		return () => {
+			if (this.#player !== player) return;
+			this.#player = undefined;
+			this.#notify();
+		};
 	}
 
 	/**
@@ -269,6 +335,139 @@ export class DevTools {
 	}
 
 	/**
+	 * Replaces persistent data with an edited record and restarts the followed play from its own
+	 * save with it, so the next `persist` stores it.
+	 *
+	 * @param persistent - The record as parsed from the editor; missing fields read as empty.
+	 * @returns The options handed to `restart`, or an `invalid-state` error for a malformed record
+	 * or before any play.
+	 * @example devtools.edit({ ...devtools.persistent, introduced: ["mika"] });
+	 */
+	edit(persistent: unknown): Result<StartOptions, NovelError> {
+		let play = this.#play;
+		if (play === undefined) {
+			return failure(new NovelError("invalid-state", "No play is running to edit."));
+		}
+		let problem = persistentProblem(persistent);
+		if (problem !== undefined) return failure(new NovelError("invalid-state", problem));
+		return success(
+			this.#restart({ from: play.state, persistent: this.#internals.persistent(persistent) }),
+		);
+	}
+
+	/**
+	 * Lists every id persistent data can hold, for editing unlocks one by one.
+	 *
+	 * @returns The catalog; every lazy scene is imported.
+	 */
+	catalog(): Promise<UnlockCatalog> {
+		return readCatalog(this.#internals);
+	}
+
+	/**
+	 * Explains why each character counts as met in a record: introduced, a read line they speak,
+	 * or a look the stage drew.
+	 *
+	 * @param persistent - The record; the followed play's by default.
+	 * @returns One report per declared character; every lazy scene is imported.
+	 */
+	async cast(persistent: unknown = this.persistent): Promise<CastReport[]> {
+		let locale = this.#player?.context.locale ?? "en";
+		let library = await readLibrary(this.novel, persistent, locale);
+		return castReport(this.#internals, library);
+	}
+
+	/**
+	 * Previews a library screen over the play's library, or one with everything unlocked or
+	 * locked, without touching the play or what it stores; the linked player draws it in its theme.
+	 *
+	 * @param screen - The library screen.
+	 * @param preset - Which library it reads.
+	 * @returns The preview; an `unlocked` one imports every lazy scene first.
+	 * @example await devtools.previewScreen("gallery", "unlocked");
+	 */
+	async previewScreen(screen: LibraryScreen, preset: LibraryPreset): Promise<DevPreview> {
+		let base = this.persistent ?? this.#internals.persistent(undefined);
+		let persistent = base;
+		if (preset === "locked") persistent = lockedPersistent(base);
+		if (preset === "unlocked") persistent = unlockedPersistent(await this.catalog(), base);
+		this.#preview = { screen, preset, persistent };
+		this.#notify();
+		return this.#preview;
+	}
+
+	/** Ends the preview, as closing its dialog does. */
+	closePreview(): void {
+		if (this.#preview === undefined) return;
+		this.#preview = undefined;
+		this.#notify();
+	}
+
+	/**
+	 * Opens one of the linked player's own screens over the running play.
+	 *
+	 * @param screen - The screen.
+	 * @returns False when no player is linked.
+	 */
+	openScreen(screen: PlayerScreen): boolean {
+		this.#player?.context.open(screen);
+		return this.#player !== undefined;
+	}
+
+	/**
+	 * Pushes a toast like the one the player shows for `kind` into the linked player.
+	 *
+	 * @param kind - The toast to imitate.
+	 * @returns The queued toast, or `undefined` when no player is linked.
+	 * @example await devtools.notify("entry"); // "New entry: The pier"
+	 */
+	async notify(kind: SampleKind): Promise<NovelNotification | undefined> {
+		let player = this.#player;
+		if (player === undefined) return undefined;
+		let sample = await sampleNotification(this.#internals, kind, {
+			labels: player.context.labels,
+			t: player.t,
+		});
+		return player.context.notifications.push(sample);
+	}
+
+	/**
+	 * Plays a declared sound on the linked player's interface channel, at the reader's volume.
+	 *
+	 * @param id - The sound's id, from {@link DevTools.sounds}.
+	 * @returns False when no player is linked or no sound has that id.
+	 */
+	async playSound(id: string): Promise<boolean> {
+		let player = this.#player?.context;
+		let asset = this.#internals.assets.get(id);
+		if (player === undefined || asset?.kind !== "sound") return false;
+		await player.mixer.resume();
+		player.mixer.playInterface(pickSource(asset.src, player.locale));
+		return true;
+	}
+
+	/**
+	 * Enters or leaves full screen with the linked player; the click on the panel's button is
+	 * the user activation the browser asks for.
+	 *
+	 * @returns False when no player is linked.
+	 */
+	toggleFullscreen(): boolean {
+		this.#player?.context.toggleFullscreen();
+		return this.#player !== undefined;
+	}
+
+	/**
+	 * Hands the linked player back to its title screen through `novel:title`.
+	 *
+	 * @returns False when no player is linked.
+	 */
+	toTitle(): boolean {
+		this.#player?.context.toTitle();
+		return this.#player !== undefined;
+	}
+
+	/**
 	 * Runs `check()` and lists the message keys the novel's catalogs lack.
 	 *
 	 * @returns Both reports; loading them imports every lazy scene.
@@ -290,10 +489,12 @@ export class DevTools {
 		return readGraph(this.#internals);
 	}
 
-	/** Stops listening to the novel and forgets every subscriber. */
+	/** Stops listening to the novel and forgets every subscriber and the linked player. */
 	dispose(): void {
 		for (let unsubscribe of this.#unsubscribe) unsubscribe();
 		this.#subscribers.clear();
+		this.#player = undefined;
+		this.#preview = undefined;
 	}
 
 	/**
