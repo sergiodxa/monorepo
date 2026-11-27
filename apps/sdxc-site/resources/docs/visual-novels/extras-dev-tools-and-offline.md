@@ -98,7 +98,8 @@ three pieces, all loaded in development only:
 1. `createDevTools(novel, { restart })` connects to the novel. Every play the tools start
    (a jump, a hot reload, edited persistent data) reaches your player through `restart`.
 2. `<NovelDevTools.Connect devtools={devtools} />` goes **inside** the player, among its
-   parts. It links the player, so the panel can open screens, show toasts and play sounds.
+   parts, and in the title screen's `parts`. It links whichever is showing, so the panel can
+   open screens, show toasts and play sounds.
 3. `<NovelDevTools devtools={devtools} floating />` is the panel. `floating` adds a
    "Dev tools" button in the corner of the page. Place the panel inside your `IntlProvider`.
 
@@ -140,19 +141,20 @@ export const Game = clientEntry(
 
 		return () => {
 			let Panel = dev?.module.NovelDevTools;
+			let connect =
+				Panel === undefined || dev === undefined ? null : (
+					<Panel.Connect devtools={dev.devtools} />
+				);
 			return (
 				<>
 					<NovelPlayer.Default
 						key={String(restarts)}
 						novel={novel}
 						start={start}
-						titleScreen={
-							restarts === 0 ? { heading: "The Café" } : undefined
-						}
+						titleScreen={{ heading: "The Café", parts: connect }}
+						skipTitle={restarts > 0}
 					>
-						{Panel === undefined || dev === undefined ? null : (
-							<Panel.Connect devtools={dev.devtools} />
-						)}
+						{connect}
 					</NovelPlayer.Default>
 					{Panel === undefined || dev === undefined ? null : (
 						<Panel devtools={dev.devtools} floating />
@@ -166,8 +168,9 @@ export const Game = clientEntry(
 
 `import.meta.env.DEV` is `false` in a production build, so the bundler drops the import and the
 tools never ship. Changing the player's `key` mounts a new player on the play `restart` hands
-over. A game with a title screen drops `titleScreen` after the first restart, so a jump lands in
-the scene rather than on the title. Vite needs each hot-reloaded scene module's path written out.
+over. `skipTitle` opens that remounted player on the play rather than on the title, and keeps the
+title for **Back to the title screen** and the ending's button. Vite needs each hot-reloaded scene
+module's path written out.
 
 The panel's sections:
 
@@ -184,7 +187,9 @@ The panel's sections:
 - **Cast**: why each character counts as met: introduced, a read line they speak, or a look the
   stage drew.
 - **Player**: shows each toast the player shows by itself ("New entry", a CG, an ending…),
-  plays every declared sound, toggles full screen and returns to the title screen.
+  plays the hover and select sounds you pass as the player's `sounds`, toggles full screen and
+  returns to the title screen. While the title shows, the library previews, the settings, the
+  sounds and full screen work there too.
 - **Flowchart**, **Events** and **Problems**: the scene graph, the event log and `check()`'s
   findings.
 
