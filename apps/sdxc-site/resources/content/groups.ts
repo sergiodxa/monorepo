@@ -193,6 +193,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"iife",
 			"dates",
 			"duration",
+			"bytes",
 			"natural-dates",
 			"money",
 			"strings",
