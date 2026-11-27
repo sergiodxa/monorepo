@@ -5,10 +5,10 @@ section:
     title: Visual novels
     order: 4.7
 order: 12
-lastUpdated: 2026-11-25
+lastUpdated: 2026-11-27
 outcomes:
     - "How a title screen places the library screens, starts a chapter replay and shows the cast"
-    - "How to run the dev tools beside the player in development only"
+    - "How to link the dev tools to the player in development only, and preview any screen over any library"
     - "What the offline worker caches, and how a page registers it"
 ---
 
@@ -92,64 +92,105 @@ terms the reader learns: [Keep an encyclopedia](/docs/visual-novels/encyclopedia
 
 ## Edit scenes with the dev tools
 
-`@sdxc/novel/dev` shows the play's position and state, jumps to any scene with edited state,
-draws the scene graph and lists `check()`'s problems. Every play it starts reaches your player
-through `restart`, and `reload()` swaps an edited scene in on the same line:
+`@sdxc/novel/dev` lets you debug a play without playing up to the moment you need. It takes
+three pieces, all loaded in development only:
 
-```tsx {% title="resources/components/dev-game.tsx" %}
+1. `createDevTools(novel, { restart })` connects to the novel. Every play the tools start
+   (a jump, a hot reload, edited persistent data) reaches your player through `restart`.
+2. `<NovelDevTools.Connect devtools={devtools} />` goes **inside** the player, among its
+   parts. It links the player, so the panel can open screens, show toasts and play sounds.
+3. `<NovelDevTools devtools={devtools} floating />` is the panel. `floating` adds a
+   "Dev tools" button in the corner of the page. Place the panel inside your `IntlProvider`.
+
+```tsx {% title="resources/components/game.tsx" %}
 import type { StartOptions } from "@sdxc/novel";
-import type { DevTools } from "@sdxc/novel/dev";
 import type { Handle } from "remix/component";
 
-import { createDevTools, NovelDevTools } from "@sdxc/novel/dev";
 import { NovelPlayer } from "@sdxc/novel/ui";
 import { clientEntry } from "remix/component";
 
 import { novel } from "~/app/initializers/novel";
 
-export const DevGame = clientEntry(
+type Dev = typeof import("@sdxc/novel/dev");
+
+export const Game = clientEntry(
 	import.meta.url,
-	function DevGame(handle: Handle<{ locale: string }>) {
+	function Game(handle: Handle<{ locale: string }>) {
 		let start: StartOptions = {};
 		let restarts = 0;
-		let devtools: DevTools | undefined;
+		let dev: { module: Dev; devtools: InstanceType<Dev["DevTools"]> } | undefined;
 
-		handle.queueTask(() => {
-			let tools = createDevTools(novel, {
+		handle.queueTask(async () => {
+			if (!import.meta.env.DEV) return;
+			let module = await import("@sdxc/novel/dev");
+			let devtools = module.createDevTools(novel, {
 				restart(options) {
 					start = options;
 					restarts += 1;
 					void handle.update();
 				},
 			});
-			handle.signal.addEventListener("abort", () => tools.dispose());
-			import.meta.hot?.accept(
-				["../novel/scenes/opening.ts", "../novel/scenes/counter.ts"],
-				(modules) => tools.reload(modules),
+			handle.signal.addEventListener("abort", () => devtools.dispose());
+			import.meta.hot?.accept(["../novel/scenes/opening.ts"], (modules) =>
+				devtools.reload(modules),
 			);
-			devtools = tools;
+			dev = { module, devtools };
 			void handle.update();
 		});
 
-		return () =>
-			devtools === undefined ? null : (
+		return () => {
+			let Panel = dev?.module.NovelDevTools;
+			return (
 				<>
-					<NovelPlayer.Default key={restarts} novel={novel} start={start} />
-					<NovelDevTools devtools={devtools} />
+					<NovelPlayer.Default
+						key={String(restarts)}
+						novel={novel}
+						start={start}
+						titleScreen={
+							restarts === 0 ? { heading: "The Café" } : undefined
+						}
+					>
+						{Panel === undefined || dev === undefined ? null : (
+							<Panel.Connect devtools={dev.devtools} />
+						)}
+					</NovelPlayer.Default>
+					{Panel === undefined || dev === undefined ? null : (
+						<Panel devtools={dev.devtools} floating />
+					)}
 				</>
 			);
+		};
 	},
 );
 ```
 
-Changing the player's `key` mounts a new player on the play `restart` hands over, and Vite needs
-each scene module's path written out. Wrap the player in an `IntlProvider` as `Game` does, and
-render `import.meta.env.DEV ? <DevGame locale={ctx.locale} /> : <Game locale={ctx.locale} />` in
-the page.
+`import.meta.env.DEV` is `false` in a production build, so the bundler drops the import and the
+tools never ship. Changing the player's `key` mounts a new player on the play `restart` hands
+over. A game with a title screen drops `titleScreen` after the first restart, so a jump lands in
+the scene rather than on the title. Vite needs each hot-reloaded scene module's path written out.
+
+The panel's sections:
+
+- **Play** and **Jump**: where the play stands, and a jump to any scene with its state edited as
+  JSON.
+- **Screens**: opens any library screen (Memories, the encyclopedia, the cast, the gallery, the
+  music room, endings, chapters, scenes) over this play's library, everything unlocked or
+  everything locked, without changing what the game stores. The preview draws inside the player,
+  so it uses your theme, and its own switch changes the library while it is open. Settings, save,
+  load and the backlog open over the play.
+- **Persistent** and **Unlocks**: edit the stored record as JSON, or tick each image, track,
+  look, entry, bio section, met character, ending and chapter. Lines read toggle all at once.
+  Each change restarts the play on its line, and the game stores the new record.
+- **Cast**: why each character counts as met: introduced, a read line they speak, or a look the
+  stage drew.
+- **Player**: shows each toast the player shows by itself ("New entry", a CG, an ending…),
+  plays every declared sound, toggles full screen and returns to the title screen.
+- **Flowchart**, **Events** and **Problems**: the scene graph, the event log and `check()`'s
+  findings.
 
 > [!WARNING]
-> Keep `@sdxc/novel/dev` behind that check. Its panel lets anyone jump to any scene and rewrite
-> state, and drawing the scene graph imports every scene module.
+> Keep `@sdxc/novel/dev` behind the `import.meta.env.DEV` check. Its panel lets anyone jump to
+> any scene and rewrite state, and several sections import every scene module.
 
 ## Play offline
 
