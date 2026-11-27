@@ -226,6 +226,9 @@ describe("GET /apps/malfoid/privacy", () => {
 		expect(html).toMatch(/<title[^>]*>Malfoid Stickers Privacy Policy<\/title>/);
 		expect(html).toContain("The app collects no data");
 		expect(html).toContain("Support requests through this website");
+		expect(html).toContain("Favorites stored on your device");
+		expect(html).toContain("Copying stickers to the clipboard");
+		expect(html).toContain("it never reads what is on your clipboard");
 		expect(html).toContain('href="/apps/malfoid/privacy.md"');
 		expect(html).toContain('href="https://sergiodxa.com/apps/malfoid/support"');
 		expect(html).toContain(
@@ -259,12 +262,22 @@ describe("GET /apps/malfoid/privacy in Spanish", () => {
 		expect(html).toContain("Política de privacidad de Malfoid Stickers: la app no recopila datos.");
 	});
 
+	test("answers ?lang=es with the Spanish policy and its local-only favorites", async () => {
+		let response = await fetchPage("/apps/malfoid/privacy?lang=es");
+		let html = await response.text();
+
+		expect(response.headers.get("content-language")).toBe("es-AR");
+		expect(html).toContain("Favoritos guardados en tu dispositivo");
+		expect(html).toContain("Copiar stickers al portapapeles");
+		expect(html).toContain("nunca lee lo que hay en tu portapapeles");
+	});
+
 	test("serves the Spanish Markdown at the .md route with ?lang=", async () => {
 		let response = await fetchPage("/apps/malfoid/privacy.md?lang=es-AR");
 		let body = await response.text();
 
 		expect(response.headers.get("content-language")).toBe("es-AR");
-		expect(body).toContain("Última actualización: 26 de noviembre de 2026");
+		expect(body).toContain("Última actualización: 27 de noviembre de 2026");
 		expect(body).toContain("## A qué puede acceder la app");
 		expect(body).not.toContain("title: Política de privacidad");
 	});
@@ -277,8 +290,12 @@ describe("GET /apps/malfoid/privacy.md", () => {
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toContain("text/markdown");
-		expect(body).toContain("Last updated: November 26, 2026");
+		expect(body).toContain("Last updated: November 27, 2026");
 		expect(body).toContain("does not access your conversations, contacts, photos");
+		expect(body).toContain("## Favorites stored on your device");
+		expect(body).toContain("using Apple’s standard app preferences (UserDefaults)");
+		expect(body).toContain("images you already pasted into other apps stay where you pasted them");
+		expect(body).not.toMatch(/\b170\b/);
 		expect(body).not.toContain("title: Malfoid Stickers Privacy Policy");
 	});
 });

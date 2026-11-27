@@ -1,23 +1,44 @@
 ---
 title: Malfoid Stickers Privacy Policy
-description: "Malfoid Stickers collects no data. How the sticker pack works on iPhone and iPad, and what happens when you contact support through this website."
+description: "Malfoid Stickers collects no data. How the companion app and the Messages sticker browser work on iPhone and iPad, what they keep on your device, and what happens when you contact support through this website."
 ---
 
-Last updated: November 26, 2026
+Last updated: November 27, 2026
 
-Malfoid Stickers is developed by Sergio Daniel Xalambri (“I,” “me,” or “my”). This policy explains how information is handled when you use the Malfoid Stickers iMessage sticker pack on iPhone and iPad, and, separately, when you contact Malfoid Stickers support through this website.
+Malfoid Stickers is developed by Sergio Daniel Xalambri (“I,” “me,” or “my”). This policy explains how information is handled when you use Malfoid Stickers on iPhone and iPad, both the companion app and the sticker browser inside Messages, and, separately, when you contact Malfoid Stickers support through this website.
 
 ## The app collects no data
 
-Malfoid Stickers does not collect, store or share any personal information. It has no account and no sign-in, and it does not send anything to servers operated by me or anyone else.
+Malfoid Stickers does not collect or share any personal information. It has no account and no sign-in, and it does not send anything to servers operated by me or anyone else. The only thing it keeps is the list of stickers you mark as favorites, stored on your device as described below.
 
 The app includes no advertising, advertising identifiers, analytics, tracking, crash-reporting SDKs or third-party code. It is completely free and offers no subscriptions or in-app purchases.
 
+## How the app works
+
+Malfoid Stickers has two parts:
+
+- **The companion app**, where you can browse, search and preview the stickers, mark favorites, and copy a sticker’s image to paste it into another app.
+- **The sticker browser in Messages**, where you can browse, search and mark favorites, and insert a sticker into a conversation or drag it onto a message.
+
+Search and filtering happen on your device. What you search for and which stickers you favorite are never sent to me or to anyone else.
+
+All sticker artwork is bundled with the app and loads from your device, so it works offline and the app makes no network requests to show it.
+
+## Favorites stored on your device
+
+When you mark a sticker as a favorite, the app saves that sticker’s identifier on your device using Apple’s standard app preferences (UserDefaults). Only the identifiers of the stickers you choose are stored, nothing else. The companion app and the sticker browser in Messages each keep their own list of favorites.
+
+These preferences stay on your device. They are not sent to me or to any server, and I have no way to see them. They are app settings, not personal data collected about you.
+
+## Copying stickers to the clipboard
+
+When you tap a sticker in the companion app, it copies that sticker’s image, a PNG with a transparent background, to the system clipboard so you can paste it into another app.
+
+The app copies only when you tap a sticker, and it never reads what is on your clipboard. Once an image is on the clipboard, the system clipboard and the app you paste it into handle it under their own behavior and privacy practices.
+
 ## What the app can access
 
-Malfoid Stickers is a sticker pack inside Messages. It does not access your conversations, contacts, photos, camera, microphone or location, and it does not ask for permission to use any of them.
-
-All 170 stickers are bundled with the app and load from your device, so the pack makes no network requests to show them.
+Malfoid Stickers does not access your conversations, contacts, photos, camera, microphone or location, and it does not ask for permission to use any of them.
 
 ## Messages and Apple
 
@@ -29,7 +50,7 @@ For details about Apple’s practices, visit [apple.com/legal/privacy](https://w
 
 ## Deleting the app
 
-Malfoid Stickers stores nothing about you, so deleting the app removes it completely. Stickers you already sent stay in your conversations, like any other message.
+Deleting Malfoid Stickers removes it from your device together with the preferences it stored there, including both lists of favorites. Stickers you already sent stay in your conversations, like any other message, and images you already pasted into other apps stay where you pasted them.
 
 ## Support requests through this website
 
@@ -63,7 +84,7 @@ Information may also be disclosed when required by law.
 
 ## Retention
 
-The app keeps no data about you. Support requests are kept in my email inbox until the issue or request is resolved, and then deleted.
+The app keeps no data about you beyond the favorites stored on your device, which it never sends anywhere and which deleting the app removes. Support requests are kept in my email inbox until the issue or request is resolved, and then deleted.
 
 ## Children
 
