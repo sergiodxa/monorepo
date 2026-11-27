@@ -143,6 +143,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 		packages: [
 			"ui",
 			"u",
+			"color",
 			"icons",
 			"i18n",
 			"messageformat",
