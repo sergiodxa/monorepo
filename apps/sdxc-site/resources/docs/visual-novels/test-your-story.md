@@ -5,7 +5,7 @@ section:
     title: Visual novels
     order: 4.7
 order: 3
-lastUpdated: 2026-11-19
+lastUpdated: 2026-11-27
 outcomes:
     - "How to drive a scene with `createTestPlay` and assert on its state"
     - "How `check()` and `explore()` find problems no single play reaches"
@@ -79,6 +79,21 @@ test("the story has no problems", async () => {
 	expect(report.ok).toBe(true);
 	expect(report.problems).toEqual([]);
 });
+```
+
+Warnings also name every extra a reader can never unlock: a sprite no scene draws
+(`unshown-sprite`), a CG no scene shows (`unshown-image`), a track no scene plays
+(`unplayed-music`), an entry no scene teaches (`unlearned-entry`), and a listed character no
+scene introduces, gives a line or draws (`unmet-character`). Every branch of every mapped scene
+counts. When an extra stays locked on purpose, filter it out by name:
+
+```typescript {% title="app/initializers/novel.test.ts" %}
+let { problems } = await check(novel);
+expect(
+	problems.filter(
+		(problem) => !("asset" in problem && problem.asset === "music.credits"),
+	),
+).toEqual([]);
 ```
 
 ## Reach every ending

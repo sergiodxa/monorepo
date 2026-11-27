@@ -5,7 +5,7 @@ section:
     title: Visual novels
     order: 4.7
 order: 1.7
-lastUpdated: 2026-11-25
+lastUpdated: 2026-11-27
 outcomes:
     - "How chapters and arcs group scenes, and where the reader sees their titles"
     - "How to start each chapter on an empty stage, and what happens when a chapter begins"
@@ -118,7 +118,8 @@ as [Saves, settings and unlocks](/docs/visual-novels/saves-and-settings) shows.
 ## Check the whole story
 
 `check()` reads every scene without playing it, so a long story keeps one test that catches a
-jump to a scene nobody mapped and a scene nothing reaches:
+jump to a scene nobody mapped, a scene nothing reaches, and a CG, track, sprite or entry no
+scene unlocks:
 
 ```typescript {% title="app/initializers/novel.test.ts" %}
 import { check } from "@sdxc/novel/test";
