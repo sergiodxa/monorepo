@@ -73,24 +73,30 @@ size, place and color it.
 ## Restyle it with variables
 
 Every color, font, size and position on the title is a `--novel-title-*` variable, and
-`NOVEL_THEME_VARIABLES` lists each with its default. Set them with `css()` in the same `mix`:
+`NOVEL_THEME_VARIABLES` lists each with its default. Set them through `theme()` in the same `mix`:
 
 ```tsx {% title="resources/components/game.tsx" %}
-css({
-	"--novel-title-background-filter": "blur(6px) brightness(0.6)",
-	"--novel-title-art-block-size": "92cqh",
-	"--novel-title-logo-filter": "drop-shadow(0 0 2cqh rgb(0 0 0 / 0.6))",
-	"--novel-title-button-font-family": "Cinzel, serif",
-	"--novel-title-button-letter-spacing": "0.14em",
-	"--novel-title-button-text-transform": "uppercase",
-	"--novel-title-button-shadow":
-		"inset 0 0 0 0.35cqh #06140e, inset 0 0 0 calc(0.35cqh + 1px) #d4b06a",
-	"--novel-title-detail-text-transform": "none",
-	"--novel-title-footer-font-size": "1.4cqh",
-});
+css(
+	theme({
+		"--novel-title-background-filter": "blur(6px) brightness(0.6)",
+		"--novel-title-art-block-size": "92cqh",
+		"--novel-title-art-animation": "novel-title-rise 1.2s ease-out both",
+		"--novel-title-logo-filter": "drop-shadow(0 0 2cqh rgb(0 0 0 / 0.6))",
+		"--novel-title-button-font-family": "Cinzel, serif",
+		"--novel-title-button-letter-spacing": "0.14em",
+		"--novel-title-button-text-transform": "uppercase",
+		"--novel-title-button-shadow":
+			"inset 0 0 0 0.35cqh #06140e, inset 0 0 0 calc(0.35cqh + 1px) #d4b06a",
+		"--novel-title-button-hover-translate": "0 -0.2cqh",
+		"--novel-title-detail-text-transform": "none",
+		"--novel-title-footer-font-size": "1.4cqh",
+	}),
+);
 ```
 
 `cqh` and `cqw` measure the title screen itself, so the menu keeps its proportions at any size.
+`--novel-title-art-animation` plays only for a reader who has not asked for reduced motion, and
+`novel-title-rise` is a built-in keyframe that fades the art in from below.
 
 ## Ornament the buttons
 

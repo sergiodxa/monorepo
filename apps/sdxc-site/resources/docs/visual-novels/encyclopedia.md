@@ -188,26 +188,34 @@ images or tracks no Gallery or Music room. `pages` picks and orders them, where 
 
 ## Restyle it
 
-The book reads the same variables as the settings screen: `--novel-settings-tab-*` for the page
-tabs, and `--novel-settings-panel-background`, `-panel-color` and `-divider` for the page. Three
-more style the open entry: `--novel-encyclopedia-page-padding`,
-`--novel-encyclopedia-current-background` and `--novel-encyclopedia-current-color`. Every part
-carries a data attribute for anything the variables leave out. CGs and a character's looks
-share one frame, locked or not, from `--novel-library-frame`, `--novel-library-radius`,
+The book reads the settings screen's variables by default: `--novel-settings-tab-*` for the page
+tabs and `--novel-settings-panel-*` for the page, controls included. `--novel-encyclopedia-page-*`
+(`-background`, `-color`, `-border`, `-radius`, `-shadow`, `-padding`) dress the page as a book of
+its own, `--novel-encyclopedia-columns` and `-column-gap` lay the list and the article out as a
+spread, and `-tab-font`, `-title-weight`, `-topic-font`, `-topic-color`, `-contents-color` and
+`-search-font-style` set the type. `--novel-character-name-color` replaces each character's own
+color on their name, for a page their colors would not read on. CGs and a character's looks share
+one frame from `--novel-library-frame`, `--novel-library-radius`,
 `--novel-library-locked-background` and `--novel-library-locked-color`:
 
 ```tsx {% title="resources/components/game.tsx" %}
-mix={css({
-	"--novel-settings-panel-background": "#f3ead6",
-	"--novel-encyclopedia-current-background": "#0f6b43",
-	"--novel-encyclopedia-current-color": "#f6e6bd",
-	"--novel-library-frame": "1px solid #c9a45a",
-	"& [data-novel-encyclopedia-article] h3": { fontFamily: "Georgia, serif" },
-})}
+mix={css(
+	theme({
+		"--novel-encyclopedia-page-background": "radial-gradient(#f7efdc, #e3d3b0)",
+		"--novel-encyclopedia-page-color": "#2b2114",
+		"--novel-encyclopedia-page-border": "1px solid #c9a45a",
+		"--novel-encyclopedia-columns": "1fr 1fr",
+		"--novel-encyclopedia-current-background": "#0f6b43",
+		"--novel-encyclopedia-current-color": "#f6e6bd",
+		"--novel-character-name-color": "#2b2114",
+		"--novel-library-frame": "1px solid #c9a45a",
+	}),
+)}
 ```
 
-The attributes are `data-novel-encyclopedia`, `-page`, `-content`, `-search`, `-article`,
-`-topic`, `-summary` and `-contents`, and on a character's page `data-novel-character-bio`.
+For anything the variables leave out, the attributes are `data-novel-encyclopedia`, `-page`,
+`-content`, `-search`, `-article`, `-topic`, `-summary` and `-contents`, and on a character's page
+`data-novel-character-bio`.
 
 ## Test what a scene teaches
 

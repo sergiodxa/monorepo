@@ -73,7 +73,10 @@ Escape, or **Settings** in the quick menu, opens the settings screen, and every 
 Each row shows the setting's current value beside its control, and **Reset settings** restores
 `DEFAULT_SETTINGS`. Every word on the screen is a label (`settingsText`, `textPreview`,
 `resetSettings`, `back` and the rest), so it translates through the player's `labels`, and it
-reads the `--novel-settings-*` variables for its tabs, page, dividers, sliders and preview:
+reads the `--novel-settings-*` variables for its tabs, page, dividers, sliders and preview. The
+page is a surface of its own: its switches, sliders and select take `--novel-settings-panel-color`,
+`-panel-accent`, `-panel-on-accent`, `-panel-line` and `-panel-field`, so a light page inside a
+dark dialog reads right:
 
 ```tsx {% title="resources/components/game.tsx" %}
 <NovelPlayer.Default
@@ -82,13 +85,16 @@ reads the `--novel-settings-*` variables for its tabs, page, dividers, sliders a
 	labels={{ settingsSound: "Audio", textPreview: "The bell over the door rings." }}
 	mix={[
 		STORAGE.sync(),
-		css({
-			"--novel-settings-panel-background": "#fbf4e8",
-			"--novel-settings-tab-selected-background": "#e86a92",
-			"--novel-settings-tab-selected-color": "#fff",
-			"--novel-settings-slider-track": "#e8d9c4",
-			"--novel-settings-slider-fill": "#e86a92",
-		}),
+		css(
+			theme({
+				"--novel-settings-panel-background": "#fbf4e8",
+				"--novel-settings-panel-color": "#2b2114",
+				"--novel-settings-panel-accent": "#e86a92",
+				"--novel-settings-tab-selected-background": "#e86a92",
+				"--novel-settings-tab-selected-color": "#fff",
+				"--novel-settings-slider-track": "#e8d9c4",
+			}),
+		),
 	]}
 />
 ```

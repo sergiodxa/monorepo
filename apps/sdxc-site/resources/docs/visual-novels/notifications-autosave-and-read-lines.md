@@ -71,16 +71,18 @@ export function CloudSync(handle: Handle) {
 ```
 
 Each toast carries `data-kind` (`image`, `music`, `ending`, `notify`, or your own `kind`), and
-the `--novel-notification-*` variables set its look:
+the `--novel-notification-*` variables, set through `theme()`, give it its look:
 
 ```tsx {% title="resources/components/cafe-player.tsx" %}
 <NovelPlayer.Default
 	novel={novel}
-	mix={css({
-		"--novel-notification-inset": "auto auto 1rem 1rem",
-		"--novel-notification-background": "#2b1d14",
-		"--novel-notification-border": "1px solid #e8a55c",
-	})}
+	mix={css(
+		theme({
+			"--novel-notification-inset": "auto auto 1rem 1rem",
+			"--novel-notification-background": "#2b1d14",
+			"--novel-notification-border": "1px solid #e8a55c",
+		}),
+	)}
 />
 ```
 
@@ -118,7 +120,10 @@ in an earlier playthrough, the same lines skip's read-only mode passes. `--novel
 (`inherit` by default) tints them:
 
 ```tsx {% title="resources/components/cafe-player.tsx" %}
-<NovelPlayer.Default novel={novel} mix={css({ "--novel-read-color": "#b8b8d0" })} />
+<NovelPlayer.Default
+	novel={novel}
+	mix={css(theme({ "--novel-read-color": "#b8b8d0" }))}
+/>
 ```
 
 A rule of your own can target `[data-novel-read]` for anything beyond a color.

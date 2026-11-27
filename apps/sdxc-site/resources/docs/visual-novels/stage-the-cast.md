@@ -119,15 +119,18 @@ variables set by how much:
 ```tsx {% title="resources/components/game.tsx" %}
 <NovelPlayer.Default
 	novel={novel}
-	mix={css({
-		"--novel-character-height": "90%",
-		"--novel-focus-scale": "1.03",
-		"--novel-focus-lift": "1%",
-		"--novel-dim-brightness": "0.75",
-	})}
+	mix={css(
+		theme({
+			"--novel-character-height": "90%",
+			"--novel-focus-scale": "1.03",
+			"--novel-focus-lift": "1%",
+			"--novel-dim-brightness": "0.75",
+		}),
+	)}
 />
 ```
 
+`theme()` from `@sdxc/novel/ui` checks each name against the player's variables.
 `--novel-character-height` is how much of the stage's height a character fills, and
 `--novel-focus-duration` how fast the focus changes hands. In a composed player,
 `<NovelPlayer.Stage focus={false}>` leaves every character as drawn. Each character carries

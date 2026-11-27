@@ -109,23 +109,26 @@ renders a message key with the line markup, through the translator `IntlProvider
 ## Restyle it
 
 Every color, image, size and timing the parts draw is a `--novel-*` custom property, and
-`NOVEL_THEME_VARIABLES` maps each name to its default. Set them with `css()` on the player or any
-ancestor; the `border-image-*` variables frame a box with your own artwork:
+`NOVEL_THEME_VARIABLES` maps each name to its default. Set them on the player or any ancestor
+through `theme()` from `@sdxc/novel/ui`, which turns a misspelled name into a type error; the
+`border-image-*` variables frame a box with your own artwork:
 
 ```tsx {% title="resources/components/cafe-player.tsx" %}
 <NovelPlayer
 	novel={novel}
 	mix={[
 		keyboardControls(),
-		css({
-			"--novel-textbox-background": "rgb(30 20 10 / 0.85)",
-			"--novel-textbox-border-image-source": "url(/ui/frame.png)",
-			"--novel-textbox-border-image-slice": "24",
-			"--novel-textbox-border-image-width": "24px",
-			"--novel-nameplate-font-family": "Caveat, cursive",
-			"--novel-next-content": '"❤"',
-			"--novel-accent": "#e8a55c",
-		}),
+		css(
+			theme({
+				"--novel-textbox-background": "rgb(30 20 10 / 0.85)",
+				"--novel-textbox-border-image-source": "url(/ui/frame.png)",
+				"--novel-textbox-border-image-slice": "24",
+				"--novel-textbox-border-image-width": "24px",
+				"--novel-nameplate-font-family": "Caveat, cursive",
+				"--novel-next-content": '"❤"',
+				"--novel-accent": "#e8a55c",
+			}),
+		),
 	]}
 >
 	<NovelPlayer.Stage>
@@ -139,6 +142,26 @@ next-line indicator, the choices, the quick menu, the dialogs, the settings scre
 read lines and the
 notifications. The root also carries `data-novel-player` with `data-phase`, `data-auto`,
 `data-skip` and `data-hidden`, for a rule that depends on what the player is doing.
+
+The dialogs read `--novel-dialog-*`: `-background` and `-color` for the panel, `-border`,
+`-shadow`, `-font` and `-title-*` for its frame and type. Every `@sdxc/ui` control inside one,
+from the close button to a `Button`, `Select`, `Slider` or `Switch` of your own, takes its colors
+from the dialog: text from `--novel-dialog-color`, fills and focus rings from
+`--novel-dialog-accent` (with `--novel-dialog-on-accent` on them), borders from
+`--novel-dialog-line` and fields from `--novel-dialog-field`, whatever the app's `@sdxc/ui` theme
+says:
+
+```tsx {% title="resources/components/cafe-player.tsx" %}
+css(
+	theme({
+		"--novel-dialog-background": "linear-gradient(#0f2a1f, #07170f)",
+		"--novel-dialog-color": "#f3e7cc",
+		"--novel-dialog-accent": "#d4b06a",
+		"--novel-dialog-border": "1px solid #d4b06a",
+		"--novel-dialog-title-font": "Cinzel, serif",
+	}),
+);
+```
 
 ## Test the part
 
