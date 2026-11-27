@@ -502,7 +502,7 @@ The whole player in one component: every part below, notifications included, the
 </NovelPlayer.Default>
 ```
 
-Given `titleScreen={{ heading, background?, art?, footer?, screens? }}` it opens on `NovelPlayer.Title` and plays what the reader starts there, with the settings changed on the title; `start` is what every such play extends, and `mix` applies to the title while it shows. When a play ends, the ending screen's button returns to the title, as does a replay begun there when it ends; the title then offers the saves and persistent data the play left, so Continue resumes the newest save and the library shows what was unlocked.
+Given `titleScreen={{ heading, background?, art?, footer?, screens?, parts? }}` it opens on `NovelPlayer.Title` (or straight on the play under `skipTitle`, read at mount, as a game remounted by its dev tools wants) and plays what the reader starts there, with the settings changed on the title; `start` is what every such play extends, and `mix` applies to the title while it shows. When a play ends, the ending screen's button returns to the title, as does a replay begun there when it ends; the title then offers the saves and persistent data the play left, so Continue resumes the newest save and the library shows what was unlocked.
 
 ```tsx
 <NovelPlayer.Default
@@ -514,7 +514,7 @@ Given `titleScreen={{ heading, background?, art?, footer?, screens? }}` it opens
 
 #### `NovelPlayer.Title`
 
-The title screen, filling its box: `heading` (text, or a logo `<img>`/`<svg>` scaled to `--novel-title-logo-*`), a full-bleed `background` (or the `--novel-title-background` variable), a foreground `art` anchored at `--novel-title-art-inset`, New game, Continue from the newest of `saves` with that save's scene and date (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Encyclopedia`, `Memories`), the settings screen, a `footer` under the menu, and a full screen button in the bottom corner (`data-novel-title-fullscreen`, `--novel-title-fullscreen-*`, shown where the browser allows full screen) that fills the screen with the box the title sits in. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable, and every part carries a `data-novel-title-*` attribute (`heading`, `menu`, `button` with `data-action`, `label`, `detail`, `footer`, `background`, `art`) that the title's own `mix` can decorate:
+The title screen, filling its box: `heading` (text, or a logo `<img>`/`<svg>` scaled to `--novel-title-logo-*`), a full-bleed `background` (or the `--novel-title-background` variable), a foreground `art` anchored at `--novel-title-art-inset`, New game, Continue from the newest of `saves` with that save's scene and date (shown only when one exists), the library screens given as children (default `ChapterSelect`, `Encyclopedia`, `Memories`), the settings screen, a `footer` under the menu, and a full screen button in the bottom corner (`data-novel-title-fullscreen`, `--novel-title-fullscreen-*`, shown where the browser allows full screen) that fills the screen with the box the title sits in. It starts nothing: New game, Continue and a chapter or scene pick dispatch `novel:start` with the `StartOptions` to mount a player with, built on its `start` prop, and a setting changed here dispatches `novel:settings`. Every style is a `--novel-title-*` variable, and every part carries a `data-novel-title-*` attribute (`heading`, `menu`, `button` with `data-action`, `label`, `detail`, `footer`, `background`, `art`) that the title's own `mix` can decorate. `parts` draws inside the title with `Title.Context` (`novel`, `element`, `labels`, `locale`, `persistent`, `sounds`, `mixer`, `open(screen)`, `toggleFullscreen()`), which is how `NovelDevTools.Connect` links there:
 
 ```tsx
 <NovelPlayer.Title
@@ -539,7 +539,7 @@ A save's scene title and the date it was saved in the reader's locale, as the sa
 What `handle.context.get(NovelPlayer)` answers inside a player: one stable object whose getters always read the current play, so a part or mixin can keep it from setup. It is a `TypedEventTarget` that dispatches `frame`, `phase` and `ending` as soon as each changes; the events carry no data, so a listener reads the getters.
 
 - State: `novel`, `element` (the root), `dialog` (the open dialog, or `null`), `frame`, `phase`, `ending`, `stage` (what the stage draws: the frame's, then the stage the story finished on), `state` (the story state at the current stop, extension slices included, one value per stop), `error`, `stalled`, `instant` (true while skipping or under reduced motion), `hidden`, `replaying`, `returnsToTitle`, `persistent`, `labels`, `locale`, `markup`, `ids` (each screen's dialog id) and `anchor` (the CSS anchor name on the root)
-- Behaviors, typed by their interfaces: `reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`, plus `mixer` (`AudioMixer`) and `prefetcher` (`Prefetcher`)
+- Behaviors, typed by their interfaces: `reveal`, `auto`, `skip`, `backlog`, `saves`, `settings`, `countdown`, `autosave`, `notifications`, `read`, plus `mixer` (`AudioMixer`), `sounds` (the `sounds` prop's interface sounds) and `prefetcher` (`Prefetcher`)
 - Actions: `answer(reply)`, `advance()`, `rollback()`, `save(slot)`, `load(slot)`, `setSettings(next)`, `toggleAuto()`, `toggleSkip()`, `holdSkip(held)`, `hide(hidden?)` (toggles without an argument; a right click on the stage does the same), `toggleFullscreen()` (a player with a title screen fills the screen with the box it shares with the title), `replay(scene, scope)`, `endReplay()`, `toTitle()` (dispatches `novel:title` with the play's persistent data), `open(screen)`, `showEntry(id)` (opens the encyclopedia on the entry `<topic>.<entry>`, read back as `entry`), `retry()` and `restart()` (a new play from the first scene, keeping persistent data)
 
 ```tsx
@@ -754,7 +754,7 @@ The scenery transitions the player draws itself as View Transitions (any other n
 - `NovelLibrary`, `LibraryArc`, `LibraryChapter`, `LibraryScene`, `LibraryAsset`, `LibraryEnding`, `SceneLine`, `MemoryLine`: What `readLibrary` and `sceneLines` answer.
 - `BacklogEntry`: A line as the backlog keeps it, with its values, speakers and voice for the reader's locale.
 - `MixerSnapshot`: What the mixer plays now, for a test or a panel.
-- `InterfaceSounds`: The `hover` and `select` sounds the player and the title screen play.
+- `InterfaceSounds`, `InterfaceSoundRole`: The `hover` and `select` sounds the player and the title screen play, and those two roles.
 - `Phase`: Where the player is in a frame (`idle`, `staging`, `typing`, `waiting`, `replying`), as `data-phase` shows it.
 - `RunningTransition`: A stage transition with its `finished` promise and a `finish()` that ends it early.
 - `Column`: A column's `left`, `width` and whether it sits left of center.
@@ -813,6 +813,8 @@ Follows the last play an event fired for, or one handed to `attach(play)`.
 - `reload(modules): Result<ReloadResult, NovelError>`: swaps in hot-reloaded scene modules and restarts the followed play from its own save, on the same line when it still exists
 - `reset({ seen?, chosen?, unlocked?, endings?, chapters?, introduced? })`: clears parts of persistent data (all of it when empty) and restarts the play
 - `problems(): Promise<DevProblems>` and `graph(): Promise<SceneGraph>`: `check()`'s report with the missing messages, and the scene graph
+- `player`, `title`, `linked`: what `<NovelDevTools.Connect devtools>` links, placed among a player's parts or in a title's `parts`
+- `sounds` and `playSound(role)`: the `hover` and `select` interface sounds the linked player or title configures, played on its interface channel
 - `dispose()`: stops listening to the novel
 
 #### `NovelDevTools`

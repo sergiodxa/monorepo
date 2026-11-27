@@ -208,6 +208,8 @@ export namespace NovelPlayer {
 		/** Whether the current line and each backlog line had been read before. */
 		readonly read: ReadBehavior;
 		readonly mixer: AudioMixer;
+		/** The interface sounds the `sounds` prop configures, by role, which the parts play on `mixer`. */
+		readonly sounds: InterfaceSounds | undefined;
 		readonly prefetcher: Prefetcher;
 		/** Answers the current frame with a reply built by one of its methods. */
 		answer(reply: Reply): void;
@@ -329,6 +331,13 @@ export namespace NovelPlayer {
 		 * @example titleScreen={{ heading: "The Café", art: <img src={keyArt} alt="" /> }}
 		 */
 		titleScreen?: Title.Options;
+		/**
+		 * Opens on the play `start` describes while keeping `titleScreen` for the reader to return
+		 * to, as a game remounted by its developer tools wants. It is read once, at mount, like `start`.
+		 *
+		 * @example <NovelPlayer.Default key={restarts} start={start} titleScreen={title} skipTitle={restarts > 0} />
+		 */
+		skipTitle?: boolean;
 	}
 }
 
@@ -670,6 +679,9 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 		get mixer() {
 			return director.mixer;
 		},
+		get sounds() {
+			return handle.props.sounds;
+		},
 		get prefetcher() {
 			return director.prefetcher;
 		},
@@ -843,11 +855,14 @@ NovelPlayer.Title = Title;
 /**
  * The whole player as one component: every part in the classic layout, the seven library screens
  * in the extras menu, the notifications, and keyboard, touch and gamepad controls. Its children
- * are drawn on the stage; given `titleScreen`, it opens on the title and returns there as a play ends.
+ * are drawn on the stage; given `titleScreen`, it opens on the title (or on the play under
+ * `skipTitle`) and returns there as a play ends.
  *
  * @example <NovelPlayer.Default novel={novel} settings={stored}><NovelPlayer.Interaction interactions={INTERACTIONS}>{(frame) => <Fishing input={frame.input} />}</NovelPlayer.Interaction></NovelPlayer.Default>
  */
 NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.DefaultProps>) {
+	/** True while a play shows in place of the title, from mount under `skipTitle`. */
+	let playing = handle.props.skipTitle === true;
 	/** The play the reader began on the title screen, until they return to the title. */
 	let chosen: StartOptions | undefined;
 	/**
@@ -866,12 +881,12 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 		settings: handle.props.settings,
 	};
 	return () => {
-		let { children, mix, titleScreen, ...rest } = handle.props;
+		let { children, mix, titleScreen, skipTitle: _skipTitle, ...rest } = handle.props;
 		if (rest.saves !== seen.saves) since = { ...since, saves: {} };
 		if (rest.start !== seen.start) since = { saves: since.saves };
 		if (rest.settings !== seen.settings) changed = undefined;
 		seen = { saves: rest.saves, start: rest.start, settings: rest.settings };
-		if (titleScreen !== undefined && chosen === undefined) {
+		if (titleScreen !== undefined && !playing) {
 			let { screens, ...look } = titleScreen;
 			let saves =
 				Object.keys(since.saves).length === 0 ? rest.saves : { ...rest.saves, ...since.saves };
@@ -894,6 +909,7 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 						}),
 						on("novel:start", (event) => {
 							chosen = event.start;
+							playing = true;
 							void handle.update();
 						}),
 						mix,
@@ -922,6 +938,7 @@ NovelPlayer.Default = function NovelPlayerDefault(handle: Handle<NovelPlayer.Def
 					on("novel:title", (event) => {
 						if (event.persistent !== undefined) since.persistent = event.persistent;
 						chosen = undefined;
+						playing = false;
 						void handle.update();
 					}),
 					mix,

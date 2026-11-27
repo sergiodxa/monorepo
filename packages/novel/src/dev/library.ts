@@ -10,7 +10,7 @@
 import type { CharacterDeclaration } from "../declarations.js";
 import type { NovelInternals } from "../novel.js";
 import type { Persistent } from "../persistent.js";
-import type { NovelLibrary } from "../ui/library.js";
+import type { NovelLibrary } from "../ui.js";
 
 import { bioKey, emptyPersistent, lookKey, recordKey } from "../persistent.js";
 import { endingKeys, isListed, isMet, sceneLines } from "../unlocks.js";

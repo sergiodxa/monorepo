@@ -8,8 +8,7 @@
  */
 
 import type { NovelInternals } from "../novel.js";
-import type { NotificationInput } from "../ui/behaviors/notifications.js";
-import type { NovelLabels } from "../ui/settings.js";
+import type { NotificationInput, NovelLabels } from "../ui.js";
 
 import { eachDirective } from "../unlocks.js";
 

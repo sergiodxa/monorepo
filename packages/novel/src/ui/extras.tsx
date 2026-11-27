@@ -70,17 +70,35 @@ export interface OfferedScreen {
 	element: RemixElement;
 }
 
+/** The label each library screen's menu entry and dialog title read, in the extras menu's order. */
+export const LIBRARY_SCREEN_LABELS: Readonly<Record<LibraryScreen, keyof NovelLabels>> = {
+	memories: "memories",
+	encyclopedia: "encyclopedia",
+	characters: "characters",
+	gallery: "gallery",
+	music: "musicRoom",
+	endings: "endings",
+	chapters: "chapterSelect",
+	scenes: "sceneReplay",
+};
+
+/** Which library screen each component is. */
+function libraryScreenOf(type: unknown): LibraryScreen | undefined {
+	if (type === Memories) return "memories";
+	if (type === Gallery) return "gallery";
+	if (type === Characters) return "characters";
+	if (type === Encyclopedia) return "encyclopedia";
+	if (type === MusicRoom) return "music";
+	if (type === EndingsList) return "endings";
+	if (type === ChapterSelect) return "chapters";
+	if (type === SceneReplay) return "scenes";
+	return undefined;
+}
+
 /** Which screen each library component is, and the label the menu names it by. */
 function screenOf(type: unknown): Pick<OfferedScreen, "screen" | "label"> | undefined {
-	if (type === Memories) return { screen: "memories", label: "memories" };
-	if (type === Gallery) return { screen: "gallery", label: "gallery" };
-	if (type === Characters) return { screen: "characters", label: "characters" };
-	if (type === Encyclopedia) return { screen: "encyclopedia", label: "encyclopedia" };
-	if (type === MusicRoom) return { screen: "music", label: "musicRoom" };
-	if (type === EndingsList) return { screen: "endings", label: "endings" };
-	if (type === ChapterSelect) return { screen: "chapters", label: "chapterSelect" };
-	if (type === SceneReplay) return { screen: "scenes", label: "sceneReplay" };
-	return undefined;
+	let screen = libraryScreenOf(type);
+	return screen === undefined ? undefined : { screen, label: LIBRARY_SCREEN_LABELS[screen] };
 }
 
 /** The library screens among `children`, in order, flattening arrays and fragments of them. */

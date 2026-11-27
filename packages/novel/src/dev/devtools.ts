@@ -1,8 +1,8 @@
 /**
  * `createDevTools()`: the developer tools' connection to a novel. It follows the play through the
  * novel's events, starts edited plays (a jump, a hot reload, edited persistent data) through the
- * app's `restart`, and drives a player that `NovelDevTools.Connect` links: screen previews over
- * any library, sample toasts, sounds, full screen and the title screen.
+ * app's `restart`, and drives the player or title screen `NovelDevTools.Connect` links: screen
+ * previews over any library, sample toasts, interface sounds, full screen and the title screen.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,16 +19,15 @@ import type { GameState } from "../frames.js";
 import type { Novel, NovelInternals, Play, StartOptions } from "../novel.js";
 import type { Persistent } from "../persistent.js";
 import type { DeepPartial, NovelState } from "../types.js";
-import type { NovelNotification } from "../ui/behaviors/notifications.js";
-import type { LibraryScreen } from "../ui/extras.js";
-import type { NovelPlayer } from "../ui/player.js";
+import type { InterfaceSoundRole, NovelNotification, NovelPlayer, Title } from "../ui.js";
+import type { LibraryScreen } from "../ui/internal.js";
 
 import { check } from "../check.js";
 import { isSceneDeclaration } from "../declarations.js";
 import { NovelError } from "../errors.js";
 import { INTERNALS } from "../novel.js";
-import { readLibrary } from "../ui/library.js";
-import { pickSource } from "../ui/source.js";
+import { readLibrary } from "../ui.js";
+import { playInterfaceSound } from "../ui/internal.js";
 
 import type { MissingMessage, SceneGraph } from "./graph.js";
 import type { CastReport, LibraryPreset, UnlockCatalog } from "./library.js";
@@ -110,10 +109,16 @@ export interface ResetOptions {
 	introduced?: boolean;
 }
 
-/** A player `NovelDevTools.Connect` linked: its context, and its translator for sample toasts. */
-export interface DevPlayer extends Pick<SampleSource, "t"> {
-	context: NovelPlayer.Context;
-}
+/**
+ * What `NovelDevTools.Connect` linked, with its translator for sample toasts: the player's context
+ * while a play runs, or the title screen's while the title shows.
+ */
+export type DevPlayer =
+	| (Pick<SampleSource, "t"> & { surface: "play"; context: NovelPlayer.Context })
+	| (Pick<SampleSource, "t"> & { surface: "title"; context: Title.Context });
+
+/** The interface sound roles, in the order the panel offers them. */
+const SOUND_ROLES: readonly InterfaceSoundRole[] = ["hover", "select"];
 
 /** A player screen that reads the play itself rather than a library. */
 export type PlayerScreen = Extract<NovelPlayer.Screen, "settings" | "save" | "load" | "backlog">;
@@ -175,14 +180,24 @@ export class DevTools {
 		return this.#play?.state;
 	}
 
-	/** The followed play's persistent data, or else the linked player's stored record. */
+	/** The followed play's persistent data, or else the linked player's or title's stored record. */
 	get persistent(): Persistent | undefined {
 		return this.#play?.persistent ?? this.#player?.context.persistent;
 	}
 
-	/** The player `NovelDevTools.Connect` linked, or `undefined` while none is on the page. */
+	/** The player `NovelDevTools.Connect` linked, or `undefined` while no play is on the page. */
 	get player(): NovelPlayer.Context | undefined {
-		return this.#player?.context;
+		return this.#player?.surface === "play" ? this.#player.context : undefined;
+	}
+
+	/** The title screen `NovelDevTools.Connect` linked, or `undefined` while none shows. */
+	get title(): Title.Context | undefined {
+		return this.#player?.surface === "title" ? this.#player.context : undefined;
+	}
+
+	/** True while `NovelDevTools.Connect` links a player or a title screen. */
+	get linked(): boolean {
+		return this.#player !== undefined;
 	}
 
 	/** The library screen being previewed, until {@link DevTools.closePreview}. */
@@ -190,11 +205,13 @@ export class DevTools {
 		return this.#preview;
 	}
 
-	/** The ids of the declared sounds, which {@link DevTools.playSound} plays. */
-	get sounds(): string[] {
-		return [...this.#internals.assets.values()]
-			.filter((asset) => asset.kind === "sound")
-			.map((asset) => asset.id);
+	/**
+	 * The interface sound roles the linked player or title configures through its `sounds` prop,
+	 * which {@link DevTools.playSound} plays; none while nothing is linked.
+	 */
+	get sounds(): InterfaceSoundRole[] {
+		let sounds = this.#player?.context.sounds;
+		return SOUND_ROLES.filter((role) => sounds?.[role] !== undefined);
 	}
 
 	/** The logged events, oldest first. */
@@ -219,9 +236,10 @@ export class DevTools {
 	}
 
 	/**
-	 * Links the player the tools drive; `NovelDevTools.Connect` calls it from inside the player.
+	 * Links the player or title screen the tools drive; `NovelDevTools.Connect` calls it from
+	 * inside either one.
 	 *
-	 * @param player - The player's context and translator.
+	 * @param player - The surface's context and translator.
 	 * @returns A function that unlinks it, unless another player linked since.
 	 */
 	connect(player: DevPlayer): () => void {
@@ -404,14 +422,22 @@ export class DevTools {
 	}
 
 	/**
-	 * Opens one of the linked player's own screens over the running play.
+	 * Opens one of the linked player's own screens over the running play, or the linked title's
+	 * settings, the one such screen a title holds.
 	 *
 	 * @param screen - The screen.
-	 * @returns False when no player is linked.
+	 * @returns False when nothing linked holds the screen.
 	 */
 	openScreen(screen: PlayerScreen): boolean {
-		this.#player?.context.open(screen);
-		return this.#player !== undefined;
+		let linked = this.#player;
+		if (linked === undefined) return false;
+		if (linked.surface === "play") {
+			linked.context.open(screen);
+			return true;
+		}
+		if (screen !== "settings") return false;
+		linked.context.open(screen);
+		return true;
 	}
 
 	/**
@@ -423,7 +449,7 @@ export class DevTools {
 	 */
 	async notify(kind: SampleKind): Promise<NovelNotification | undefined> {
 		let player = this.#player;
-		if (player === undefined) return undefined;
+		if (player?.surface !== "play") return undefined;
 		let sample = await sampleNotification(this.#internals, kind, {
 			labels: player.context.labels,
 			t: player.t,
@@ -432,25 +458,27 @@ export class DevTools {
 	}
 
 	/**
-	 * Plays a declared sound on the linked player's interface channel, at the reader's volume.
+	 * Plays the interface sound the linked player or title configures for `role`, on its interface
+	 * channel at the reader's volume, as reaching or picking an option there does.
 	 *
-	 * @param id - The sound's id, from {@link DevTools.sounds}.
-	 * @returns False when no player is linked or no sound has that id.
+	 * @param role - The role, from {@link DevTools.sounds}.
+	 * @returns False when nothing is linked or it configures no sound for `role`.
+	 * @example await devtools.playSound("select");
 	 */
-	async playSound(id: string): Promise<boolean> {
-		let player = this.#player?.context;
-		let asset = this.#internals.assets.get(id);
-		if (player === undefined || asset?.kind !== "sound") return false;
-		await player.mixer.resume();
-		player.mixer.playInterface(pickSource(asset.src, player.locale));
+	async playSound(role: InterfaceSoundRole): Promise<boolean> {
+		let context = this.#player?.context;
+		let sound = context?.sounds?.[role];
+		if (context === undefined || sound === undefined) return false;
+		await context.mixer.resume();
+		playInterfaceSound(context.mixer, sound, context.locale);
 		return true;
 	}
 
 	/**
-	 * Enters or leaves full screen with the linked player; the click on the panel's button is
-	 * the user activation the browser asks for.
+	 * Enters or leaves full screen with the linked player or title; the click on the panel's
+	 * button is the user activation the browser asks for.
 	 *
-	 * @returns False when no player is linked.
+	 * @returns False when nothing is linked.
 	 */
 	toggleFullscreen(): boolean {
 		this.#player?.context.toggleFullscreen();
@@ -460,11 +488,12 @@ export class DevTools {
 	/**
 	 * Hands the linked player back to its title screen through `novel:title`.
 	 *
-	 * @returns False when no player is linked.
+	 * @returns False when no player is linked, the title screen included.
 	 */
 	toTitle(): boolean {
-		this.#player?.context.toTitle();
-		return this.#player !== undefined;
+		let player = this.player;
+		player?.toTitle();
+		return player !== undefined;
 	}
 
 	/**

@@ -38,7 +38,7 @@ export type {
 } from "./ui/library.js";
 export type { SceneLine } from "./unlocks.js";
 export type { Phase } from "./ui/director.js";
-export type { InterfaceSounds } from "./ui/interface-sounds.js";
+export type { InterfaceSoundRole, InterfaceSounds } from "./ui/interface-sounds.js";
 export type {
 	AudioChannel,
 	NovelLabels,

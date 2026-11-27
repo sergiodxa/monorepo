@@ -1,7 +1,8 @@
 /**
  * The title screen a novel opens on: its heading over the author's background and art, New game,
  * Continue from the newest save, the library screens and the settings, each in a modal dialog.
- * It starts nothing itself; a play the reader begins leaves as `novel:start` for its owner.
+ * It starts nothing itself; a play the reader begins leaves as `novel:start` for its owner, and
+ * it provides `Title.Context` to the parts placed in it, such as the developer tools' link.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +15,9 @@ import { css, on, ref } from "remix/component";
 
 import type { GameState } from "../frames.js";
 import type { Novel, StartOptions } from "../novel.js";
+import type { Persistent } from "../persistent.js";
+
+import { INTERNALS } from "../novel.js";
 
 import type { LibraryScreen } from "./extras.js";
 import type { InterfaceSounds } from "./interface-sounds.js";
@@ -61,6 +65,40 @@ export namespace Title {
 		 * @default <ChapterSelect /><Encyclopedia /><Memories />
 		 */
 		screens?: RemixNode;
+		/**
+		 * Drawn inside the title after its dialogs, reading `Title.Context`, such as the
+		 * developer tools' `NovelDevTools.Connect`, so they link while the title shows.
+		 */
+		parts?: RemixNode;
+	}
+
+	/** A dialog the title opens by name: the settings, or a library screen its menu offers. */
+	export type Screen = LibraryScreen | "settings";
+
+	/**
+	 * What `handle.context.get(Title)` answers to the parts inside a title screen: the novel and
+	 * the reader's words, sounds and stored data the title shows, and the actions its menu takes.
+	 */
+	export interface Context {
+		readonly novel: Novel;
+		/** The title's root element, once it is in the document. */
+		readonly element: HTMLElement | undefined;
+		/** The interface's words: the English defaults with the `labels` prop over them. */
+		readonly labels: NovelLabels;
+		readonly locale: string;
+		/**
+		 * The persistent data `start` carries, as a play reads it, or `undefined` without any. It
+		 * is one value while `start.persistent` stays the same, so a screen can key on it.
+		 */
+		readonly persistent: Persistent | undefined;
+		/** The interface sounds the `sounds` prop configures, by role, which the menu plays on `mixer`. */
+		readonly sounds: InterfaceSounds | undefined;
+		/** The title's mixer at the reader's volumes, made the first time it is read. */
+		readonly mixer: AudioMixer;
+		/** Opens the settings or a library screen the menu offers; any other screen stays closed. */
+		open(screen: Screen): void;
+		/** Enters or leaves full screen with the box the title shares with the play it starts. */
+		toggleFullscreen(): void;
 	}
 
 	/** Props {@link Title} accepts; `mix` styles the parts through their `data-novel-title-*` attributes. */
@@ -124,7 +162,7 @@ function describes(node: RemixNode): boolean {
  * @example <NovelPlayer.Title novel={novel} heading="The Café" art={<img src={art} alt="" />} saves={saves} mix={on("novel:start", (event) => play(event.start))} />
  * @example mix={css({ "& [data-novel-title-button]::before": { content: '"◆"', position: "absolute", insetInlineStart: "-0.5em" } })}
  */
-export function Title(handle: Handle<Title.Props>) {
+export function Title(handle: Handle<Title.Props, Title.Context>) {
 	let root: HTMLElement | undefined;
 	let seenSettings = handle.props.settings;
 	let settings = new SettingsModel(seenSettings);
@@ -133,6 +171,8 @@ export function Title(handle: Handle<Title.Props>) {
 	/** The title's own mixer, made once a sound plays, so a silent title opens no audio context. */
 	let mixer: AudioMixer | undefined;
 	handle.signal.addEventListener("abort", () => mixer?.dispose());
+	/** The persistent data last parsed from `start`, kept while the stored value stays the same. */
+	let parsed: { from: unknown; value: Persistent | undefined } | undefined;
 
 	/** The mixer at the reader's current volumes. */
 	function soundMixer(): AudioMixer {
@@ -149,6 +189,43 @@ export function Title(handle: Handle<Title.Props>) {
 		},
 		{ signal: listenerSignal(handle) },
 	);
+
+	handle.context.set({
+		get novel() {
+			return handle.props.novel;
+		},
+		get element() {
+			return root;
+		},
+		get labels() {
+			return { ...DEFAULT_LABELS, ...handle.props.labels };
+		},
+		get locale() {
+			return intl(handle).locale;
+		},
+		get persistent() {
+			let stored = handle.props.start?.persistent;
+			if (parsed === undefined || parsed.from !== stored) {
+				let value =
+					stored === undefined ? undefined : handle.props.novel[INTERNALS]().persistent(stored);
+				parsed = { from: stored, value };
+			}
+			return parsed.value;
+		},
+		get sounds() {
+			return handle.props.sounds;
+		},
+		get mixer() {
+			return soundMixer();
+		},
+		open(screen) {
+			let dialog = root?.querySelector<HTMLDialogElement>(`#${prefix}-${screen}`);
+			if (dialog !== null && dialog !== undefined && !dialog.open) dialog.showModal();
+		},
+		toggleFullscreen() {
+			toggleTitleFullscreen(root);
+		},
+	});
 
 	/** Begins a play from `start`, closing any dialog the title left open. */
 	function begin(target: EventTarget, start: StartOptions): void {
@@ -181,6 +258,7 @@ export function Title(handle: Handle<Title.Props>) {
 			settings: stored,
 			labels: overrides,
 			sounds: _sounds,
+			parts,
 			children,
 			mix,
 			...rest
@@ -407,9 +485,23 @@ export function Title(handle: Handle<Title.Props>) {
 				})}
 				<SettingsScreen id={settingsId} settings={settings} labels={labels} />
 				<FullscreenButton label={labels.fullscreen} />
+				{parts}
 			</div>
 		);
 	};
+}
+
+/**
+ * Leaves full screen, or fills the screen with the box `title` sits in, which the play started
+ * from it shares, so starting a game stays in full screen.
+ */
+function toggleTitleFullscreen(title: HTMLElement | undefined): void {
+	if (document.fullscreenElement !== null) {
+		void document.exitFullscreen().catch(() => undefined);
+		return;
+	}
+	let target = title?.parentElement ?? title;
+	void target?.requestFullscreen().catch(() => undefined);
 }
 
 /** Props of {@link FullscreenButton}. */
@@ -443,13 +535,7 @@ function FullscreenButton(handle: Handle<FullscreenButtonProps>) {
 
 	/** Leaves full screen, or fills the screen with the box the title sits in. */
 	function toggle(): void {
-		if (document.fullscreenElement !== null) {
-			void document.exitFullscreen().catch(() => undefined);
-			return;
-		}
-		let title = button?.closest("[data-novel-title]");
-		let target = title?.parentElement ?? title;
-		void target?.requestFullscreen().catch(() => undefined);
+		toggleTitleFullscreen(button?.closest<HTMLElement>("[data-novel-title]") ?? undefined);
 	}
 
 	return () => (

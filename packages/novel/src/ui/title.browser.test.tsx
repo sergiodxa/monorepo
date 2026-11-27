@@ -8,7 +8,7 @@
  */
 
 import type {} from "@vitest/browser-playwright";
-import type { RemixNode } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
 import { createI18n } from "@sdxc/i18n";
@@ -215,6 +215,42 @@ describe("NovelPlayer.Title", () => {
 	});
 });
 
+describe("NovelPlayer.Title's context", () => {
+	test("hands its parts the novel, labels, stored record and sounds, and opens its dialogs", async () => {
+		let seen: Title.Context | undefined;
+		/** Records the title's context and draws a marker. */
+		function Probe(handle: Handle) {
+			seen = handle.context.get(Title) as Title.Context;
+			return () => <span data-probe="" />;
+		}
+		let novel = fixture();
+		let sounds = { hover: SOUNDS.sounds.tick };
+		let { result } = mount(
+			<Title
+				novel={novel}
+				heading="The Café"
+				labels={{ newGame: "Begin" }}
+				start={{ persistent: STORED }}
+				sounds={sounds}
+				parts={<Probe />}
+			/>,
+		);
+		expect(result.$("[data-novel-title] [data-probe]")).not.toBeNull();
+		let context = seen as Title.Context;
+		expect(context.novel).toBe(novel);
+		expect(context.element).toBe(result.$("[data-novel-title]"));
+		expect(context.labels.newGame).toBe("Begin");
+		expect(context.locale).toBe("en");
+		expect(context.sounds).toBe(sounds);
+		expect(context.persistent?.chapters).toEqual(["prologue"]);
+		expect(context.persistent).toBe(context.persistent);
+		context.open("settings");
+		await vi.waitFor(() =>
+			expect(result.$("[data-novel-title] dialog[open][data-novel-settings]")).not.toBeNull(),
+		);
+	});
+});
+
 describe("NovelPlayer.Title's full screen button", () => {
 	test("fills the screen with the box the title sits in, and leaves full screen once in it", async () => {
 		let { result } = mount(<Title novel={fixture()} heading="The Café" />);
@@ -280,6 +316,23 @@ describe("NovelPlayer.Default with a title screen", () => {
 		await userEvent.click(result.$('[data-novel-menu] [data-action="toTitle"]')!);
 		await vi.waitFor(() => expect(result.$("[data-novel-title]")).not.toBeNull());
 		expect(result.$("[data-novel-player]")).toBeNull();
+	});
+
+	test("opens on the play under skipTitle and keeps the title to return to", async () => {
+		let { result } = mount(
+			<NovelPlayer.Default
+				novel={fixture()}
+				settings={{ textSpeed: 0 }}
+				titleScreen={{ heading: "The Café" }}
+				skipTitle
+			/>,
+		);
+		expect(result.$("[data-novel-title]")).toBeNull();
+		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
+		await userEvent.click(result.$('[data-novel-menu] [data-action="toTitle"]')!);
+		await vi.waitFor(() => expect(result.$("[data-novel-title]")).not.toBeNull());
+		button(result, "new-game")!.click();
+		await vi.waitFor(() => expect(result.$("[data-novel-line]")?.textContent).toBe("Welcome."));
 	});
 
 	test("offers no way to the title in a player without a title screen", async () => {

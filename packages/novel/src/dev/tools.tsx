@@ -1,7 +1,7 @@
 /**
  * The panel's tools that reach past the play: screen previews over any library, unlocks edited
- * one by one, why each character counts as met, and the linked player's toasts, sounds, full
- * screen and title screen. Each is a native disclosure like the rest of the panel.
+ * one by one, why each character counts as met, and the linked player's or title's toasts,
+ * interface sounds, full screen and title screen. Each is a native disclosure like the rest.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,15 +13,17 @@ import { Button, Checkbox, Disclosure, Select } from "@sdxc/ui";
 import { css, on } from "remix/component";
 
 import type { Persistent } from "../persistent.js";
-import type { LibraryScreen } from "../ui/extras.js";
+import type { InterfaceSoundRole } from "../ui.js";
+import type { LibraryScreen } from "../ui/internal.js";
 
-import { DEFAULT_LABELS } from "../ui/settings.js";
+import { DEFAULT_LABELS } from "../ui.js";
+import { LIBRARY_SCREEN_LABELS } from "../ui/internal.js";
 
 import type { DevTools, PlayerScreen } from "./devtools.js";
 import type { CastReport, LibraryPreset, UnlockCatalog } from "./library.js";
 import type { SampleKind } from "./samples.js";
 
-import { PRESET_LABELS, SCREEN_LABELS } from "./connect.js";
+import { PRESET_LABELS } from "./connect.js";
 import { lockedPersistent, unlockedPersistent } from "./library.js";
 import { SAMPLE_KINDS } from "./samples.js";
 
@@ -32,7 +34,16 @@ export interface SectionProps {
 
 /** Shown in a section that drives the player while none is linked. */
 const UNLINKED =
-	"Start a play with <NovelDevTools.Connect> among the player's parts to use these tools.";
+	"Place <NovelDevTools.Connect> among the player's parts, or the title screen's, to use these tools.";
+
+/** Shown beside the tools only a running play answers, while the title screen is linked. */
+const ON_TITLE = "The title screen is showing; start a play for its toasts and screens.";
+
+/** What each interface sound's button reads. */
+const SOUND_LABELS: Readonly<Record<InterfaceSoundRole, string>> = {
+	hover: "Hover sound",
+	select: "Select sound",
+};
 
 /** The player screens the Screens section opens over the running play, with their labels. */
 const PLAYER_SCREENS: readonly [PlayerScreen, keyof typeof DEFAULT_LABELS][] = [
@@ -78,9 +89,9 @@ export function ScreensSection(handle: Handle<SectionProps>) {
 	let preset: LibraryPreset = "current";
 	return () => {
 		let { devtools } = handle.props;
-		let player = devtools.player;
-		let labels = player?.labels ?? DEFAULT_LABELS;
-		let disabled = player === undefined;
+		let labels = devtools.player?.labels ?? devtools.title?.labels ?? DEFAULT_LABELS;
+		let disabled = !devtools.linked;
+		let onTitle = devtools.title !== undefined;
 		return (
 			<Disclosure>
 				<Disclosure.Trigger>Screens</Disclosure.Trigger>
@@ -105,7 +116,7 @@ export function ScreensSection(handle: Handle<SectionProps>) {
 							</Select>
 						</label>
 						<div role="group" aria-label="Library screens" mix={css(ROW)}>
-							{(Object.keys(SCREEN_LABELS) as LibraryScreen[]).map((screen) => (
+							{(Object.keys(LIBRARY_SCREEN_LABELS) as LibraryScreen[]).map((screen) => (
 								<Button
 									type="button"
 									size="sm"
@@ -114,7 +125,7 @@ export function ScreensSection(handle: Handle<SectionProps>) {
 									data-screen={screen}
 									mix={on("click", () => void devtools.previewScreen(screen, preset))}
 								>
-									{labels[SCREEN_LABELS[screen]]}
+									{labels[LIBRARY_SCREEN_LABELS[screen]]}
 								</Button>
 							))}
 						</div>
@@ -124,7 +135,7 @@ export function ScreensSection(handle: Handle<SectionProps>) {
 									type="button"
 									size="sm"
 									variant="ghost"
-									disabled={disabled}
+									disabled={disabled || (onTitle && screen !== "settings")}
 									data-screen={screen}
 									mix={on("click", () => void devtools.openScreen(screen))}
 								>
@@ -428,27 +439,30 @@ export function metReasons(character: CastReport): string {
 }
 
 /**
- * The linked player's own reactions, on demand: a toast of each kind it shows, every declared
- * sound on the interface channel, full screen, and the title screen.
+ * The linked player's own reactions, on demand: a toast of each kind it shows, its hover and
+ * select sounds on the interface channel, full screen, and the title screen. A linked title
+ * screen answers its sounds and full screen.
  */
 export function PlayerSection(handle: Handle<SectionProps>) {
 	return () => {
 		let { devtools } = handle.props;
-		let disabled = devtools.player === undefined;
+		let linked = devtools.linked;
+		let playing = devtools.player !== undefined;
 		let sounds = devtools.sounds;
 		return (
 			<Disclosure>
 				<Disclosure.Trigger>Player</Disclosure.Trigger>
 				<Disclosure.Panel>
 					<div mix={css({ display: "grid", gap: "8px" })}>
-						{disabled ? <p>{UNLINKED}</p> : null}
+						{linked ? null : <p>{UNLINKED}</p>}
+						{devtools.title === undefined ? null : <p>{ON_TITLE}</p>}
 						<div role="group" aria-label="Sample notifications" mix={css(ROW)}>
 							{SAMPLE_KINDS.map((kind) => (
 								<Button
 									type="button"
 									size="sm"
 									variant="outline"
-									disabled={disabled}
+									disabled={!playing}
 									data-sample={kind}
 									mix={on("click", () => void devtools.notify(kind))}
 								>
@@ -456,18 +470,21 @@ export function PlayerSection(handle: Handle<SectionProps>) {
 								</Button>
 							))}
 						</div>
-						<div role="group" aria-label="Sounds" mix={css(ROW)}>
-							{sounds.length === 0 ? <p>The novel declares no sounds.</p> : null}
-							{sounds.map((id) => (
+						<div role="group" aria-label="Interface sounds" mix={css(ROW)}>
+							{linked && sounds.length === 0 ? (
+								<p>
+									No interface sounds: pass <code>sounds</code> to the player.
+								</p>
+							) : null}
+							{sounds.map((role) => (
 								<Button
 									type="button"
 									size="sm"
 									variant="ghost"
-									disabled={disabled}
-									data-sound={id}
-									mix={on("click", () => void devtools.playSound(id))}
+									data-sound={role}
+									mix={on("click", () => void devtools.playSound(role))}
 								>
-									▶ {id}
+									▶ {SOUND_LABELS[role]}
 								</Button>
 							))}
 						</div>
@@ -476,7 +493,7 @@ export function PlayerSection(handle: Handle<SectionProps>) {
 								type="button"
 								size="sm"
 								variant="outline"
-								disabled={disabled}
+								disabled={!linked}
 								mix={on("click", () => void devtools.toggleFullscreen())}
 							>
 								Toggle full screen
@@ -485,7 +502,7 @@ export function PlayerSection(handle: Handle<SectionProps>) {
 								type="button"
 								size="sm"
 								variant="outline"
-								disabled={disabled}
+								disabled={!playing}
 								mix={on("click", () => void devtools.toTitle())}
 							>
 								Back to the title screen

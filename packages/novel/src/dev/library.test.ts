@@ -28,7 +28,7 @@ import {
 } from "../index.js";
 import { INTERNALS } from "../novel.js";
 import { emptyPersistent } from "../persistent.js";
-import { DEFAULT_LABELS } from "../ui/settings.js";
+import { DEFAULT_LABELS } from "../ui.js";
 
 import { createDevTools } from "./devtools.js";
 import { lockedPersistent, persistentProblem, unlockedPersistent } from "./library.js";
@@ -252,7 +252,9 @@ describe("sample notifications", () => {
 		});
 	});
 
-	test("lists the declared sounds", () => {
-		expect(fixture().devtools.sounds).toEqual(["sounds.tick"]);
+	test("lists no interface sound before a player or title links", async () => {
+		let { devtools } = fixture();
+		expect(devtools.sounds).toEqual([]);
+		expect(await devtools.playSound("select")).toBe(false);
 	});
 });

@@ -33,7 +33,7 @@ import {
 	scenes,
 	topic,
 } from "../index.js";
-import { NovelPlayer } from "../ui/player.js";
+import { AudioMixer, NovelPlayer } from "../ui.js";
 
 import { createDevTools } from "./devtools.js";
 import { NovelDevTools } from "./panel.js";
@@ -77,7 +77,7 @@ const CAST = cast({
 
 const ASSETS = assets({
 	images: { letter: svg("white"), kiss: svg("red") },
-	sounds: { tick: svg("black") },
+	sounds: { tick: svg("black"), chime: svg("gray") },
 });
 
 const LORE = encyclopedia({
@@ -103,13 +103,17 @@ let mounted: RenderResult | undefined;
 afterEach(() => {
 	mounted?.cleanup();
 	mounted = undefined;
+	vi.restoreAllMocks();
 });
 
 /**
  * Mounts the panel over a fresh novel, beside a player linked through `NovelDevTools.Connect`
- * when `player` is set, all under a translator.
+ * when `player` is set (opening on a title screen that links too under `title`), all under a
+ * translator; `sounds` gives the player its hover and select sounds.
  */
-function mount(options: { player?: boolean; floating?: boolean } = {}) {
+function mount(
+	options: { player?: boolean; title?: boolean; sounds?: boolean; floating?: boolean } = {},
+) {
 	let novel = createNovel({
 		scenes: SCENES,
 		cast: CAST,
@@ -134,7 +138,21 @@ function mount(options: { player?: boolean; floating?: boolean } = {}) {
 					"--novel-library-locked-color": "rgb(1, 2, 3)",
 				}}
 			>
-				<NovelPlayer.Default novel={novel} start={{ seed: "dev" }} settings={{ textSpeed: 0 }}>
+				<NovelPlayer.Default
+					novel={novel}
+					start={{ seed: "dev" }}
+					settings={{ textSpeed: 0 }}
+					titleScreen={
+						options.title === true
+							? { heading: "The Café", parts: <NovelDevTools.Connect devtools={devtools} /> }
+							: undefined
+					}
+					sounds={
+						options.sounds === true
+							? { hover: ASSETS.sounds.tick, select: ASSETS.sounds.chime }
+							: undefined
+					}
+				>
 					<NovelDevTools.Connect devtools={devtools} />
 				</NovelPlayer.Default>
 			</div>
@@ -181,9 +199,9 @@ async function playLines(play: Play, count: number): Promise<void> {
 	}
 }
 
-/** The unlocked state of every image the open preview's gallery lists. */
-function galleryStates(result: RenderResult): string[] {
-	return [...result.$$("[data-novel-player] dialog[open] [data-novel-gallery] [data-image]")].map(
+/** The unlocked state of every image the open preview's gallery lists, inside `surface`. */
+function galleryStates(result: RenderResult, surface = "[data-novel-player]"): string[] {
+	return [...result.$$(`${surface} dialog[open] [data-novel-gallery] [data-image]`)].map(
 		(node) => (node as HTMLElement).dataset["unlocked"] ?? "",
 	);
 }
@@ -241,9 +259,62 @@ describe("screen previews", () => {
 			true,
 		);
 		expect((panel.result.$("aside [data-sample=entry]") as HTMLButtonElement).disabled).toBe(true);
-		expect((panel.result.$("aside [data-sound='sounds.tick']") as HTMLButtonElement).disabled).toBe(
-			true,
+		expect(panel.result.$("aside [data-sound]")).toBeNull();
+	});
+
+	test("link the title screen, previewing inside it, until a play starts and links the player", async () => {
+		let panel = mount({ player: true, title: true });
+		await vi.waitFor(() => expect(panel.devtools.title).toBeDefined());
+		expect(panel.devtools.player).toBeUndefined();
+		await panel.open("Screens");
+		expect((panel.result.$("aside [data-screen=save]") as HTMLButtonElement).disabled).toBe(true);
+		await userEvent.click(panel.result.$("aside [data-screen=gallery]") as HTMLElement);
+		await vi.waitFor(() =>
+			expect(galleryStates(panel.result, "[data-novel-title]")).toHaveLength(2),
 		);
+		(panel.result.$("[data-novel-title] dialog[open]") as HTMLDialogElement).close();
+		await vi.waitFor(() => expect(panel.devtools.preview).toBeUndefined());
+		await userEvent.click(panel.result.$("aside [data-screen=settings]") as HTMLElement);
+		await vi.waitFor(() =>
+			expect(panel.result.$("[data-novel-title] dialog[open][data-novel-settings]")).not.toBeNull(),
+		);
+		(panel.result.$("[data-novel-title] dialog[open]") as HTMLDialogElement).close();
+		await panel.open("Player");
+		expect((panel.result.$("aside [data-sample=entry]") as HTMLButtonElement).disabled).toBe(true);
+		expect(panel.button("Back to the title screen").disabled).toBe(true);
+		expect(panel.button("Toggle full screen").disabled).toBe(false);
+		await userEvent.click(
+			panel.result.$('[data-novel-title] [data-action="new-game"]') as HTMLElement,
+		);
+		await vi.waitFor(() => expect(panel.devtools.player).toBeDefined());
+		expect(panel.devtools.title).toBeUndefined();
+		expect((panel.result.$("aside [data-sample=entry]") as HTMLButtonElement).disabled).toBe(false);
+	});
+
+	test("play the player's hover and select sounds by role", async () => {
+		let played = vi
+			.spyOn(AudioMixer.prototype, "playInterface")
+			.mockImplementation(() => undefined);
+		let panel = mount({ player: true, sounds: true });
+		await vi.waitFor(() => expect(panel.devtools.player).toBeDefined());
+		expect(panel.devtools.player?.sounds?.select).toBe(ASSETS.sounds.chime);
+		expect(panel.devtools.sounds).toEqual(["hover", "select"]);
+		played.mockClear();
+		expect(await panel.devtools.playSound("select")).toBe(true);
+		expect(played.mock.calls).toEqual([[ASSETS.sounds.chime.src]]);
+		await panel.open("Player");
+		played.mockClear();
+		await userEvent.click(panel.result.$("aside [data-sound=hover]") as HTMLElement);
+		expect(played.mock.calls.at(-1)).toEqual([ASSETS.sounds.tick.src]);
+	});
+
+	test("list no sound for a player without interface sounds", async () => {
+		let panel = mount({ player: true });
+		await vi.waitFor(() => expect(panel.devtools.player).toBeDefined());
+		expect(panel.devtools.sounds).toEqual([]);
+		expect(await panel.devtools.playSound("hover")).toBe(false);
+		await panel.open("Player");
+		expect(panel.panel().textContent).toContain("No interface sounds");
 	});
 });
 

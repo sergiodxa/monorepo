@@ -21,6 +21,9 @@ export interface InterfaceSounds {
 	select?: AssetDeclaration<"sound">;
 }
 
+/** A role an interface sound plays in: reaching an option, or picking one. */
+export type InterfaceSoundRole = keyof InterfaceSounds;
+
 /** What the listeners read on every event, so a new `sounds` prop or locale applies at once. */
 interface InterfaceSoundsSource {
 	/** Answers the mixer, called only when a declared sound plays. */
@@ -55,7 +58,23 @@ function optionOf(target: EventTarget | null): Element | null {
 /** Plays one interface sound, when the play declared it. */
 function play(source: InterfaceSoundsSource, sound: AssetDeclaration<"sound"> | undefined): void {
 	if (sound === undefined) return;
-	source.mixer().playInterface(pickSource(sound.src, source.locale));
+	playInterfaceSound(source.mixer(), sound, source.locale);
+}
+
+/**
+ * Plays a sound on the mixer's interface channel, picking the file for the reader's locale the
+ * way the interface's own hover and select sounds do, so a preview sounds like the real thing.
+ *
+ * @param mixer - The player's or the title screen's mixer.
+ * @param sound - The declared sound.
+ * @param locale - The reader's locale.
+ */
+export function playInterfaceSound(
+	mixer: AudioMixer,
+	sound: AssetDeclaration<"sound">,
+	locale: string,
+): void {
+	mixer.playInterface(pickSource(sound.src, locale));
 }
 
 /**
