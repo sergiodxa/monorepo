@@ -5,11 +5,11 @@ section:
     title: Visual novels
     order: 4.7
 order: 11
-lastUpdated: 2026-11-25
+lastUpdated: 2026-11-27
 outcomes:
     - "How to declare a Blob as an asset beside URLs"
     - "How the player plays and draws a Blob, and when a generated asset belongs in a file instead"
-    - "How to give the menus hover and select sounds rendered with @sdxc/synth"
+    - "How to give the menus ready-made hover and select sounds from @sdxc/novel/sounds"
 ---
 
 A jam game has no composer, and a procedural story draws its own skies. Every asset kind takes a
@@ -97,10 +97,55 @@ Scenes use them like any other asset: `ctx.show(ASSETS.backgrounds.dusk)`,
 
 ## Sound the interface
 
-A short note makes a good interface sound. `renderScore` plays one on an instrument, and its
-release becomes the file's tail:
+`@sdxc/novel/sounds` synthesizes hover and select sounds in the browser, so the menus sound
+without a file to ship. `renderInterfaceSounds()` renders a preset into the two declarations the
+player's `sounds` prop takes. Synthesis costs a few milliseconds, so render once the player is on
+the page, in a task the component queues:
+
+```tsx {% title="resources/components/game.tsx" %}
+import type { Handle } from "remix/component";
+
+import { renderInterfaceSounds } from "@sdxc/novel/sounds";
+import { NovelPlayer } from "@sdxc/novel/ui";
+
+import { novel } from "~/app/initializers/novel";
+
+function Game(handle: Handle) {
+	let sounds: ReturnType<typeof renderInterfaceSounds> | undefined;
+	handle.queueTask(() => {
+		sounds = renderInterfaceSounds("soft");
+		void handle.update();
+	});
+	return () => <NovelPlayer.Default novel={novel} sounds={sounds} />;
+}
+```
+
+Three presets ship, each under a quarter of a second and quiet:
+
+| Preset  | Hover              | Select                       |
+| ------- | ------------------ | ---------------------------- |
+| `soft`  | a rounded sine pop | a brush of paper             |
+| `tick`  | a dry switch tick  | a short click with some body |
+| `chime` | a soft sine note   | two rising notes             |
+
+To change one sound, spread a preset from `INTERFACE_SOUND_PRESETS` and pass the result.
+Each sound is an `@sdxc/synth` instrument, its notes, a gain and a tail in seconds:
+
+```typescript
+import { INTERFACE_SOUND_PRESETS, renderInterfaceSounds } from "@sdxc/novel/sounds";
+
+let soft = INTERFACE_SOUND_PRESETS.soft;
+let sounds = renderInterfaceSounds({
+	...soft,
+	hover: { ...soft.hover, notes: [{ at: 0, length: 0.02, pitch: "G5" }] },
+});
+```
+
+A sound written from scratch is a short note from `renderScore`, declared like any other sound
+and passed as `sounds={UI_SOUNDS}`:
 
 ```typescript {% title="resources/novel/generated.ts" %}
+import { assets } from "@sdxc/novel";
 import { PRESETS, encodeWav, renderScore } from "@sdxc/synth";
 
 export function blip(pitch: string, length = 0.125): Blob {
@@ -115,22 +160,10 @@ export function blip(pitch: string, length = 0.125): Blob {
 	);
 	return new Blob([encodeWav(samples, SAMPLE_RATE)], { type: "audio/wav" });
 }
-```
 
-Declare them as sounds, and give the player a `hover` and a `select`:
-
-```typescript {% title="resources/novel/declarations.ts" %}
-export const ASSETS = assets({
+export const UI_SOUNDS = assets({
 	sounds: { hover: blip("E6", 0.0625), select: blip("A5") },
-});
-```
-
-```tsx {% title="resources/components/game.tsx" %}
-<NovelPlayer.Default
-	novel={novel}
-	titleScreen={{ heading: "The Café" }}
-	sounds={{ hover: ASSETS.sounds.hover, select: ASSETS.sounds.select }}
-/>
+}).sounds;
 ```
 
 The hover sound plays as the pointer enters a button, tab or link, or keyboard and gamepad focus
