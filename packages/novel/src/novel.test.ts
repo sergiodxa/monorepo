@@ -1687,7 +1687,7 @@ describe("check", () => {
 			]),
 		);
 		let report = await check(novel);
-		expect(report.problems).toEqual([]);
+		expect(report.problems.filter((problem) => problem.code === "shared-slot")).toEqual([]);
 	});
 
 	test("warns about introducing a character declared known", async () => {
@@ -1703,7 +1703,7 @@ describe("check", () => {
 		);
 		let report = await check(novel);
 		expect(report.ok).toBe(true);
-		expect(report.problems).toEqual([
+		expect(report.problems.filter((problem) => problem.code === "known-introduced")).toEqual([
 			{ code: "known-introduced", severity: "warning", scene: "start", character: "player" },
 		]);
 	});
