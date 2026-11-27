@@ -11,7 +11,7 @@ import type { Head, Point } from "./geometry.js";
 import type { SvgElement, SvgNode } from "./tree.js";
 
 import { drawHead, pathData } from "./geometry.js";
-import { BACKGROUND, STROKE } from "./style.js";
+import { BACKGROUND, CAPTION, STROKE, TITLE_BAND, TITLE_SIZE } from "./style.js";
 import { FONT_SIZE, LINE_HEIGHT, blockSize } from "./text.js";
 import { element, num } from "./tree.js";
 
@@ -25,6 +25,10 @@ export interface LabelOptions {
 	bold?: boolean;
 	italic?: boolean;
 	underline?: boolean;
+	/** Softer caption color for group headers and secondary labels. */
+	muted?: boolean;
+	/** Overrides the root font-size for this label. */
+	size?: number;
 }
 
 /**
@@ -48,11 +52,12 @@ export function label(
 		y: num(top),
 		"text-anchor": options.anchor ?? "middle",
 		"dominant-baseline": "central",
-		fill: "currentColor",
+		fill: options.muted ? CAPTION : "currentColor",
 	};
 	if (options.bold) attributes["font-weight"] = "bold";
 	if (options.italic) attributes["font-style"] = "italic";
 	if (options.underline) attributes["text-decoration"] = "underline";
+	if (options.size) attributes["font-size"] = String(options.size);
 
 	if (lines.length === 1)
 		return element("text", attributes, [{ type: "text", value: lines[0] ?? "" }]);
@@ -95,6 +100,8 @@ export interface RectOptions {
 	/** @default true */
 	stroke?: boolean;
 	dashed?: boolean;
+	/** Overrides the shared outline when stroke is on. */
+	outline?: Record<string, string>;
 }
 
 /**
@@ -119,10 +126,29 @@ export function rect(
 		height: num(height),
 	};
 	if (options.radius) attributes.rx = num(options.radius);
-	if (options.stroke !== false) Object.assign(attributes, STROKE);
+	if (options.stroke !== false) Object.assign(attributes, options.outline ?? STROKE);
 	if (options.dashed) attributes["stroke-dasharray"] = "5 4";
 	attributes.style = options.style ?? "fill: none";
 	return element("rect", attributes);
+}
+
+/**
+ * A visible title centered above the drawing when the author named the diagram.
+ * The accessible `<title>` still carries the same name; this band is for readers.
+ *
+ * @param title - Author-supplied title, or nothing when the kind name is the default
+ * @param width - Full SVG width the title centers on
+ * @returns Height to add above the drawing, and the title nodes to prepend
+ */
+export function titleBand(
+	title: string | undefined,
+	width: number,
+): { height: number; nodes: SvgNode[] } {
+	if (!title) return { height: 0, nodes: [] };
+	return {
+		height: TITLE_BAND,
+		nodes: [label([title], width / 2, TITLE_BAND / 2 - 2, { bold: true, size: TITLE_SIZE })],
+	};
 }
 
 /**
@@ -193,6 +219,7 @@ export function svgRoot(
 			width: num(width),
 			height: num(height),
 			role: "img",
+			class: "sdxc-diagram",
 			fill: "none",
 			"font-family": "ui-sans-serif, system-ui, sans-serif",
 			"font-size": String(FONT_SIZE),
