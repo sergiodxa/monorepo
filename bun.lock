@@ -2041,6 +2041,7 @@
         "@sdxc/icons": "workspace:*",
         "@sdxc/random": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/synth": "workspace:*",
         "@sdxc/types": "workspace:*",
         "@sdxc/ui": "workspace:*",
         "@sdxc/uuid": "workspace:*",

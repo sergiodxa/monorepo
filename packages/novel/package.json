@@ -9,6 +9,7 @@
 		"./dev": "./src/dev.tsx",
 		"./offline": "./src/offline.ts",
 		"./offline/worker": "./src/offline/worker.ts",
+		"./sounds": "./src/sounds.ts",
 		"./storage/local-storage": "./src/storage/local-storage.ts",
 		"./test": "./src/test.ts",
 		"./ui": "./src/ui.tsx"
@@ -22,6 +23,7 @@
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/random": "workspace:*",
 		"@sdxc/result": "workspace:*",
+		"@sdxc/synth": "workspace:*",
 		"@sdxc/types": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
