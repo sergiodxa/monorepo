@@ -515,6 +515,26 @@ describe("NovelPlayer", () => {
 		expect(player.result.$('[data-id="ren"]')!.dataset["speaking"]).toBe("false");
 	});
 
+	test("keeps a style object the caller passes beside its own declarations", async () => {
+		let player = mount({ style: { "--novel-letterbox": "rgb(1, 2, 3)", outline: "2px solid" } });
+		await shows(player, "Welcome to the café.");
+		let root = player.root();
+		expect(root.style.getPropertyValue("--novel-letterbox")).toBe("rgb(1, 2, 3)");
+		expect(getComputedStyle(root).backgroundColor).toBe("rgb(1, 2, 3)");
+		expect(root.style.outlineWidth).toBe("2px");
+		expect(root.style.getPropertyValue("--novel-font-scale")).toBe("1");
+		expect(root.style.getPropertyValue("anchor-name")).toMatch(/^--novel-/);
+	});
+
+	test("applies a style string the caller passes after its own declarations", async () => {
+		let player = mount({ style: "--novel-letterbox: rgb(4, 5, 6); --novel-font-scale: 2" });
+		await shows(player, "Welcome to the café.");
+		let root = player.root();
+		expect(getComputedStyle(root).backgroundColor).toBe("rgb(4, 5, 6)");
+		expect(root.style.getPropertyValue("--novel-font-scale").trim()).toBe("2");
+		expect(root.style.getPropertyValue("anchor-name")).toMatch(/^--novel-/);
+	});
+
 	test("selects no text when the reader clicks through quickly or drags across it", async () => {
 		let player = mount();
 		await shows(player, "Welcome to the café.");

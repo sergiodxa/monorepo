@@ -8,9 +8,11 @@
  */
 
 import type { Trans } from "@sdxc/i18n/ui";
+import type { StyleDeclarations, StyleProp } from "@sdxc/ui/utils";
 import type { Handle, Props as TagProps, RemixElement, RemixNode } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
+import { mergeStyle } from "@sdxc/ui/utils";
 import { css, on, ref, TypedEventTarget } from "remix/component";
 
 import type { SceneDeclaration } from "../declarations.js";
@@ -741,6 +743,7 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			sounds: _sounds,
 			children,
 			mix,
+			style,
 			...rest
 		} = handle.props;
 		if (stored !== seenSettings) {
@@ -765,7 +768,10 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 				data-hidden={String(hidden)}
 				data-replay={String(director.replaying)}
 				data-dyslexia={String(current.dyslexiaFont)}
-				style={{ "--novel-font-scale": current.fontSize, anchorName: anchor }}
+				style={underCallerStyle(
+					{ "--novel-font-scale": current.fontSize, "anchor-name": anchor },
+					style,
+				)}
 				mix={[
 					ref((node) => {
 						root = node;
@@ -800,6 +806,15 @@ export function NovelPlayer(handle: Handle<NovelPlayer.Props, NovelPlayer.Contex
 			</div>
 		);
 	};
+}
+
+/**
+ * The root's own declarations with the caller's `style` after them, in the form the caller used,
+ * so a declaration the caller repeats wins and every other one of theirs is kept.
+ */
+function underCallerStyle(own: StyleDeclarations, style: StyleProp): StyleProp {
+	if (typeof style === "string") return `${mergeStyle("", own) as string};${style}`;
+	return Object.assign({}, mergeStyle(undefined, own), style);
 }
 
 /** The persistent data a play passes in `start`, read once a screen asks, before the play runs. */
