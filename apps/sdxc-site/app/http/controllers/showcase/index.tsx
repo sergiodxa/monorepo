@@ -46,6 +46,7 @@ const GRID_TITLES: Record<ShowcaseFilter, string> = {
 	app: "App demos",
 	landing: "Landing demos",
 	docs: "Docs demos",
+	blog: "Blog demos",
 };
 
 export default createAction(routes.showcase.index, async (ctx) => {
@@ -103,8 +104,8 @@ export default createAction(routes.showcase.index, async (ctx) => {
 							packages
 							{apps.length > live ? ` (${apps.length - live} more application is source only)` : ""}
 							, and {counts.demo} demos for invented products show what @sdxc/ui builds: apps,
-							landing pages and documentation sites, each in its own art direction. Every one has a
-							case study of what it demonstrates and what it is built from.
+							landing pages, documentation sites and blogs, each in its own art direction. Every one
+							has a case study of what it demonstrates and what it is built from.
 						</ProseParagraph>
 						<ShowcaseFilters current={filter} counts={counts} />
 					</div>

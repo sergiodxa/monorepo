@@ -99,7 +99,12 @@ Observability is enabled, with traces head-sampled at 10%.
   `vp preview` on port 4317 (`SHOWCASE_ORIGIN` points elsewhere, `--scheme=dark` takes one
   scheme), and every old `/demo` address answers a `308` to its new one. It also writes each
   item's `card.png`, the cover its social card draws (`--cards` rewrites only those).
-- **Demo HTML is reused at the edge.** Landings, docs sites and app screens
+- **A blog demo is a folder of Markdown posts.** `resources/views/demo-blogs/<slug>/index.tsx`
+  declares the blog (author, theme, kinds, page size) and draws its pages; its posts are
+  `posts/*.md` with front matter. One controller serves every blog the same addresses: a
+  mixed feed at the root narrowed by `?type=`, `<kind>/<slug>`, `archive`, `tags`, `search`,
+  `about`, `subscribe` and `rss.xml`, so a new blog writes only its own design.
+- **Demo HTML is reused at the edge.** Landings, docs sites, blogs and app screens
   use the existing build-keyed Workers Cache: a hit skips rendering the demo, while a miss
   keeps the renderer's stream and frame fallbacks.
   Docs query strings keep search and feedback states distinct; remembered package-manager

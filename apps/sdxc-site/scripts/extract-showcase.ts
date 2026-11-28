@@ -59,6 +59,11 @@ const DEMO_ROOTS: Array<{ folder: string; shared: string[]; category: ShowcaseCa
 		category: "docs" as const,
 	},
 	{ folder: "demo-apps", shared: ["document.tsx"], category: "app" as const },
+	{
+		folder: "demo-blogs",
+		shared: ["parts.tsx", "markdown.tsx"],
+		category: "blog" as const,
+	},
 ].map(({ category, folder, shared }) => {
 	let root = join(APP, "resources", "views", folder);
 	return { folder: root, shared: shared.map((file) => join(root, file)), category };

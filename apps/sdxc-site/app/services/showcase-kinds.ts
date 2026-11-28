@@ -12,7 +12,7 @@ import type { DemoKind } from "~/app/services/demos";
 /** Whether an item runs for real, or is a demo for an invented product. */
 export type ShowcaseKind = "production" | "demo";
 
-/** What an item is, production or demo alike: an app, a landing or a docs site. */
+/** What an item is, production or demo alike: an app, a landing, a docs site or a blog. */
 export type ShowcaseCategory = DemoKind;
 
 /** What an item's chips and labels are read from. */
@@ -28,6 +28,7 @@ export const CATEGORY_LABELS: Record<ShowcaseCategory, string> = {
 	app: "App",
 	landing: "Landing",
 	docs: "Docs",
+	blog: "Blog",
 };
 
 /**

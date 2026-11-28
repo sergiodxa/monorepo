@@ -8,11 +8,12 @@
  */
 
 import { listDemoAppSlugs } from "~/resources/views/demo-apps";
+import { listDemoBlogSlugs } from "~/resources/views/demo-blogs";
 import { listDemoDocsSlugs } from "~/resources/views/demo-docs";
 import { listDemoSlugs } from "~/resources/views/demos";
 
-/** The three shapes a demo comes in, each drawn by its own renderer. */
-export type DemoKind = "landing" | "docs" | "app";
+/** The four shapes a demo comes in, each drawn by its own renderer. */
+export type DemoKind = "landing" | "docs" | "app" | "blog";
 
 /**
  * The generic names the landing demos had before each took its product's name, so an old
@@ -35,13 +36,14 @@ export const LEGACY_LANDING_SLUGS: Readonly<Record<string, string>> = {
 /**
  * Every demo slug with its kind, read from the folder names alone so no demo module loads.
  *
- * @returns One entry per demo, landings first, then docs sites, then apps.
+ * @returns One entry per demo, landings first, then docs sites, then apps, then blogs.
  */
 export function listDemoKinds(): Array<{ slug: string; kind: DemoKind }> {
 	return [
 		...listDemoSlugs().map((slug) => ({ slug, kind: "landing" as const })),
 		...listDemoDocsSlugs().map((slug) => ({ slug, kind: "docs" as const })),
 		...listDemoAppSlugs().map((slug) => ({ slug, kind: "app" as const })),
+		...listDemoBlogSlugs().map((slug) => ({ slug, kind: "blog" as const })),
 	];
 }
 

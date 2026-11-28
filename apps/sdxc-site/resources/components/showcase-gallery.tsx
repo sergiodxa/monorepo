@@ -30,6 +30,7 @@ const FILTER_LABELS: Record<ShowcaseFilter, string> = {
 	app: "Apps",
 	landing: "Landings",
 	docs: "Docs sites",
+	blog: "Blogs",
 };
 
 namespace ShowcaseFilters {

@@ -31,10 +31,19 @@ const DEMO_FOLDERS: Record<ShowcaseCategory, string> = {
 	landing: "sdxc-site/resources/views/demos",
 	docs: "sdxc-site/resources/views/demo-docs",
 	app: "sdxc-site/resources/views/demo-apps",
+	blog: "sdxc-site/resources/views/demo-blogs",
 };
 
 /** The `?kind=` values the showcase filters by, `all` showing everything. */
-export const SHOWCASE_FILTERS = ["all", "production", "demo", "app", "landing", "docs"] as const;
+export const SHOWCASE_FILTERS = [
+	"all",
+	"production",
+	"demo",
+	"app",
+	"landing",
+	"docs",
+	"blog",
+] as const;
 
 /** One of {@link SHOWCASE_FILTERS}. */
 export type ShowcaseFilter = (typeof SHOWCASE_FILTERS)[number];
@@ -257,8 +266,8 @@ export function toShowcaseItem(
 	};
 }
 
-/** Apps, then landings, then docs sites, within production and within the demos. */
-const CATEGORY_ORDER: ShowcaseCategory[] = ["app", "landing", "docs"];
+/** Apps, then landings, docs sites and blogs, within production and within the demos. */
+const CATEGORY_ORDER: ShowcaseCategory[] = ["app", "landing", "docs", "blog"];
 
 /**
  * Every showcase item with a case study, applications in production first, then the demos by

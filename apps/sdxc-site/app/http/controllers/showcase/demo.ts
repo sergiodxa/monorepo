@@ -12,6 +12,7 @@ import { createAction } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { findDemoKind } from "~/app/services/demos";
+import { SUBSCRIBE_PAGE } from "~/resources/views/demo-blogs";
 import { FEEDBACK_PAGE } from "~/resources/views/demo-docs/feedback";
 import routes from "~/routes/web";
 
@@ -56,12 +57,14 @@ export const showDemo = createAction(routes.showcase.demo, async (ctx) => {
 		return run(await import("~/app/http/controllers/demo-docs/markdown"), ctx);
 	}
 	if (kind === "docs") return run(await import("~/app/http/controllers/demo-docs/show"), ctx);
+	if (kind === "blog") return run(await import("~/app/http/controllers/demo-blogs/show"), ctx);
 	return defaultHandler(ctx);
 });
 
 /**
- * Takes a demo's form post: an app's action, or a docs page's feedback vote. A landing keeps
- * its forms on GET, so a post to one, like a post to a docs page other than its vote, is `404`.
+ * Takes a demo's form post: an app's action, a docs page's feedback vote or a blog's sign-up.
+ * A landing keeps its forms on GET, so a post to one, like a post to a docs page other than
+ * its vote, is `404`.
  */
 export const submitDemo = createAction(routes.showcase.demoAction, async (ctx) => {
 	let { page, slug } = s.parse(PARAMS, ctx.params);
@@ -69,6 +72,9 @@ export const submitDemo = createAction(routes.showcase.demoAction, async (ctx) =
 	if (kind === "app") return run(await import("~/app/http/controllers/demo-apps/action"), ctx);
 	if (kind === "docs" && page === FEEDBACK_PAGE) {
 		return run(await import("~/app/http/controllers/demo-docs/feedback"), ctx);
+	}
+	if (kind === "blog" && page === SUBSCRIBE_PAGE) {
+		return run(await import("~/app/http/controllers/demo-blogs/subscribe"), ctx);
 	}
 	return notFound();
 });
