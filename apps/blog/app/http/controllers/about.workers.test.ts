@@ -55,6 +55,13 @@ describe("GET /about", () => {
 		expect(html).toContain('href="/about?lang=es-AR"');
 	});
 
+	test("names the owner's avatar as the page icon", async () => {
+		let html = await (await fetchPage("/about")).text();
+
+		expect(html).toMatch(/<link rel="icon" href="\/favicon\.png" type="image\/png" sizes="32x32"/);
+		expect(html).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png"');
+	});
+
 	test("answers in Spanish for a Spanish browser or ?lang=es", async () => {
 		let byHeader = await (
 			await fetchPage("/about", { headers: { "accept-language": "es-PE" } })

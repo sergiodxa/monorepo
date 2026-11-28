@@ -42,6 +42,15 @@ const BLOG_THEME_COLORS: DocumentLayout.ThemeColors = {
 	dark: "oklch(0.16 0.006 250)",
 };
 
+/**
+ * The site owner's avatar, cropped to the head, as every page's icon unless the page
+ * brings its own; `/favicon.ico` sits beside them for clients that only request that path.
+ */
+const AVATAR_ICONS: Array<DocumentLayout.IconLink> = [
+	{ rel: "icon", href: "/favicon.png", type: "image/png", sizes: "32x32" },
+	{ rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+];
+
 export namespace DocumentLayout {
 	/**
 	 * A tag rendered in `<head>` beyond the document's own fixed set. Either
@@ -109,7 +118,7 @@ export namespace DocumentLayout {
 		 * on the root, so every semantic token derives from it.
 		 */
 		scope?: string;
-		/** Icons in place of the browser's default lookup. */
+		/** The page's icons, replacing the site owner's avatar. */
 		icons?: Array<IconLink>;
 		/** The page's translations, advertised as `alternate` links with their language. */
 		alternates?: Array<Alternate>;
@@ -132,7 +141,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 			canonical,
 			children,
 			description,
-			icons = [],
+			icons = AVATAR_ICONS,
 			locale = "en",
 			meta = [],
 			scope,
